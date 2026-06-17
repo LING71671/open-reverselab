@@ -49,9 +49,16 @@
 
 `tools/` 下的工具需要单独下载安装，详见各子目录的 `README.md`。常用工具的下载链接和安装说明已在对应目录中提供。
 
+## 前置依赖
+
+本项目设计为与 [codex-session-patcher](https://github.com/LING71671/codex-session-patcher) 配合使用。clone 后请先配置 codex-session-patcher，以确保 AI Agent 能正确路由到各板块的 `AI-USAGE.md` 和工具链。
+
 ## 快速开始
 
 ```powershell
+# 安装 codex-session-patcher（一次性）
+# 详见: https://github.com/LING71671/codex-session-patcher
+
 # 查看工具安装状态
 python scripts/misc/ai_toolcheck.py
 
