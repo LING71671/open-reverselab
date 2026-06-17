@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 from mcp.server.fastmcp import FastMCP
 
-from reverselab_mcp.config import SERVER_NAME
+from reverselab_mcp.config import REVERSE_ROOT, SERVER_NAME
 from reverselab_mcp.paths import resolve_file
 from reverselab_mcp.tools import (
     android_mumu,
@@ -35,6 +35,7 @@ from reverselab_mcp.tools import (
     toolbox,
     triage,
     unpack_intake,
+    web_ctf,
     workflow,
     workspace_crud,
     yara_stub,
@@ -1068,6 +1069,86 @@ def sample_autopilot_round(
     return _safe_call(workflow.sample_autopilot_round, manifest_path, max_actions, execute)
 
 
+# ── Web CTF tools ──
+
+@mcp.tool()
+def http_probe(url: str, timeout: int = 15) -> dict[str, Any]:
+    """对目标 URL 发起 GET 探测，收集 header/body/cookie/指纹。"""
+    return _safe_call(web_ctf.http_probe, url, timeout)
+
+
+@mcp.tool()
+def kb_router(query: str) -> dict[str, Any]:
+    """按攻击信号搜索知识库，返回匹配的技术文件和路径。"""
+    return _safe_call(web_ctf.kb_router, query)
+
+
+@mcp.tool()
+def kb_read_file(technique_path: str) -> dict[str, Any]:
+    """读取知识库技术文件内容。路径格式如 '02-auth/jwt/01-alg-none.md'。"""
+    return _safe_call(web_ctf.kb_read_file, technique_path)
+
+
+@mcp.tool()
+def kb_catalog() -> dict[str, Any]:
+    """列出知识库所有分类、条目数和文件数。"""
+    return _safe_call(web_ctf.kb_catalog)
+
+
+@mcp.tool()
+def ctf_new_challenge(name: str, url: str = "") -> dict[str, Any]:
+    """创建新的 CTF 题目 case 目录，从模板初始化。"""
+    return _safe_call(web_ctf.ctf_new_challenge, name, url)
+
+
+@mcp.tool()
+def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict[str, Any]:
+    """运行 CTF 工具。tool: sqlmap/dirsearch/jwt_tool/tplmap。args: 命令行参数。"""
+    return _safe_call(web_ctf.run_ctf_tool, tool, args, timeout)
+
+
+@mcp.tool()
+def ctf_tool_status() -> dict[str, Any]:
+    """检查 CTF 工具安装状态。"""
+    return _safe_call(web_ctf.ctf_tool_status)
+
+
+# ── Skill / project setup ──
+
+@mcp.tool()
+def project_skills_status() -> dict[str, Any]:
+    """查看项目级 skills/MCP 安装状态和推荐安装命令。"""
+    skills_dir = REVERSE_ROOT / "tools" / "skills" / "mcp"
+    status = {
+        "ghidra_mcp": {
+            "path": str((skills_dir / "GhidraMCP" / "bridge_mcp_ghidra.py").relative_to(REVERSE_ROOT)),
+            "installed": (skills_dir / "GhidraMCP" / "bridge_mcp_ghidra.py").exists(),
+            "install": "git clone https://github.com/LaurieWired/GhidraMCP.git tools/skills/mcp/GhidraMCP",
+        },
+        "jshook": {
+            "path": str((skills_dir / "JSHookLocal" / "dist" / "index.js").relative_to(REVERSE_ROOT)),
+            "installed": (skills_dir / "JSHookLocal" / "dist" / "index.js").exists(),
+            "install": "git clone https://github.com/wuji1/jshook-reverse-tool.git tools/skills/mcp/JSHookLocal && cd tools/skills/mcp/JSHookLocal && npm install && npm run build",
+        },
+        "reverse_lab_tools": {
+            "path": str((skills_dir / "ReverseLabToolsMCP" / "reverse_lab_tools_mcp.py").relative_to(REVERSE_ROOT)),
+            "installed": (skills_dir / "ReverseLabToolsMCP" / "reverse_lab_tools_mcp.py").exists(),
+            "install": "cd tools/skills/mcp/ReverseLabToolsMCP && uv sync",
+        },
+    }
+    installed = sum(1 for s in status.values() if s["installed"])
+    return {
+        "skills": status,
+        "installed": installed,
+        "total": len(status),
+        "project_root": str(REVERSE_ROOT),
+        "next": (
+            "All skills ready" if installed == len(status)
+            else f"Run install commands above for missing skills ({len(status) - installed} remaining)"
+        ),
+    }
+
+
 def _self_test(path: str) -> int:
     target = str(resolve_file(path))
     checks = {
@@ -1334,9 +1415,10 @@ def _ioc_refine_test(ioc_json_path: str) -> int:
 
 
 def _workspace_crud_test() -> int:
-    base = r"E:\ReverseLab\notes\mcp_workspace_crud_test.md"
-    copy_path = r"E:\ReverseLab\reports\mcp_workspace_crud_test_copy.md"
-    moved_path = r"E:\ReverseLab\reports\mcp_workspace_crud_test_moved.md"
+    test_dir = REVERSE_ROOT
+    base = str(test_dir / "notes" / "mcp_workspace_crud_test.md")
+    copy_path = str(test_dir / "reports" / "mcp_workspace_crud_test_copy.md")
+    moved_path = str(test_dir / "reports" / "mcp_workspace_crud_test_moved.md")
     checks = {
         "workspace_write_text_create": workspace_write_text(base, "# CRUD Test\n", mode="replace", create_dirs=True, overwrite=True),
         "workspace_write_text_append": workspace_write_text(base, "append line\n", mode="append", create_dirs=True, overwrite=True),

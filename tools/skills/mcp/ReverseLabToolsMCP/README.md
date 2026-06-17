@@ -51,9 +51,17 @@ uv sync
 | | `crypto_unpack` | 加密算法识别和 unpack |
 | | `debug_script` | 调试断点脚本生成 |
 | | `analysis_note` | 自动生成分析笔记 |
-| **工具** | `toolbox_list` | 列出可用工具 |
+| **Web CTF** | `http_probe` | HTTP 探测（header/body/cookie/指纹） |
+| | `kb_router` | 按信号搜索知识库技术文件 |
+| | `kb_read_file` | 读取技术文件完整内容 |
+| | `kb_catalog` | 列出 KB 全部分类统计 |
+| | `ctf_new_challenge` | 创建 CTF 题目 case |
+| | `run_ctf_tool` | 运行 sqlmap/dirsearch/jwt_tool/tplmap |
+| | `ctf_tool_status` | 检查 CTF 工具安装状态 |
+| **工具** | `toolbox_list` | 列出可用二进制工具 |
 | | `toolbox_run` | 运行工具 |
 | | `mcp_self_update` | 更新自身配置 |
+| **项目设置** | `project_skills_status` | 检查 skills/MCP 安装状态 + 推荐安装命令 |
 
 ## 路径约定
 
