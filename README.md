@@ -32,7 +32,7 @@ python scripts/ctf-website/kb_router.py "sql injection"
 | [SKILLS.md](SKILLS.md) | 推荐安装的 Claude Code skills |
 | [boards/README.md](boards/README.md) | Board 索引（Android / Windows / CTF / Misc） |
 
-搭配 [codex-session-patcher](https://github.com/LING71671/codex-session-patcher) 后，AI 会自动读取以上文件。
+AI 入口为 [CLAUDE.md](CLAUDE.md)，启动时自动加载，并沿链路依次路由至上述文件。搭配 [codex-session-patcher](https://github.com/LING71671/codex-session-patcher) 可一键配置项目级 AI 环境与 MCP 服务器。
 
 ## Boards
 
