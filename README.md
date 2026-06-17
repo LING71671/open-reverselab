@@ -6,7 +6,7 @@
 
 - **Web CTF 选手** — 50+ 篇可运行的技术文档 + 一键安装全工具链
 - **二进制分析师** — PE/APK 分析模板、Ghidra 集成、Frida 脚本
-- **AI Agent 用户** — 搭配 [codex-session-patcher](https://github.com/LING71671/codex-session-patcher) 实现 Agent 自动路由
+- **AI Agent 用户** — 搭配 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 实现 Agent 自动路由
 
 ## 快速开始
 
@@ -35,7 +35,7 @@ python scripts/ctf-website/kb_router.py "sql injection"
 
 **Claude Code** — 启动时自动读取 `CLAUDE.md`，沿链路依次路由至各文件。
 
-**Codex** — 搭配 [codex-session-patcher](https://github.com/LING71671/codex-session-patcher) 一键配置项目级 `.codex/` 环境与 MCP 服务器。
+**Codex** — 搭配 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 一键配置项目级 `.codex/` 环境与 MCP 服务器。
 
 ## Boards
 
@@ -148,7 +148,7 @@ python scripts/misc/ai_toolcheck.py
 
 ## 依赖
 
-- [codex-session-patcher](https://github.com/LING71671/codex-session-patcher) — AI Agent 项目级配置
+- [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) — AI Agent 项目级配置
 - Git、Python 3、Java（部分工具需要）
 
 ## 贡献

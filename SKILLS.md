@@ -30,4 +30,4 @@ claude plugins list
 
 ## 搭配 codex-session-patcher
 
-使用 [codex-session-patcher](https://github.com/LING71671/codex-session-patcher) 配置项目后，AI Agent 会自动路由到对应板块的 `AI-USAGE.md`，skill 提供执行能力，KB 提供知识参考。
+使用 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 配置项目后，AI Agent 会自动路由到对应板块的 `AI-USAGE.md`，skill 提供执行能力，KB 提供知识参考。
