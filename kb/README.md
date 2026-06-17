@@ -1,10 +1,9 @@
 # Knowledge Base
 
-可复用逆向/安全知识库。按领域和主题组织。
+AI 使用说明：[AI-USAGE.md](AI-USAGE.md)
 
-## 结构
+Reusable knowledge lives here. Unlike `notes/`, this is not per-case evidence; it is a tactical reference library.
 
-| 目录 | 内容 |
+| Area | Path |
 |---|---|
-| `ctf-website/` | Web CTF 技术知识库 |
-| `ai-findings/` | AI 分析过程中的可复用发现 |
+| Web CTF | [ctf-website](ctf-website/README.md) |

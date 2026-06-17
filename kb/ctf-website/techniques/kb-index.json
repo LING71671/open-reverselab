@@ -1,177 +1,389 @@
-[
-  {
-    "category": "01-recon",
-    "file": "01-recon/recon-routing.md",
-    "title": "Recon 路由策略",
-    "keywords": ["recon", "scan", "nmap", "dirsearch", "ffuf", "fingerprint", "version"],
-    "description": "端口扫描、目录爆破、指纹识别的最佳实践和工具链"
-  },
-  {
-    "category": "01-recon",
-    "file": "01-recon/version-fingerprinting.md",
-    "title": "版本指纹识别",
-    "keywords": ["fingerprint", "version", "cms", "framework", "header", "cookie"],
-    "description": "从HTTP头、Cookie、错误页、JS文件中提取产品版本信息"
-  },
-  {
-    "category": "02-auth",
-    "file": "02-auth/jwt/00-overview.md",
-    "title": "JWT 攻击总览",
-    "keywords": ["jwt", "token", "auth", "bearer", "authorization"],
-    "description": "JWT 九大攻击技术：alg:none、算法混淆、弱密钥爆破、kid注入等"
-  },
-  {
-    "category": "02-auth",
-    "file": "02-auth/oauth-sso.md",
-    "title": "OAuth / SSO 攻击",
-    "keywords": ["oauth", "sso", "openid", "saml", "redirect_uri"],
-    "description": "OAuth2.0流程中的常见漏洞：redirect_uri绕过、state缺失、scope提升"
-  },
-  {
-    "category": "02-auth",
-    "file": "02-auth/saml-attacks.md",
-    "title": "SAML 攻击",
-    "keywords": ["saml", "xml", "signature", "assertion"],
-    "description": "SAML签名绕过、XML签名包装(XSW)、断言重放"
-  },
-  {
-    "category": "03-injection",
-    "file": "03-injection/sqli-nosqli.md",
-    "title": "SQLi / NoSQLi",
-    "keywords": ["sqli", "nosqli", "injection", "sqlmap", "mongodb"],
-    "description": "关系型和非关系型数据库注入技术，含盲注、时间注入、二次注入"
-  },
-  {
-    "category": "03-injection",
-    "file": "03-injection/ssti.md",
-    "title": "SSTI 模板注入",
-    "keywords": ["ssti", "template", "jinja2", "twig", "freemarker", "tplmap"],
-    "description": "服务端模板注入检测与利用，覆盖Jinja2/Twig/Freemarker/Velocity等引擎"
-  },
-  {
-    "category": "03-injection",
-    "file": "03-injection/graphql.md",
-    "title": "GraphQL 注入",
-    "keywords": ["graphql", "introspection", "query", "mutation"],
-    "description": "GraphQL introspection利用、查询深度攻击、批量查询绕过"
-  },
-  {
-    "category": "03-injection",
-    "file": "03-injection/prototype-pollution.md",
-    "title": "原型链污染",
-    "keywords": ["prototype", "pollution", "__proto__", "constructor"],
-    "description": "JavaScript原型链污染检测和利用，常见gadget链"
-  },
-  {
-    "category": "04-ssrf",
-    "file": "04-ssrf/ssrf.md",
-    "title": "SSRF 攻击",
-    "keywords": ["ssrf", "internal", "metadata", "169.254", "localhost"],
-    "description": "SSRF探测内网、云metadata、file/gopher协议利用"
-  },
-  {
-    "category": "04-ssrf",
-    "file": "04-ssrf/open-redirect.md",
-    "title": "Open Redirect → SSRF",
-    "keywords": ["redirect", "open redirect", "url", "bypass"],
-    "description": "通过Open Redirect绕过SSRF白名单限制"
-  },
-  {
-    "category": "05-deserialization",
-    "file": "05-deserialization/deserialization.md",
-    "title": "反序列化攻击",
-    "keywords": ["deserialize", "unserialize", "pickle", "ysoserial", "gadget"],
-    "description": "PHP/Java/Python/Node.js反序列化漏洞，gadget链构造"
-  },
-  {
-    "category": "06-file-attacks",
-    "file": "06-file-attacks/file-upload-xxe-lfi.md",
-    "title": "文件上传 / XXE / LFI",
-    "keywords": ["upload", "xxe", "lfi", "rfi", "file", "include"],
-    "description": "文件上传绕过、XML外部实体注入、本地/远程文件包含"
-  },
-  {
-    "category": "07-client",
-    "file": "07-client/admin-bot-xss.md",
-    "title": "Admin Bot + XSS",
-    "keywords": ["xss", "bot", "admin", "cookie", "csp", "dom"],
-    "description": "Admin Bot类CTF中的XSS利用：窃取cookie、CSP绕过、DOM clobbering"
-  },
-  {
-    "category": "07-client",
-    "file": "07-client/cors-csrf.md",
-    "title": "CORS / CSRF",
-    "keywords": ["cors", "csrf", "origin", "referer", "token"],
-    "description": "CORS配置错误利用、CSRF token绕过技术"
-  },
-  {
-    "category": "07-client",
-    "file": "07-client/postmessage.md",
-    "title": "PostMessage 攻击",
-    "keywords": ["postmessage", "message", "origin", "iframe"],
-    "description": "跨窗口通信中的origin校验缺陷和消息劫持"
-  },
-  {
-    "category": "08-infra",
-    "file": "08-infra/race-cache-smuggling.md",
-    "title": "Race Condition / Cache / Smuggling",
-    "keywords": ["race", "cache", "smuggling", "turbo intruder", "http2"],
-    "description": "竞态条件、Web缓存中毒/欺骗、HTTP请求走私"
-  },
-  {
-    "category": "09-cve",
-    "file": "09-cve/cve-workflow.md",
-    "title": "CVE 分析工作流",
-    "keywords": ["cve", "nvd", "epss", "kev", "exploit"],
-    "description": "从版本指纹到CVE利用的标准化流程"
-  },
-  {
-    "category": "09-cve",
-    "file": "09-cve/cve-correlation-graph.md",
-    "title": "CVE 关联图谱",
-    "keywords": ["cve", "graph", "correlation", "chain"],
-    "description": "多CVE关联分析：共有前提条件、链式利用路径"
-  },
-  {
-    "category": "09-cve",
-    "file": "09-cve/multi-cve-chain-playbook.md",
-    "title": "多CVE链 Playbook",
-    "keywords": ["cve", "chain", "multi", "combination"],
-    "description": "多个CVE组合利用的实战playbook"
-  },
-  {
-    "category": "10-cloud",
-    "file": "10-cloud/ci-cd-pipeline.md",
-    "title": "CI/CD 攻击",
-    "keywords": ["ci/cd", "github actions", "jenkins", "pipeline"],
-    "description": "CI/CD Pipeline中的权限提升和密钥泄露"
-  },
-  {
-    "category": "10-cloud",
-    "file": "10-cloud/kubernetes-container.md",
-    "title": "Kubernetes / 容器",
-    "keywords": ["kubernetes", "k8s", "docker", "container", "escape"],
-    "description": "K8s RBAC绕过、容器逃逸、服务账户token利用"
-  },
-  {
-    "category": "11-supply-chain",
-    "file": "11-supply-chain/dependency-confusion.md",
-    "title": "依赖混淆攻击",
-    "keywords": ["supply chain", "dependency", "confusion", "npm", "pip", "typosquatting"],
-    "description": "利用私有包名在公共仓库注册进行供应链投毒"
-  },
-  {
-    "category": "12-payment",
-    "file": "12-payment/payment-logic.md",
-    "title": "支付逻辑漏洞",
-    "keywords": ["payment", "logic", "price", "amount", "currency"],
-    "description": "金额篡改、币种切换、负数值、并发购买等支付逻辑绕过"
-  },
-  {
-    "category": "13-signature",
-    "file": "13-signature/00-overview.md",
-    "title": "API 签名攻击总览",
-    "keywords": ["signature", "sign", "hmac", "hash", "api key"],
-    "description": "API签名算法的识别、绕过和利用"
-  }
-]
+{
+  "version": "1.0",
+  "purpose": "Signal → technique file mapping for kb_router.py",
+  "entries": [
+    {
+      "id": "jwt",
+      "signals": ["jwt", "json web token", "bearer", "authorization header", "token", "eyJ", "jws", "jwe", "HMAC", "JWT"],
+      "files": [
+        "02-auth/jwt/00-overview.md",
+        "02-auth/jwt/01-alg-none.md",
+        "02-auth/jwt/02-algorithm-confusion.md",
+        "02-auth/jwt/03-weak-key-bruteforce.md",
+        "02-auth/jwt/04-kid-injection.md",
+        "02-auth/jwt/05-jku-x5u-abuse.md",
+        "02-auth/jwt/06-claim-missing.md",
+        "02-auth/jwt/07-theft-replay.md",
+        "02-auth/jwt/08-cve-library.md",
+        "02-auth/jwt/09-toolchain-defense.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "oauth",
+      "signals": ["oauth", "oauth2", "oidc", "openid", "sso", "redirect_uri", "authorization code", "implicit flow", "pkce", "state nonce", "ID token", "access token"],
+      "files": [
+        "02-auth/oauth-sso.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "saml",
+      "signals": ["saml", "xml signature", "assertion", "saml response", "xml canonicalization", "xml wrapping", "identity provider", "idp"],
+      "files": [
+        "02-auth/saml-attacks.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "ldap",
+      "signals": ["ldap", "active directory", "directory service", "ldap filter", "jndi", "389", "636"],
+      "files": [
+        "02-auth/ldap-injection.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "host-header",
+      "signals": ["host header", "host injection", "password reset", "vhost", "x-forwarded-host", "host override"],
+      "files": [
+        "02-auth/host-header.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "sqli",
+      "signals": ["sql", "sqli", "sql injection", "database", "mysql", "postgresql", "oracle", "mssql", "sqlite", "nosql", "mongodb", "query", "waf bypass sql"],
+      "files": [
+        "03-injection/sqli-nosqli.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "ssti",
+      "signals": ["ssti", "template injection", "template engine", "jinja2", "twig", "freemarker", "thymeleaf", "velocity", "smarty", "razor", "pebble", "tornado", "erb"],
+      "files": [
+        "03-injection/ssti.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "prototype-pollution",
+      "signals": ["prototype pollution", "pp", "__proto__", "constructor.prototype", "node.js", "object merge", "deep copy", "ejs", "pug"],
+      "files": [
+        "03-injection/prototype-pollution.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "graphql",
+      "signals": ["graphql", "graphiql", "introspection", "mutation", "subscription", "fragment", "alias", "persisted query", "__typename", "__schema"],
+      "files": [
+        "03-injection/graphql.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "hpp-crlf",
+      "signals": ["hpp", "parameter pollution", "crlf", "crlf injection", "response splitting", "header injection", "smtp injection", "email injection", "%0d%0a"],
+      "files": [
+        "03-injection/hpp-crlf.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "redos-timing",
+      "signals": ["redos", "regex", "backtracking", "regular expression", "timing attack", "side channel", "catastrophic backtracking", "event loop block"],
+      "files": [
+        "03-injection/redos-timing.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "grpc",
+      "signals": ["grpc", "protobuf", "protocol buffer", "grpc-web", "h2", "field number"],
+      "files": [
+        "03-injection/grpc-protobuf.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "ssrf",
+      "signals": ["ssrf", "server-side request forgery", "gopher", "metadata", "169.254", "internal network", "dns rebinding", "url parser", "imds"],
+      "files": [
+        "04-ssrf/ssrf.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "open-redirect",
+      "signals": ["open redirect", "redirect", "redirect_uri", "302", "301", "location header", "next param", "return url"],
+      "files": [
+        "04-ssrf/open-redirect.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "deserialization",
+      "signals": ["deserialization", "unserialize", "pickle", "ysoserial", "gadget", "binaryformatter", "node-serialize", "hessian", "jackson polymorphic"],
+      "files": [
+        "05-deserialization/deserialization.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "file-attacks",
+      "signals": ["file upload", "lfi", "xxe", "path traversal", "zip slip", "php wrapper", "pdf generation", "wkhtmltopdf", "include", "../", "file read"],
+      "files": [
+        "06-file-attacks/file-upload-xxe-lfi.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "xss",
+      "signals": ["xss", "cross site scripting", "csp", "content security policy", "dom clobbering", "svg", "sanitizer", "dompurify", "admin bot", "mutation xss", "exfiltration"],
+      "files": [
+        "07-client/admin-bot-xss.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "js-runtime",
+      "signals": ["javascript", "js", "obfuscation", "deobfuscate", "webpack", "hook", "fetch api", "webcrypto", "cryptojs", "ast", "babel", "wasm"],
+      "files": [
+        "07-client/js-runtime.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "websocket",
+      "signals": ["websocket", "ws", "wss", "socket.io", "mqtt", "cswsh", "real-time", "realtime"],
+      "files": [
+        "07-client/websocket.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "cors-csrf",
+      "signals": ["cors", "csrf", "cross origin", "access-control", "same origin", "cross-site request forgery", "samesite", "aca-header", "origin header"],
+      "files": [
+        "07-client/cors-csrf.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "postmessage",
+      "signals": ["postmessage", "post message", "window.postmessage", "cross origin communication", "event.source", "structured clone"],
+      "files": [
+        "07-client/postmessage.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "web-crypto",
+      "signals": ["web crypto", "subtle", "crypto.subtle", "math.random", "prng", "rsa key", "extractable", "ecb", "jwe"],
+      "files": [
+        "07-client/web-crypto-abuse.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "race-smuggling",
+      "signals": ["race condition", "cache poisoning", "request smuggling", "cl.te", "te.cl", "turbo intruder", "concurrent", "toctou", "double spend"],
+      "files": [
+        "08-infra/race-cache-smuggling.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "http2",
+      "signals": ["http2", "h2", "hpack", "continuation", "stream multiplexing", "h2c", "http/2"],
+      "files": [
+        "08-infra/http2-attacks.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "cache-deception",
+      "signals": ["cache deception", "web cache", "cdn cache", "cached response", "x-cache", "cache hit", "fat get"],
+      "files": [
+        "08-infra/web-cache-deception.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "cve",
+      "signals": ["cve", "nvd", "epss", "kev", "vulnerability", "exploit", "poc", "cvss", "cwe", "cpe"],
+      "files": [
+        "09-cve/cve-workflow.md",
+        "09-cve/cve-correlation-graph.md",
+        "09-cve/multi-cve-chain-playbook.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "cloud-serverless",
+      "signals": ["lambda", "serverless", "aws", "cloud function", "azure function", "metadata service", "169.254.169.254", "iam role", "function url"],
+      "files": [
+        "10-cloud/serverless-lambda.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "kubernetes",
+      "signals": ["kubernetes", "k8s", "pod", "container", "docker", "service account", "kubelet", "etcd", "runc", "rbac", "hostpath"],
+      "files": [
+        "10-cloud/kubernetes-container.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "ci-cd",
+      "signals": ["ci/cd", "jenkins", "github actions", "gitlab ci", "pipeline", "runner", "workflow", "self-hosted", "groovy"],
+      "files": [
+        "10-cloud/ci-cd-pipeline.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "payment",
+      "signals": ["payment", "pay", "支付", "checkout", "order", "订单", "trade", "notify", "callback", "webhook", "alipay", "wechat pay", "stripe", "paypal", "amount", "金额", "coupon", "优惠券", "discount", "refund", "退款", "balance", "余额", "recharge", "充值", "invoice"],
+      "files": [
+        "12-payment/payment-logic.md",
+        "12-payment/payment-bypass.md",
+        "12-payment/payment-callback-async.md",
+        "12-payment/payment-php.md",
+        "12-payment/payment-subscription.md",
+        "12-payment/payment-digital-goods.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "payment-bypass",
+      "signals": ["payment bypass", "支付绕过", "zero price", "零元购", "amount tampering", "price manipulation", "type confusion", "mass assignment", "state machine", "rounding attack", "float precision", "currency attack", "coupon abuse", "discount abuse"],
+      "files": [
+        "12-payment/payment-bypass.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "payment-callback",
+      "signals": ["payment callback", "支付回调", "async payment", "异步支付", "notify", "webhook", "signature bypass", "签名绕过", "idempotency", "幂等", "replay attack", "settlement", "结算", "reconciliation", "对账", "message queue", "mq attack", "TOCTOU payment"],
+      "files": [
+        "12-payment/payment-callback-async.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "payment-subscription",
+      "signals": ["subscription", "订阅", "recurring", "定期付款", "trial", "试用", "renewal", "续费", "auto-renew", "自动续费", "proration", "按比例", "plan switch", "升级", "降级", "metered billing", "计量计费", "seat", "license", "stripe billing", "invoice"],
+      "files": [
+        "12-payment/payment-subscription.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "payment-digital-goods",
+      "signals": ["digital goods", "虚拟商品", "IAP", "in-app purchase", "内购", "receipt", "收据", "app store", "google play", "steam", "cdkey", "卡密", "license key", "激活码", "virtual currency", "虚拟货币", "token", "代币", "loyalty points", "积分", "gift card", "礼品卡"],
+      "files": [
+        "12-payment/payment-digital-goods.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "payment-php",
+      "signals": ["php", "laravel", "thinkphp", "wordpress", "woocommerce", "magento", "extract", "strcmp", "type juggling", "magic hash", "0e", "php serialization", "phar", "php session", "eloquent", "mass assignment", "cashier", "omnipay", "yansongda", "composer"],
+      "files": [
+        "12-payment/payment-php.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature",
+      "signals": ["sign", "signature", "sign_type", "sign_method", "hmac", "hash", "md5 sign", "sha1 sign", "sha256 sign", "signature bypass", "签名", "signature forgery", "签名伪造", "signature verification", "verify sign", "check sign"],
+      "files": [
+        "13-signature/00-overview.md",
+        "13-signature/01-algorithm.md",
+        "13-signature/02-implementation.md",
+        "13-signature/03-key-attacks.md",
+        "13-signature/04-canonicalization.md",
+        "13-signature/05-length-extension.md",
+        "13-signature/06-replay-nonce.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-algorithm",
+      "signals": ["algorithm downgrade", "alg:none", "sign_type", "sign_method", "algorithm confusion", "rs256 hs256", "md5 downgrade", "none algorithm", "空签名", "算法降级"],
+      "files": [
+        "13-signature/01-algorithm.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-implementation",
+      "signals": ["strcmp bypass", "md5 array", "sha1 array", "magic hash", "0e", "type juggling sign", "== vs ===", "timing attack sign", "extract bypass", "parse_str", "variable override"],
+      "files": [
+        "13-signature/02-implementation.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-key",
+      "signals": ["weak key", "弱密钥", "secret key leak", "hardcoded key", "key reuse", "api key leak", ".env key", "secret_key", "app_key", "hmac key", "signing key", "jwt secret", "密钥泄露"],
+      "files": [
+        "13-signature/03-key-attacks.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-canonicalization",
+      "signals": ["canonicalization", "参数排序", "url encoding sign", "json canonicalization", "xml canonicalization", "c14n", "parameter pollution", "hpp", "规范化"],
+      "files": [
+        "13-signature/04-canonicalization.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "signature-length-extension",
+      "signals": ["length extension", "hash length extension", "hash extender", "hashpumpy", "md5 extension", "sha1 extension", "sha256 extension", "长度扩展", "hash length attack"],
+      "files": [
+        "13-signature/05-length-extension.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "signature-replay",
+      "signals": ["replay attack", "重放", "nonce bypass", "nonce reuse", "timestamp bypass", "replay sig", "signature replay", "expired sign", "nonce predict", "signature nonce"],
+      "files": [
+        "13-signature/06-replay-nonce.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "supply-chain",
+      "signals": ["dependency confusion", "supply chain", "npm", "pypi", "typosquatting", "manifest confusion", "package hijack", "package.json"],
+      "files": [
+        "11-supply-chain/dependency-confusion.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "recon",
+      "signals": ["recon", "reconnaissance", "header fuzzing", "route", "directory", "path", "method override", "technology stack", "fingerprint", "wappalyzer", "whatweb"],
+      "files": [
+        "01-recon/recon-routing.md",
+        "01-recon/version-fingerprinting.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "attack-network",
+      "signals": ["attack network", "attack graph", "attack chain", "attack path", "entry point", "多入口", "攻击路径", "分叉", "全网图"],
+      "files": [
+        "attack-network.md"
+      ],
+      "priority": 10
+    }
+  ]
+}
