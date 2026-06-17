@@ -15,7 +15,7 @@ git clone https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
 ```
 
-## 使用方法(下面都是人工智能瞎写的，嗯，使用方法就是打开codex，cc，直接说话，AI会干这些事情的😂)
+## 使用方法(下面场景一，二都是人工智能瞎写的，嗯，使用方法就是打开codex，cc，直接说话，AI会干这些事情的😂)
 
 ### 场景一：Web CTF
 
