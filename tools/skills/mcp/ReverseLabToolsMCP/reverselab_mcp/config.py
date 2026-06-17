@@ -65,10 +65,7 @@ def _find_exe(base: Path, names: list[str], label: str) -> Path:
         candidate = base / name
         if candidate.exists():
             return candidate
-    raise FileNotFoundError(
-        f"{label} not found in {base}. Tried: {names}. "
-        f"Run: .\\scripts\\misc\\install_tools.ps1"
-    )
+    return base / names[0]
 
 
 # Ghidra (version-flexible)

@@ -54,10 +54,10 @@ def main():
             found = os.path.exists(fullpath)
 
         if found:
-            print(f"  ✓ {name}")
+            print(f"  [OK] {name}")
             installed += 1
         else:
-            print(f"  ✗ {name} — install: .\\scripts\\misc\\install_tools.ps1")
+            print(f"  [MISSING] {name} - install: .\\scripts\\misc\\install_tools.ps1")
             missing += 1
 
     print(f"\n  {installed} installed, {missing} missing")

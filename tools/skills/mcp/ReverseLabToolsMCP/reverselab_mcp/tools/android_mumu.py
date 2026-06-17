@@ -117,7 +117,8 @@ def _shell(command: str, serial: str = "", as_root: bool = False, timeout: int =
     except Exception:
         if not _is_default_mumu_serial(serial):
             raise
-        wrapped = command if as_root else f"su -c \"{command.replace('\"', '\\\"')}\""
+        escaped = command.replace('"', '\\"')
+        wrapped = command if as_root else f'su -c "{escaped}"'
         code, stdout, stderr = _mumu_cli(["sh", "--vmindex", _mumu_vmindex(), "--cmd", wrapped], timeout=timeout, check=True)
     return {
         "command": command,

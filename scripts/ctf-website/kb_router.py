@@ -74,7 +74,7 @@ def main():
         print(f"     Signals: {', '.join(entry.get('signals', [])[:5])}")
         for f in entry.get("files", []):
             full = os.path.join(TECHNIQUES_DIR, f)
-            exists = "✓" if os.path.exists(full) else "✗"
+            exists = "[OK]" if os.path.exists(full) else "[MISSING]"
             print(f"     {exists} kb/ctf-website/techniques/{f}")
         print()
 

@@ -34,7 +34,7 @@ def check_directories():
     for d in REQUIRED_DIRS:
         path = os.path.join(ROOT, d)
         exists = os.path.isdir(path)
-        status = "✓" if exists else "✗ MISSING"
+        status = "[OK]" if exists else "[MISSING]"
         if not exists:
             ok = False
         print(f"  {status}: {d}/")
@@ -48,10 +48,10 @@ def check_platform_dirs():
         for parent in ["samples", "projects", "exports", "notes", "reports", "patches", "scripts"]:
             path = os.path.join(ROOT, parent, area)
             if not os.path.isdir(path):
-                print(f"  ✗ MISSING: {parent}/{area}/")
+                print(f"  [MISSING]: {parent}/{area}/")
                 ok = False
     if ok:
-        print("  ✓ All platform directories present")
+        print("  [OK] All platform directories present")
     return ok
 
 
@@ -68,7 +68,7 @@ def main():
         print("\n=== Tool Check ===")
         subprocess.run([sys.executable, toolcheck])
 
-    print(f"\n{'✓ All checks passed' if dirs_ok and platform_ok else '✗ Issues found — see above'}")
+    print(f"\n{'[OK] All checks passed' if dirs_ok and platform_ok else '[ERROR] Issues found - see above'}")
 
 
 if __name__ == "__main__":
