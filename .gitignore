@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+SECURITY.md
 
 # Python / Node caches
 __pycache__/
