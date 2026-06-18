@@ -4,51 +4,66 @@
   "entries": [
     {
       "id": "triage",
-      "signals": ["pe", "exe", "dll", "sys", "pe32", "pe64", "die", "detect it easy", "trid", "compiler", "packer", "entropy", "hash", "md5", "sha256"],
-      "files": [],
+      "signals": ["aob", "signature", "pattern scan", "findpattern", "byte pattern", "特征码", "GetModuleHandle", "mask", "wildcard"],
+      "files": [
+        "01-triage/01-aob-signature-scan.md"
+      ],
       "priority": 10
     },
     {
       "id": "pe-structure",
-      "signals": ["section", "节区", "import", "export", "reloc", "resource", "iat", "eat", "dos header", "nt header", "optional header", "imagebase", "entrypoint", "oep"],
-      "files": [],
+      "signals": ["dos header", "nt header", "section", "节区", "import", "export", "iat", "eat", "image_dos_header", "image_nt_headers", "e_lfanew", "optional header"],
+      "files": [
+        "02-pe-structure/01-pe-header-parsing.md"
+      ],
       "priority": 9
     },
     {
       "id": "static-analysis",
-      "signals": ["ghidra", "ida", "decompile", "disassemble", "xref", "cross reference", "function", "graph", "control flow", "call", "string"],
-      "files": [],
+      "signals": ["struct", "reconstruct", "offset", "disassemble", "zydis", "xbyak", "jit", "assemble", "machine code", "反汇编", "汇编"],
+      "files": [
+        "03-static-analysis/01-struct-reconstruction.md",
+        "03-static-analysis/02-disasm-jit-asm.md"
+      ],
       "priority": 10
     },
     {
       "id": "dynamic-analysis",
-      "signals": ["x64dbg", "x32dbg", "breakpoint", "step", "trace", "dump", "procmon", "process monitor", "filemon", "regmon", "debug", "anti-debug", "isdebuggerpresent"],
-      "files": [],
+      "signals": ["dll inject", "inject", "createremotethread", "loadlibrary", "trampoline", "detour", "hook", "detour", "jmp hook", "external memory", "readprocessmemory", "writeprocessmemory", "finddmaaddy", "pointer chain"],
+      "files": [
+        "04-dynamic-analysis/01-dll-injection.md",
+        "04-dynamic-analysis/02-trampoline-detour.md",
+        "04-dynamic-analysis/03-external-memory-rw.md"
+      ],
       "priority": 10
     },
     {
       "id": "crypto-unpack",
-      "signals": ["aes", "rc4", "xor", "crypt", "decrypt", "unpack", "脱壳", "upx", "aspack", "themida", "vmprotect", "injection", "dll inject", "reflective", "memory dump", "scylla"],
-      "files": [],
-      "priority": 10
+      "signals": ["pack", "packer", "unpack", "脱壳", "upx", "aspack", "vmprotect", "themida", "scylla", "iat rebuild", "dump", "内存镜像", "procdump", "oep"],
+      "files": [
+        "05-crypto-unpack/01-pe-unpack-dump.md"
+      ],
+      "priority": 9
     },
     {
       "id": "ioc",
-      "signals": ["ip", "domain", "url", "c2", "mutex", "mutant", "registry", "regkey", "file path", "pipe", "named pipe", "user-agent", "botnet"],
+      "signals": ["ip", "domain", "url", "c2", "mutex", "registry", "regkey", "file path", "pipe"],
       "files": [],
-      "priority": 8
+      "priority": 7
     },
     {
       "id": "yara-sigma",
-      "signals": ["yara", "sigma", "rule", "detection", "signature", "match", "condition", "pattern", "hex"],
+      "signals": ["yara", "sigma", "rule", "detection", "signature", "match", "condition"],
       "files": [],
       "priority": 7
     },
     {
       "id": "patch",
-      "signals": ["patch", "nop", "jmp", "je", "jne", "byte", "hex", "offset", "hxd", "modify"],
-      "files": [],
-      "priority": 7
+      "signals": ["patch", "nop", "jmp", "virtualprotect", "byte patch", "modify", "hxd", "memory patch", "code patch"],
+      "files": [
+        "08-patch/01-code-patching.md"
+      ],
+      "priority": 8
     }
   ]
 }

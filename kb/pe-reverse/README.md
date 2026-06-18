@@ -1,19 +1,19 @@
 # PE 逆向知识库
 
-Windows PE/二进制实战逆向 Lab。每个文件 = 可复制运行的分析/调试代码。
+Windows PE/二进制实战逆向 Lab。每个文件 = 可复制运行的 C++/分析代码。
 
 ## 结构
 
 ```
-techniques/ (8 分类)
-├── 01-triage/          初筛与文件识别
-├── 02-pe-structure/    PE 结构分析
-├── 03-static-analysis/ 静态分析 (Ghidra)
-├── 04-dynamic-analysis/ 动态分析 (x64dbg/Procmon)
-├── 05-crypto-unpack/   解密与脱壳
-├── 06-ioc-extraction/  IOC 提取
-├── 07-yara-sigma/      检测规则
-└── 08-patch/           Patch 与字节修改
+techniques/ (9 files, 5 分类)
+├── 01-triage/           AOB 特征码扫描
+├── 02-pe-structure/     PE 头解析与节区定位
+├── 03-static-analysis/  结构体重建 + 反汇编/JIT汇编
+├── 04-dynamic-analysis/ DLL注入 + TrampolineHook + 外部内存读写
+├── 05-crypto-unpack/    PE 脱壳与内存 Dump
+├── 06-ioc-extraction/   待补充
+├── 07-yara-sigma/       待补充
+└── 08-patch/            Code Patch 与字节修改
 ```
 
 ## 流程

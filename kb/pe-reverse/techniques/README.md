@@ -1,49 +1,61 @@
 # PE 逆向技术库
 
-Windows PE/二进制实战逆向 Lab。每个文件 = 可复制运行的分析/调试代码。
+Windows PE/二进制实战逆向 Lab。每个文件 = 可复制运行的 C++/Frida 代码。攻击视角，可实战。
 
-## 分类索引 (8 分类)
+## 目录 (9 篇)
 
-### 01-triage — 初筛与文件识别
-- 待补充：DiE 使用、hash 计算、编译器/语言识别、壳签名检测
+```
+01-triage/            (1)   aob-signature-scan
+02-pe-structure/      (1)   pe-header-parsing
+03-static-analysis/   (2)   struct-reconstruction + disasm-jit-asm
+04-dynamic-analysis/  (3)   dll-injection + trampoline-detour + external-memory-rw
+05-crypto-unpack/     (1)   pe-unpack-dump
+06-ioc-extraction/    (0)   待补充
+07-yara-sigma/        (0)   待补充
+08-patch/             (1)   code-patching
+```
 
-### 02-pe-structure — PE 结构
-- 待补充：PE-bear 使用、节区分析、导出表/导入表、重定位、资源解析
+## 分类索引
 
-### 03-static-analysis — 静态分析 (Ghidra)
-- 待补充：Ghidra 项目配置、函数识别、交叉引用、反编译技巧、脚本自动化
+### 01-triage — 初筛与特征码
+- `01-aob-signature-scan.md`: IDA/Ghidra 提取特征码, mask 模式, 全模块扫描, 按节区扫描, FindPatternWithOffset
+
+### 02-pe-structure — PE 结构解析
+- `01-pe-header-parsing.md`: DOS/NT Header 手动解析, 节区遍历, 导入表导出表枚举, IAT 解析
+
+### 03-static-analysis — 静态分析
+- `01-struct-reconstruction.md`: 从汇编偏移推断结构体, 类型推断(int/float/pointer), 指针链 vs 内嵌, 链表遍历
+- `02-disasm-jit-asm.md`: Zydis 反汇编, Xbyak JIT 汇编, 指令边界判定, 字节级编码
 
 ### 04-dynamic-analysis — 动态分析
-- 待补充：x64dbg 断点策略、Procmon 过滤、内存 dump、反调试绕过
+- `01-dll-injection.md`: CreateRemoteThread+LoadLibrary, Toolhelp32 进程枚举, DllMain 委派, 自弹出
+- `02-trampoline-detour.md`: Trampoline 函数劫持, 寄存器保存/恢复, JMP 偏移计算, NOP sled
+- `03-external-memory-rw.md`: ReadProcessMemory/WriteProcessMemory, FindDMAAddy, 内部 vs 外部
 
-### 05-crypto-unpack — 解密与脱壳
-- 待补充：常见加密算法识别、DLL 注入点、内存 dump、壳特征、脱壳脚本
-
-### 06-ioc-extraction — IOC 提取
-- 待补充：IP/域名/URL 提取、文件路径、注册表键、互斥体、管道名
-
-### 07-yara-sigma — 检测规则
-- 待补充：YARA 规则模板、Sigma 规则模板、基于字符串/导入表/节区特征
+### 05-crypto-unpack — 脱壳/Dump
+- `01-pe-unpack-dump.md`: x64dbg+Scylla, Frida 运行时 dump, ProcDump, IAT 修复, 壳行为追踪
 
 ### 08-patch — Patch 与修改
-- 待补充：字节 patching、NOP 填充、条件跳转修改、常量替换
+- `01-code-patching.md`: VirtualProtect 写保护内存, NOP/JMP/立即数 patch, 函数劫持, 安装/卸载模板
 
 ## 工具映射
 
 ```
-tools/common/ghidra/           → 反编译器
-tools/windows/Cutter/          → 反汇编
-tools/windows/PE-bear/         → PE 结构
-tools/windows/die/             → 文件识别
-tools/windows/HxD/             → 十六进制编辑
-tools/windows/ProcessMonitor/  → 进程监控
-tools/windows/x64dbg/          → 动态调试
-scripts/windows/               → 分析脚本
-templates/notes/windows-pe-analysis.md → 笔记模板
+x64dbg / Scylla              → 动态调试 + dump + IAT 修复
+Ghidra / IDA                 → 静态反编译
+DiE / diec                   → 壳检测
+Zydis                        → 反汇编库
+Xbyak                        → JIT 汇编库
+Frida                        → 运行时 Hook
+ProcDump (Sysinternals)      → 全内存 dump
+Cheat Engine                 → 内存扫描/修改
+ReClass                      → 结构体重建
 ```
 
 ## 分析链总览
 
 ```
-样本 → DiE triage → PE-bear 结构 → Ghidra 静态 → x64dbg 动态 → Procmon 行为 → IOC 提取 → YARA/Sigma → 报告
+PE 文件 → DiE triage → 特征码提取 → PE 头解析
+→ 加壳检测 → 脱壳/dump → Ghidra 静态分析 → 结构体重建
+→ DLL 注入 → Trampoline Hook → 外部/内部内存读写 → Patch/修改
 ```
