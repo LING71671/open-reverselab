@@ -241,12 +241,4 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | 模板注入检测 | `run_ctf_tool tplmap` | 自动检测 SSTI |
 | 按信号查技术 | `kb_router` | 搜索 ssti 相关技术文件 |
 
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| SSTI 自动检测与利用 | `run_ctf_tool tplmap` | 运行 tplmap 进行 SSTI 检测与利用 |
-| SSTI 入口探测 | `http_probe` | HTTP GET 探测 SSTI 注入点 |
 

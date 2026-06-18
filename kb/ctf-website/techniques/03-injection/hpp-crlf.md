@@ -180,11 +180,3 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | HTTP 参数污染探测 | `http_probe` | 发送 HPP/CRLF payload |
 | 按信号查技术 | `kb_router` | 搜索 hpp/crlf 相关技术文件 |
 
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| HTTP 参数污染/CRLF 注入探测 | `http_probe` | HTTP GET 探测 HPP/CRLF 注入点 |
-| 知识检索 | `kb_router` | 按 HPP/CRLF 信号搜索知识库 |

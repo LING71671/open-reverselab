@@ -171,10 +171,3 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | ReDoS 探测 | `http_probe` | 发送正则炸弹 payload |
 | 按信号查技术 | `kb_router` | 搜索 redos 相关技术文件 |
 
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| ReDoS/时序攻击探测 | `http_probe` | HTTP GET 探测正则拒绝服务/时序差异 |

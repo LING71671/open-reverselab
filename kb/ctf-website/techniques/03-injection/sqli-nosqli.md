@@ -344,12 +344,3 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | SQL 注入自动化 | `run_ctf_tool sqlmap --args "--batch --dbs"` | 自动检测+利用 SQLi |
 | 按信号查技术 | `kb_router` | 搜索 sqli 相关技术文件 |
 
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| SQL 注入自动检测与利用 | `run_ctf_tool sqlmap` | 运行 sqlmap 进行 SQL 注入检测与利用，参数如 `--batch --dbs` |
-| SQL 注入端点探测 | `http_probe` | HTTP GET 探测 SQL 注入入口点 |
-| 知识检索 | `kb_router` | 按 SQL/NoSQL 注入信号搜索知识库 |

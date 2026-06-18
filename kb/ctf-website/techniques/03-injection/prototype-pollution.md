@@ -289,10 +289,3 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | HTTP 探测 | `http_probe` | 发送 prototype pollution payload |
 | 按信号查技术 | `kb_router` | 搜索 prototype pollution 相关技术文件 |
 
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| 原型污染探测 | `http_probe` | HTTP GET/POST 探测原型污染注入点 |

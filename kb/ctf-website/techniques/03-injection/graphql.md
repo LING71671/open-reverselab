@@ -266,11 +266,3 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | GraphQL 端点探测 | `http_probe` | GET /graphql?query={__schema{types{name}}} |
 | 按信号查技术 | `kb_router` | 搜索 graphql 相关技术文件 |
 
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| GraphQL introspection 探测 | `http_probe` | HTTP GET 探测 GraphQL endpoint 和 introspection |
-| 知识检索 | `kb_router` | 按 GraphQL 攻击信号搜索知识库 |

@@ -133,11 +133,3 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | gRPC 端点探测 | `http_probe` | HTTP/2 探测 gRPC 服务 |
 | 按信号查技术 | `kb_router` | 搜索 grpc 相关技术文件 |
 
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| gRPC endpoint 探测 | `http_probe` | HTTP GET 探测 gRPC endpoint |
-| 知识检索 | `kb_router` | 按 gRPC/Protobuf 攻击信号搜索知识库 |
