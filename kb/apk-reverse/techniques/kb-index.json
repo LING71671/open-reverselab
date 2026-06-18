@@ -1,0 +1,79 @@
+{
+  "version": "1.1",
+  "purpose": "Signal → technique file mapping for APK reverse analysis",
+  "entries": [
+    {
+      "id": "dex-java",
+      "signals": ["dex", "java", "smali", "jadx", "decompile", "class", "method", "dalvik", "art", "apktool"],
+      "files": [
+        "01-dex-java/01-smali-injection.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "native",
+      "signals": [".so", "native", "jni", "ndk", "elf", "arm", "aarch64", "lib", "loadlibrary", "system.load", "il2cpp", "libil2cpp", "ue4", "libue4", "offset", "pointer chain", "getZZ", "pagemap", "virtual address", "physical address", "proc node", "procfs", "kernel driver"],
+      "files": [
+        "02-native/01-il2cpp-offset-discovery.md",
+        "02-native/02-pointer-chain-patterns.md",
+        "02-native/03-ue4-offset-hunting.md",
+        "02-native/04-kernel-procfs-driver.md",
+        "02-native/05-virt-phys-memory.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "manifest",
+      "signals": ["manifest", "activity", "service", "receiver", "provider", "intent", "broadcast", "exported", "permission", "entry point", "startup chain", "attachbasecontext"],
+      "files": [
+        "03-manifest/01-entry-point-tracing.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "crypto",
+      "signals": ["aes", "des", "rsa", "ecb", "cbc", "cipher", "crypt", "key", "iv", "secretkey", "javax.crypto", "encrypt", "decrypt", "hash", "md5", "sha", "hmac", "ssl pinning", "certificate", "rc4", "ksa", "prga", "custom encrypt"],
+      "files": [
+        "04-crypto/01-game-encryption-patterns.md",
+        "04-crypto/02-rc4-custom-crypto.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "network",
+      "signals": ["okhttp", "http", "https", "url", "request", "response", "retrofit", "volley", "certificate", "ssl", "tls", "socket", "websocket", "api", "protobuf", "protocol", "packet", "封包", "sendto", "recvfrom", "微验", "verify", "license", "channel verify", "频道验证"],
+      "files": [
+        "05-network/01-game-protocol-hook.md",
+        "05-network/02-license-verification-bypass.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "dynamic-frida",
+      "signals": ["frida", "hook", "intercept", "overload", "implementation", "attach", "spawn", "send", "rpc", "java.perform", "process_vm_readv", "ioctl", "/proc/pid/mem", "memory read", "overlay", "imgui", "anativewindow", "touch", "input", "注入"],
+      "files": [
+        "06-dynamic/01-memory-rw-hook.md",
+        "06-dynamic/02-overlay-rendering-hook.md",
+        "06-dynamic/03-touch-input-hook.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "packer",
+      "signals": ["packer", "pack", "壳", "加固", "obfuscate", "混淆", "proguard", "dexclassloader", "dexfile", "multidex", "classloader", "oxorany", "ollvm", "upx", "control flow flattening", "string encryption", "self extract", "self extract", "自解压", "embedded payload", "gzip"],
+      "files": [
+        "07-packer/01-obfuscation-detection.md",
+        "07-packer/02-self-extracting-payload.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "patch-repack",
+      "signals": ["patch", "repack", "重打包", "sign", "签名", "apktool", "apk sign", "integrity", "signature check", "modify", "so inject", "inject", "libinject"],
+      "files": [
+        "08-patch-repack/01-so-injection-repack.md"
+      ],
+      "priority": 8
+    }
+  ]
+}

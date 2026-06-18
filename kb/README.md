@@ -7,3 +7,5 @@ Reusable knowledge lives here. Unlike `notes/`, this is not per-case evidence; i
 | Area | Path |
 |---|---|
 | Web CTF | [ctf-website](ctf-website/README.md) |
+| APK Reverse | [apk-reverse](apk-reverse/README.md) |
+| PE Reverse | [pe-reverse](pe-reverse/README.md) |

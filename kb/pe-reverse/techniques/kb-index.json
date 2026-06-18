@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "purpose": "Signal → technique file mapping for PE reverse analysis",
+  "entries": [
+    {
+      "id": "triage",
+      "signals": ["pe", "exe", "dll", "sys", "pe32", "pe64", "die", "detect it easy", "trid", "compiler", "packer", "entropy", "hash", "md5", "sha256"],
+      "files": [],
+      "priority": 10
+    },
+    {
+      "id": "pe-structure",
+      "signals": ["section", "节区", "import", "export", "reloc", "resource", "iat", "eat", "dos header", "nt header", "optional header", "imagebase", "entrypoint", "oep"],
+      "files": [],
+      "priority": 9
+    },
+    {
+      "id": "static-analysis",
+      "signals": ["ghidra", "ida", "decompile", "disassemble", "xref", "cross reference", "function", "graph", "control flow", "call", "string"],
+      "files": [],
+      "priority": 10
+    },
+    {
+      "id": "dynamic-analysis",
+      "signals": ["x64dbg", "x32dbg", "breakpoint", "step", "trace", "dump", "procmon", "process monitor", "filemon", "regmon", "debug", "anti-debug", "isdebuggerpresent"],
+      "files": [],
+      "priority": 10
+    },
+    {
+      "id": "crypto-unpack",
+      "signals": ["aes", "rc4", "xor", "crypt", "decrypt", "unpack", "脱壳", "upx", "aspack", "themida", "vmprotect", "injection", "dll inject", "reflective", "memory dump", "scylla"],
+      "files": [],
+      "priority": 10
+    },
+    {
+      "id": "ioc",
+      "signals": ["ip", "domain", "url", "c2", "mutex", "mutant", "registry", "regkey", "file path", "pipe", "named pipe", "user-agent", "botnet"],
+      "files": [],
+      "priority": 8
+    },
+    {
+      "id": "yara-sigma",
+      "signals": ["yara", "sigma", "rule", "detection", "signature", "match", "condition", "pattern", "hex"],
+      "files": [],
+      "priority": 7
+    },
+    {
+      "id": "patch",
+      "signals": ["patch", "nop", "jmp", "je", "jne", "byte", "hex", "offset", "hxd", "modify"],
+      "files": [],
+      "priority": 7
+    }
+  ]
+}
