@@ -2,9 +2,6 @@
 
 开源逆向工程实验环境。目录即约定，Agent 原生。
 
-> 公共仓库仅含框架、模板和合成测试数据。
-> 私人样本、case、日志、目标、凭据不在此仓库。详见 [PUBLICATION.md](PUBLICATION.md)。
-
 ## 路由
 
 ```
@@ -76,6 +73,8 @@ cd open-reverselab
 ```
 CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
 ```
+
+搭配 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 一键配置项目级 `.codex/` 环境与 MCP 服务器。
 
 ## 许可
 
