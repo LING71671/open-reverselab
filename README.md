@@ -209,4 +209,4 @@ python scripts/misc/ai_toolcheck.py
 - `tools/` — 补充工具安装说明
 
 提交前请运行 `python scripts/misc/public_release_check.py`，并遵守
-[SECURITY.md](SECURITY.md) 与 [CONTRIBUTING.md](CONTRIBUTING.md)。
+[CONTRIBUTING.md](CONTRIBUTING.md)。
