@@ -158,11 +158,6 @@ CORS → CSRF token 读取 → 完整 CSRF 攻击链路
 ## 工具引用
 
 ```bash
-# 项目内 CSRF 探测脚本
-python scripts/misc/test_api_csrf.py
-python scripts/misc/test_api_csrf2.py
-python scripts/misc/test_login_csrf.py
-
-# HTTP 探测框架
-python scripts/ctf-website/http_probe.py
+# 通用 HTTP 探测框架；带认证的请求应保存在被 gitignore 的 case/exports 中
+python scripts/ctf-website/http_probe.py https://example.test/
 ```

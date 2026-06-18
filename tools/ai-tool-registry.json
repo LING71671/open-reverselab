@@ -1,0 +1,512 @@
+{
+  "schema": "reverselab.ai_tool_registry.v1",
+  "root": ".",
+  "global_bin": "tools/bin",
+  "policy": {
+    "default_no_popup": true,
+    "ai_default_rule": "AI may run entries with launch_mode=cli or launch_mode=file_probe. Entries with launch_mode=gui must not be launched during automatic checks; verify them only by file existence/hash unless the user explicitly asks to open the GUI.",
+    "path_bootstrap_powershell": "$env:Path = \"$(Resolve-Path tools/bin);$(Resolve-Path tools/ctf-website/bin);$env:Path\""
+  },
+  "tools": [
+    {
+      "id": "system.python",
+      "board": "common",
+      "name": "Python",
+      "launch_mode": "cli",
+      "command": "python",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 15000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "system.node",
+      "board": "common",
+      "name": "Node.js",
+      "launch_mode": "cli",
+      "command": "node",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 8000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "system.java",
+      "board": "common",
+      "name": "Java",
+      "launch_mode": "cli",
+      "command": "java",
+      "args": [
+        "-version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 8000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "system.rg",
+      "board": "common",
+      "name": "ripgrep",
+      "launch_mode": "cli",
+      "command": "rg",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 8000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "system.curl",
+      "board": "common",
+      "name": "curl",
+      "launch_mode": "cli",
+      "command": "curl",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 8000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "system.git",
+      "board": "common",
+      "name": "Git",
+      "launch_mode": "cli",
+      "command": "git",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 8000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "system.go",
+      "board": "common",
+      "name": "Go",
+      "launch_mode": "cli",
+      "command": "go",
+      "args": [
+        "version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 8000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "system.docker",
+      "board": "common",
+      "name": "Docker",
+      "launch_mode": "cli",
+      "command": "docker",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "misc.ai_context",
+      "board": "misc",
+      "name": "AI task context generator",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\ai_context.bat",
+      "args": [
+        "tool",
+        "context",
+        "--json"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true,
+      "notes": "Run at task start with the real task text and --save to recall tools/findings."
+    },
+    {
+      "id": "misc.ai_tool",
+      "board": "misc",
+      "name": "AI tool router",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\ai_tool.bat",
+      "args": [
+        "list"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "misc.ai_finding",
+      "board": "misc",
+      "name": "AI finding recorder/searcher",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\ai_finding.bat",
+      "args": [
+        "list",
+        "--limit",
+        "1"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "misc.ai_toolcheck",
+      "board": "misc",
+      "name": "No-popup AI toolcheck",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\ai_toolcheck.bat",
+      "args": [
+        "--board",
+        "common"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 60000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.ffuf",
+      "board": "ctf-website",
+      "name": "ffuf",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\ffuf.bat",
+      "args": [
+        "-V"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.gobuster",
+      "board": "ctf-website",
+      "name": "gobuster",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\gobuster.bat",
+      "args": [
+        "--help"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.feroxbuster",
+      "board": "ctf-website",
+      "name": "feroxbuster",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\feroxbuster.bat",
+      "args": [
+        "-V"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.sqlmap",
+      "board": "ctf-website",
+      "name": "sqlmap",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\sqlmap.bat",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 20000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.nmap",
+      "board": "ctf-website",
+      "name": "nmap",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\nmap.bat",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.httpx",
+      "board": "ctf-website",
+      "name": "httpx",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\httpx.bat",
+      "args": [
+        "-version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.katana",
+      "board": "ctf-website",
+      "name": "katana",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\katana.bat",
+      "args": [
+        "-version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.nuclei",
+      "board": "ctf-website",
+      "name": "nuclei",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\nuclei.bat",
+      "args": [
+        "-version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 30000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.dirsearch",
+      "board": "ctf-website",
+      "name": "dirsearch",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\dirsearch.bat",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 10000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.jwt_tool",
+      "board": "ctf-website",
+      "name": "jwt_tool",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\jwt_tool.bat",
+      "args": [
+        "--help"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 12000,
+        "allow_nonzero": true
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.tplmap",
+      "board": "ctf-website",
+      "name": "tplmap",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\tplmap.bat",
+      "args": [
+        "--help"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 12000,
+        "allow_nonzero": true
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.searchsploit",
+      "board": "ctf-website",
+      "name": "searchsploit",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\searchsploit.bat",
+      "args": [
+        "-h"
+      ],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\ctf-website\\bin\\searchsploit.bat"
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "ctf.burp.jar",
+      "board": "ctf-website",
+      "name": "Burp Suite Desktop JAR",
+      "launch_mode": "file_probe",
+      "command": "tools\\bin\\burp.bat",
+      "args": [],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\ctf-website\\burp\\burpsuite_desktop_v2026.6.jar",
+        "sha256": "9DA7DDA5C5E05A9B888A79A0629FAE5E47E816441F84546C0DAC6C87E4606F73"
+      },
+      "ai_callable": false,
+      "notes": "GUI/proxy app. Automatic AI checks must not launch it; use only when user explicitly wants the GUI."
+    },
+    {
+      "id": "android.apktool",
+      "board": "android",
+      "name": "apktool",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\apktool.bat",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 15000
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "android.jadx",
+      "board": "android",
+      "name": "jadx CLI",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\jadx.bat",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 20000
+      },
+      "ai_callable": true,
+      "notes": "CLI wrapper uses absolute classpath and does not launch GUI."
+    },
+    {
+      "id": "android.uber_apk_signer",
+      "board": "android",
+      "name": "uber-apk-signer",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\uber-apk-signer.bat",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 15000,
+        "allow_nonzero": true
+      },
+      "ai_callable": true
+    },
+    {
+      "id": "android.frida_server_x86_64",
+      "board": "android",
+      "name": "frida-server android x86_64",
+      "launch_mode": "file_probe",
+      "command": "tools\\android\\mobile\\frida\\frida-server-17.9.8-android-x86_64",
+      "args": [],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\android\\mobile\\frida\\frida-server-17.9.8-android-x86_64"
+      },
+      "ai_callable": false,
+      "notes": "Android target binary; push with scripts/android/install_frida_server.ps1."
+    },
+    {
+      "id": "windows.pe_bear",
+      "board": "windows",
+      "name": "PE-bear",
+      "launch_mode": "gui",
+      "command": "tools\\bin\\pe-bear.bat",
+      "args": [],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\windows\\PE-bear_0.7.1_qt6.8_x64_win_vs22\\PE-bear.exe"
+      },
+      "ai_callable": false,
+      "notes": "GUI. Do not launch in automatic checks."
+    },
+    {
+      "id": "windows.procmon",
+      "board": "windows",
+      "name": "Procmon",
+      "launch_mode": "gui",
+      "command": "tools\\bin\\procmon.bat",
+      "args": [],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\windows\\ProcessMonitor\\Procmon64.exe"
+      },
+      "ai_callable": false,
+      "notes": "GUI. Use Procmon configs/scripts only when explicitly needed."
+    },
+    {
+      "id": "windows.hxd",
+      "board": "windows",
+      "name": "HxD installer",
+      "launch_mode": "gui",
+      "command": "tools\\bin\\hxd.bat",
+      "args": [],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\windows\\HxDSetup\\HxDSetup.exe"
+      },
+      "ai_callable": false,
+      "notes": "Installer/GUI; automatic AI checks only verify file exists."
+    },
+    {
+      "id": "windows.cutter",
+      "board": "windows",
+      "name": "Cutter",
+      "launch_mode": "gui",
+      "command": "tools\\windows\\Cutter-v2.4.1-Windows-x86_64\\Cutter-v2.4.1-Windows-x86_64\\cutter.exe",
+      "args": [],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\windows\\Cutter-v2.4.1-Windows-x86_64\\Cutter-v2.4.1-Windows-x86_64\\cutter.exe"
+      },
+      "ai_callable": false,
+      "notes": "GUI reverse engineering frontend; automatic AI checks only verify file exists."
+    }
+  ]
+}

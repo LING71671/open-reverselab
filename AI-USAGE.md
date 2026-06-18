@@ -15,12 +15,19 @@
 ## 2. AI 默认工作流
 
 1. **识别板块**：Web/Android/Windows/Misc；不确定时从 `boards/README.md` 选择最接近的入口。
-2. **查知识库路由**：对有明确信号的 Web 目标，运行 `python scripts/ctf-website/kb_router.py "<信号>"` 获取相关技术文件，Read 排名靠前的文件，直接用其中的伪代码。
-3. **建立或更新 case**：复杂任务必须在 `cases/<case>/` 维护轻量索引，链接样本、脚本、报告、笔记。
-4. **读取本地说明**：先看目标目录的 `README.md` / `AI-USAGE.md`，再运行工具。
-5. **证据落盘**：原始输出进 `exports/<board>/`，过程笔记进 `notes/<board>/`，最终报告进 `reports/<board>/`。
-6. **复用知识库**：通用技巧写入 `kb/`，不要只写在单个 case 里。
-7. **可回放**：每个重要动作记录命令、输入、输出路径、版本、时间。
+2. **生成任务上下文**：运行 `python scripts/misc/ai_context.py "<task>" --save`。
+3. **查知识库路由**：对有明确信号的 Web 目标，运行 `python scripts/ctf-website/kb_router.py "<信号>"`。
+4. **建立或更新 case**：复杂任务在 `cases/<case>/` 维护轻量索引。
+5. **读取本地说明**：先看目标目录的 `README.md` / `AI-USAGE.md`。
+6. **工具路由**：先运行 `python scripts/misc/ai_tool.py plan "<task>"`，再按 ID 调用工具。
+7. **证据落盘**：原始输出进 `exports/<board>/`，笔记进 `notes/<board>/`，最终报告进 `reports/<board>/`。
+8. **可回放**：记录关键输入、输出路径、版本和时间。
+
+## 2.1 公共仓库边界
+
+不要把私人工作区的 `cases/`、samples、日志、真实目标、凭据、用户目录或个人信息
+迁入本仓库。通用发现应去标识化后写入 `kb/`；发布前运行
+`python scripts/misc/public_release_check.py`。详细规则见 `PUBLICATION.md`。
 
 ## 3. 跨板块联动规则
 

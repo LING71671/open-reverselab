@@ -11,10 +11,9 @@
 ## 当前重点
 
 - Web CTF：`kb/ctf-website/README.md`
-- CVE 关联网：`kb/ctf-website/techniques/cve-correlation-graph.md`
+- CVE 关联网：`kb/ctf-website/techniques/09-cve/cve-correlation-graph.md`
 
 ## AI 联动
 
 - 发现新通用技巧后，从 case 笔记提炼到 `kb/`。
 - 用 `kb/` 指导脚本和模板更新，而不是只停留在文字说明。
-

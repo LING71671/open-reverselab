@@ -131,12 +131,8 @@ PAYLOADS = [
 ]
 ```
 
-```bash
-# 使用项目已有脚本
-python scripts/misc/test_email_crlf.py
-python scripts/misc/test_email_none.py
-python scripts/misc/test_email_rate.py
-```
+将上面的 payload 放入当前 case 的最小复现脚本；不要把目标域名、Cookie、邮箱或
+请求抓包提交到公共仓库。
 
 ---
 
@@ -168,10 +164,8 @@ HPP OAuth redirect_uri → 授权码窃取 → Account Takeover
 ## 工具引用
 
 ```bash
-# 项目内脚本
-python scripts/misc/test_crlf.py
-python scripts/misc/test_email_crlf.py
-python scripts/ctf-website/http_probe.py  # HTTP 探测框架
+# 通用 HTTP 探测框架；目标参数由当前 case 提供
+python scripts/ctf-website/http_probe.py https://example.test/
 
 # 安装缺失工具
 powershell scripts/ctf-website/install_missing_tools.ps1

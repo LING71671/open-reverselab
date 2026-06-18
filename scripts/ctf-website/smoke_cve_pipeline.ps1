@@ -13,7 +13,7 @@ function New-Dir([string]$Path) {
 
 $caseDir = Join-Path $Root "cases\2026-06-cve-pipeline-smoke"
 $reportDir = Join-Path $Root "reports\ctf-website\smoke"
-$fixtureDir = Join-Path $Root "reports\ctf-website\cve-chain\smoke-input"
+$fixtureDir = Join-Path $Root "tests\fixtures\cve-chain"
 $plannerOut = Join-Path $reportDir "chain"
 New-Dir $caseDir
 New-Dir $reportDir
