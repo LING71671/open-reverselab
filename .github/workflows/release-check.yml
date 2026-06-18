@@ -1,0 +1,37 @@
+name: public-release-check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Public data and syntax checks
+        run: python scripts/misc/public_release_check.py
+      - name: Core health check
+        run: python scripts/misc/lab_healthcheck.py
+      - name: PowerShell syntax check
+        shell: pwsh
+        run: |
+          $errors = @()
+          Get-ChildItem scripts -Recurse -Filter *.ps1 | ForEach-Object {
+            $tokens = $null; $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            $errors += $parseErrors
+          }
+          if ($errors.Count) { $errors | Format-List; exit 1 }
+      - name: Offline CVE pipeline smoke
+        shell: pwsh
+        run: ./scripts/ctf-website/smoke_cve_pipeline.ps1
+      - name: ReverseLabToolsMCP dependency and CLI smoke
+        shell: pwsh
+        run: |
+          pip install uv
+          uv sync --project tools/skills/mcp/ReverseLabToolsMCP
+          uv run --project tools/skills/mcp/ReverseLabToolsMCP python tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py --help

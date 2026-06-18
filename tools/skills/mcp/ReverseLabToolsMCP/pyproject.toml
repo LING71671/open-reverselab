@@ -1,0 +1,13 @@
+[project]
+name = "reverselab-tools-mcp"
+version = "0.1.0"
+description = "Portable MCP tools for the ReverseLab workspace"
+license = "GPL-3.0-only"
+requires-python = ">=3.10"
+dependencies = [
+  "mcp>=1.2.0,<2",
+  "pycryptodome>=3.20.0,<4",
+]
+
+[tool.uv]
+package = false

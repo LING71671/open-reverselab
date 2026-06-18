@@ -84,15 +84,24 @@ try:
     CUTTER_ROOT = _find_glob(TOOLS_WINDOWS_DIR / "Cutter", "Cutter-*/Cutter-*", "Cutter")
 except FileNotFoundError:
     CUTTER_ROOT = TOOLS_WINDOWS_DIR / "Cutter" / "Cutter-placeholder"
-RZ_BIN_EXE = _find_exe(CUTTER_ROOT, ["rz-bin.exe", "rizin.exe"], "rz-bin")
-RZ_HASH_EXE = _find_exe(CUTTER_ROOT, ["rz-hash.exe", "rz-hash.exe"], "rz-hash")
+try:
+    RZ_BIN_EXE = _find_exe(CUTTER_ROOT, ["rz-bin.exe", "rizin.exe"], "rz-bin")
+    RZ_HASH_EXE = _find_exe(CUTTER_ROOT, ["rz-hash.exe"], "rz-hash")
+except FileNotFoundError:
+    # Optional external tools must not prevent the MCP server from starting.
+    # Individual tools report the actionable install error when invoked.
+    RZ_BIN_EXE = CUTTER_ROOT / "rz-bin.exe"
+    RZ_HASH_EXE = CUTTER_ROOT / "rz-hash.exe"
 
 # DiE (version-flexible)
 try:
     DIE_ROOT = _find_glob(TOOLS_WINDOWS_DIR / "die", "die*/", "DiE")
 except FileNotFoundError:
     DIE_ROOT = TOOLS_WINDOWS_DIR / "die" / "die"
-DIEC_EXE = _find_exe(DIE_ROOT, ["diec.exe"], "diec")
+try:
+    DIEC_EXE = _find_exe(DIE_ROOT, ["diec.exe"], "diec")
+except FileNotFoundError:
+    DIEC_EXE = DIE_ROOT / "diec.exe"
 
 # PE-bear (version-flexible)
 try:

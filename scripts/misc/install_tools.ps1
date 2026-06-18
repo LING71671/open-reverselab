@@ -429,9 +429,15 @@ function Install-Maven {
 
 function Install-McpSkills {
     Write-Host "`n[Skills] MCP Servers" -ForegroundColor Cyan
-    Write-Host "  MCP servers are under development." -ForegroundColor Yellow
-    Write-Host "  GhidraMCP, JSHookLocal, ReverseLabToolsMCP:" -ForegroundColor Yellow
-    Write-Host "    Clone to tools/skills/mcp/<name>/ and follow README.md" -ForegroundColor Yellow
+    $coreProject = Join-Path $toolsDir "skills\mcp\ReverseLabToolsMCP"
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        throw "uv is required for ReverseLabToolsMCP. Install from https://docs.astral.sh/uv/"
+    }
+    & uv sync --project $coreProject
+    if ($LASTEXITCODE -ne 0) { throw "ReverseLabToolsMCP dependency installation failed" }
+    Write-Host "  ReverseLabToolsMCP ready." -ForegroundColor Green
+    Write-Host "  Optional GhidraMCP/JSHookLocal are not enabled by default." -ForegroundColor Yellow
+    Write-Host "  Follow tools/skills/mcp/<name>/README.md, then merge .mcp.optional.example.json." -ForegroundColor Yellow
 }
 
 # ═══════════════════════════════════════════

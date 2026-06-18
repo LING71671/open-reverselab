@@ -1,75 +1,74 @@
 #!/usr/bin/env python3
-"""
-ReverseLab 环境健康检查。
+"""Portable, no-popup health check for a ReverseLab checkout."""
 
-Usage:
-    python scripts/misc/lab_healthcheck.py
+from __future__ import annotations
 
-Checks:
-    - Required directories exist
-    - Git status
-    - Tool availability (runs ai_toolcheck.py)
-    - Disk space
-"""
-
-import os
-import sys
+import argparse
+import json
+import py_compile
 import subprocess
+import sys
+from pathlib import Path
 
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
+ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_DIRS = [
-    "boards", "cases", "exports", "kb", "logs", "notes",
-    "patches", "projects", "reports", "samples", "scripts",
-    "templates", "tools", "tmp",
+    "boards", "cases", "exports", "kb", "logs", "notes", "patches",
+    "projects", "reports", "samples", "scripts", "templates", "tools", "tmp",
+]
+CORE_FILES = [
+    "AGENTS.md", "AI-USAGE.md", ".mcp.json",
+    "tools/ai-tool-registry.json", "tools/ai-tool-playbook.json",
+    "scripts/misc/ai_context.py", "scripts/misc/ai_tool.py",
+    "tools/skills/mcp/ReverseLabToolsMCP/pyproject.toml",
 ]
 
-BOARDS = ["android", "windows", "ctf-website", "misc"]
 
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--strict-tools", action="store_true", help="also require every registry tool")
+    args = ap.parse_args()
+    failures: list[str] = []
 
-def check_directories():
-    print("\n=== Directory Check ===")
-    ok = True
-    for d in REQUIRED_DIRS:
-        path = os.path.join(ROOT, d)
-        exists = os.path.isdir(path)
-        status = "✓" if exists else "✗ MISSING"
-        if not exists:
-            ok = False
-        print(f"  {status}: {d}/")
-    return ok
+    for rel in REQUIRED_DIRS:
+        if not (ROOT / rel).is_dir():
+            failures.append(f"missing directory: {rel}/")
+    for rel in CORE_FILES:
+        if not (ROOT / rel).is_file():
+            failures.append(f"missing core file: {rel}")
 
+    for path in ROOT.rglob("*.py"):
+        if any(part in {".git", ".venv", "venv", "node_modules"} for part in path.parts):
+            continue
+        try:
+            py_compile.compile(str(path), doraise=True)
+        except Exception as exc:
+            failures.append(f"python syntax: {path.relative_to(ROOT)}: {exc}")
 
-def check_platform_dirs():
-    print("\n=== Platform Directory Check ===")
-    ok = True
-    for area in BOARDS:
-        for parent in ["samples", "projects", "exports", "notes", "reports", "patches", "scripts"]:
-            path = os.path.join(ROOT, parent, area)
-            if not os.path.isdir(path):
-                print(f"  ✗ MISSING: {parent}/{area}/")
-                ok = False
-    if ok:
-        print("  ✓ All platform directories present")
-    return ok
+    for rel in [".mcp.json", "tools/ai-tool-registry.json", "tools/ai-tool-playbook.json"]:
+        try:
+            json.loads((ROOT / rel).read_text(encoding="utf-8"))
+        except Exception as exc:
+            failures.append(f"json parse: {rel}: {exc}")
 
+    tool_result = None
+    if args.strict_tools:
+        tool_result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/misc/ai_toolcheck.py")], cwd=ROOT
+        ).returncode
+        if tool_result:
+            failures.append("strict tool availability check failed")
 
-def main():
-    print("ReverseLab Health Check")
-    print(f"  Root: {ROOT}")
-
-    dirs_ok = check_directories()
-    platform_ok = check_platform_dirs()
-
-    # Tool check
-    toolcheck = os.path.join(ROOT, "scripts", "misc", "ai_toolcheck.py")
-    if os.path.exists(toolcheck):
-        print("\n=== Tool Check ===")
-        subprocess.run([sys.executable, toolcheck])
-
-    print(f"\n{'✓ All checks passed' if dirs_ok and platform_ok else '✗ Issues found — see above'}")
+    payload = {
+        "root": str(ROOT),
+        "overall": "PASS" if not failures else "FAIL",
+        "strict_tools": args.strict_tools,
+        "failures": failures,
+        "note": "External GUI/CLI tools are optional unless --strict-tools is used.",
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if not failures else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

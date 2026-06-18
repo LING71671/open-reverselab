@@ -1,81 +1,13 @@
 {
   "mcpServers": {
-    "ghidra": {
-      "command": "uv",
-      "args": [
-        "run",
-        "tools/skills/mcp/GhidraMCP/bridge_mcp_ghidra.py",
-        "--ghidra-server",
-        "http://127.0.0.1:18080/"
-      ],
-      "env": {}
-    },
     "reverse_lab_tools": {
       "command": "uv",
       "args": [
         "run",
+        "--project",
+        "tools/skills/mcp/ReverseLabToolsMCP",
+        "python",
         "tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py"
-      ],
-      "env": {}
-    },
-    "jshook": {
-      "command": "node",
-      "args": [
-        "tools/skills/mcp/JSHookLocal/dist/index.js"
-      ],
-      "env": {
-        "DEFAULT_LLM_PROVIDER": "none",
-        "PUPPETEER_HEADLESS": "false",
-        "PUPPETEER_TIMEOUT": "30000"
-      }
-    },
-    "github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "."
-      ],
-      "env": {}
-    },
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
-      "env": {}
-    },
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "@playwright/mcp@latest"
-      ],
-      "env": {}
-    },
-    "puppeteer": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ],
-      "env": {}
-    },
-    "shell": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@mako10k/mcp-shell-server"
       ],
       "env": {}
     }

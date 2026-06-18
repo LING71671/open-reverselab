@@ -15,10 +15,14 @@ uv sync
 {
   "reverse_lab_tools": {
     "command": "uv",
-    "args": ["run", "tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py"]
+    "args": ["run", "--project", "tools/skills/mcp/ReverseLabToolsMCP", "python", "tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py"]
   }
 }
 ```
+
+仓库默认 `.mcp.json` 只启用随仓库发布、能够直接安装的
+`reverse_lab_tools`。GhidraMCP 和 JSHookLocal 属于可选第三方组件，安装后可从
+`.mcp.optional.example.json` 复制相应配置；默认配置不会引用尚不存在的文件。
 
 ## 工具列表
 
