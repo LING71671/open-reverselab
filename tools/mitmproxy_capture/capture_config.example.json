@@ -1,0 +1,45 @@
+{
+  "schema": "reverselab.mitmproxy_capture_config.v1",
+  "proxy": {
+    "port": 8080,
+    "listen_host": "0.0.0.0"
+  },
+  "capture": {
+    "output_dir": "exports/mitmproxy",
+    "save_body": true,
+    "max_body_bytes": 102400,
+    "filter_hosts": []
+  },
+  "modify_rules": {
+    "request": [
+      {
+        "host_pattern": ".*",
+        "path_pattern": ".*",
+        "header_set": {
+          "X-ReverseLab": "1.0"
+        },
+        "header_del": [],
+        "body_replace": []
+      }
+    ],
+    "response": [
+      {
+        "host_pattern": ".*",
+        "path_pattern": "/license/verify",
+        "header_set": {},
+        "header_del": [],
+        "body_replace": [
+          ["\"valid\":false", "\"valid\":true"]
+        ],
+        "status_override": null,
+        "body_override": null
+      }
+    ]
+  },
+  "replay": {
+    "target_override": "",
+    "timeout_sec": 15,
+    "concurrency": 1,
+    "delay_ms": 0
+  }
+}

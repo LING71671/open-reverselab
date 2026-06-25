@@ -1,0 +1,1413 @@
+{
+  "version": "1.0",
+  "purpose": "Signal → technique file mapping for kb_router.py",
+  "entries": [
+    {
+      "id": "jwt",
+      "signals": [
+        "jwt",
+        "json web token",
+        "bearer",
+        "authorization header",
+        "token",
+        "eyJ",
+        "jws",
+        "jwe",
+        "HMAC",
+        "JWT"
+      ],
+      "files": [
+        "02-auth/jwt/00-overview.md",
+        "02-auth/jwt/01-alg-none.md",
+        "02-auth/jwt/02-algorithm-confusion.md",
+        "02-auth/jwt/03-weak-key-bruteforce.md",
+        "02-auth/jwt/04-kid-injection.md",
+        "02-auth/jwt/05-jku-x5u-abuse.md",
+        "02-auth/jwt/06-claim-missing.md",
+        "02-auth/jwt/07-theft-replay.md",
+        "02-auth/jwt/08-cve-library.md",
+        "02-auth/jwt/09-toolchain-defense.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "oauth",
+      "signals": [
+        "oauth",
+        "oauth2",
+        "oidc",
+        "openid",
+        "sso",
+        "redirect_uri",
+        "authorization code",
+        "implicit flow",
+        "pkce",
+        "state nonce",
+        "ID token",
+        "access token"
+      ],
+      "files": [
+        "02-auth/oauth-sso.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "saml",
+      "signals": [
+        "saml",
+        "xml signature",
+        "assertion",
+        "saml response",
+        "xml canonicalization",
+        "xml wrapping",
+        "identity provider",
+        "idp"
+      ],
+      "files": [
+        "02-auth/saml-attacks.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "ldap",
+      "signals": [
+        "ldap",
+        "active directory",
+        "directory service",
+        "ldap filter",
+        "jndi",
+        "389",
+        "636"
+      ],
+      "files": [
+        "02-auth/ldap-injection.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "host-header",
+      "signals": [
+        "host header",
+        "host injection",
+        "password reset",
+        "vhost",
+        "x-forwarded-host",
+        "host override"
+      ],
+      "files": [
+        "02-auth/host-header.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "sqli",
+      "signals": [
+        "sql",
+        "sqli",
+        "sql injection",
+        "database",
+        "mysql",
+        "postgresql",
+        "oracle",
+        "mssql",
+        "sqlite",
+        "nosql",
+        "mongodb",
+        "query",
+        "waf bypass sql"
+      ],
+      "files": [
+        "03-injection/sqli-nosqli.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "ssti",
+      "signals": [
+        "ssti",
+        "template injection",
+        "template engine",
+        "jinja2",
+        "twig",
+        "freemarker",
+        "thymeleaf",
+        "velocity",
+        "smarty",
+        "razor",
+        "pebble",
+        "tornado",
+        "erb"
+      ],
+      "files": [
+        "03-injection/ssti.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "prototype-pollution",
+      "signals": [
+        "prototype pollution",
+        "pp",
+        "__proto__",
+        "constructor.prototype",
+        "node.js",
+        "object merge",
+        "deep copy",
+        "ejs",
+        "pug"
+      ],
+      "files": [
+        "03-injection/prototype-pollution.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "graphql",
+      "signals": [
+        "graphql",
+        "graphiql",
+        "introspection",
+        "mutation",
+        "subscription",
+        "fragment",
+        "alias",
+        "persisted query",
+        "__typename",
+        "__schema"
+      ],
+      "files": [
+        "03-injection/graphql.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "hpp-crlf",
+      "signals": [
+        "hpp",
+        "parameter pollution",
+        "crlf",
+        "crlf injection",
+        "response splitting",
+        "header injection",
+        "smtp injection",
+        "email injection",
+        "%0d%0a"
+      ],
+      "files": [
+        "03-injection/hpp-crlf.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "redos-timing",
+      "signals": [
+        "redos",
+        "regex",
+        "backtracking",
+        "regular expression",
+        "timing attack",
+        "side channel",
+        "catastrophic backtracking",
+        "event loop block"
+      ],
+      "files": [
+        "03-injection/redos-timing.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "grpc",
+      "signals": [
+        "grpc",
+        "protobuf",
+        "protocol buffer",
+        "grpc-web",
+        "h2",
+        "field number"
+      ],
+      "files": [
+        "03-injection/grpc-protobuf.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "ssrf",
+      "signals": [
+        "ssrf",
+        "server-side request forgery",
+        "gopher",
+        "metadata",
+        "169.254",
+        "internal network",
+        "dns rebinding",
+        "url parser",
+        "imds"
+      ],
+      "files": [
+        "04-ssrf/ssrf.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "open-redirect",
+      "signals": [
+        "open redirect",
+        "redirect",
+        "redirect_uri",
+        "302",
+        "301",
+        "location header",
+        "next param",
+        "return url"
+      ],
+      "files": [
+        "04-ssrf/open-redirect.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "deserialization",
+      "signals": [
+        "deserialization",
+        "unserialize",
+        "pickle",
+        "ysoserial",
+        "gadget",
+        "binaryformatter",
+        "node-serialize",
+        "hessian",
+        "jackson polymorphic"
+      ],
+      "files": [
+        "05-deserialization/deserialization.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "file-attacks",
+      "signals": [
+        "file upload",
+        "lfi",
+        "xxe",
+        "path traversal",
+        "zip slip",
+        "php wrapper",
+        "pdf generation",
+        "wkhtmltopdf",
+        "include",
+        "../",
+        "file read"
+      ],
+      "files": [
+        "06-file-attacks/file-upload-xxe-lfi.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "xss",
+      "signals": [
+        "xss",
+        "cross site scripting",
+        "csp",
+        "content security policy",
+        "dom clobbering",
+        "svg",
+        "sanitizer",
+        "dompurify",
+        "admin bot",
+        "mutation xss",
+        "exfiltration"
+      ],
+      "files": [
+        "07-client/admin-bot-xss.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "js-runtime",
+      "signals": [
+        "javascript",
+        "js",
+        "obfuscation",
+        "deobfuscate",
+        "webpack",
+        "hook",
+        "fetch api",
+        "webcrypto",
+        "cryptojs",
+        "ast",
+        "babel",
+        "wasm"
+      ],
+      "files": [
+        "07-client/js-runtime.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "websocket",
+      "signals": [
+        "websocket",
+        "ws",
+        "wss",
+        "socket.io",
+        "mqtt",
+        "cswsh",
+        "real-time",
+        "realtime"
+      ],
+      "files": [
+        "07-client/websocket.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "cors-csrf",
+      "signals": [
+        "cors",
+        "csrf",
+        "cross origin",
+        "access-control",
+        "same origin",
+        "cross-site request forgery",
+        "samesite",
+        "aca-header",
+        "origin header"
+      ],
+      "files": [
+        "07-client/cors-csrf.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "postmessage",
+      "signals": [
+        "postmessage",
+        "post message",
+        "window.postmessage",
+        "cross origin communication",
+        "event.source",
+        "structured clone"
+      ],
+      "files": [
+        "07-client/postmessage.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "web-crypto",
+      "signals": [
+        "web crypto",
+        "subtle",
+        "crypto.subtle",
+        "math.random",
+        "prng",
+        "rsa key",
+        "extractable",
+        "ecb",
+        "jwe"
+      ],
+      "files": [
+        "07-client/web-crypto-abuse.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "race-smuggling",
+      "signals": [
+        "race condition",
+        "cache poisoning",
+        "request smuggling",
+        "cl.te",
+        "te.cl",
+        "turbo intruder",
+        "concurrent",
+        "toctou",
+        "double spend"
+      ],
+      "files": [
+        "08-infra/race-cache-smuggling.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "http2",
+      "signals": [
+        "http2",
+        "h2",
+        "hpack",
+        "continuation",
+        "stream multiplexing",
+        "h2c",
+        "http/2"
+      ],
+      "files": [
+        "08-infra/http2-attacks.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "cache-deception",
+      "signals": [
+        "cache deception",
+        "web cache",
+        "cdn cache",
+        "cached response",
+        "x-cache",
+        "cache hit",
+        "fat get"
+      ],
+      "files": [
+        "08-infra/web-cache-deception.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "cve",
+      "signals": [
+        "cve",
+        "nvd",
+        "epss",
+        "kev",
+        "vulnerability",
+        "exploit",
+        "poc",
+        "cvss",
+        "cwe",
+        "cpe"
+      ],
+      "files": [
+        "09-cve/cve-workflow.md",
+        "09-cve/cve-correlation-graph.md",
+        "09-cve/multi-cve-chain-playbook.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "cloud-serverless",
+      "signals": [
+        "lambda",
+        "serverless",
+        "aws",
+        "cloud function",
+        "azure function",
+        "metadata service",
+        "169.254.169.254",
+        "iam role",
+        "function url"
+      ],
+      "files": [
+        "10-cloud/serverless-lambda.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "kubernetes",
+      "signals": [
+        "kubernetes",
+        "k8s",
+        "pod",
+        "container",
+        "docker",
+        "service account",
+        "kubelet",
+        "etcd",
+        "runc",
+        "rbac",
+        "hostpath"
+      ],
+      "files": [
+        "10-cloud/kubernetes-container.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "ci-cd",
+      "signals": [
+        "ci/cd",
+        "jenkins",
+        "github actions",
+        "gitlab ci",
+        "pipeline",
+        "runner",
+        "workflow",
+        "self-hosted",
+        "groovy"
+      ],
+      "files": [
+        "10-cloud/ci-cd-pipeline.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "payment",
+      "signals": [
+        "payment",
+        "pay",
+        "支付",
+        "checkout",
+        "order",
+        "订单",
+        "trade",
+        "notify",
+        "callback",
+        "webhook",
+        "alipay",
+        "wechat pay",
+        "stripe",
+        "paypal",
+        "amount",
+        "金额",
+        "coupon",
+        "优惠券",
+        "discount",
+        "refund",
+        "退款",
+        "balance",
+        "余额",
+        "recharge",
+        "充值",
+        "invoice"
+      ],
+      "files": [
+        "12-payment/payment-logic.md",
+        "12-payment/payment-bypass.md",
+        "12-payment/payment-callback-async.md",
+        "12-payment/payment-php.md",
+        "12-payment/payment-subscription.md",
+        "12-payment/payment-digital-goods.md",
+        "12-payment/payment-email-bounce-idor.md",
+        "12-payment/platform-fingerprints.md",
+        "12-payment/ticket-rush-api-reversing.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "payment-bypass",
+      "signals": [
+        "payment bypass",
+        "支付绕过",
+        "zero price",
+        "零元购",
+        "amount tampering",
+        "price manipulation",
+        "type confusion",
+        "mass assignment",
+        "state machine",
+        "rounding attack",
+        "float precision",
+        "currency attack",
+        "coupon abuse",
+        "discount abuse"
+      ],
+      "files": [
+        "12-payment/payment-bypass.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "payment-callback",
+      "signals": [
+        "payment callback",
+        "支付回调",
+        "async payment",
+        "异步支付",
+        "notify",
+        "webhook",
+        "signature bypass",
+        "签名绕过",
+        "idempotency",
+        "幂等",
+        "replay attack",
+        "settlement",
+        "结算",
+        "reconciliation",
+        "对账",
+        "message queue",
+        "mq attack",
+        "TOCTOU payment"
+      ],
+      "files": [
+        "12-payment/payment-callback-async.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "payment-subscription",
+      "signals": [
+        "subscription",
+        "订阅",
+        "recurring",
+        "定期付款",
+        "trial",
+        "试用",
+        "renewal",
+        "续费",
+        "auto-renew",
+        "自动续费",
+        "proration",
+        "按比例",
+        "plan switch",
+        "升级",
+        "降级",
+        "metered billing",
+        "计量计费",
+        "seat",
+        "license",
+        "stripe billing",
+        "invoice"
+      ],
+      "files": [
+        "12-payment/payment-subscription.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "payment-digital-goods",
+      "signals": [
+        "digital goods",
+        "虚拟商品",
+        "IAP",
+        "in-app purchase",
+        "内购",
+        "receipt",
+        "收据",
+        "app store",
+        "google play",
+        "steam",
+        "cdkey",
+        "卡密",
+        "license key",
+        "激活码",
+        "virtual currency",
+        "虚拟货币",
+        "token",
+        "代币",
+        "loyalty points",
+        "积分",
+        "gift card",
+        "礼品卡"
+      ],
+      "files": [
+        "12-payment/payment-digital-goods.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "payment-bounce-idor",
+      "signals": [
+        "bounce",
+        "退信",
+        "NDR",
+        "non-delivery receipt",
+        "email bounce",
+        "bounce callback",
+        "order idor",
+        "订单越权",
+        "order enumeration",
+        "guest order leak",
+        "card key leak",
+        "卡密泄露",
+        "voucher leak",
+        "IDOR",
+        "insecure direct object reference",
+        "CWE-639",
+        "CWE-862",
+        "CWE-200",
+        "order detail leak"
+      ],
+      "files": [
+        "12-payment/payment-email-bounce-idor.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "race-lost-update",
+      "signals": [
+        "lost update",
+        "race condition",
+        "TOCTOU",
+        "optimistic lock",
+        "version conflict",
+        "乐观锁",
+        "version number",
+        "balance bypass",
+        "quota bypass",
+        "余额绕过",
+        "new-api",
+        "new api",
+        "one api",
+        "ai gateway",
+        "LLM proxy",
+        "并发扣费",
+        "write skew",
+        "double spend",
+        "重复消费",
+        "竞争条件",
+        "数据库竞态",
+        "SQLite write lock"
+      ],
+      "files": [
+        "12-payment/payment-race-lost-update.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "payment-php",
+      "signals": [
+        "php",
+        "laravel",
+        "thinkphp",
+        "wordpress",
+        "woocommerce",
+        "magento",
+        "extract",
+        "strcmp",
+        "type juggling",
+        "magic hash",
+        "0e",
+        "php serialization",
+        "phar",
+        "php session",
+        "eloquent",
+        "mass assignment",
+        "cashier",
+        "omnipay",
+        "yansongda",
+        "composer"
+      ],
+      "files": [
+        "12-payment/payment-php.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature",
+      "signals": [
+        "sign",
+        "signature",
+        "sign_type",
+        "sign_method",
+        "hmac",
+        "hash",
+        "md5 sign",
+        "sha1 sign",
+        "sha256 sign",
+        "signature bypass",
+        "签名",
+        "signature forgery",
+        "签名伪造",
+        "signature verification",
+        "verify sign",
+        "check sign"
+      ],
+      "files": [
+        "13-signature/00-overview.md",
+        "13-signature/01-algorithm.md",
+        "13-signature/02-implementation.md",
+        "13-signature/03-key-attacks.md",
+        "13-signature/04-canonicalization.md",
+        "13-signature/05-length-extension.md",
+        "13-signature/06-replay-nonce.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-algorithm",
+      "signals": [
+        "algorithm downgrade",
+        "alg:none",
+        "sign_type",
+        "sign_method",
+        "algorithm confusion",
+        "rs256 hs256",
+        "md5 downgrade",
+        "none algorithm",
+        "空签名",
+        "算法降级"
+      ],
+      "files": [
+        "13-signature/01-algorithm.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-implementation",
+      "signals": [
+        "strcmp bypass",
+        "md5 array",
+        "sha1 array",
+        "magic hash",
+        "0e",
+        "type juggling sign",
+        "== vs ===",
+        "timing attack sign",
+        "extract bypass",
+        "parse_str",
+        "variable override"
+      ],
+      "files": [
+        "13-signature/02-implementation.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-key",
+      "signals": [
+        "weak key",
+        "弱密钥",
+        "secret key leak",
+        "hardcoded key",
+        "key reuse",
+        "api key leak",
+        ".env key",
+        "secret_key",
+        "app_key",
+        "hmac key",
+        "signing key",
+        "jwt secret",
+        "密钥泄露"
+      ],
+      "files": [
+        "13-signature/03-key-attacks.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "signature-canonicalization",
+      "signals": [
+        "canonicalization",
+        "参数排序",
+        "url encoding sign",
+        "json canonicalization",
+        "xml canonicalization",
+        "c14n",
+        "parameter pollution",
+        "hpp",
+        "规范化"
+      ],
+      "files": [
+        "13-signature/04-canonicalization.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "signature-length-extension",
+      "signals": [
+        "length extension",
+        "hash length extension",
+        "hash extender",
+        "hashpumpy",
+        "md5 extension",
+        "sha1 extension",
+        "sha256 extension",
+        "长度扩展",
+        "hash length attack"
+      ],
+      "files": [
+        "13-signature/05-length-extension.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "signature-replay",
+      "signals": [
+        "replay attack",
+        "重放",
+        "nonce bypass",
+        "nonce reuse",
+        "timestamp bypass",
+        "replay sig",
+        "signature replay",
+        "expired sign",
+        "nonce predict",
+        "signature nonce"
+      ],
+      "files": [
+        "13-signature/06-replay-nonce.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "supply-chain",
+      "signals": [
+        "dependency confusion",
+        "supply chain",
+        "npm",
+        "pypi",
+        "typosquatting",
+        "manifest confusion",
+        "package hijack",
+        "package.json"
+      ],
+      "files": [
+        "11-supply-chain/dependency-confusion.md"
+      ],
+      "priority": 7
+    },
+    {
+      "id": "recon",
+      "signals": [
+        "recon",
+        "reconnaissance",
+        "header fuzzing",
+        "route",
+        "directory",
+        "path",
+        "method override",
+        "technology stack",
+        "fingerprint",
+        "wappalyzer",
+        "whatweb"
+      ],
+      "files": [
+        "01-recon/recon-routing.md",
+        "01-recon/version-fingerprinting.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "cloudflare-bypass",
+      "signals": [
+        "cloudflare",
+        "cf-ray",
+        "cf-cache-status",
+        "cdn bypass",
+        "origin ip",
+        "源站",
+        "real ip",
+        "true ip",
+        "waf bypass",
+        "cdn",
+        "cloudfront",
+        "akamai",
+        "fastly",
+        "imperva",
+        "dns history",
+        "securitytrails",
+        "censys",
+        "shodan",
+        "crt.sh",
+        "certificate transparency",
+        "ssl search"
+      ],
+      "files": [
+        "01-recon/cloudflare-bypass.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "captcha-bypass",
+      "signals": [
+        "captcha",
+        "验证码",
+        "recaptcha",
+        "hcaptcha",
+        "turnstile",
+        "geetest",
+        "极验",
+        "滑块",
+        "slider",
+        "ddddocr",
+        "2captcha",
+        "anticaptcha",
+        "capsolver",
+        "ocr",
+        "token reuse",
+        "automation",
+        "playwright",
+        "stealth",
+        "sms verify",
+        "验证码绕过"
+      ],
+      "files": [
+        "01-recon/captcha-bypass.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "fofa",
+      "signals": [
+        "fofa",
+        "FOFA",
+        "网络空间测绘",
+        "资产测绘",
+        "asset discovery",
+        "space mapping",
+        "fofa.so",
+        "hunter",
+        "quake",
+        "被动收集",
+        "passive recon",
+        "网络空间搜索引擎",
+        "scan engine",
+        "org filter",
+        "fofa query",
+        "fofa语法"
+      ],
+      "files": [
+        "01-recon/fofa-hunting.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "attack-network",
+      "signals": [
+        "attack network",
+        "attack graph",
+        "attack chain",
+        "attack path",
+        "entry point",
+        "多入口",
+        "攻击路径",
+        "分叉",
+        "全网图"
+      ],
+      "files": [
+        "attack-network.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "idor",
+      "signals": [
+        "idor",
+        "insecure direct object reference",
+        "越权",
+        "authorization bypass",
+        "object reference",
+        "uuid predictable",
+        "batch idor",
+        "graphql idor",
+        "enumeration",
+        "id increment",
+        "horizontal privilege",
+        "vertical privilege",
+        "CWE-639"
+      ],
+      "files": [
+        "14-idor/01-idor-enumeration.md",
+        "14-idor/02-bac-business-logic.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "mass-assignment",
+      "signals": [
+        "mass assignment",
+        "批量赋值",
+        "属性注入",
+        "parameter injection",
+        "laravel fillable",
+        "spring boot binding",
+        "nesting params",
+        "price manipulation",
+        "价格篡改",
+        "coupon stacking",
+        "优惠券叠加",
+        "currency confusion",
+        "race condition coupon",
+        "CWE-915"
+      ],
+      "files": [
+        "15-mass-assignment/01-mass-assignment.md",
+        "15-mass-assignment/02-parameter-tampering.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "rate-limit",
+      "signals": [
+        "rate limit",
+        "速率限制",
+        "brute force",
+        "暴力破解",
+        "credential spraying",
+        "凭证喷洒",
+        "mfa fatigue",
+        "push bombing",
+        "ip rotation",
+        "x-forwarded-for",
+        "throttle bypass",
+        "password spray",
+        "concurrent bypass"
+      ],
+      "files": [
+        "16-rate-limit/01-rate-limit-bypass.md",
+        "16-rate-limit/02-brute-force-tactics.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "api-attacks",
+      "signals": [
+        "api",
+        "swagger",
+        "openapi",
+        "graphql introspection",
+        "wsdl",
+        "soap",
+        "postman collection",
+        "api key leak",
+        "github dorking",
+        "firebase config",
+        "aws key",
+        "gcp key",
+        "stripe key",
+        "source map",
+        "unwebpack"
+      ],
+      "files": [
+        "17-api-attacks/01-api-discovery-leak.md",
+        "17-api-attacks/02-api-key-leak.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "csp-cors-advanced",
+      "signals": [
+        "csp bypass",
+        "content security policy",
+        "csp evaluator",
+        "jsonp",
+        "cdn gadget",
+        "dom clobber",
+        "strict-dynamic bypass",
+        "xs-leaks",
+        "cross-site leak",
+        "side channel",
+        "frame counting",
+        "xs-search",
+        "xs-leak",
+        "performance api"
+      ],
+      "files": [
+        "18-cors-csp-advanced/01-csp-bypass.md",
+        "18-cors-csp-advanced/02-xs-leaks-browser-sidechannels.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "dns-email",
+      "signals": [
+        "subdomain takeover",
+        "子域名接管",
+        "dangling dns",
+        "cname takeover",
+        "cloudfront takeover",
+        "email spoofing",
+        "spf",
+        "dkim",
+        "dmarc",
+        "smtp injection",
+        "phishing",
+        "microsoft 365",
+        "spf bypass",
+        "sender forgery"
+      ],
+      "files": [
+        "19-dns-email/01-subdomain-takeover.md",
+        "19-dns-email/02-email-spoofing.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "oauth-deep",
+      "signals": [
+        "oauth attack",
+        "pkce bypass",
+        "redirect_uri bypass",
+        "state replay",
+        "scope escalation",
+        "implicit flow",
+        "session fixation",
+        "sso hijack",
+        "remember-me",
+        "refresh token abuse",
+        "sameSite bypass",
+        "session puzzling"
+      ],
+      "files": [
+        "20-oauth-deep/01-oauth-attack-chains.md",
+        "20-oauth-deep/02-session-fixation-attacks.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "mobile-bridge",
+      "signals": [
+        "webview",
+        "addjavascriptinterface",
+        "deeplink",
+        "intent hijacking",
+        "cordova",
+        "react native",
+        "electron",
+        "nodeintegration",
+        "contextisolation",
+        "flutter",
+        "platform channel",
+        "capacitor",
+        "wkwebview",
+        "javascript bridge"
+      ],
+      "files": [
+        "21-mobile-bridge/01-webview-attacks.md",
+        "21-mobile-bridge/02-cordova-reactnative.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "dos",
+      "signals": [
+        "dos",
+        "ddos",
+        "denial of service",
+        "拒绝服务",
+        "slowloris",
+        "slow http",
+        "rapid reset",
+        "h2 rapid reset",
+        "CVE-2023-44487",
+        "rudy",
+        "websocket dos",
+        "graphql amplification",
+        "resource exhaustion",
+        "hashdos",
+        "billion laughs",
+        "xml bomb",
+        "zip bomb",
+        "amplification",
+        "drdos",
+        "dns amplification",
+        "ntp monlist",
+        "memcached udp",
+        "ip spoofing",
+        "反射攻击",
+        "放大攻击"
+      ],
+      "files": [
+        "22-dos/01-application-layer-dos.md",
+        "22-dos/02-resource-exhaustion.md",
+        "22-dos/03-amplification-drdos.md",
+        "22-dos/04-redos.md",
+        "22-dos/05-http2-continuation.md",
+        "22-dos/06-tcp-state-exhaustion.md",
+        "22-dos/07-dns-dos.md",
+        "22-dos/08-tls-exhaustion.md",
+        "22-dos/09-cache-cdn-dos.md",
+        "22-dos/10-api-abuse.md",
+        "22-dos/11-cloud-container-dos.md",
+        "22-dos/12-ssrf-dos.md",
+        "22-dos/13-database-dos.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "paywall-bypass",
+      "signals": [
+        "paywall",
+        "付费墙",
+        "付费订阅",
+        "metered paywall",
+        "hard paywall",
+        "registration wall",
+        "piano",
+        "tinypass",
+        "poool",
+        "sophi",
+        "zephr",
+        "wallkit",
+        "axate",
+        "agate",
+        "leaky paywall",
+        "substack paywall",
+        "ghost paywall",
+        "medium paywall",
+        "beehiiv",
+        "googlebot",
+        "bingbot",
+        "user-agent spoof",
+        "referer spoof",
+        "declarativeNetRequest",
+        "archive.is",
+        "json-ld articleBody",
+        "amp paywall",
+        "amp-access",
+        "bloomberg paywall",
+        "wsj paywall",
+        "nytimes paywall",
+        "cookie paywall",
+        "localStorage meter",
+        "piano overlay",
+        "news paywall",
+        "publisher paywall",
+        "site paywall"
+      ],
+      "files": [
+        "23-paywall-bypass/01-paywall-detection-bypass.md",
+        "23-paywall-bypass/02-http-header-manipulation.md",
+        "23-paywall-bypass/03-network-rule-blocking.md",
+        "23-paywall-bypass/04-content-extraction.md",
+        "23-paywall-bypass/05-dom-css-manipulation.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "database-attacks",
+      "signals": [
+        "database",
+        "SQL",
+        "sql",
+        "注入",
+        "sqli",
+        "脱库",
+        "数据库",
+        "备份",
+        "backup",
+        "dump",
+        "nosql",
+        "mongodb",
+        "redis",
+        "elasticsearch",
+        "默认密码",
+        "default password",
+        "连接字符串",
+        "connection string",
+        "config.php",
+        ".env",
+        "源码泄露",
+        "phpmyadmin",
+        "adminer",
+        "宽字节",
+        "GBK",
+        "WAF bypass",
+        "二阶注入",
+        "second order",
+        "OOB",
+        "DNSLog",
+        "盲注",
+        "blind",
+        "time-based",
+        "error-based",
+        "发卡",
+        "卡密",
+        "CDK",
+        "卡盟",
+        "die缺失",
+        "IDOR"
+      ],
+      "files": [
+        "24-database/00-overview.md",
+        "24-database/01-sqli-fundamentals.md",
+        "24-database/02-sqli-advanced.md",
+        "24-database/03-nosql-injection.md",
+        "24-database/04-config-exposure.md",
+        "24-database/05-backup-log-leak.md",
+        "24-database/06-card-platform.md",
+        "24-database/README.md"
+      ],
+      "priority": 10
+    }
+  ]
+}

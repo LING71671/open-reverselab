@@ -1,0 +1,603 @@
+{
+  "schema": "reverselab.ai_tool_playbook.v1",
+  "purpose": "Task keywords -> tool sequences. Used by scripts/misc/ai_tool.py plan so agents remember which installed tools to use.",
+  "rules": [
+    {
+      "id": "web-first-recon",
+      "keywords": [
+        "web",
+        "website",
+        "ctf",
+        "http",
+        "target",
+        "站点",
+        "网站",
+        "目录",
+        "路由"
+      ],
+      "when": "New web/website CTF target or sparse route map.",
+      "tools": [
+        "ctf.httpx",
+        "ctf.katana",
+        "ctf.ffuf",
+        "ctf.gobuster",
+        "ctf.feroxbuster"
+      ],
+      "kb_files": [
+        "01-recon/recon-routing.md",
+        "01-recon/version-fingerprinting.md",
+        "attack-network.md"
+      ],
+      "method": "Probe status/tech with httpx; crawl with katana; fuzz routes with ffuf/gobuster/feroxbuster; save raw outputs under exports/ctf-website/<case>.",
+      "evidence": "HTTP status/title/headers, discovered URLs, wordlist, response filters."
+    },
+    {
+      "id": "web-injection",
+      "keywords": [
+        "sqli",
+        "sql",
+        "nosql",
+        "ssti",
+        "模板",
+        "注入",
+        "参数",
+        "表单"
+      ],
+      "when": "Forms, parameters, JSON APIs, template rendering, search endpoints, or error-based hints.",
+      "tools": [
+        "ctf.sqlmap",
+        "ctf.tplmap",
+        "ctf.jwt_tool"
+      ],
+      "kb_files": [
+        "03-injection/sqli-nosqli.md",
+        "03-injection/ssti.md",
+        "03-injection/prototype-pollution.md",
+        "03-injection/graphql.md",
+        "03-injection/hpp-crlf.md"
+      ],
+      "method": "Confirm one narrow input-to-effect path manually, then use sqlmap/tplmap for systematic enumeration; use jwt_tool for token trust boundary checks.",
+      "evidence": "Request, payload, response delta, DBMS/template engine fingerprint, extracted proof."
+    },
+    {
+      "id": "web-cve-chain",
+      "keywords": [
+        "cve",
+        "版本",
+        "fingerprint",
+        "指纹",
+        "geoserver",
+        "struts",
+        "spring",
+        "shiro",
+        "漏洞链",
+        "组合"
+      ],
+      "when": "Any product/version/banner/header/package evidence appears.",
+      "tools": [
+        "ctf.searchsploit"
+      ],
+      "scripts": [
+        "scripts/ctf-website/fingerprint_cve_pipeline.py",
+        "scripts/ctf-website/cve_graph.py",
+        "scripts/ctf-website/cve_chain_planner.py"
+      ],
+      "kb_files": [
+        "09-cve/cve-workflow.md",
+        "09-cve/cve-correlation-graph.md",
+        "09-cve/multi-cve-chain-playbook.md"
+      ],
+      "method": "Write cases/<case>/fingerprints.json; run fingerprint_cve_pipeline; inspect graph/chain output; use searchsploit for local exploit references.",
+      "evidence": "Fingerprint source, CVE report, EPSS/KEV/CWE/product edges, chain validation steps."
+    },
+    {
+      "id": "web-proxy-manual",
+      "keywords": [
+        "burp",
+        "proxy",
+        "cookie",
+        "session",
+        "登录",
+        "鉴权",
+        "csrf",
+        "oauth"
+      ],
+      "when": "Authenticated browser state, complex session mutation, or manual Repeater/Intruder workflow is needed.",
+      "tools": [
+        "ctf.burp.jar"
+      ],
+      "method": "Do not auto-launch in checks. Start Burp only on explicit user request; export decisive requests to cases/<case>/evidence.",
+      "evidence": "Raw HTTP request/response, cookies, session diff, replay result."
+    },
+    {
+      "id": "android-apk-static",
+      "keywords": [
+        "apk",
+        "android",
+        "dex",
+        "manifest",
+        "jadx",
+        "apktool",
+        "安卓",
+        "反编译"
+      ],
+      "when": "APK/XAPK/JAR/AAR static analysis or endpoint/secret extraction.",
+      "tools": [
+        "android.apktool",
+        "android.jadx"
+      ],
+      "method": "Use apktool for resources/manifest/smali; use jadx only when registry marks it callable; write outputs to projects/android/<case> and exports/android/<case>.",
+      "evidence": "Manifest entries, permissions, strings, endpoints, decompiled class paths."
+    },
+    {
+      "id": "android-repack-sign",
+      "keywords": [
+        "repack",
+        "sign",
+        "签名",
+        "重打包",
+        "frida",
+        "hook"
+      ],
+      "when": "Patch/repack APK or deploy Frida server to emulator/device.",
+      "tools": [
+        "android.apktool",
+        "android.uber_apk_signer",
+        "android.frida_server_x86_64"
+      ],
+      "scripts": [
+        "scripts/android/install_frida_server.ps1",
+        "scripts/android/repack_apk_entries.py"
+      ],
+      "method": "Patch copy only; rebuild with apktool; sign with uber-apk-signer; use install_frida_server.ps1 for target-side frida-server.",
+      "evidence": "Original hash, patch diff, signed APK path, frida version/process list."
+    },
+    {
+      "id": "windows-pe-triage",
+      "keywords": [
+        "pe",
+        "exe",
+        "dll",
+        "windows",
+        "crackme",
+        "malware",
+        "样本",
+        "壳",
+        "patch"
+      ],
+      "when": "Windows native binary triage or patch/crackme analysis.",
+      "tools": [
+        "windows.pe_bear",
+        "windows.cutter",
+        "windows.procmon",
+        "windows.hxd"
+      ],
+      "method": "Automatic checks do file probes only. For analysis use reverse_lab_tools/sample_full_workup first; GUI tools are explicit/manual follow-up.",
+      "evidence": "Hashes, imports, strings, sections, entrypoint, behavior logs, patch bytes."
+    },
+    {
+      "id": "jadx-corrupt-repair",
+      "keywords": [
+        "android",
+        "corrupt",
+        "jadx",
+        "repair",
+        "sourceforge"
+      ],
+      "when": "GitHub release 下载不稳且本地 jadx zip/jar 损坏",
+      "tools": [
+        "android.jadx"
+      ],
+      "method": "若 jadx 再损坏，优先从 SourceForge mirror 下载 v1.5.5 zip，验证 zip/jar 后解压到 tools/android/jadx，并确认 ai_toolcheck android PASS。",
+      "evidence": "Tool version output and analysis artifacts produced in the current workspace.",
+      "derived_from_findings": [
+        "3a7050b7-6b1c-4e05-9bf9-d84973d0f834"
+      ]
+    },
+    {
+      "id": "web-auth-jwt",
+      "keywords": [
+        "jwt",
+        "token",
+        "eyJ",
+        "bearer",
+        "jws",
+        "jwe",
+        "jku",
+        "jwk",
+        "kid injection",
+        "none algorithm"
+      ],
+      "when": "JWT token found in Authorization header, cookie, or URL param.",
+      "tools": [
+        "ctf.jwt_tool"
+      ],
+      "tool_payloads": {
+        "ctf.jwt_tool": {
+          "wordlists": [
+            "tools\\ctf-website\\jwt_tool\\jwt-common.txt",
+            "tools\\ctf-website\\jwt_tool\\common-headers.txt",
+            "tools\\ctf-website\\jwt_tool\\common-payloads.txt",
+            "tools\\ctf-website\\jwt_tool\\jwks-common.txt"
+          ],
+          "usage": "jwt_tool TOKEN -C -w jwt-common.txt  (爆破密钥)\njwt_tool TOKEN -X at                      (alg:none)\njwt_tool TOKEN -X k                       (KID注入)"
+        }
+      },
+      "kb_files": [
+        "02-auth/jwt/00-overview.md",
+        "02-auth/jwt/01-alg-none.md",
+        "02-auth/jwt/02-algorithm-confusion.md",
+        "02-auth/jwt/03-weak-key-bruteforce.md",
+        "02-auth/jwt/04-kid-injection.md"
+      ],
+      "method": "jwt_tool 探测算法、爆破弱密钥、alg:none、KID注入。先跑 -t (scan) 看概览。",
+      "evidence": "jwt_token, decoded_header, decoded_payload, attack_result"
+    },
+    {
+      "id": "web-injection-sqli",
+      "keywords": [
+        "sqli",
+        "sql injection",
+        "mysql",
+        "postgres",
+        "database",
+        "select",
+        "union select",
+        "or 1=1"
+      ],
+      "when": "Forms, URL params, JSON APIs, headers that interact with SQL backend.",
+      "tools": [
+        "ctf.sqlmap"
+      ],
+      "tool_payloads": {
+        "ctf.sqlmap": {
+          "payload_files": [
+            "tools\\ctf-website\\sqlmap\\data\\xml\\payloads\\boolean_blind.xml",
+            "tools\\ctf-website\\sqlmap\\data\\xml\\payloads\\error_based.xml",
+            "tools\\ctf-website\\sqlmap\\data\\xml\\payloads\\inline_query.xml",
+            "tools\\ctf-website\\sqlmap\\data\\xml\\payloads\\stacked_queries.xml",
+            "tools\\ctf-website\\sqlmap\\data\\xml\\payloads\\time_blind.xml",
+            "tools\\ctf-website\\sqlmap\\data\\xml\\payloads\\union_query.xml"
+          ],
+          "tamper_scripts": "tools\\ctf-website\\sqlmap\\tamper\\  (71个WAF绕过脚本)",
+          "wordlists": [
+            "tools\\ctf-website\\sqlmap\\data\\txt\\common-tables.txt",
+            "tools\\ctf-website\\sqlmap\\data\\txt\\common-columns.txt",
+            "tools\\ctf-website\\sqlmap\\data\\txt\\common-files.txt",
+            "tools\\ctf-website\\sqlmap\\data\\txt\\smalldict.txt",
+            "tools\\ctf-website\\sqlmap\\data\\txt\\keywords.txt"
+          ],
+          "usage": "sqlmap -r request.txt --batch  (基础)\nsqlmap -r request.txt --tamper=space2comment,charencode --level=5 --risk=3  (WAF绕过)\nsqlmap 数据可复用于 ffuf/手动构造"
+        }
+      },
+      "kb_files": [
+        "03-injection/sqli-nosqli.md"
+      ],
+      "method": "先手工确认注入点，再上 sqlmap。关注 tamper/ 目录绕过 WAF。sqlmap 的 txt 字典可复用于其他 fuzz 工具。",
+      "evidence": "注入点 URL, parameter, DBMS, extracted data, flag"
+    },
+    {
+      "id": "web-injection-ssti",
+      "keywords": [
+        "ssti",
+        "template injection",
+        "jinja2",
+        "twig",
+        "freemarker",
+        "smarty",
+        "{{",
+        "{%",
+        "${"
+      ],
+      "when": "页面回显用户输入，或 500 错误暴露模板引擎信息。",
+      "tools": [
+        "ctf.tplmap"
+      ],
+      "tool_payloads": {
+        "ctf.tplmap": {
+          "engines": [
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\jinja2.py",
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\twig.py",
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\smarty.py",
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\freemarker.py",
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\velocity.py",
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\erb.py",
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\mako.py",
+            "tools\\ctf-website\\tplmap\\plugins\\engines\\tornado.py"
+          ],
+          "usage": "tplmap.py -u 'URL?param=*' --engine jinja2\n不指定引擎时自动检测"
+        }
+      },
+      "kb_files": [
+        "03-injection/ssti.md"
+      ],
+      "method": "先用手工 {{7*7}} 确认注入点，再用 tplmap 自动探测引擎类型和 RCE。",
+      "evidence": "SSTI payload, engine fingerprint, RCE proof, flag"
+    },
+    {
+      "id": "web-cve-exploitdb",
+      "keywords": [
+        "cve",
+        "exploitdb",
+        "searchsploit",
+        "exploit",
+        "poc",
+        "version exploit"
+      ],
+      "when": "发现产品名称/版本号，需要查已公开 exploit。",
+      "tools": [
+        "ctf.searchsploit"
+      ],
+      "tool_payloads": {
+        "ctf.searchsploit": {
+          "exploit_db": "tools\\ctf-website\\exploitdb\\exploits\\  (45000+ exploits CSV indexed)",
+          "exploit_index": "tools\\ctf-website\\exploitdb\\files_exploits.csv",
+          "shellcode_db": "tools\\ctf-website\\exploitdb\\shellcodes\\",
+          "google_hacking": "tools\\ctf-website\\exploitdb\\ghdb.xml",
+          "usage": "searchsploit <product> <version>\nsearchsploit -t <platform>  (shellcode)\nsearchsploit -w <edb-id>       (在线链接)"
+        }
+      },
+      "kb_files": [
+        "09-cve/cve-workflow.md",
+        "09-cve/cve-correlation-graph.md",
+        "09-cve/multi-cve-chain-playbook.md"
+      ],
+      "method": "searchsploit 查本地 exploitdb；配合 fingerprint_cve_pipeline.py 做CVE图谱。",
+      "evidence": "CVE-IDs, EDB-IDs, exploit path, exploit result"
+    },
+    {
+      "id": "web-recon-ffuf",
+      "keywords": [
+        "fuzz",
+        "directory",
+        "route",
+        "dirb",
+        "gobuster",
+        "feroxbuster",
+        "wordlist"
+      ],
+      "when": "需要暴力枚举目录/文件/路由/参数。",
+      "tools": [
+        "ctf.ffuf",
+        "ctf.gobuster",
+        "ctf.feroxbuster",
+        "ctf.dirsearch"
+      ],
+      "tool_payloads": {
+        "ctf.dirsearch": {
+          "wordlists": [
+            "tools\\ctf-website\\dirsearch\\db\\dicc.txt",
+            "tools\\ctf-website\\dirsearch\\db\\400_blacklist.txt",
+            "tools\\ctf-website\\dirsearch\\db\\403_blacklist.txt",
+            "tools\\ctf-website\\dirsearch\\db\\500_blacklist.txt"
+          ]
+        },
+        "ctf.sqlmap_reuse": {
+          "wordlists": [
+            "tools\\ctf-website\\sqlmap\\data\\txt\\smalldict.txt",
+            "tools\\ctf-website\\sqlmap\\data\\txt\\common-tables.txt",
+            "tools\\ctf-website\\sqlmap\\data\\txt\\common-files.txt"
+          ],
+          "note": "sqlmap 内置字典可复用为 ffuf 输入"
+        }
+      },
+      "kb_files": [
+        "01-recon/recon-routing.md",
+        "01-recon/version-fingerprinting.md"
+      ],
+      "method": "dirsearch 做首轮目录扫描；ffuf 做精细化 fuzz（参数/header/cookie）。复用 sqlmap 的 smalldict.txt 和 common-files.txt 作为 ffuf 字典。",
+      "evidence": "discovered paths, status codes, response sizes"
+    },
+    {
+      "id": "web-nuclei-scan",
+      "keywords": [
+        "nuclei",
+        "template scan",
+        "cve scan",
+        "vulnerability scan",
+        "exposure scan"
+      ],
+      "when": "有存活 URL 列表，需要批量扫 CVE/config/exposure。",
+      "tools": [
+        "ctf.nuclei"
+      ],
+      "tool_payloads": {
+        "ctf.nuclei": {
+          "templates_online": "nuclei -ut (更新模板库，本地缓存 6700+ 模板)",
+          "usage": "nuclei -u URL -t cves/             (CVE 扫描)\nnuclei -u URL -t exposures/configs/  (配置泄露)\nnuclei -u URL -t vulnerabilities/    (漏洞扫描)\nnuclei -l urls.txt -t ~/nuclei-templates/ (批量)"
+        }
+      },
+      "kb_files": [
+        "09-cve/cve-workflow.md"
+      ],
+      "method": "先 httpx 做存活探测，再 nuclei 批量扫模板。优先 cves/ 和 exposures/ 分类。",
+      "evidence": "template name, matched URL, severity, extracted info"
+    },
+    {
+      "id": "web-payment-full",
+      "keywords": [
+        "payment",
+        "支付",
+        "callback",
+        "notify",
+        "webhook",
+        "signature",
+        "amount",
+        "order",
+        "coupon",
+        "refund",
+        "subscription"
+      ],
+      "when": "支付/订单/回调/签名/订阅/卡密任何支付类攻击面。",
+      "tools": [
+        "ctf.ffuf",
+        "ctf.sqlmap",
+        "ctf.jwt_tool"
+      ],
+      "tool_payloads": {
+        "ctf.ffuf": {
+          "note": "用 sqlmap smalldict.txt + dirsearch dicc.txt 做支付路由/参数 fuzz"
+        },
+        "ctf.sqlmap": {
+          "tamper_scripts": "tools\\ctf-website\\sqlmap\\tamper\\  (签名绕过可参考)",
+          "wordlists": [
+            "tools\\ctf-website\\sqlmap\\data\\txt\\smalldict.txt",
+            "tools\\ctf-website\\sqlmap\\data\\txt\\keywords.txt"
+          ]
+        },
+        "ctf.jwt_tool": {
+          "wordlists": [
+            "tools\\ctf-website\\jwt_tool\\jwt-common.txt",
+            "tools\\ctf-website\\jwt_tool\\common-headers.txt"
+          ],
+          "note": "JWT 弱密钥字典可复用于签名爆破"
+        },
+        "mapping_ref": "tools\\ctf-website\\payloads\\TOOL-PAYLOAD-MAP.md"
+      },
+      "kb_files": [
+        "12-payment/payment-logic.md",
+        "12-payment/payment-bypass.md",
+        "12-payment/payment-callback-async.md",
+        "12-payment/payment-php.md",
+        "12-payment/payment-subscription.md",
+        "12-payment/payment-digital-goods.md"
+      ],
+      "method": "先查 TOOL-PAYLOAD-MAP.md 看哪些工具 payload 可用。金额/状态/签名/方法字段用 ffuf + sqlmap字典做参数fuzz。签名爆破复用 jwt_tool 弱密钥字典。",
+      "evidence": "bypass payload, response diff, order state change, flag"
+    },
+    {
+      "id": "web-signature-full",
+      "keywords": [
+        "signature",
+        "sign",
+        "签名",
+        "hmac",
+        "md5 sign",
+        "sha sign",
+        "algorithm downgrade",
+        "magic hash",
+        "strcmp",
+        "length extension",
+        "canonicalization",
+        "replay",
+        "nonce"
+      ],
+      "when": "任何签名验证场景（支付回调/API签名/JWT/文件校验/Cookie签名/Webhook）。",
+      "tools": [
+        "ctf.jwt_tool",
+        "ctf.sqlmap"
+      ],
+      "tool_payloads": {
+        "ctf.jwt_tool": {
+          "wordlists": [
+            "tools\\ctf-website\\jwt_tool\\jwt-common.txt",
+            "tools\\ctf-website\\jwt_tool\\common-headers.txt",
+            "tools\\ctf-website\\jwt_tool\\jwks-common.txt"
+          ],
+          "usage": "jwt_tool 的字典可复用于非 JWT 场景的 HMAC 密钥爆破"
+        },
+        "ctf.sqlmap": {
+          "tamper_scripts": "tools\\ctf-website\\sqlmap\\tamper\\  (编码/混淆可参考用于签名变体)",
+          "wordlists": [
+            "tools\\ctf-website\\sqlmap\\data\\txt\\smalldict.txt"
+          ]
+        },
+        "ctf.ffuf": {
+          "note": "用 sqlmap smalldict 做 sign_type/sign_method/algorithm 字段 fuzz"
+        },
+        "mapping_ref": "tools\\ctf-website\\payloads\\TOOL-PAYLOAD-MAP.md"
+      },
+      "kb_files": [
+        "13-signature/00-overview.md",
+        "13-signature/01-algorithm.md",
+        "13-signature/02-implementation.md",
+        "13-signature/03-key-attacks.md",
+        "13-signature/04-canonicalization.md",
+        "13-signature/05-length-extension.md",
+        "13-signature/06-replay-nonce.md"
+      ],
+      "method": "先跑 signature_surface_probe.py 识别签名类型。JWT类用 jwt_tool；支付回调类复用 jwt_tool字典+sqlmap字典做参数fuzz。算法降级/编码攻击用 ffuf 批量测。",
+      "evidence": "signature type, bypass method, forged payload, verification result, flag"
+    },
+    {
+      "id": "web-nmap-scan",
+      "keywords": [
+        "port",
+        "nmap",
+        "service",
+        "nse",
+        "scan",
+        "端口",
+        "服务"
+      ],
+      "when": "需要端口扫描、服务识别、NSE脚本探测。",
+      "tools": [
+        "ctf.nmap"
+      ],
+      "tool_payloads": {
+        "ctf.nmap": {
+          "scripts": "tools\\ctf-website\\nmap\\scripts\\  (613个NSE脚本)",
+          "probes": [
+            "tools\\ctf-website\\nmap\\nmap-service-probes",
+            "tools\\ctf-website\\nmap\\nmap-protocols",
+            "tools\\ctf-website\\nmap\\nmap-os-db",
+            "tools\\ctf-website\\nmap\\nmap-mac-prefixes"
+          ],
+          "usage": "nmap -sV -sC TARGET              (默认脚本)\nnmap --script=http-* TARGET        (Web类)\nnmap --script=vuln TARGET          (漏洞类)"
+        }
+      },
+      "kb_files": [
+        "01-recon/recon-routing.md"
+      ],
+      "method": "nmap -sV -sC 首轮；按需加 --script 分类。结果喂给 httpx + nuclei。",
+      "evidence": "open ports, services, versions, NSE output"
+    },
+    {
+      "id": "web-php-specific",
+      "keywords": [
+        "php",
+        "laravel",
+        "type juggling",
+        "strcmp",
+        "magic hash",
+        "extract",
+        "parse_str",
+        "phar",
+        "php session",
+        "thinkphp",
+        "woocommerce",
+        "magento"
+      ],
+      "when": "目标确认使用 PHP（X-Powered-By / PHPSESSID / .php 路由 / Laravel/TP 特征）。",
+      "tools": [
+        "ctf.sqlmap",
+        "ctf.ffuf",
+        "ctf.jwt_tool"
+      ],
+      "tool_payloads": {
+        "ctf.sqlmap": {
+          "tamper_scripts": "tools\\ctf-website\\sqlmap\\tamper\\  (71个，PHP WAF常用)",
+          "wordlists": [
+            "tools\\ctf-website\\sqlmap\\data\\txt\\smalldict.txt"
+          ],
+          "usage": "sqlmap --tamper=chardoubleencode,charencode (PHP场景WAF绕过)"
+        },
+        "ctf.jwt_tool": {
+          "wordlists": [
+            "tools\\ctf-website\\jwt_tool\\jwt-common.txt"
+          ],
+          "note": "弱密钥字典可用于 PHP HMAC 签名爆破"
+        },
+        "ctf.ffuf": {
+          "note": "用 smalldict 做 Laravel/TP 路由 fuzz；PHP 特征路径 fuzz"
+        }
+      },
+      "kb_files": [
+        "12-payment/payment-php.md",
+        "03-injection/sqli-nosqli.md"
+      ],
+      "method": "PHP type juggling 用手工 Python（见 payment-php.md）；SQLi 用 sqlmap；路由 fuzz 用 ffuf。",
+      "evidence": "PHP version, framework fingerprint, type juggling bypass, flag"
+    }
+  ]
+}

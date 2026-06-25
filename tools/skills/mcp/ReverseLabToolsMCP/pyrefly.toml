@@ -1,0 +1,12 @@
+project-includes = [
+  "reverse_lab_tools_mcp.py",
+  "reverselab_mcp/**/*.py",
+]
+
+project-excludes = [
+  "**/__pycache__",
+]
+
+search-path = [
+  ".",
+]

@@ -1,0 +1,69 @@
+{
+  "schema": "reverselab.proxy_sources.v1",
+  "description": "代理池来源配置 — 支持免费 API、付费 API、本地文件、手动列表",
+  "test_url": "https://httpbin.org/ip",
+  "validation": {
+    "timeout_sec": 8.0,
+    "concurrency": 10,
+    "min_anon_level": "anonymous"
+  },
+  "pool": {
+    "max_size": 50,
+    "strategy": "round_robin",
+    "cooldown_sec": 60,
+    "max_failures": 3
+  },
+  "sources": [
+    {
+      "id": "geonode_free",
+      "name": "GeoNode Free Proxy List",
+      "type": "api",
+      "url": "https://proxylist.geonode.com/api/proxy-list?limit=20&page=1&sort_by=lastChecked&sort_type=desc&protocols=http%2Chttps%2Csocks4%2Csocks5&anonymityLevel=anonymous&anonymityLevel=elite",
+      "format": "geonode",
+      "refresh_sec": 300,
+      "enabled": false,
+      "notes": "Free tier: 20 proxies per request, rate-limited"
+    },
+    {
+      "id": "proxyscrape_http",
+      "name": "ProxyScrape HTTP Proxies",
+      "type": "api",
+      "url": "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=http&proxy_format=protocolipport&format=json&timeout=5000",
+      "format": "proxyscrape",
+      "refresh_sec": 300,
+      "enabled": false,
+      "notes": "Free HTTP proxies from ProxyScrape v4 API"
+    },
+    {
+      "id": "proxyscrape_socks5",
+      "name": "ProxyScrape SOCKS5 Proxies",
+      "type": "api",
+      "url": "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=socks5&proxy_format=protocolipport&format=json&timeout=5000",
+      "format": "proxyscrape",
+      "refresh_sec": 300,
+      "enabled": false,
+      "notes": "Free SOCKS5 proxies from ProxyScrape v4 API"
+    },
+    {
+      "id": "local_file",
+      "name": "Local proxy list file",
+      "type": "file",
+      "path": "tools/proxy_pool/proxies.local.txt",
+      "format": "text",
+      "refresh_sec": 0,
+      "enabled": true,
+      "notes": "每行一个代理: protocol://host:port 或 host:port"
+    },
+    {
+      "id": "manual_list",
+      "name": "Manually configured proxies",
+      "type": "inline",
+      "proxies": [
+        "socks5://127.0.0.1:1080",
+        "http://127.0.0.1:8080"
+      ],
+      "enabled": true,
+      "notes": "手动配置的代理列表，如 Burp Suite 上游、Clash/Shadowsocks 本地端口"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "target": "",
+  "url": "",
+  "timestamp": "",
+  "fingerprints": [
+    {
+      "type": "header / body / cookie / file / error / behavior",
+      "pattern": "",
+      "product": "",
+      "version": "",
+      "confidence": "high / medium / low",
+      "cve_candidates": []
+    }
+  ]
+}

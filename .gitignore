@@ -1,0 +1,79 @@
+# Environment secrets
+.env
+.env.*
+!.env.example
+SECURITY.md
+
+# Python / Node caches
+__pycache__/
+*.pyc
+node_modules/
+
+# Logs
+logs/*.log
+
+# ── Tools: ignore binaries, keep README.md + .gitkeep ──
+tools/common/**
+!tools/common/**/
+!tools/common/**/README.md
+!tools/common/**/.gitkeep
+tools/windows/**
+!tools/windows/**/
+!tools/windows/**/README.md
+!tools/windows/**/.gitkeep
+tools/android/**
+!tools/android/**/
+!tools/android/**/README.md
+!tools/android/**/.gitkeep
+
+# Tools cloned from GitHub (install via README instructions)
+tools/ctf-website/sqlmap/
+tools/ctf-website/dirsearch/
+tools/ctf-website/jwt_tool/
+tools/ctf-website/tplmap/
+tools/ctf-website/nmap/
+tools/ctf-website/exploitdb/
+tools/ctf-website/burp/
+tools/ctf-website/browser/
+
+# ── Content dirs: ignore binaries, keep README.md + .gitkeep ──
+projects/**
+!projects/**/
+!projects/**/README.md
+!projects/**/.gitkeep
+samples/**
+!samples/**/
+!samples/**/README.md
+!samples/**/.gitkeep
+patches/**
+!patches/**/
+!patches/**/README.md
+!patches/**/.gitkeep
+exports/**
+!exports/**/
+!exports/**/README.md
+!exports/**/.gitkeep
+
+# Ghidra / Cutter / x64dbg project files
+*.rep/
+*.gpr
+*.db
+*.sqlite
+
+# MCP tool build artifacts (cached by install scripts)
+tools/skills/mcp/JSHookLocal/.cache/
+tools/skills/mcp/JSHookLocal/dist/
+
+# Downloads cache (created by install_tools.ps1)
+tools/common/downloads/
+tools/ctf-website/_downloads/
+
+# Local agent / IDE config (not part of public release)
+.codex/
+.serena/
+
+# Generated reports (may contain machine paths); keep README stubs
+reports/**
+!reports/**/
+!reports/**/README.md
+!reports/**/.gitkeep

@@ -1,0 +1,19 @@
+title: Sample Detection Rule
+id: 00000000-0000-0000-0000-000000000000
+status: experimental
+description: Description of what this rule detects
+author: ""
+date: ""
+tags:
+    - attack.tactic
+    - attack.technique_id
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\example.exe'
+    condition: selection
+falsepositives:
+    - Legitimate use cases
+level: medium

@@ -1,0 +1,75 @@
+{
+  "version": "1.1",
+  "purpose": "Signal → technique file mapping for general security/reversing knowledge base",
+  "entries": [
+    {
+      "id": "crypto",
+      "signals": ["aes", "des", "rsa", "ecc", "elliptic curve", "cipher", "decrypt", "encrypt", "hash", "md5", "sha1", "sha256", "hmac", "pbkdf", "bcrypt", "argon2", "xor", "side channel", "timing attack", "dpake", "diffie-hellman", "key exchange", "custom crypto", "obfuscated algorithm", "s-box", "entropy", "block cipher", "stream cipher", "white-box", "feistel", "substitution-permutation"],
+      "files": [
+        "crypto/01-algorithm-identification.md",
+        "crypto/02-custom-obfuscation-reverse.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "prng",
+      "signals": ["prng", "random", "lcg", "mersenne twister", "mt19937", "xorshift", "math.random", "java random", "random.nextint", "php mt_rand", "ecdsa nonce", "nonce reuse", "seed recovery", "predictable random"],
+      "files": ["crypto/03-prng-randomness-cracking.md"],
+      "priority": 10
+    },
+    {
+      "id": "protocol",
+      "signals": ["protocol", "tcp", "udp", "packet", "抓包", "wireshark", "tcpdump", "state machine", "protobuf", "flatbuffers", "messagepack", "asn.1", "ber", "der", "tlv", "binary protocol", "unknown protocol", "custom protocol", "checksum", "crc", "field inference", "grpc"],
+      "files": [
+        "protocol/01-unknown-protocol-reverse.md",
+        "protocol/02-protobuf-flatbuffers-reverse.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "cheating",
+      "signals": ["cheat", "作弊", "game hack", "memory hack", "pointer scan", "dma attack", "packet intercept", "封包", "winsock hook", "wallhack", "esp", "透视", "aimbot", "d3d hook", "imgui", "anti-cheat", "eac", "battleye", "vanguard", "easy anti-cheat", "bypass", "speed hack", "加速", "time manipulation", "gettime", "queryperformancecounter"],
+      "files": [
+        "cheating/01-memory-hacking.md",
+        "cheating/02-packet-interception.md",
+        "cheating/03-esp-wallhack-rendering.md",
+        "cheating/04-anti-cheat-bypass.md",
+        "cheating/05-speedhack-time-manipulation.md"
+      ],
+      "priority": 9
+    },
+    {
+      "id": "methodology",
+      "signals": ["methodology", "方法论", "workflow", "工作流", "efficiency", "效率", "naming", "命名", "note taking", "笔记", "organization", "组织", "checklist", "清单", "best practice", "最佳实践", "first 30 min", "triage", "toolchain", "决策树", "decision tree"],
+      "files": [
+        "methodology/01-reverse-checklist-first-30-min.md",
+        "methodology/02-toolchain-decision-tree.md"
+      ],
+      "priority": 8
+    },
+    {
+      "id": "firmware",
+      "signals": ["firmware", "固件", "binwalk", "uboot", "spl", "bootloader", "flash", "nand", "nor", "squashfs", "jffs2", "yaffs", "cramfs", "initramfs", "device tree", "dtb", "mtd", "ubi", "fit image", "u-boot"],
+      "files": [],
+      "priority": 9
+    },
+    {
+      "id": "hardware",
+      "signals": ["jtag", "swd", "uart", "spi", "i2c", "gpio", "openocd", "logic analyzer", "salae", "flashrom", "chipoff", "glitching", "fault injection", "power analysis", "em probe", "pcb", "schematics"],
+      "files": [],
+      "priority": 8
+    },
+    {
+      "id": "radio",
+      "signals": ["ble", "bluetooth", "zigbee", "lora", "nfc", "rfid", "sdr", "hackrf", "rtl-sdr", "gnuradio", "gps", "wifi", "802.11", "subghz", "fsk", "ask", "ook", "gfsk", "meshtastic", "lorawan"],
+      "files": [],
+      "priority": 8
+    },
+    {
+      "id": "ai-security",
+      "signals": ["ai", "llm", "chatgpt", "gpt", "claude", "prompt injection", "prompt leak", "jailbreak", "越狱", "rag", "retrieval", "vector db", "embedding", "model extraction", "adversarial", "guardrail", "safety", "alignment"],
+      "files": [],
+      "priority": 8
+    }
+  ]
+}

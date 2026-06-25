@@ -1,0 +1,74 @@
+{
+  "version": "1.1",
+  "purpose": "Signal → technique file mapping for PE reverse analysis",
+  "entries": [
+    {
+      "id": "triage",
+      "signals": ["aob", "signature", "pattern scan", "findpattern", "byte pattern", "特征码", "GetModuleHandle", "mask", "wildcard"],
+      "files": ["01-triage/01-aob-signature-scan.md"],
+      "priority": 10
+    },
+    {
+      "id": "pe-structure",
+      "signals": ["dos header", "nt header", "section", "节区", "import", "export", "iat", "eat", "image_dos_header", "image_nt_headers", "e_lfanew"],
+      "files": ["02-pe-structure/01-pe-header-parsing.md"],
+      "priority": 9
+    },
+    {
+      "id": "static-analysis",
+      "signals": ["struct", "reconstruct", "offset", "disassemble", "zydis", "xbyak", "jit", "assemble", "machine code", "反汇编", "汇编", "x64dbg", "breakpoint", "conditional bp", "reclass", "structure rebuild"],
+      "files": [
+        "03-static-analysis/01-struct-reconstruction.md",
+        "03-static-analysis/02-disasm-jit-asm.md",
+        "03-static-analysis/03-x64dbg-breakpoints.md",
+        "03-static-analysis/04-reclass-reconstruction.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "dynamic-analysis",
+      "signals": ["dll inject", "createremotethread", "loadlibrary", "trampoline", "detour", "hook", "jmp hook", "external memory", "readprocessmemory", "writeprocessmemory", "finddmaaddy", "pointer chain", "naked", "inline asm", "pushad", "anti debug", "isdebuggerpresent", "peb", "manual map", "reflective", "syscall", "direct syscall", "procmon", "process monitor"],
+      "files": [
+        "04-dynamic-analysis/01-dll-injection.md",
+        "04-dynamic-analysis/02-trampoline-detour.md",
+        "04-dynamic-analysis/03-external-memory-rw.md",
+        "04-dynamic-analysis/04-naked-function-hook.md",
+        "04-dynamic-analysis/05-anti-debug-bypass.md",
+        "04-dynamic-analysis/06-manual-map-injection.md",
+        "04-dynamic-analysis/07-direct-syscall.md",
+        "04-dynamic-analysis/08-procmon-patterns.md"
+      ],
+      "priority": 10
+    },
+    {
+      "id": "crypto-unpack",
+      "signals": ["pack", "packer", "unpack", "脱壳", "upx", "aspack", "vmprotect", "themida", "scylla", "iat rebuild", "dump", "procdump", "oep"],
+      "files": ["05-crypto-unpack/01-pe-unpack-dump.md"],
+      "priority": 9
+    },
+    {
+      "id": "ioc",
+      "signals": ["ip", "domain", "url", "c2", "mutex", "registry", "regkey", "file path", "pipe", "user-agent", "ioc extraction"],
+      "files": ["06-ioc-extraction/01-ioc-extraction.md"],
+      "priority": 8
+    },
+    {
+      "id": "yara-sigma",
+      "signals": ["yara", "sigma", "rule", "detection", "signature", "match", "condition", "pattern", "hex"],
+      "files": ["07-yara-sigma/01-yara-rule-writing.md"],
+      "priority": 7
+    },
+    {
+      "id": "patch",
+      "signals": ["patch", "nop", "jmp", "virtualprotect", "byte patch", "modify", "hxd", "memory patch", "code patch"],
+      "files": ["08-patch/01-code-patching.md"],
+      "priority": 8
+    },
+    {
+      "id": "av-evasion",
+      "signals": ["免杀", "av evasion", "antivirus bypass", "shellcode", "loader", "cobalt strike", "meterpreter", "veh", "syscall bypass", "anti sandbox", "杀软绕过", "payload", "msfvenom", "shellcode encrypt", "shellcode obfuscate", "花指令", "junk code", "uuid shellcode", "mac shellcode", "反沙箱", "免杀loader", "defender bypass", "火绒绕过", "360免杀", "卡巴斯基绕过", "edr bypass", "内存保护", "进程注入免杀"],
+      "files": ["09-av-evasion/01-ai-powered-evasion.md"],
+      "priority": 10
+    }
+  ]
+}

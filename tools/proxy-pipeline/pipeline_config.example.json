@@ -1,0 +1,50 @@
+{
+  "schema": "reverselab.proxy_pipeline_config.v1",
+  "description": "代理管道配置 — 多级代理串联/路由",
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 9090,
+    "protocol": "http"
+  },
+  "hops": [
+    {
+      "id": "hop1_local",
+      "name": "本地 SOCKS5 出口",
+      "proxy": "socks5://127.0.0.1:1080",
+      "timeout_sec": 10,
+      "retries": 2,
+      "enabled": true
+    },
+    {
+      "id": "hop2_remote",
+      "name": "远程 HTTP 代理",
+      "proxy": "http://10.0.0.1:3128",
+      "timeout_sec": 15,
+      "retries": 1,
+      "enabled": false,
+      "notes": "第二跳 — 仅在需要多层匿名时启用"
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule_burp",
+      "name": "Burp Suite 上游代理",
+      "comment": "所有 HTTP 流量先过 Burp (8080)，再过代理池",
+      "listen": { "host": "127.0.0.1", "port": 8081 },
+      "target": "hop1_local",
+      "match": { "protocol": ["http", "https"] },
+      "enabled": false
+    },
+    {
+      "id": "rule_pool_round_robin",
+      "name": "代理池轮转出口",
+      "comment": "使用 proxy_pool 的轮转结果作为上游",
+      "listen": { "host": "127.0.0.1", "port": 9090 },
+      "target": "pool",
+      "pool_config": "tools/proxy_pool/proxy_sources.json",
+      "pool_state": "tools/proxy_pool/pool_state.json",
+      "match": { "protocol": ["http", "https"] },
+      "enabled": true
+    }
+  ]
+}

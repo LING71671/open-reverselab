@@ -1,0 +1,8 @@
+# Proxy Pool — local proxy list
+# 每行一个代理，格式: protocol://host:port 或 host:port
+# 以 # 开头的行为注释
+
+# 示例:
+# socks5://127.0.0.1:1080
+# http://127.0.0.1:8080
+# http://192.168.1.100:3128

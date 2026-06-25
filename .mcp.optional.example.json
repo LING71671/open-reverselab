@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "ghidra": {
+      "command": "uv",
+      "args": [
+        "run",
+        "tools/skills/mcp/GhidraMCP/bridge_mcp_ghidra.py",
+        "--ghidra-server",
+        "http://127.0.0.1:18080/"
+      ],
+      "env": {}
+    },
+    "jshook": {
+      "command": "node",
+      "args": ["tools/skills/mcp/JSHookLocal/dist/index.js"],
+      "env": {
+        "DEFAULT_LLM_PROVIDER": "none",
+        "PUPPETEER_HEADLESS": "false"
+      }
+    }
+  }
+}
