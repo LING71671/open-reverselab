@@ -279,3 +279,4 @@ gcc -O2 -Wall -Wextra -static exp.c -o fragnesia_exp
 | NVD CVE-2026-43500 | https://nvd.nist.gov/vuln/detail/CVE-2026-43500 |
 | NVD CVE-2026-46300 | https://nvd.nist.gov/vuln/detail/CVE-2026-46300 |
 | CISA KEV CVE-2026-31431 | https://www.cisa.gov/known-exploited-vulnerabilities-catalog |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab (Copy Fail / Dirty Frag / Fragnesia) |

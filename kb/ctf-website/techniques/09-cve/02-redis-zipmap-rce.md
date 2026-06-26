@@ -144,3 +144,4 @@ valkey-cli ACL SETUSER <user> -RESTORE
 | GHSA | https://github.com/redis/redis/security/advisories/GHSA-c8h9-259x-jff4 |
 | Valkey 修复 | https://github.com/valkey-io/valkey/commit/fea0b4064cf612d1c365b032326832bff0946bd9 |
 | Valkey 仓库 | https://github.com/valkey-io/valkey |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-25243%20Invalid%20Memory%20Access%20in%20Redis%20RESTORE%20Command%20May%20Lead%20to%20Remote%20Code%20Execution |

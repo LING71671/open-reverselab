@@ -115,3 +115,4 @@ curl -s -X GET http://localhost:4000/user/list \
 | 上游 PoC | https://github.com/learner202649/CVE-2026-47101-PoC |
 | NVD | https://nvd.nist.gov/vuln/detail/CVE-2026-47101 |
 | Obsidian Security | https://www.obsidiansecurity.com/blog/litellm-privilege-escalation-rce |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-47101%20LiteLLM |

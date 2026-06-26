@@ -129,3 +129,4 @@ CALDAV_DEFAULT_WAIT_LADDER = [5, 10, 20, 30]  # 秒
 | cPanel 安全公告 | https://support.cpanel.net/hc/en-us/articles/40437020299927 |
 | Searchlight Cyber 分析 | https://slcyber.io/research-center/new-age-of-collisions-reading-arbitrary-files-pre-auth-as-root-in-cpanel-cve-2026-29205 |
 | 本仓库工具 | `CVE-2026-29205/exploit/scanner.py` |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-29205%20cPanel2Shell-Scanner |

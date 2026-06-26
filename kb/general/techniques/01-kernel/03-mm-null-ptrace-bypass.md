@@ -171,3 +171,4 @@ fd 5 -> /etc/ssh/ssh_host_ed25519_key (round=37 try=812)
 | PoC 仓库 | https://github.com/qualys/CVE-2026-46333 |
 | Jann Horn 2020 FD-theft | https://lore.kernel.org/all/20201016230915.1972840-1-jannh@google.com/ |
 | NVD | https://nvd.nist.gov/vuln/detail/CVE-2026-46333 |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-46333%20SSH%20Keysign%20pwn |

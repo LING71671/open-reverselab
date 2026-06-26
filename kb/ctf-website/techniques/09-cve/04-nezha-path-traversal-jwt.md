@@ -123,3 +123,4 @@ python3 CVE-2026-53519.py http://127.0.0.1:8008 <jwt_secret> <user_id>
 | GitHub Advisory | https://github.com/nezhahq/nezha/security/advisories/GHSA-5c25-7vpj-9mqh |
 | 上游 PoC | https://github.com/tar-xz/CVE-2026-53519-PoC |
 | 阿里云 AVD | https://avd.aliyun.com/detail?id=AVD-2026-53519 |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-53519%20Nezha%20Monitoring |

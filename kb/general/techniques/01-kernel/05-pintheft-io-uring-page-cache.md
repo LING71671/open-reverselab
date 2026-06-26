@@ -132,3 +132,4 @@ pkill -f "sleep 99999"
 | 本仓库 PoC | `QVD-2026-27616 PinTheft/exploit/exp.c` |
 | Linux io_uring UAPI | `include/uapi/linux/io_uring.h` |
 | Linux RDS UAPI | `include/uapi/linux/rds.h` |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/QVD-2026-27616%20PinTheft |

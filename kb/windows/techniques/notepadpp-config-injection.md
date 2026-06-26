@@ -106,3 +106,4 @@ notepad++.exe -settingsDir="C:\attacker\settings"
 | 修复版本公告 | https://notepad-plus-plus.org/news/v8961-released/ |
 | 修复提交 | https://github.com/notepad-plus-plus/notepad-plus-plus/commit/24c7b5c63cece76dbc8c4f2607a27ebfe22fa614 |
 | Qualys 分析 | https://threatprotect.qualys.com/2026/05/29/notepad-vulnerabilities-allow-attackers-to-execute-arbitrary-code-cve-2026-48778/ |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-48778%20Notepad%2B%2B%20RCE |

@@ -150,3 +150,4 @@ rm -rf /tmp/cifs-upcall-sudoers-poc-*/
 | 作者 PoC | https://github.com/manizada/CIFSwitch |
 | 上游修复 | https://github.com/torvalds/linux/commit/3da1fdf4efbc490041eb4f836bf596201203f8f2 |
 | 腾讯云通告 | https://cloud.tencent.com/developer/article/2676151 |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/QVD-2026-29453%20CIFSwitch |

@@ -174,3 +174,4 @@ UAF 本身导致渲染进程崩溃（DoS）。要实现完整 RCE，需要：
 | Chrome 公告 | https://chromereleases.googleblog.com/2026/02/stable-channel-update-for-desktop_13.html |
 | NVD | https://nvd.nist.gov/vuln/detail/CVE-2026-2441 |
 | CISA KEV | https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve=CVE-2026-2441 |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-2441%20Chrome%20CSSFontFeatureValuesMap%20UAF |

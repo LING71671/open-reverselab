@@ -152,3 +152,4 @@ dmesg | grep -E "warn_free_bad_obj|Wrong slab cache"
 | Blue Dragon Security PoC | https://github.com/bluedragonsecurity/CVE-2026-31429-POC |
 | 主线补丁 | https://git.kernel.org/stable/c/0f42e3f4fe2a58394e37241d02d9ca6ab7b7d516 |
 | NVD | https://nvd.nist.gov/vuln/detail/CVE-2026-31429 |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-31429%20Slab%20Cross-Cache |

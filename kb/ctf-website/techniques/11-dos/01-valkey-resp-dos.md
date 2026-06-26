@@ -107,3 +107,4 @@ python3 exploit/exp.py
 |------|------|
 | GitHub Advisory | https://github.com/valkey-io/valkey/security/advisories/GHSA-93p9-5vc7-8wgr |
 | 上游修复 | https://github.com/valkey-io/valkey/commit/2c311dd7173ffc715a3d61266fdede6096a097de |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-27623%20Pre-Authentication%20DOS%20from%20malformed%20RESP%20request |

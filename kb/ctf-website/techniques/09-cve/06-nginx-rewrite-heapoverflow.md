@@ -147,3 +147,4 @@ python3 exploit/exp.py \
 | F5 Advisory K000161019 | https://my.f5.com/manage/s/article/K000161019 |
 | CVE 官方记录 | https://www.cve.org/CVERecord?id=CVE-2026-42945 |
 | 腾讯云分析 | https://cloud.tencent.com/developer/article/2671091 |
+| poc-lab 源 | https://github.com/Unclecheng-li/poc-lab/tree/main/CVE-2026-42945%20NGINX%20Rift |
