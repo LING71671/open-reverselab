@@ -26,6 +26,17 @@ $env:Path = "$PWD\tools\ctf-website\bin;$env:Path"
 | `jwt_tool` | JWT alg/kid/jku/弱密钥/claim 修改 |
 | `tplmap` | SSTI fingerprint 与自动化探测 |
 | `searchsploit` | 本地 exploitdb 检索 |
+| `Burp Suite` | 复杂认证态/手工 Repeater/Intruder；自动巡检只探测文件，不弹 GUI |
+
+## MCP 接入链
+
+Web/CTF 目标分析时优先走 MCP：
+
+1. `kb_router(query, board="ctf-website")` 查技术文件。
+2. `ctf_tool_status()` 检查 sqlmap/Burp wrapper 与本地安装状态。
+3. Burp 或浏览器确认请求后，调用 `ctf_save_request(raw_request, case_name, filename)` 保存证据。
+4. SQLi 自动化调用 `run_sqlmap_request(request_path, "--batch ...")`；普通工具调用用 `run_ctf_tool("sqlmap", "...")`。
+5. `burp_status()` 只做无弹窗探测；需要打开 Burp GUI 时才显式调用 `burp_launch(launch=True)`。
 
 ## 证据输出
 

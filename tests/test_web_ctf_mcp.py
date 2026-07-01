@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MCP_ROOT = ROOT / "tools" / "skills" / "mcp" / "ReverseLabToolsMCP"
+sys.path.insert(0, str(MCP_ROOT))
+
+from reverselab_mcp.tools import web_ctf  # noqa: E402
+
+
+def test_split_args_preserves_quoted_url():
+    args = web_ctf._split_args('--batch -u "http://example.test/a.php?id=1&x=two words"')
+
+    assert args == ["--batch", "-u", "http://example.test/a.php?id=1&x=two words"]
+
+
+def test_ctf_save_request_writes_under_exports(tmp_path, monkeypatch):
+    monkeypatch.setattr(web_ctf, "CTF_EXPORTS_DIR", tmp_path / "exports" / "ctf-website")
+
+    result = web_ctf.ctf_save_request(
+        "GET /vuln?id=1 HTTP/1.1\nHost: example.test\n\n",
+        case_name="../bad case",
+        filename="../request.raw",
+    )
+
+    assert "error" not in result
+    written = Path(result["path"])
+    if not written.is_absolute():
+        written = ROOT / written
+    assert written.name == "request.raw.txt"
+    assert ".." not in result["path"]
+
+
+def test_burp_status_is_file_probe_only(tmp_path, monkeypatch):
+    burp_dir = tmp_path / "burp"
+    burp_dir.mkdir()
+    jar = burp_dir / "burpsuite_community_test.jar"
+    jar.write_bytes(b"jar")
+    monkeypatch.setattr(web_ctf, "BURP_DIR", burp_dir)
+    monkeypatch.setattr(web_ctf, "BIN_DIR", tmp_path)
+
+    status = web_ctf.burp_status()
+
+    assert status["installed"] is True
+    assert status["jars"][0]["path"].endswith("burpsuite_community_test.jar")
+    assert status["proxy"] == "http://127.0.0.1:8080"
+
+
+def test_run_sqlmap_request_builds_request_args(tmp_path, monkeypatch):
+    req = tmp_path / "request.txt"
+    req.write_text("GET / HTTP/1.1\r\nHost: example.test\r\n\r\n", encoding="utf-8")
+    called = {}
+
+    def fake_run(tool: str, args: str, timeout: int):
+        called.update({"tool": tool, "args": args, "timeout": timeout})
+        return {"ok": True}
+
+    monkeypatch.setattr(web_ctf, "run_ctf_tool", fake_run)
+    monkeypatch.setattr(web_ctf, "ensure_under", lambda path, roots, label: path)
+
+    result = web_ctf.run_sqlmap_request(str(req), "--batch --dbs", timeout=12)
+
+    assert result == {"ok": True}
+    assert called["tool"] == "sqlmap"
+    assert called["args"].endswith('" --batch --dbs')
+    assert called["timeout"] == 12

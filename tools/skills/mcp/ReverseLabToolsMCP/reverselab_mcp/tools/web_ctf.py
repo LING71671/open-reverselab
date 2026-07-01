@@ -7,6 +7,8 @@ HTTP probing, knowledge base routing, CVE lookup, CTF tool execution.
 from __future__ import annotations
 
 import json
+import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +28,9 @@ KB_INDEX = REVERSE_ROOT / "kb" / "ctf-website" / "techniques" / "kb-index.json"
 TECHNIQUES_DIR = REVERSE_ROOT / "kb" / "ctf-website" / "techniques"
 KB_ROUTER = SCRIPTS_DIR / "ctf-website" / "kb_router.py"
 CTF_TOOLS_DIR = REVERSE_ROOT / "tools" / "ctf-website"
+CTF_EXPORTS_DIR = REVERSE_ROOT / "exports" / "ctf-website"
+BIN_DIR = REVERSE_ROOT / "tools" / "bin"
+BURP_DIR = CTF_TOOLS_DIR / "burp"
 
 
 # ── HTTP Probe ──
@@ -278,12 +283,54 @@ def ctf_new_challenge(name: str, url: str = "") -> dict:
 
 # ── CTF Tool Runner ──
 
-_CTF_TOOL_MAP = {
-    "sqlmap": CTF_TOOLS_DIR / "sqlmap" / "sqlmap.py",
-    "dirsearch": CTF_TOOLS_DIR / "dirsearch" / "dirsearch.py",
-    "jwt_tool": CTF_TOOLS_DIR / "jwt_tool" / "jwt_tool.py",
-    "tplmap": CTF_TOOLS_DIR / "tplmap" / "tplmap.py",
+_CTF_TOOL_MAP: dict[str, dict[str, Path]] = {
+    "sqlmap": {
+        "script": CTF_TOOLS_DIR / "sqlmap" / "sqlmap.py",
+        "wrapper": BIN_DIR / "sqlmap.bat",
+    },
+    "dirsearch": {
+        "script": CTF_TOOLS_DIR / "dirsearch" / "dirsearch.py",
+        "wrapper": BIN_DIR / "dirsearch.bat",
+    },
+    "jwt_tool": {
+        "script": CTF_TOOLS_DIR / "jwt_tool" / "jwt_tool.py",
+        "wrapper": BIN_DIR / "jwt_tool.bat",
+    },
+    "tplmap": {
+        "script": CTF_TOOLS_DIR / "tplmap" / "tplmap.py",
+        "wrapper": BIN_DIR / "tplmap.bat",
+    },
 }
+
+
+def _split_args(args: str) -> list[str]:
+    """Split a user-supplied command line while preserving quoted URL/request args."""
+    if not args:
+        return []
+    return shlex.split(args, posix=True)
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REVERSE_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _tool_command(tool: str) -> tuple[list[str] | None, dict]:
+    entry = _CTF_TOOL_MAP[tool]
+    script_path = entry["script"]
+    wrapper_path = entry["wrapper"]
+    if script_path.exists():
+        return [sys.executable, str(script_path)], {}
+    if wrapper_path.exists():
+        return [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(wrapper_path)], {
+            "warning": f"{tool} source script is missing; using wrapper fallback"
+        }
+    return None, {
+        "error": f"{tool} not installed at {script_path}. "
+        f"Run: .\\scripts\\misc\\install_tools.ps1 -CTF"
+    }
 
 
 def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict:
@@ -292,18 +339,23 @@ def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict:
         available = ", ".join(_CTF_TOOL_MAP)
         return {"error": f"unknown tool: {tool}. Available: {available}"}
 
-    tool_path = _CTF_TOOL_MAP[tool]
-    if not tool_path.exists():
-        return {
-            "error": f"{tool} not installed at {tool_path}. "
-            f"Run: .\\scripts\\misc\\install_tools.ps1 -CTF"
-        }
+    base_cmd, meta = _tool_command(tool)
+    if base_cmd is None:
+        return meta
 
-    cmd = [sys.executable, str(tool_path)] + args.split()
+    try:
+        arg_list = _split_args(args)
+    except ValueError as e:
+        return {"tool": tool, "args": args, "error": f"cannot parse args: {e}"}
+
+    cmd = base_cmd + arg_list
+    env = os.environ.copy()
+    env["PATH"] = str(BIN_DIR) + os.pathsep + str(CTF_TOOLS_DIR / "bin") + os.pathsep + env.get("PATH", "")
     try:
         result = subprocess.run(
             cmd,
             cwd=str(REVERSE_ROOT),
+            env=env,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -314,6 +366,7 @@ def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict:
             "exit_code": result.returncode,
             "stdout": result.stdout[-8192:],
             "stderr": result.stderr[-2048:],
+            **meta,
         }
     except subprocess.TimeoutExpired:
         return {"tool": tool, "args": args, "error": f"timeout after {timeout}s"}
@@ -324,9 +377,115 @@ def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict:
 def ctf_tool_status() -> dict:
     """Check installation status of all CTF tools."""
     status = {}
-    for name, path in _CTF_TOOL_MAP.items():
+    for name, entry in _CTF_TOOL_MAP.items():
         status[name] = {
-            "path": str(path.relative_to(REVERSE_ROOT)),
-            "installed": path.exists(),
+            "script": str(entry["script"].relative_to(REVERSE_ROOT)),
+            "wrapper": str(entry["wrapper"].relative_to(REVERSE_ROOT)),
+            "installed": entry["script"].exists(),
+            "wrapper_installed": entry["wrapper"].exists(),
         }
+    status["burp"] = burp_status()
     return {"tools": status, "install_cmd": ".\\scripts\\misc\\install_tools.ps1 -CTF"}
+
+
+def _safe_case_name(case_name: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in (case_name or "default"))
+    return safe.strip("._") or "default"
+
+
+def ctf_save_request(raw_request: str, case_name: str = "default", filename: str = "request.txt") -> dict:
+    """Save a raw HTTP request under exports/ctf-website for Burp/sqlmap replay."""
+    if not raw_request.strip():
+        return {"error": "raw_request is required"}
+    safe_filename = Path(filename or "request.txt").name
+    if not safe_filename.lower().endswith(".txt"):
+        safe_filename += ".txt"
+    request_dir = (CTF_EXPORTS_DIR / _safe_case_name(case_name) / "requests").resolve()
+    try:
+        ensure_under(request_dir, [CTF_EXPORTS_DIR], "request output dir")
+    except Exception as e:
+        return {"error": str(e)}
+    request_dir.mkdir(parents=True, exist_ok=True)
+    request_path = request_dir / safe_filename
+    request_path.write_text(raw_request.replace("\r\n", "\n").replace("\n", "\r\n"), encoding="utf-8")
+    return {
+        "path": _display_path(request_path),
+        "sqlmap_args": f'-r "{request_path}" --batch',
+        "burp_note": "Import or paste this raw request into Burp Repeater/Intruder.",
+    }
+
+
+def run_sqlmap_request(request_path: str, extra_args: str = "--batch", timeout: int = 300) -> dict:
+    """Run sqlmap against a saved raw HTTP request file."""
+    try:
+        resolved = Path(request_path).expanduser()
+        if not resolved.is_absolute():
+            resolved = REVERSE_ROOT / resolved
+        resolved = resolved.resolve(strict=True)
+        ensure_under(resolved, [REVERSE_ROOT], "request path")
+    except Exception as e:
+        return {"error": str(e)}
+    args = f'-r "{resolved}" {extra_args}'.strip()
+    return run_ctf_tool("sqlmap", args, timeout)
+
+
+def _find_burp_jars() -> list[Path]:
+    jars: list[Path] = []
+    for pattern in ("burpsuite*.jar", "burp*.jar"):
+        jars.extend(p for p in BURP_DIR.glob(pattern) if p.is_file())
+    return sorted(set(jars), key=lambda p: (p.stat().st_mtime, p.name), reverse=True)
+
+
+def burp_status() -> dict:
+    """Check Burp Suite local jar/wrapper status without launching the GUI."""
+    jars = _find_burp_jars()
+    wrapper = BIN_DIR / "burp.bat"
+    return {
+        "installed": bool(jars),
+        "wrapper_installed": wrapper.exists(),
+        "wrapper": _display_path(wrapper),
+        "jars": [
+            {
+                "path": _display_path(jar),
+                "size": jar.stat().st_size,
+            }
+            for jar in jars
+        ],
+        "proxy": "http://127.0.0.1:8080",
+        "install_note": "Download Burp Community/Professional JAR from PortSwigger into tools/ctf-website/burp/.",
+    }
+
+
+def burp_launch(extra_args: str = "", launch: bool = False) -> dict:
+    """Build or optionally launch the Burp Suite command.
+
+    launch defaults to False so smoke tests and agents can inspect the command
+    without opening a GUI. Set launch=True only on an explicit user request.
+    """
+    jars = _find_burp_jars()
+    if not jars:
+        return {
+            "error": f"Burp Suite JAR not found under {BURP_DIR}. "
+            "Download from PortSwigger and place burpsuite*.jar there."
+        }
+    try:
+        arg_list = _split_args(extra_args)
+    except ValueError as e:
+        return {"error": f"cannot parse extra_args: {e}"}
+    cmd = ["java", "-jar", str(jars[0]), *arg_list]
+    response = {
+        "jar": str(jars[0].relative_to(REVERSE_ROOT)),
+        "command": cmd,
+        "proxy": "http://127.0.0.1:8080",
+        "launched": False,
+    }
+    if launch:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(REVERSE_ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+        )
+        response.update({"launched": True, "pid": proc.pid})
+    return response

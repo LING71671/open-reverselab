@@ -1113,6 +1113,30 @@ def ctf_tool_status() -> dict[str, Any]:
     return _safe_call(web_ctf.ctf_tool_status)
 
 
+@mcp.tool()
+def ctf_save_request(raw_request: str, case_name: str = "default", filename: str = "request.txt") -> dict[str, Any]:
+    """保存 raw HTTP request 到 exports/ctf-website/<case>/requests，供 Burp Repeater/Intruder 或 sqlmap -r 使用。"""
+    return _safe_call(web_ctf.ctf_save_request, raw_request, case_name, filename)
+
+
+@mcp.tool()
+def run_sqlmap_request(request_path: str, extra_args: str = "--batch", timeout: int = 300) -> dict[str, Any]:
+    """用 sqlmap -r 运行已保存的 raw HTTP request。"""
+    return _safe_call(web_ctf.run_sqlmap_request, request_path, extra_args, timeout)
+
+
+@mcp.tool()
+def burp_status() -> dict[str, Any]:
+    """检查 Burp Suite JAR、wrapper 和默认代理状态；不启动 GUI。"""
+    return _safe_call(web_ctf.burp_status)
+
+
+@mcp.tool()
+def burp_launch(extra_args: str = "", launch: bool = False) -> dict[str, Any]:
+    """生成或可选启动 Burp Suite。默认 launch=False，只返回命令，不弹 GUI。"""
+    return _safe_call(web_ctf.burp_launch, extra_args, launch)
+
+
 # ── Skill / project setup ──
 
 @mcp.tool()

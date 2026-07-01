@@ -392,6 +392,20 @@
       "notes": "GUI/proxy app. Automatic AI checks must not launch it; use only when user explicitly wants the GUI."
     },
     {
+      "id": "ctf.burp.wrapper",
+      "board": "ctf-website",
+      "name": "Burp Suite wrapper",
+      "launch_mode": "file_probe",
+      "command": "tools\\bin\\burp.bat",
+      "args": [],
+      "safe_probe": {
+        "type": "file",
+        "path": "tools\\bin\\burp.bat"
+      },
+      "ai_callable": false,
+      "notes": "No-popup wrapper probe. The MCP burp_status tool reports whether a Burp JAR is installed."
+    },
+    {
       "id": "android.apktool",
       "board": "android",
       "name": "apktool",

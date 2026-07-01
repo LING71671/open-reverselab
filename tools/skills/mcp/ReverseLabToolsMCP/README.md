@@ -62,6 +62,10 @@ uv sync
 | | `ctf_new_challenge` | 创建 CTF 题目 case |
 | | `run_ctf_tool` | 运行 sqlmap/dirsearch/jwt_tool/tplmap |
 | | `ctf_tool_status` | 检查 CTF 工具安装状态 |
+| | `ctf_save_request` | 保存 raw HTTP request，供 Burp Repeater/Intruder 或 sqlmap `-r` 复用 |
+| | `run_sqlmap_request` | 对已保存 request 文件运行 sqlmap |
+| | `burp_status` | 检查 Burp JAR、wrapper 和默认代理状态（不启动 GUI） |
+| | `burp_launch` | 生成或显式启动 Burp Suite 命令，默认不弹窗 |
 | **工具** | `toolbox_list` | 列出可用二进制工具 |
 | | `toolbox_run` | 运行工具 |
 | | `mcp_self_update` | 更新自身配置 |
@@ -78,3 +82,10 @@ uv sync
 | `REVERSELAB_HOST_PYTHON` | 宿主机 Python 路径（用于启动 GUI 工具） |
 | `ANDROID_SDK_PLATFORM_TOOLS` | Android SDK platform-tools 路径 |
 | `MUMU_SERIAL` | MuMu 模拟器 ADB 序列号，默认 `127.0.0.1:16384` |
+
+## Burp → sqlmap 接入链
+
+1. Burp/浏览器里确认一个可疑请求，复制 raw HTTP request。
+2. 调用 `ctf_save_request(raw_request, case_name, filename)`，文件会落到 `exports/ctf-website/<case>/requests/`。
+3. 调用 `run_sqlmap_request(request_path, "--batch --level=3 --risk=2")`。
+4. 用 `burp_status()` 做无弹窗状态检查；只有用户明确要求打开 GUI 时才调用 `burp_launch(launch=True)`。

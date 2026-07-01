@@ -86,10 +86,17 @@ function New-ToolBat {
     New-Item -ItemType Directory -Force -Path $batDir | Out-Null
     $batPath = Join-Path $batDir "$Name.bat"
     $absTarget = (Resolve-Path -Path $Target).Path
-    @"
+    if ([IO.Path]::GetExtension($absTarget).ToLowerInvariant() -eq ".py") {
+        @"
+@echo off
+python "$absTarget" %*
+"@ | Out-File -FilePath $batPath -Encoding ASCII
+    } else {
+        @"
 @echo off
 "$absTarget" %*
 "@ | Out-File -FilePath $batPath -Encoding ASCII
+    }
     Write-Host "    Wrapper: $batPath" -ForegroundColor Gray
 }
 
@@ -316,7 +323,21 @@ function Install-FridaDesktop {
 function Install-Sqlmap {
     Write-Host "`n[CTF] sqlmap" -ForegroundColor Cyan
     $dir = Join-Path $toolsDir "ctf-website\sqlmap"
-    Invoke-GitClone -Url "https://github.com/sqlmapproject/sqlmap.git" -Path $dir
+    $script = Join-Path $dir "sqlmap.py"
+    if (-not (Test-Path -LiteralPath $script)) {
+        if (Test-Path -LiteralPath $dir) {
+            $tmp = Join-Path (Split-Path -Parent $dir) ("sqlmap.__clone_" + [guid]::NewGuid().ToString("N"))
+            Invoke-GitClone -Url "https://github.com/sqlmapproject/sqlmap.git" -Path $tmp
+            if (Test-Path -LiteralPath (Join-Path $tmp "sqlmap.py")) {
+                Copy-Item -Path (Join-Path $tmp "*") -Destination $dir -Recurse -Force
+                Remove-Item -LiteralPath $tmp -Recurse -Force
+            } else {
+                Write-Warning "  sqlmap clone did not produce sqlmap.py; keeping existing directory."
+            }
+        } else {
+            Invoke-GitClone -Url "https://github.com/sqlmapproject/sqlmap.git" -Path $dir
+        }
+    }
     New-ToolBat -Name "sqlmap" -Target (Join-Path $dir "sqlmap.py")
     Write-Host "  sqlmap done." -ForegroundColor Green
 }
