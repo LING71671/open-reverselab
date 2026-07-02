@@ -235,6 +235,37 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 ?id=1 PROCEDURE ANALYSE(extractvalue(1,concat(0x7e,database())),1)--
 ```
 
+## 攻击链 / 工作流
+
+```
+1. 复用基础 SQLi 证据，确认注入点、闭合方式、DBMS 和过滤规则
+2. 分层测试绕过：HTTP 参数污染/分块 → 编码 → 注释 → 函数等价 → 语法变形
+3. 无直接回显时切换到二阶注入、OOB DNS/HTTP/SMB 或时间盲注
+4. 将 INSERT/UPDATE/ORDER BY/LIMIT 等非 SELECT 场景分别建模，避免套用单一 payload
+5. 对每种绕过只保留最小可验证 payload，并记录触发条件
+6. 如果 payload 需要外带通道，保存 DNS/HTTP listener 原始日志作为证据
+7. 输出 WAF 规则假设、可绕过语法族和修复建议（参数化 + allowlist）
+```
+
+## Evidence
+
+| 场景 | 证据 |
+|------|------|
+| WAF 绕过 | 拦截前 payload、绕过后 payload、状态码/响应差异 |
+| 二阶注入 | 写入点请求、触发点请求、延迟或报错输出 |
+| OOB 注入 | DNS/HTTP/SMB listener 日志、唯一 token |
+| 非 SELECT 注入 | INSERT/UPDATE/ORDER BY/LIMIT 的最小触发语句 |
+| 修复验证 | 参数化后同 payload 不再改变 SQL 语义 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 WAF bypass、second-order、OOB SQLi 搜索 |
+| HTTP 探测 | `http_probe` | 验证 payload 差异、延迟和状态码 |
+| 工具执行 | `run_ctf_tool` | 调用 sqlmap tamper、dnslog/自定义脚本 |
+| 证据记录 | `workspace_write_text` | 保存绕过矩阵和外带日志 |
+
 ## 9. 关联技术
 
 - [[01-sqli-fundamentals]] — SQL 注入基础

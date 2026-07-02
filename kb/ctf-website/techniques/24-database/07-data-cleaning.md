@@ -183,6 +183,16 @@ HTML/JSON  定位数据块   去除标记行   长度/字符集  样本→实体
 
 每条记录应包含：原始行号、数据内容、分类标签、关联实体 ID、关联实体名称、置信度。输出格式：CSV（全量）、SQLite（查询）、HTML（浏览）。
 
+## MCP 工具映射
+
+| 分析步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 database dump、data cleaning、leak triage 搜索 |
+| 文件哈希 | `hash_file` | 记录原始 dump、清洗后 CSV/SQLite 的完整性 |
+| 模式搜索 | `search_pattern` | 扫描邮箱、手机号、卡密、token、订单号等模式 |
+| 脚本执行 | `run_ctf_tool` | 调用清洗、去重、聚类、格式转换脚本 |
+| 证据记录 | `workspace_write_text` | 保存字段字典、脱敏样例、置信度规则和输出索引 |
+
 ## 9. 关联技术
 
 - [[00-overview]] — 数据库攻击全景

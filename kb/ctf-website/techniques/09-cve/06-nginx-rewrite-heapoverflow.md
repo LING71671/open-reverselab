@@ -146,6 +146,17 @@ python3 exploit/exp.py \
 - 容器内文件系统出现预期创建的文件
 - 堆喷射后 worker 进程 crash 或进入 system()
 
+## 攻击链
+
+```
+1. 确认 NGINX 版本受影响 + 目标启用了 rewrite/set 相关配置
+2. 用固定关键地址构造伪结构体（system() 地址 | 命令字符串地址 | 0）
+3. /spray 堆喷射（X-Delay 让请求对象不释放）→ 稳定堆布局
+4. 发送溢出 URI（A*349 + +*969 + target_bytes）→ set 缓冲区长度错配写越界
+5. 覆盖相邻堆结构 → 劫持控制流跳入 system()
+6. 验证命令执行 / 反弹 shell → RCE
+```
+
 ## Evidence
 
 记录: NGINX 版本、堆喷射请求/响应、溢出 URI 长度、system() 执行证据

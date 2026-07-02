@@ -108,6 +108,18 @@ python3 exploit/exp.py
 
 9.0.3+ 上进程不崩；对 `*0` 一节的处理完成后，对 `PING` 返回 `+PONG`。
 
+## 攻击链
+
+```
+1. 探测 Valkey/Redis 兼容端口可达 + 确认版本落在受影响区间
+2. 建立预认证 TCP 连接（无需密码、无需命令权限）
+3. 在同一 TCP buffer 中发送 *0\r\nPING\r\n pipeline 载荷
+4. 第一次解析 *0 后 resetClient 未清理 reqtype
+5. 第二次解析仍进入 multibulk 路径，qb_pos 指向 'P' 而非 '*'
+6. networking.c 断言失败 → valkey-server abort → 预认证 DoS
+7. 修复后重复发送载荷，应保持进程存活并对 PING 返回 +PONG
+```
+
 ## Evidence
 
 记录: 服务端崩溃日志、`networking.c:3528` 断言输出、nc 连接断开状态

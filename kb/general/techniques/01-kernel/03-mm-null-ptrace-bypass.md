@@ -191,6 +191,18 @@ fd 5 -> /etc/ssh/ssh_host_ed25519_key (round=37 try=812)
 | `ssh-keysign` | `/etc/ssh/ssh_host_*_key` | `permanently_set_uid()` |
 | `/usr/bin/chage -l` | `/etc/passwd` + `/etc/shadow` | `setreuid(ruid, ruid)` |
 
+## 攻击链
+
+```
+1. 选择会先打开 root-only 文件、再降权/退出的 setuid 目标程序
+2. 通过 fork/exec 与同步窗口反复触发目标进程进入 do_exit()
+3. 在 mm 被置空但 fd 表仍可被访问的窗口发起 ptrace/pidfd 相关操作
+4. 利用 mm-NULL 检查绕过，借 /proc/self/fd/<n> 复制目标进程残留 fd
+5. 枚举并确认 fd symlink 指向 /etc/ssh/ssh_host_*_key 或 /etc/shadow
+6. 读取复制到的 fd 内容 → 泄露 root-only 文件
+7. 在修复内核上重复验证，应无法跨过 ptrace 权限检查或无法复制敏感 fd
+```
+
 ## Evidence
 
 记录: 目标程序路径、命中 fd 编号、/proc/self/fd/ symlink 目标、泄露文件内容前 200 字节

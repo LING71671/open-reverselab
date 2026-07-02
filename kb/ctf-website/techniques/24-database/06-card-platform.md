@@ -319,6 +319,26 @@ XSS 链路:
 | P2 | `act=getcount` 加登录态校验 | 信息泄露 |
 | P2 | 全局 CSRF Token（非仅 Referer 校验） | 全局 |
 
+## Evidence
+
+| 风险点 | 证据 |
+|--------|------|
+| 全量库存泄露 | `?mod=faka&action=show` 请求/响应、CDK 字段脱敏样例、响应条数 |
+| IDOR 订单枚举 | `act=query` 页码、匿名 Session、`isnext` 翻页证据、订单 ID 范围 |
+| 订单详情读取 | `act=order` 的 `id+skey` 请求、kminfo/money/inputs 字段 |
+| DOM-XSS | kminfo/desc 注入 payload、DOM sink、浏览器执行截图或控制台证据 |
+| 支付回调 | 未签名/错误签名回调请求、订单状态变化或明确错误差异 |
+| 修复验证 | 加认证/归属校验/输出编码后，同 payload 不再泄露或执行 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 card platform、IDOR、payment callback、DOM-XSS 搜索 |
+| HTTP 探测 | `http_probe` | 验证 show/query/order/getcount/pay notify 接口差异 |
+| 工具执行 | `run_ctf_tool` | 调用枚举脚本、Playwright/XSS 验证或 Burp 导出复放 |
+| 证据记录 | `workspace_write_text` | 保存脱敏订单、CDK、请求响应与修复对比 |
+
 ## 9. 关联技术
 
 - [[sqli-nosqli]] — WAF 绕过与 SQL 注入

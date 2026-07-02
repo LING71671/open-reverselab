@@ -264,6 +264,37 @@ EXEC xp_cmdshell 'whoami';
 | HPP | `?id=1&id=2 UNION SELECT...` |
 | 编码绕过 | `CHAR(115,101,108,101,99,116)` |
 
+## 攻击链 / 工作流
+
+```
+1. 枚举所有输入点：URL 参数、POST 表单、Cookie、Header、JSON/XML 字段
+2. 用闭合符和布尔表达式确认是否存在 SQL 语义差异
+3. 通过报错信息、时间函数或特征语句识别 DBMS 指纹
+4. 有回显：走 ORDER BY → UNION 列数 → 回显位 → 表/列/数据提取
+5. 无回显：走 Boolean/Time blind，优先提取 database/user/version 等低风险指纹
+6. 有文件权限：评估 LOAD_FILE / INTO OUTFILE / xp_cmdshell 等高风险能力
+7. 遇到 WAF：记录拦截规则后转入高级绕过文档，避免无序 payload 爆破
+```
+
+## Evidence
+
+| 阶段 | 证据 |
+|------|------|
+| 注入确认 | 原始参数、payload、正常/异常响应差异 |
+| DBMS 指纹 | 报错栈、版本函数、时间函数响应 |
+| 数据提取 | UNION 回显位、盲注脚本输出、脱敏样例 |
+| 文件读写 | 目标路径、返回内容片段、写入文件哈希 |
+| WAF 记录 | 被拦截 payload、状态码、绕过前后对比 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 SQLi、blind、error-based、union 信号搜索 |
+| HTTP 对比 | `http_probe` | 比较 True/False/Time payload 的响应差异 |
+| 自动化验证 | `run_ctf_tool` | 调用 sqlmap 或自定义脚本做可控验证 |
+| 证据落盘 | `workspace_write_text` | 保存请求响应、payload 与结论 |
+
 ## 8. 关联技术
 
 - [[sqli-nosqli]] — SQL/NoSQL 注入

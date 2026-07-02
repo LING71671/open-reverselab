@@ -1,7 +1,7 @@
 # ReverseLab — Full Knowledge Base Dump for LLM Ingestion
 
 Total articles: 166
-Generated: 2026-06-28
+Generated: 2026-07-02
 
 ---
 ## [ctf-website] 验证码绕过技术与自动化
@@ -5924,7 +5924,7 @@ Java 模板引擎可以通过实例化 Java Runtime 类直接执行命令：
       .getCodeSource()
       .getLocation()
       .toURI()
-      .resolve("/home/carlos/my_password.txt")
+      .resolve("/tmp/reverselab-demo/my_password.txt")
       .toURL()
       .openStream()
       .readAllBytes()?join(" ")}
@@ -9491,6 +9491,18 @@ python3 exploit/exploit.py
 valkey-cli ACL SETUSER <user> -RESTORE
 ```
 
+## 攻击链
+
+```
+1. 探测目标 Redis/Valkey 端口可达 + 确认版本落在受影响区间
+2. 确认可执行 RESTORE（未被 ACL 禁用）
+3. 构造 overlong 编码的 zipmap payload（s=5, l=3, l<254 但 s!=1）
+4. RESTORE key ttl <payload> 注入 → verifyDumpPayload 通过 CRC/版本校验
+5. rdbLoadObject 进入 RDB_TYPE_HASH_ZIPMAP → zipmapValidateIntegrity 误判通过
+6. zipmapNext 步长错配 → 指针落入数据中间 → 误读长度 → heap-buffer-overflow
+7. 结合堆布局控制 → 从越界写升级为 RCE
+```
+
 ## Evidence
 
 记录: ASan 输出、Redis/Valkey 版本、`rdbLoadObject` 返回值、`zipmapValidateIntegrity` 校验结果
@@ -9900,6 +9912,16 @@ curl -s -X GET http://localhost:4000/user/list \
 | `--key` | 已有的 internal_user key |
 | `--verify-only` | 仅验证当前 key 是否已是管理员 |
 
+## 攻击链
+
+```
+1. 以低权限 internal_user 身份认证（或获取一枚 internal_user key）
+2. POST /key/generate 申请 allowed_routes=["/*"] → 系统未校验申请者角色边界 → 拿到通配符 key
+3. 用通配符 key POST /user/update 把自己 user_role 改为 proxy_admin → 路由授权回退到 key 的 allowed_routes 匹配放行
+4. GET /user/list 验证已获得管理员视图 → 提权成功
+5. 以 proxy_admin 完全控制管理接口（模型/预算/密钥/用户）
+```
+
 ## Evidence
 
 记录: `/key/generate` 返回的通配符 key、`/user/update` 响应、`/user/list` 返回的管理员用户列表
@@ -10059,6 +10081,17 @@ python3 exploit/exp.py \
 - PoC 输出 `crashed — system("<cmd>") executed`
 - 容器内文件系统出现预期创建的文件
 - 堆喷射后 worker 进程 crash 或进入 system()
+
+## 攻击链
+
+```
+1. 确认 NGINX 版本受影响 + 目标启用了 rewrite/set 相关配置
+2. 用固定关键地址构造伪结构体（system() 地址 | 命令字符串地址 | 0）
+3. /spray 堆喷射（X-Delay 让请求对象不释放）→ 稳定堆布局
+4. 发送溢出 URI（A*349 + +*969 + target_bytes）→ set 缓冲区长度错配写越界
+5. 覆盖相邻堆结构 → 劫持控制流跳入 system()
+6. 验证命令执行 / 反弹 shell → RCE
+```
 
 ## Evidence
 
@@ -10932,6 +10965,18 @@ python3 exploit/exp.py
 ## 5. 修复后行为
 
 9.0.3+ 上进程不崩；对 `*0` 一节的处理完成后，对 `PING` 返回 `+PONG`。
+
+## 攻击链
+
+```
+1. 探测 Valkey/Redis 兼容端口可达 + 确认版本落在受影响区间
+2. 建立预认证 TCP 连接（无需密码、无需命令权限）
+3. 在同一 TCP buffer 中发送 *0\r\nPING\r\n pipeline 载荷
+4. 第一次解析 *0 后 resetClient 未清理 reqtype
+5. 第二次解析仍进入 multibulk 路径，qb_pos 指向 'P' 而非 '*'
+6. networking.c 断言失败 → valkey-server abort → 预认证 DoS
+7. 修复后重复发送载荷，应保持进程存活并对 PING 返回 +PONG
+```
 
 ## Evidence
 
@@ -28803,6 +28848,38 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 └─ 发卡/电商平台 → [06] 平台专项攻击
 ```
 
+## 攻击链 / 工作流
+
+```
+1. 资产枚举：域名、目录、API、管理后台、数据库端口、备份文件名
+2. 信号分类：SQL 报错 / NoSQL 参数 / 配置文件 / 备份日志 / 平台特征
+3. 路由文档：按信号进入 01-07 对应技术文档，不在概览页直接深挖
+4. 低风险验证：只确认可控表达式、布尔差异、文件可读性或未授权访问
+5. 证据固化：保存请求、响应、时间差、错误栈、文件哈希和脱敏字段样例
+6. 横向关联：配置泄露 → 数据库登录；备份泄露 → 表结构；SQLi → 文件读写
+7. 收敛结论：写入 notes/reports，明确影响面、利用条件和修复优先级
+```
+
+## Evidence
+
+| 证据类型 | 记录内容 |
+|----------|----------|
+| HTTP 证据 | URL、参数、请求方法、状态码、关键响应片段 |
+| 数据库指纹 | DBMS 类型、版本、报错函数、时间函数差异 |
+| 文件泄露 | 文件路径、大小、哈希、脱敏字段样例 |
+| 权限边界 | 未授权/低权限/管理员权限的对比请求 |
+| 影响面 | 可读表、可枚举订单、可下载备份、可访问管理工具 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 按信号路由 | `kb_router` | 输入 SQLi、NoSQL、备份、配置泄露等信号 |
+| 读取技术文档 | `kb_read_file` | 打开对应 24-database 子文档 |
+| HTTP 探测 | `http_probe` | 验证端点、状态码、响应差异 |
+| 执行 Web 工具 | `run_ctf_tool` | 调用 sqlmap、git-dumper、目录枚举等工具 |
+| 证据记录 | `workspace_write_text` | 写入 notes/reports 的复现证据 |
+
 ## 关联技术
 
 - [[sqli-nosqli]] — SQL/NoSQL 注入
@@ -29039,6 +29116,37 @@ EXEC xp_cmdshell 'whoami';
 | HPP | `?id=1&id=2 UNION SELECT...` |
 | 编码绕过 | `CHAR(115,101,108,101,99,116)` |
 
+## 攻击链 / 工作流
+
+```
+1. 枚举所有输入点：URL 参数、POST 表单、Cookie、Header、JSON/XML 字段
+2. 用闭合符和布尔表达式确认是否存在 SQL 语义差异
+3. 通过报错信息、时间函数或特征语句识别 DBMS 指纹
+4. 有回显：走 ORDER BY → UNION 列数 → 回显位 → 表/列/数据提取
+5. 无回显：走 Boolean/Time blind，优先提取 database/user/version 等低风险指纹
+6. 有文件权限：评估 LOAD_FILE / INTO OUTFILE / xp_cmdshell 等高风险能力
+7. 遇到 WAF：记录拦截规则后转入高级绕过文档，避免无序 payload 爆破
+```
+
+## Evidence
+
+| 阶段 | 证据 |
+|------|------|
+| 注入确认 | 原始参数、payload、正常/异常响应差异 |
+| DBMS 指纹 | 报错栈、版本函数、时间函数响应 |
+| 数据提取 | UNION 回显位、盲注脚本输出、脱敏样例 |
+| 文件读写 | 目标路径、返回内容片段、写入文件哈希 |
+| WAF 记录 | 被拦截 payload、状态码、绕过前后对比 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 SQLi、blind、error-based、union 信号搜索 |
+| HTTP 对比 | `http_probe` | 比较 True/False/Time payload 的响应差异 |
+| 自动化验证 | `run_ctf_tool` | 调用 sqlmap 或自定义脚本做可控验证 |
+| 证据落盘 | `workspace_write_text` | 保存请求响应、payload 与结论 |
+
 ## 8. 关联技术
 
 - [[sqli-nosqli]] — SQL/NoSQL 注入
@@ -29245,6 +29353,37 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 ```sql
 ?id=1 PROCEDURE ANALYSE(extractvalue(1,concat(0x7e,database())),1)--
 ```
+
+## 攻击链 / 工作流
+
+```
+1. 复用基础 SQLi 证据，确认注入点、闭合方式、DBMS 和过滤规则
+2. 分层测试绕过：HTTP 参数污染/分块 → 编码 → 注释 → 函数等价 → 语法变形
+3. 无直接回显时切换到二阶注入、OOB DNS/HTTP/SMB 或时间盲注
+4. 将 INSERT/UPDATE/ORDER BY/LIMIT 等非 SELECT 场景分别建模，避免套用单一 payload
+5. 对每种绕过只保留最小可验证 payload，并记录触发条件
+6. 如果 payload 需要外带通道，保存 DNS/HTTP listener 原始日志作为证据
+7. 输出 WAF 规则假设、可绕过语法族和修复建议（参数化 + allowlist）
+```
+
+## Evidence
+
+| 场景 | 证据 |
+|------|------|
+| WAF 绕过 | 拦截前 payload、绕过后 payload、状态码/响应差异 |
+| 二阶注入 | 写入点请求、触发点请求、延迟或报错输出 |
+| OOB 注入 | DNS/HTTP/SMB listener 日志、唯一 token |
+| 非 SELECT 注入 | INSERT/UPDATE/ORDER BY/LIMIT 的最小触发语句 |
+| 修复验证 | 参数化后同 payload 不再改变 SQL 语义 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 WAF bypass、second-order、OOB SQLi 搜索 |
+| HTTP 探测 | `http_probe` | 验证 payload 差异、延迟和状态码 |
+| 工具执行 | `run_ctf_tool` | 调用 sqlmap tamper、dnslog/自定义脚本 |
+| 证据记录 | `workspace_write_text` | 保存绕过矩阵和外带日志 |
 
 ## 9. 关联技术
 
@@ -29456,6 +29595,37 @@ echo "stats cachedump 1 100" | nc target 11211  # 缓存内容
 echo "get keyname" | nc target 11211
 ```
 
+## 攻击链 / 工作流
+
+```
+1. 识别技术栈信号：MongoDB 操作符、Redis 端口、Elasticsearch API、CouchDB/Memcached Banner
+2. 低风险探测：未授权访问、认证绕过、错误信息、状态接口
+3. MongoDB：测试 $ne/$regex/$where 等操作符注入，确认 JSON/参数解析方式
+4. Redis/Memcached：先只读 INFO/STATS/GET，确认权限与数据敏感度
+5. Elasticsearch/CouchDB：枚举索引/数据库/用户，不直接执行破坏性脚本
+6. 需要 RCE 链时记录版本、插件/脚本引擎状态和写入路径，隔离环境复现
+7. 收敛证据：服务类型、版本、认证状态、可读键/集合/索引样例
+```
+
+## Evidence
+
+| 服务 | 证据 |
+|------|------|
+| MongoDB | 注入前后查询差异、认证绕过请求、操作符 payload |
+| Redis | `INFO` 输出、`CONFIG GET dir`、可读 key 名称（脱敏） |
+| Elasticsearch | `_cluster/health`、索引列表、查询注入响应 |
+| CouchDB | `/_all_dbs`、`/_users`、未授权状态码 |
+| Memcached | `stats`、`stats items`、脱敏 key/value 样例 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 MongoDB、Redis、Elasticsearch、NoSQL injection 搜索 |
+| 端点探测 | `http_probe` | 探测 HTTP API 型 NoSQL 服务 |
+| 工具执行 | `run_ctf_tool` | 调用 nc/redis-cli/curl/自定义探测脚本 |
+| 证据记录 | `workspace_write_text` | 保存服务指纹、未授权证据和脱敏样例 |
+
 ## 6. 关联技术
 
 - [[01-sqli-fundamentals]] — SQL 注入基础
@@ -29638,6 +29808,37 @@ Flask debug mode → 代码执行
 - `disable_functions`（可执行函数列表）
 - `open_basedir`（目录访问限制）
 - `Loaded Configuration File`（php.ini 路径）
+
+## 攻击链 / 工作流
+
+```
+1. 枚举常见配置路径：.env、config.php、application.yml、settings.py、web.config
+2. 结合目录遍历、源码泄露、备份文件、php filter 或 debug 页面读取配置
+3. 提取连接字符串、DB_HOST、DB_USER、DB_PASS、Redis/Mongo URI 等字段
+4. 判断凭证作用域：本地数据库、内网数据库、云 RDS、缓存服务、消息队列
+5. 只做最小登录/版本/权限验证，避免写入或修改业务数据
+6. 关联后续链路：SQLi 文件读写、NoSQL 未授权、备份下载、管理后台登录
+7. 记录泄露路径和脱敏凭证片段，输出清理与轮换建议
+```
+
+## Evidence
+
+| 证据类型 | 记录内容 |
+|----------|----------|
+| 泄露入口 | URL、参数、文件路径、状态码、响应长度 |
+| 配置字段 | 脱敏后的 host/user/database/driver/port |
+| 访问验证 | 只读登录成功、版本查询、权限边界 |
+| 环境信息 | phpinfo/debug 页面中的 DOCUMENT_ROOT、open_basedir、框架版本 |
+| 修复验证 | 文件不可读、debug 关闭、凭证轮换后旧凭证失效 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 .env、config leak、phpinfo、connection string 搜索 |
+| HTTP 探测 | `http_probe` | 验证配置文件、debug 页面和状态码 |
+| 工具执行 | `run_ctf_tool` | 调用目录扫描、git-dumper、curl 等工具 |
+| 证据记录 | `workspace_write_text` | 保存脱敏配置和验证结果 |
 
 ## 8. 关联技术
 
@@ -29837,6 +30038,37 @@ curl target/.git/HEAD
 # 使用工具恢复
 git-dumper target/.git output/
 ```
+
+## 攻击链 / 工作流
+
+```
+1. 从站点名、目录名、时间戳、部署习惯生成备份候选路径
+2. 探测 .sql/.dump/.zip/.tar.gz/.bak/.old/.log/.git 等静态资源
+3. 对命中文件先记录响应头、大小、hash，再下载到隔离目录分析
+4. 解压/解析后提取 schema、用户表、订单表、日志中的 SQL/Token/错误栈
+5. 关联配置泄露与源码恢复：定位数据库连接、后台路径、框架版本
+6. 对 Git 泄露执行最小恢复，确认源码/配置/历史提交是否含敏感信息
+7. 输出影响面：泄露表、时间范围、字段类型、可独立使用资产和修复清单
+```
+
+## Evidence
+
+| 证据类型 | 记录内容 |
+|----------|----------|
+| 文件命中 | URL、状态码、Content-Length、ETag/Last-Modified |
+| 完整性 | SHA256、文件大小、解压后的文件列表 |
+| 数据内容 | 脱敏表名、字段名、样例行、日志关键片段 |
+| 源码恢复 | `.git/HEAD`、恢复提交、敏感文件路径 |
+| 修复验证 | 备份文件 404/403、目录索引关闭、历史凭证轮换 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 backup leak、log leak、git exposure 搜索 |
+| HTTP 探测 | `http_probe` | 批量验证候选备份/日志路径 |
+| 工具执行 | `run_ctf_tool` | 调用 git-dumper、目录枚举、解包/解析脚本 |
+| 证据记录 | `workspace_write_text` | 保存文件哈希、脱敏样例和恢复清单 |
 
 ## 7. 关联技术
 
@@ -30128,6 +30360,26 @@ XSS 链路:
 | P2 | `act=getcount` 加登录态校验 | 信息泄露 |
 | P2 | 全局 CSRF Token（非仅 Referer 校验） | 全局 |
 
+## Evidence
+
+| 风险点 | 证据 |
+|--------|------|
+| 全量库存泄露 | `?mod=faka&action=show` 请求/响应、CDK 字段脱敏样例、响应条数 |
+| IDOR 订单枚举 | `act=query` 页码、匿名 Session、`isnext` 翻页证据、订单 ID 范围 |
+| 订单详情读取 | `act=order` 的 `id+skey` 请求、kminfo/money/inputs 字段 |
+| DOM-XSS | kminfo/desc 注入 payload、DOM sink、浏览器执行截图或控制台证据 |
+| 支付回调 | 未签名/错误签名回调请求、订单状态变化或明确错误差异 |
+| 修复验证 | 加认证/归属校验/输出编码后，同 payload 不再泄露或执行 |
+
+## MCP 工具映射
+
+| 攻击步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 card platform、IDOR、payment callback、DOM-XSS 搜索 |
+| HTTP 探测 | `http_probe` | 验证 show/query/order/getcount/pay notify 接口差异 |
+| 工具执行 | `run_ctf_tool` | 调用枚举脚本、Playwright/XSS 验证或 Burp 导出复放 |
+| 证据记录 | `workspace_write_text` | 保存脱敏订单、CDK、请求响应与修复对比 |
+
 ## 9. 关联技术
 
 - [[sqli-nosqli]] — WAF 绕过与 SQL 注入
@@ -30286,6 +30538,16 @@ HTML/JSON  定位数据块   去除标记行   长度/字符集  样本→实体
 ## 8. 输出规范
 
 每条记录应包含：原始行号、数据内容、分类标签、关联实体 ID、关联实体名称、置信度。输出格式：CSV（全量）、SQLite（查询）、HTML（浏览）。
+
+## MCP 工具映射
+
+| 分析步骤 | MCP 工具 | 说明 |
+|---------|---------|------|
+| 知识检索 | `kb_router` | 按 database dump、data cleaning、leak triage 搜索 |
+| 文件哈希 | `hash_file` | 记录原始 dump、清洗后 CSV/SQLite 的完整性 |
+| 模式搜索 | `search_pattern` | 扫描邮箱、手机号、卡密、token、订单号等模式 |
+| 脚本执行 | `run_ctf_tool` | 调用清洗、去重、聚类、格式转换脚本 |
+| 证据记录 | `workspace_write_text` | 保存字段字典、脱敏样例、置信度规则和输出索引 |
 
 ## 9. 关联技术
 
@@ -37393,6 +37655,18 @@ dmesg | grep -E "warn_free_bad_obj|Wrong slab cache"
 | 唯一路径 | `bpf_test_init` 是唯一通过 kzalloc 分配 704 字节的路径 |
 | 静默数据损坏 | 无 `CONFIG_SLUB_DEBUG` 时可能导致无法诊断的内核崩溃 |
 
+## 攻击链
+
+```
+1. 确认目标内核版本受影响，且启用了 KFENCE / BPF prog test run 路径
+2. 构造会进入 bpf_prog_test_run_skb 的 BPF 触发程序
+3. 让 skb head 以 704 字节路径分配，命中 KFENCE 精确大小报告
+4. __ksize 返回精确请求大小而非 slab cache 大小，破坏 skb head cache 推断
+5. skb_free_head 按错误 cache 释放对象 → warn_free_bad_obj / cross-cache free
+6. 通过 dmesg splat 与调用栈确认触发点；无调试配置时关注异常崩溃或静默损坏
+7. 对比修复内核，确认 __ksize/KFENCE 路径不再导致错误 cache 释放
+```
+
 ## Evidence
 
 记录: 内核版本、KFENCE 配置、dmesg splat 完整输出、BPF 程序触发轮次
@@ -37562,9 +37836,7 @@ sudo install -m 4755 vuln_target /usr/local/bin/vuln_target
 ```text
 uid=1000  target=/usr/lib/ssh/ssh-keysign
 fd 5 -> /etc/ssh/ssh_host_ed25519_key (round=37 try=812)
------BEGIN OPENSSH PRIVATE KEY-----
-...
------END OPENSSH PRIVATE KEY-----
+[OPENSSH PRIVATE KEY REDACTED]
 ```
 
 ### Hits 范围
@@ -37577,6 +37849,18 @@ fd 5 -> /etc/ssh/ssh_host_ed25519_key (round=37 try=812)
 |------|-----------|---------|
 | `ssh-keysign` | `/etc/ssh/ssh_host_*_key` | `permanently_set_uid()` |
 | `/usr/bin/chage -l` | `/etc/passwd` + `/etc/shadow` | `setreuid(ruid, ruid)` |
+
+## 攻击链
+
+```
+1. 选择会先打开 root-only 文件、再降权/退出的 setuid 目标程序
+2. 通过 fork/exec 与同步窗口反复触发目标进程进入 do_exit()
+3. 在 mm 被置空但 fd 表仍可被访问的窗口发起 ptrace/pidfd 相关操作
+4. 利用 mm-NULL 检查绕过，借 /proc/self/fd/<n> 复制目标进程残留 fd
+5. 枚举并确认 fd symlink 指向 /etc/ssh/ssh_host_*_key 或 /etc/shadow
+6. 读取复制到的 fd 内容 → 泄露 root-only 文件
+7. 在修复内核上重复验证，应无法跨过 ptrace 权限检查或无法复制敏感 fd
+```
 
 ## Evidence
 

@@ -30,6 +30,9 @@ CRITICAL_FILES = [
     "scripts/ctf-website/fingerprint_cve_pipeline.py",
 ]
 STUB_MARKERS = ("not yet implemented", "backend not yet configured", "TODO: Plan CVE")
+# Generated aggregations of KB content. They inherit the KB's synthetic attack
+# snippets verbatim, so the assignment heuristic below must treat them like kb/.
+KB_DERIVED_FILES = {"docs/llms-full.txt", "docs/llms.txt"}
 
 
 def tracked_files(staged: bool = False) -> list[Path]:
@@ -83,8 +86,9 @@ def main() -> int:
         # KB pages intentionally contain synthetic attack snippets. Keep strong
         # token/key patterns enabled everywhere, but apply assignment heuristics
         # only to executable/config content to avoid treating examples as leaks.
+        rel_posix = path.relative_to(ROOT).as_posix()
         rel_parts = path.relative_to(ROOT).parts
-        if "kb" not in rel_parts and re.search(
+        if "kb" not in rel_parts and rel_posix not in KB_DERIVED_FILES and re.search(
             r"(?im)^[^#\n]*(?:password|passwd|api[_-]?key|token|secret)[ \t]*=[ \t]*[^\s#]+",
             text,
         ):

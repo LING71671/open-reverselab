@@ -22,3 +22,10 @@ def test_text_extensions_include_public_config_formats():
     assert ".toml" in public_release_check.TEXT_EXTS
     assert ".yml" in public_release_check.TEXT_EXTS
     assert ".json" in public_release_check.TEXT_EXTS
+
+
+def test_kb_derived_dumps_are_exempt_from_credential_heuristic():
+    # The generated LLM dumps aggregate KB articles verbatim, so they inherit the
+    # KB's synthetic credential snippets and must be exempt like kb/ itself.
+    assert "docs/llms-full.txt" in public_release_check.KB_DERIVED_FILES
+    assert "docs/llms.txt" in public_release_check.KB_DERIVED_FILES

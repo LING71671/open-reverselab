@@ -175,6 +175,18 @@ dmesg | grep -E "warn_free_bad_obj|Wrong slab cache"
 | 唯一路径 | `bpf_test_init` 是唯一通过 kzalloc 分配 704 字节的路径 |
 | 静默数据损坏 | 无 `CONFIG_SLUB_DEBUG` 时可能导致无法诊断的内核崩溃 |
 
+## 攻击链
+
+```
+1. 确认目标内核版本受影响，且启用了 KFENCE / BPF prog test run 路径
+2. 构造会进入 bpf_prog_test_run_skb 的 BPF 触发程序
+3. 让 skb head 以 704 字节路径分配，命中 KFENCE 精确大小报告
+4. __ksize 返回精确请求大小而非 slab cache 大小，破坏 skb head cache 推断
+5. skb_free_head 按错误 cache 释放对象 → warn_free_bad_obj / cross-cache free
+6. 通过 dmesg splat 与调用栈确认触发点；无调试配置时关注异常崩溃或静默损坏
+7. 对比修复内核，确认 __ksize/KFENCE 路径不再导致错误 cache 释放
+```
+
 ## Evidence
 
 记录: 内核版本、KFENCE 配置、dmesg splat 完整输出、BPF 程序触发轮次

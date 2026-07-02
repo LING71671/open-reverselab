@@ -144,6 +144,18 @@ python3 exploit/exploit.py
 valkey-cli ACL SETUSER <user> -RESTORE
 ```
 
+## 攻击链
+
+```
+1. 探测目标 Redis/Valkey 端口可达 + 确认版本落在受影响区间
+2. 确认可执行 RESTORE（未被 ACL 禁用）
+3. 构造 overlong 编码的 zipmap payload（s=5, l=3, l<254 但 s!=1）
+4. RESTORE key ttl <payload> 注入 → verifyDumpPayload 通过 CRC/版本校验
+5. rdbLoadObject 进入 RDB_TYPE_HASH_ZIPMAP → zipmapValidateIntegrity 误判通过
+6. zipmapNext 步长错配 → 指针落入数据中间 → 误读长度 → heap-buffer-overflow
+7. 结合堆布局控制 → 从越界写升级为 RCE
+```
+
 ## Evidence
 
 记录: ASan 输出、Redis/Valkey 版本、`rdbLoadObject` 返回值、`zipmapValidateIntegrity` 校验结果

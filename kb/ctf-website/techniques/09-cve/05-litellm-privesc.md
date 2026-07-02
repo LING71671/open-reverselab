@@ -115,6 +115,16 @@ curl -s -X GET http://localhost:4000/user/list \
 | `--key` | 已有的 internal_user key |
 | `--verify-only` | 仅验证当前 key 是否已是管理员 |
 
+## 攻击链
+
+```
+1. 以低权限 internal_user 身份认证（或获取一枚 internal_user key）
+2. POST /key/generate 申请 allowed_routes=["/*"] → 系统未校验申请者角色边界 → 拿到通配符 key
+3. 用通配符 key POST /user/update 把自己 user_role 改为 proxy_admin → 路由授权回退到 key 的 allowed_routes 匹配放行
+4. GET /user/list 验证已获得管理员视图 → 提权成功
+5. 以 proxy_admin 完全控制管理接口（模型/预算/密钥/用户）
+```
+
 ## Evidence
 
 记录: `/key/generate` 返回的通配符 key、`/user/update` 响应、`/user/list` 返回的管理员用户列表
