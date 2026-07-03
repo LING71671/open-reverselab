@@ -17,7 +17,7 @@ keywords: ["canonicalization攻击", "规范化绕过", "参数排序差异", "J
 difficulty: "advanced"
 tags: ["signature", "canonicalization", "encoding", "parsing", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/01-algorithm"]
 ---
 # Canonicalization Attacks — 签名规范化绕过
@@ -1871,6 +1871,42 @@ if __name__ == "__main__":
 [ ] CRLF: 参数值中能否注入分隔符?
 ```
 
+## 支付回调签名模型
+
+支付回调里最常见的不是“破解 HMAC”，而是签名 canonical 和业务读取 canonical 不一致。
+
+| 差异点 | 签名看到 | 业务看到 | 利用信号 |
+|---|---|---|---|
+| 重复金额 | `amount=100` first wins | `amount=0.01` last wins | 低价回调变 paid |
+| 字段覆盖 | 签名只覆盖 `order_id,trade_no` | 业务读取 `status,total_amount` | 改状态/金额仍通过 |
+| JSON 重复 key | parser A first wins | parser B last wins | `{"amount":100,"amount":0.01}` |
+| 空字段 | 签名过滤空值 | 业务保留空值 | `status=` 覆盖默认状态 |
+| 编码 | `%2b` / `+` | 空格或加号 | 签名串和业务值不同 |
+| 类型 | `"100"` | `100.0` / `1e2` | 数字表示差异 |
+
+```python
+# payment_canonical_probe.py — 支付回调规范化差异样本
+import json
+import urllib.parse
+
+def payment_hpp_variants(order_id="ORD001"):
+    return [
+        f"out_trade_no={order_id}&amount=100&amount=0.01&status=TRADE_SUCCESS",
+        f"out_trade_no={order_id}&status=WAIT_PAY&status=TRADE_SUCCESS&amount=100",
+        f"out_trade_no={order_id}&total_amount=100&paid_amount=0.01&status=TRADE_SUCCESS",
+        urllib.parse.urlencode({"out_trade_no": order_id, "amount": "100%26status=TRADE_SUCCESS"}),
+    ]
+
+def payment_json_variants(order_id="ORD001"):
+    return [
+        '{"out_trade_no":"%s","amount":100,"amount":0.01,"status":"TRADE_SUCCESS"}' % order_id,
+        json.dumps({"out_trade_no": order_id, "amount": "1e-2", "status": "TRADE_SUCCESS"}, separators=(",", ":")),
+        json.dumps({"status": "TRADE_SUCCESS", "amount": 0.01, "out_trade_no": order_id}, indent=2),
+    ]
+```
+
+Evidence 里要同时保存：签名原串、验签原串、业务读取字段、最终订单状态。只保存 `sign valid` 不够，因为签名通过但业务字段没变，说明卡在业务读取层。
+
 ## 参考
 
 - [RFC 8785 — JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785)
@@ -1895,9 +1931,10 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 采集合法签名样本 → 还原 canonicalization → 锁定算法/密钥/nonce 假设 → 单变量变异 → 服务端 oracle 验证 → 重放或伪造链。
 
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `canonical_string.txt`: 签名原串、验签原串、排序规则、编码规则。
+- `variant_matrix.csv`: 参数顺序、重复 key、URL 编码、JSON 空白、数字表示、Base64 padding。
+- `payment_callback_fields.json`: `out_trade_no`、`trade_no`、`amount`、`status`、`sign` 的签名值与业务读取值。
+- 成功样本: 单变量变体被接受且服务端状态、权限、订单或 Flag 发生可重复变化。
+- 失败样本: 签名通过但业务字段未改变；业务字段改变但签名失败；响应差异只来自错误页模板。

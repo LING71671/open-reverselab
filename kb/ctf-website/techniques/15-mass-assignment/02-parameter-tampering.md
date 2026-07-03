@@ -59,6 +59,50 @@ cart → quote → order → payment_intent → callback → fulfill/refund
 
 最终 oracle：订单状态变为 `paid/shipped/active`、权益/卡密/下载链接出现、余额/积分变化、库存扣减或退款到账。中间步骤 `200` 只能算候选。
 
+### 0.1 支付结果一致性矩阵
+
+金额参数每改一次，都要记录“五个值”：请求值、订单持久化值、网关值、回调值、最终权益值。
+
+| 请求值 | 订单值 | 网关值 | 回调值 | 权益/退款 | 判断 |
+|---|---|---|---|---|---|
+| `0` | `0` | `0` | `0` | 发货 | 零元购完整命中 |
+| `0.01` | 原价 | 原价 | 原价 | 发货 | 前端/quote 层失败 |
+| `0.01` | `0.01` | 原价 | 原价 | 不发货 | 订单层命中，网关层失败 |
+| `0.01` | `0.01` | `0.01` | `0.01` | 发货 | 低价支付完整命中 |
+| `-100` | `-100` | 不创建 | 余额增加 | 退款/充值 | 负值链命中 |
+| 原价 | 原价 | 原价 | `0.01` | 发货 | 回调金额未核对 |
+
+```python
+# payment_value_tracker.py — 金额链路五值记录
+def extract_amounts(order_resp=None, payment_resp=None, notify_resp=None, fulfill_resp=None):
+    def pick(obj, keys):
+        if obj is None:
+            return None
+        if hasattr(obj, "json"):
+            try:
+                obj = obj.json()
+            except Exception:
+                obj = {}
+        for key in keys:
+            cur = obj
+            for part in key.split("."):
+                if isinstance(cur, dict) and part in cur:
+                    cur = cur[part]
+                else:
+                    cur = None
+                    break
+            if cur is not None:
+                return cur
+        return None
+
+    return {
+        "order_amount": pick(order_resp, ["amount", "total", "data.amount", "data.total"]),
+        "gateway_amount": pick(payment_resp, ["amount", "total_amount", "data.amount"]),
+        "notify_amount": pick(notify_resp, ["amount", "paid_amount", "total_amount"]),
+        "entitlement": pick(fulfill_resp, ["license", "download", "vip", "flag", "data.license"]),
+    }
+```
+
 ### 1. 价格操纵深度矩阵
 
 #### 1.1 类型混淆全向量
@@ -724,7 +768,9 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 
 ## Evidence
 
-- 保存 cart/quote/order/payment/callback/fulfill 全链请求与关键响应字段。
-- 记录每个金额字段的请求值、响应值、持久化值、网关值、最终权益。
-- 对竞态记录并发数、成功响应数、最终落库数、权益到账数和失败样本。
-- 输出统一放入 `exports/ctf-website/<case>/`，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `payment_value_matrix.csv`: 请求值、订单值、网关值、回调值、权益/退款结果。
+- `cart_quote_order.json`: cart/quote/order 三阶段完整请求与关键响应字段。
+- `notify_replay.json`: 回调 payload、签名字段、状态码、订单状态变化。
+- `race_result.json`: 并发数、成功响应数、最终落库数、权益到账数。
+- 成功样本: 低价/零值进入网关并最终发货；回调低金额仍标记 paid；退款后权益仍保留。
+- 失败样本: 只改前端展示；订单重算原价；网关拒绝低价；发货服务重新核对订单金额。

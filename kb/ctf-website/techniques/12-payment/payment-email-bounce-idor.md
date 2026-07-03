@@ -16,7 +16,7 @@ keywords: ["退信攻击", "bounce email", "IDOR", "订单越权", "卡密泄露
 difficulty: "intermediate"
 tags: ["idor", "email-security", "information-disclosure", "payment", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/14-idor/01-idor-enumeration"]
 ---
 # 退信滥用 + 订单号授权绕过窃取卡密
@@ -181,9 +181,10 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 - [CWE-639] Authorization Bypass Through User-Controlled Key
 - [CWE-200] Exposure of Sensitive Information to an Unauthorized Actor
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `order_probe_matrix.csv`: order_id、email/token、登录态、状态码、响应长度、关键字段。
+- `bounce_payloads.json`: 退信/邮件链接里的订单号、签名、一次性 token、过期时间。
+- `role_compare.json`: 匿名、订单所有者、其他用户、管理员的响应字段 diff。
+- 成功样本: 非订单所有者读到订单、支付状态、下载链接、优惠券或 flag。
+- 失败样本: 只返回公共状态、链接过期、token 绑定邮箱或订单所有者。

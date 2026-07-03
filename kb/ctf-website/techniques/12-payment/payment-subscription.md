@@ -17,7 +17,7 @@ keywords: ["订阅攻击", "subscription bypass", "试用绕过", "trial abuse",
 difficulty: "advanced"
 tags: ["payment", "subscription", "recurring", "trial-abuse", "webhook", "web-security"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/12-payment/payment-bypass", "ctf-website/12-payment/payment-digital-goods"]
 ---
 # Payment Subscription — 订阅/定期付款攻击深度手册
@@ -607,9 +607,10 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | 订阅 API 探测 | `http_probe` | HTTP GET 探测订阅管理端点 |
 | 知识检索 | `kb_router` | 按订阅攻击信号搜索知识库 |
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `subscription_state.json`: trial、active、past_due、cancelled、expired、grace_period 的转换记录。
+- `plan_matrix.csv`: plan_id、price_id、coupon、billing_cycle、entitlement、最终权限。
+- `webhook_replay.json`: invoice/payment/subscription 回调 payload、签名、重放次数、状态变化。
+- 成功样本: 低价 plan 获得高价权益、取消后权益保留、trial 无限续、past_due 仍可访问付费资源。
+- 失败样本: entitlement 服务重新核对 plan/price、webhook 幂等、取消立即回收权限。

