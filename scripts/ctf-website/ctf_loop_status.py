@@ -37,26 +37,6 @@ def round_count(manifest: dict[str, Any]) -> int:
     return len(((manifest.get("autopilot") or {}).get("rounds")) or [])
 
 
-def budget_exhausted(manifest: dict[str, Any], now: datetime | None = None) -> tuple[bool, str]:
-    if manifest.get("next_actions") or manifest.get("next_round_focus") or manifest.get("attack_paths"):
-        return False, ""
-
-    state = manifest.get("autopilot") or {}
-    budget = state.get("budget") or {}
-    max_rounds = int(budget.get("max_rounds") or 0)
-    if max_rounds and round_count(manifest) >= max_rounds:
-        return True, f"max_rounds reached: {round_count(manifest)}/{max_rounds}"
-
-    budget_seconds = int(budget.get("budget_seconds") or 0)
-    started_at = parse_time(str(state.get("started_at") or ""))
-    if budget_seconds and started_at:
-        current = now or datetime.now(timezone.utc)
-        elapsed = (current - started_at).total_seconds()
-        if elapsed >= budget_seconds:
-            return True, f"budget_seconds exhausted: {int(elapsed)}/{budget_seconds}"
-    return False, ""
-
-
 def paths_exhausted(manifest: dict[str, Any]) -> bool:
     hypotheses = manifest.get("hypotheses") or []
     next_actions = [x for x in (manifest.get("next_actions") or []) if str(x).strip()]
@@ -72,10 +52,6 @@ def paths_exhausted(manifest: dict[str, Any]) -> bool:
 def evaluate_manifest(manifest: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:
     if has_flag_evidence(manifest):
         return {"status": "DONE", "reason": "flag or solved evidence recorded"}
-
-    exhausted, reason = budget_exhausted(manifest, now=now)
-    if exhausted:
-        return {"status": "EXHAUSTED", "reason": reason}
 
     if paths_exhausted(manifest):
         return {"status": "EXHAUSTED", "reason": "all hypotheses and attack paths are exhausted"}

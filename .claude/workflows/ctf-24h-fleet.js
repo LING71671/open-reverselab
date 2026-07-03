@@ -17,9 +17,10 @@ export const meta = {
 //   object.caseRoot     → case 根目录，默认 cases
 //   object.casePrefix   → case 前缀；默认 fleetName
 //   object.reportRoot   → report 根目录，默认 reports/ctf-website
-//   object.batchSize    → 每轮并行目标数，默认 4
-//   object.maxActions   → 每个 target 的 autopilot 动作数，默认 4
-//   object.maxWorkflows → 每个 target 的攻击 worker 数，默认 4
+//   object.batchSize    → 可选；每轮并行目标数，不传/0 表示全部并行
+//   object.maxActions   → 可选数量参数；不传/0 表示全部
+//   object.maxWorkflows → 可选数量参数；不传/0 表示全部
+//   object.innerIterations → 可选；每个攻击 worker 内部迭代次数，不传表示迭代到收敛/状态变化
 //   object.workerIds    → 每个 target 允许的 worker 列表
 //   object.execute      → 是否执行 allowlist 动作，默认 true
 // ================================================================
@@ -54,9 +55,10 @@ const fleetName = typeof args === 'object' && args?.fleetName ? slugify(args.fle
 const caseRoot = typeof args === 'object' && args?.caseRoot ? args.caseRoot : 'cases'
 const casePrefix = typeof args === 'object' && args?.casePrefix ? slugify(args.casePrefix) : fleetName
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
-const batchSize = typeof args === 'object' && args?.batchSize ? Math.max(1, Number(args.batchSize)) : 4
-const maxActions = typeof args === 'object' && args?.maxActions ? Number(args.maxActions) : 4
-const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? Number(args.maxWorkflows) : 4
+const batchSize = typeof args === 'object' && args?.batchSize ? Math.max(1, Number(args.batchSize)) : 0
+const maxActions = typeof args === 'object' && args?.maxActions ? Number(args.maxActions) : 0
+const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? Number(args.maxWorkflows) : 0
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 const workerIds = typeof args === 'object' && args?.workerIds ? args.workerIds : []
 const testOrigin = typeof args === 'object' && args?.testOrigin ? args.testOrigin : undefined
 const redirectProbeHost = typeof args === 'object' && args?.redirectProbeHost ? args.redirectProbeHost : undefined
@@ -76,9 +78,10 @@ const targetPlan = await agent(
 - Case root: ${caseRoot}
 - Case prefix: ${casePrefix}
 - Report root: ${reportRoot}
-- Batch size: ${batchSize}
-- Max actions per target: ${maxActions}
-- Max attack workflows per target: ${maxWorkflows}
+- Batch size: ${batchSize || 'all targets'}
+- Max actions per target: ${maxActions || 'all'}
+- Max attack workflows per target: ${maxWorkflows || 'all'}
+- Inner iterations per attack worker: ${innerIterations || 'until convergence/status change'}
 - Worker allowlist: ${JSON.stringify(workerIds)}
 - Execute allowlist actions: ${execute}
 
@@ -111,8 +114,9 @@ const enabledTargets = targets.map(target => ({
 }))
 
 const batches = []
-for (let i = 0; i < enabledTargets.length; i += batchSize) {
-  batches.push(enabledTargets.slice(i, i + batchSize))
+const effectiveBatchSize = batchSize || enabledTargets.length
+for (let i = 0; i < enabledTargets.length; i += effectiveBatchSize) {
+  batches.push(enabledTargets.slice(i, i + effectiveBatchSize))
 }
 
 const batchResults = []
@@ -128,6 +132,7 @@ for (const [batchIndex, batch] of batches.entries()) {
         reportRoot,
         maxActions,
         maxWorkflows,
+        innerIterations,
         workerIds,
         testOrigin,
         redirectProbeHost,
@@ -189,6 +194,7 @@ return {
   batchSize,
   maxActions,
   maxWorkflows,
+  innerIterations,
   caseRoot,
   casePrefix,
   reportRoot,

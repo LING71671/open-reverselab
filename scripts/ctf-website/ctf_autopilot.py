@@ -3,7 +3,7 @@
 Stateful Web CTF autopilot controller.
 
 The controller turns ctf_ai_next.py's advisory plan into repeatable rounds with
-budget, checkpoint, and manifest write-back.  It deliberately executes only a
+checkpoint and manifest write-back.  It deliberately executes only a
 small allowlist of deterministic actions; everything else is recorded as a
 next-round AI task.
 """
@@ -212,6 +212,30 @@ def run_command(cmd: list[str], timeout: int) -> dict[str, Any]:
     }
 
 
+def run_attack_executor(
+    manifest: dict[str, Any],
+    manifest_path: Path,
+    *,
+    probes: list[str],
+    timeout: int,
+) -> dict[str, Any]:
+    cmd = [
+        sys.executable,
+        str(ROOT / "scripts" / "ctf-website" / "ctf_attack_executor.py"),
+        str(manifest_path),
+    ]
+    for probe in probes:
+        cmd.extend(["--probe", probe])
+    result = run_command(cmd, timeout)
+    try:
+        refreshed = load_manifest(manifest_path)
+        manifest.clear()
+        manifest.update(refreshed)
+    except Exception:
+        pass
+    return {"status": "executed", "handler": "run_attack_executor", "probes": probes, **result}
+
+
 def run_fingerprint_cve_pipeline(
     manifest: dict[str, Any],
     manifest_path: Path,
@@ -317,6 +341,16 @@ def execute_action(
     try:
         if action_name == "Collect HTTP baseline":
             return collect_http_baseline(manifest, manifest_path)
+        if action_name == "Run targeted route discovery":
+            return run_attack_executor(manifest, manifest_path, probes=["routes"], timeout=command_timeout)
+        if action_name == "Inspect JavaScript runtime and API routes":
+            return run_attack_executor(manifest, manifest_path, probes=["javascript"], timeout=command_timeout)
+        if action_name == "Probe forms for auth/injection/state bugs":
+            return run_attack_executor(manifest, manifest_path, probes=["sqli", "xss"], timeout=command_timeout)
+        if action_name == "Run deterministic client and redirect probes":
+            return run_attack_executor(manifest, manifest_path, probes=["cors", "open_redirect", "xss"], timeout=command_timeout)
+        if action_name == "Run deterministic SSRF and file-read probes":
+            return run_attack_executor(manifest, manifest_path, probes=["ssrf", "lfi"], timeout=command_timeout)
         if action_name == "Create version fingerprint evidence file":
             return create_fingerprint_template(manifest, manifest_path)
         if action_name == "Run fingerprint-to-CVE graph and chain pipeline":
@@ -340,14 +374,15 @@ def execute_action(
 
 def select_actions(plan_result: dict[str, Any], max_actions: int) -> list[dict[str, Any]]:
     actions = list(plan_result.get("actions") or [])
-    return actions[: max(0, max_actions)]
+    if max_actions <= 0:
+        return actions
+    return actions[:max_actions]
 
 
 def update_autopilot_state(
     manifest: dict[str, Any],
     *,
     round_record: dict[str, Any],
-    budget_seconds: int,
     max_rounds: int,
     execute: bool,
 ) -> None:
@@ -356,8 +391,7 @@ def update_autopilot_state(
     state.setdefault("started_at", round_record["started_at"])
     state["updated_at"] = utc_now()
     state["status"] = "running" if execute else "dry_run"
-    state["budget"] = {
-        "budget_seconds": budget_seconds,
+    state["loop"] = {
         "max_rounds": max_rounds,
         "execute": execute,
     }
@@ -383,12 +417,11 @@ def update_autopilot_state(
 def run_round(
     manifest_path: Path,
     *,
-    max_actions: int = 4,
+    max_actions: int = 0,
     execute: bool = False,
     no_network_cve: bool = True,
     command_timeout: int = 600,
-    budget_seconds: int = 86400,
-    max_rounds: int = 1,
+    max_rounds: int = 0,
 ) -> dict[str, Any]:
     manifest = load_manifest(manifest_path)
     ensure_manifest_shape(manifest, manifest_path)
@@ -414,6 +447,11 @@ def run_round(
                 "handler_available": str(action.get("action") or "")
                 in {
                     "Collect HTTP baseline",
+                    "Run targeted route discovery",
+                    "Inspect JavaScript runtime and API routes",
+                    "Probe forms for auth/injection/state bugs",
+                    "Run deterministic client and redirect probes",
+                    "Run deterministic SSRF and file-read probes",
                     "Create version fingerprint evidence file",
                     "Run fingerprint-to-CVE graph and chain pipeline",
                     "Rebuild CVE correlation graph and multi-CVE chain plan",
@@ -433,7 +471,6 @@ def run_round(
     update_autopilot_state(
         manifest,
         round_record=round_record,
-        budget_seconds=budget_seconds,
         max_rounds=max_rounds,
         execute=execute,
     )
@@ -452,7 +489,6 @@ def run_round(
 def run_loop(
     manifest_path: Path,
     *,
-    budget_seconds: int,
     max_rounds: int,
     max_actions: int,
     interval_seconds: int,
@@ -460,31 +496,24 @@ def run_loop(
     no_network_cve: bool,
     command_timeout: int,
 ) -> dict[str, Any]:
-    deadline = time.monotonic() + max(0, budget_seconds)
     rounds: list[dict[str, Any]] = []
     stop_reason = "max_rounds"
 
-    for index in range(max_rounds):
-        if time.monotonic() >= deadline:
-            stop_reason = "budget_exhausted"
-            break
+    index = 0
+    while max_rounds <= 0 or index < max_rounds:
         result = run_round(
             manifest_path,
             max_actions=max_actions,
             execute=execute,
             no_network_cve=no_network_cve,
             command_timeout=command_timeout,
-            budget_seconds=budget_seconds,
             max_rounds=max_rounds,
         )
         rounds.append(result)
-        if index == max_rounds - 1:
+        index += 1
+        if max_rounds > 0 and index >= max_rounds:
             break
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            stop_reason = "budget_exhausted"
-            break
-        time.sleep(min(max(0, interval_seconds), remaining))
+        time.sleep(max(0, interval_seconds))
 
     return {
         "manifest": str(manifest_path),
@@ -496,13 +525,11 @@ def run_loop(
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Run a stateful Web CTF autopilot round or loop.")
+    parser = argparse.ArgumentParser(description="Run a stateful Web CTF autopilot round or fallback loop.")
     parser.add_argument("manifest", help="Path to cases/<case>/ai_manifest.json")
-    parser.add_argument("--loop", action="store_true", help="Run repeated rounds until budget/max-rounds is reached.")
-    parser.add_argument("--budget-hours", type=float, default=24.0, help="Loop budget in hours; default 24.")
-    parser.add_argument("--budget-seconds", type=int, default=0, help="Override --budget-hours for tests/smoke runs.")
-    parser.add_argument("--max-rounds", type=int, default=24, help="Maximum number of rounds in loop mode.")
-    parser.add_argument("--max-actions", type=int, default=4, help="Maximum actions selected per round.")
+    parser.add_argument("--loop", action="store_true", help="Run repeated fallback rounds until --max-rounds is reached.")
+    parser.add_argument("--max-rounds", type=int, default=0, help="Optional local fallback round limit. 0 means unlimited.")
+    parser.add_argument("--max-actions", type=int, default=0, help="Optional action limit per round. 0 means all planned actions.")
     parser.add_argument("--interval-seconds", type=int, default=900, help="Sleep between loop rounds.")
     parser.add_argument("--execute", action="store_true", help="Execute allowlisted actions; default records a dry-run plan.")
     parser.add_argument("--allow-network-cve", action="store_true", help="Allow live CVE enrichment network calls.")
@@ -510,11 +537,9 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     manifest_path = resolve_manifest_path(args.manifest)
-    budget_seconds = args.budget_seconds or int(args.budget_hours * 3600)
     if args.loop:
         result = run_loop(
             manifest_path,
-            budget_seconds=budget_seconds,
             max_rounds=args.max_rounds,
             max_actions=args.max_actions,
             interval_seconds=args.interval_seconds,
@@ -529,7 +554,6 @@ def main(argv: list[str]) -> int:
             execute=args.execute,
             no_network_cve=not args.allow_network_cve,
             command_timeout=args.command_timeout,
-            budget_seconds=budget_seconds,
             max_rounds=1,
         )
     print(json.dumps(result, ensure_ascii=False, indent=2))

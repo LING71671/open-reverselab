@@ -53,7 +53,7 @@ Claude Code 中推荐用 `/loop + workflow`：
 
 ```bash
 python scripts/ctf-website/ctf_autopilot.py cases/<case>/ai_manifest.json \
-  --loop --budget-hours 24 --max-rounds 96 --interval-seconds 900 --execute
+  --loop --interval-seconds 900 --execute
 ```
 
 规则：

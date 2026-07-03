@@ -17,8 +17,9 @@ export const meta = {
 //   object.manifest    → ai_manifest.json 路径；有则优先使用
 //   object.caseRoot    → case 根目录，默认 cases
 //   object.reportRoot  → report 根目录，默认 reports/ctf-website
-//   object.maxActions  → ctf_autopilot 单轮最多动作数，默认 4
-//   object.maxWorkflows → attack-router 本轮最多 worker 数，默认 4
+//   object.maxActions  → 可选数量参数；不传/0 表示全部
+//   object.maxWorkflows → 可选数量参数；不传/0 表示全部
+//   object.innerIterations → 可选；每个 attack worker 内部迭代次数，不传表示迭代到收敛/状态变化
 //   object.workerIds   → 可选攻击 worker allowlist
 //   object.execute     → 是否执行 allowlist 动作，默认 true
 //   object.stopOnExhausted → 全路径耗尽时停止，默认 true
@@ -42,8 +43,9 @@ const manifest =
   typeof args === 'object' && args?.manifest
     ? args.manifest
     : `${caseDir}/ai_manifest.json`
-const maxActions = typeof args === 'object' && args?.maxActions ? args.maxActions : 4
-const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? args.maxWorkflows : 4
+const maxActions = typeof args === 'object' && args?.maxActions ? args.maxActions : 0
+const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? args.maxWorkflows : 0
+const innerIterations = typeof args === 'object' && args?.innerIterations ? args.innerIterations : 0
 const workerIds = typeof args === 'object' && args?.workerIds ? args.workerIds : []
 const testOrigin = typeof args === 'object' && args?.testOrigin ? args.testOrigin : undefined
 const redirectProbeHost = typeof args === 'object' && args?.redirectProbeHost ? args.redirectProbeHost : undefined
@@ -65,8 +67,9 @@ const checkpoint = await agent(
 - Manifest path: ${manifest}
 - Case root: ${caseRoot}
 - Report root: ${reportRoot}
-- Max actions: ${maxActions}
-- Max attack workflows: ${maxWorkflows}
+- Max actions: ${maxActions || 'all'}
+- Max attack workflows: ${maxWorkflows || 'all'}
+- Inner iterations per attack worker: ${innerIterations || 'until convergence/status change'}
 - Execute allowlist actions: ${execute}
 
 ## 必读
@@ -144,6 +147,7 @@ const attackRound = await workflow('ctf-attack-router', {
   signals: [autopilot],
   focus: [checkpoint, autopilot],
   maxWorkflows,
+  innerIterations,
   workerIds,
   caseRoot,
   reportRoot,
@@ -182,7 +186,7 @@ ${attackRound}
    \`\`\`
 5. 输出状态：
    - DONE：已拿到 flag / 已生成完整复现报告。
-   - EXHAUSTED：预算耗尽、全路径耗尽、目标长期不可达或关键依赖缺失且无替代路径。
+   - EXHAUSTED：全路径耗尽、目标长期不可达或关键依赖缺失且无替代路径。
    - CONTINUE：仍有 next_round_focus 或 pending hypotheses。
 6. stopOnExhausted 当前为 ${stopOnExhausted}；如果 false，即使路径暂时耗尽也生成新的 recon/fingerprint/route-discovery 焦点并返回 CONTINUE。
 

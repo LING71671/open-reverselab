@@ -14,6 +14,7 @@ const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
 const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
 if (!caseName || !manifest) throw new Error('ctf-attack-file_ssrf requires args.caseName and args.manifest')
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 const ssrfProbeTargets = typeof args === 'object' && args?.ssrfProbeTargets ? args.ssrfProbeTargets : [
   'http://127.0.0.1/',
   'http://localhost/',
@@ -35,10 +36,12 @@ const result = await agent(
   `对 ${target} 做一轮 file/SSRF worker。
 
 Manifest: ${manifest}
+Inner iterations: ${innerIterations || 'until convergence/status change'}
 KB:
 ${kb}
 
 任务：
+0. 内部循环协议：plan → execute file/URL payload → observe status/body/timing → mutate traversal encoding/protocol/host/path → retry。不要只试一次；未设置 innerIterations 时迭代到证据确认、路径证伪或状态变化。
 1. LFI/path traversal 参数：file/path/page/include/download/view/img/doc。
 2. 平台特定文件：/etc/passwd、/proc/self/environ、WEB-INF/web.xml、web.config、.env、config.php。
 3. Upload/XXE：上传表单、content-type 绕过、SVG/XML XXE、zip slip，仅做有界验证。

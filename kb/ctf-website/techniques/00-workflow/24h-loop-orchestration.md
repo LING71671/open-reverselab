@@ -68,7 +68,7 @@ flowchart TD
 4. 上轮未验证、且未进入 `dead_ends[]` 的路径。
 5. 低成本 recon：路由、JS endpoint、fingerprint、CVE graph。
 
-每轮最多深入 2 条路径，避免无限发散。
+每轮深入多少条路径由 workflow 参数决定；未设置时按所有可用高价值路径推进。
 
 ## 5. 状态语义
 
@@ -76,7 +76,7 @@ flowchart TD
 |---|---|
 | `CONTINUE` | 仍有 `next_round_focus` / `next_actions` / pending hypotheses |
 | `DONE` | `evidence[]` 中记录 flag/solve 证据 |
-| `EXHAUSTED` | 预算耗尽、max_rounds 耗尽或全部路径证据化失败 |
+| `EXHAUSTED` | 全部路径证据化失败、目标长期不可达或关键依赖缺失且无替代路径 |
 
 ## 6. MCP 工具映射
 

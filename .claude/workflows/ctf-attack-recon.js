@@ -14,6 +14,7 @@ const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
 const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
 if (!caseName || !manifest) throw new Error('ctf-attack-recon requires args.caseName and args.manifest')
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 
 phase('KB 路由')
 const kb = await agent(
@@ -33,10 +34,12 @@ const result = await agent(
 
 Manifest: ${manifest}
 Case: ${caseName}
+Inner iterations: ${innerIterations || 'until convergence/status change'}
 KB:
 ${kb}
 
 任务：
+0. 内部循环协议：plan → enumerate → observe new endpoints/fingerprints → expand route/JS/API/subdomain set → retry。不要只做首页一次；未设置 innerIterations 时迭代到无新增资产/信号。
 1. HTTP baseline、redirect、headers、cookies、TLS 证书 SAN。
 2. robots.txt / sitemap.xml / .well-known / swagger / api-docs / graphql / actuator。
 3. 首页和 JS bundle：提取 fetch/XHR/WebSocket/API base URL、source map、硬编码 key。
