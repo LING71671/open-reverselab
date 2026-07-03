@@ -11,11 +11,11 @@ category: "02-auth"
 signals: ["Claim", "exp", "aud", "iss", "Token混用", "ID Token", "Access Token", "权限绕过"]
 mcp_tools: ["run_ctf_tool", "http_probe"]
 keywords: ["JWT claim", "过期Token", "aud验证", "iss验证", "Token混用", "ID Token", "Access Token", "jwt_tool"]
-difficulty: "intermediate"
+difficulty: "advanced"
 tags: ["authentication", "jwt", "claim-validation", "token-confusion", "web-security", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/03-weak-key-bruteforce", "ctf-website/02-auth/jwt/07-theft-replay", "ctf-website/20-oauth-deep/01-oauth-attack-chains"]
 ---
 
 # JWT Claim 验证缺失 & Token 混用
@@ -56,13 +56,13 @@ login -> id_token
 
 ## 原理
 
-JWT 的 Claim 字段构成安全边界，但服务端常只解析 Payload 做业务判断，忽略了 Claim 的语义验证。同时，同一 SSO 体系下的不同 Token 类型（ID Token、Access Token、Refresh Token）若被混用，可导致权限绕过。
+JWT 的 Claim 字段构成信任边界，但服务端常只解析 Payload 做业务判断，忽略 Claim 的语义校验。同时，同一 SSO 体系下的不同 Token 类型（ID Token、Access Token、Refresh Token）若被混用，可导致权限绕过。
 
 ---
 
 ## 1. Claim 验证缺失
 
-### Claim 安全矩阵
+### Claim 边界矩阵
 
 | Claim | 含义 | 缺失验证的后果 | 攻击方法 |
 |-------|------|---------------|----------|
@@ -74,6 +74,36 @@ JWT 的 Claim 字段构成安全边界，但服务端常只解析 Payload 做业
 | `jti` | Token 唯一 ID | 无法防止重放 | 相同 jti 多次使用 |
 | `typ` | Token 类型 | ID Token 当 Access Token 用 | 见下文 Token 混用 |
 | `iat` | 签发时间 | 一般不单独利用 | 配合其他 Claim |
+
+### 1.1 Claim 差分执行器
+
+```python
+# jwt_claim_diff_runner.py — claim 变体与接口差分
+import copy
+import time
+
+def claim_variants(payload):
+    base = copy.deepcopy(payload)
+    yield "exp_past", {**base, "exp": 1}
+    yield "exp_future", {**base, "exp": 4102444800}
+    yield "aud_other", {**base, "aud": "other-service"}
+    yield "aud_array", {**base, "aud": [base.get("aud", "api"), "admin-api"]}
+    yield "iss_other", {**base, "iss": "https://other-idp.example"}
+    yield "typ_id", {**base, "typ": "id"}
+    yield "scope_admin", {**base, "scope": "admin *"}
+    yield "role_admin", {**base, "role": "admin", "isAdmin": True}
+
+def run_matrix(sign_fn, send_fn, payload):
+    rows = []
+    for name, body in claim_variants(payload):
+        token = sign_fn(body)
+        t0 = time.time()
+        res = send_fn(token)
+        rows.append({"case": name, "elapsed": round(time.time() - t0, 3), **res})
+    return rows
+```
+
+保存 `claim_diff_matrix.jsonl`：case、payload diff、接口、状态码、响应 hash、身份字段、权限字段、订单/flag/管理数据变化。过期仍可用转 token theft/replay；ID token 能调 API 转 OAuth/OIDC 链。
 
 ### 伪代码：漏洞逻辑
 

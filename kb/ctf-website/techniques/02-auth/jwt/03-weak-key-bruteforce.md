@@ -11,11 +11,11 @@ category: "02-auth"
 signals: ["HMAC", "弱密钥", "爆破", "hashcat", "HS256", "JWT cracker", "wordlist", "secret"]
 mcp_tools: ["run_ctf_tool", "http_probe"]
 keywords: ["JWT爆破", "HMAC密钥", "hashcat jwt", "弱密钥", "jwt-cracker", "jwt_tool", "密钥破解", "HS256"]
-difficulty: "beginner"
+difficulty: "advanced"
 tags: ["authentication", "jwt", "bruteforce", "web-security", "crypto", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/24-database/04-config-exposure", "ctf-website/13-signature/03-key-attacks"]
 ---
 
 # JWT 弱 HMAC 密钥爆破
@@ -46,6 +46,33 @@ related_articles: []
 | 字典未命中 | HS 仍可能强密钥 | 转 claim/kid/jku |
 | 多个 secret 命中 | 可能 token 被截断或算法错 | 用服务端 oracle 验证 |
 | 伪造后 401 | claim/aud/iss 仍卡住 | 转 `06-claim-missing` |
+
+### 0.2 语境字典生成器
+
+弱密钥爆破的胜负点是字典，不是 hashcat 参数。把域名、题目名、项目名、框架名、配置泄露字段、支付密钥字段组合成第一批候选。
+
+```python
+# jwt_context_wordlist.py — 语境字典
+def variants(seed):
+    s = seed.strip()
+    if not s:
+        return
+    lowers = {s, s.lower(), s.upper(), s.capitalize()}
+    suffixes = ["", "123", "123456", "2024", "2025", "2026", "_secret", "-secret", "_jwt", "-jwt"]
+    for base in lowers:
+        for suf in suffixes:
+            yield base + suf
+
+def build_wordlist(seeds):
+    seen = set()
+    for seed in seeds:
+        for v in variants(seed):
+            if v not in seen:
+                seen.add(v)
+                yield v
+```
+
+命中后不要只报告 secret。继续生成 `forged_claim_matrix.jsonl`：`role/admin/sub/aud/iss/exp` 逐项变体、服务端响应、业务字段变化。若 secret 与 `APP_KEY/PAY_KEY/SESSION_SECRET` 重用，转 `13-signature/03-key-attacks.md` 和配置泄露链。
 
 ## 原理
 

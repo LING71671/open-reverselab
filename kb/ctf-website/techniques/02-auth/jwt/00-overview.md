@@ -11,11 +11,11 @@ category: "02-auth"
 signals: ["JWT", "签名绕过", "算法混淆", "kid注入", "jku", "x5u", "弱密钥", "token窃取"]
 mcp_tools: ["run_ctf_tool", "http_probe", "kb_router"]
 keywords: ["JWT攻击", "JSON Web Token", "JWT", "签名绕过", "算法混淆", "jwt_tool", "jwt攻击面", "Bearer Token"]
-difficulty: "intermediate"
+difficulty: "advanced"
 tags: ["authentication", "jwt", "token", "web-security", "signature-bypass", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/02-auth/jwt/01-alg-none", "ctf-website/02-auth/jwt/02-algorithm-confusion", "ctf-website/02-auth/jwt/03-weak-key-bruteforce", "ctf-website/02-auth/jwt/04-kid-injection", "ctf-website/02-auth/jwt/05-jku-x5u-abuse", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/02-auth/jwt/07-theft-replay", "ctf-website/13-signature/00-overview"]
 ---
 
 # JWT 攻击全景
@@ -90,6 +90,40 @@ base64url(Header).base64url(Payload).base64url(Signature)
 | 07 | `jwt-theft-replay.md` | 窃取与重放 | XSS/日志/Referer 泄露 + 无状态无法撤销 |
 | 08 | `jwt-cve-library.md` | CVE与依赖库 | 库实现缺陷导致验签绕过 |
 | 09 | `09-toolchain-operations.md` | 工具链+操作 | 攻击套件、路由流程、结果矩阵 |
+
+## 0. 实战路由矩阵
+
+JWT 不要只看 Header。一次有效判断至少要同时记录：原始 token、变体 token、目标接口、响应 diff、业务字段变化和下一跳。
+
+| 入口信号 | 第一轮变体 | 命中样本 | 下一跳 |
+|---|---|---|---|
+| `alg` 为 HS | 字典爆破 + payload 篡改 | secret 命中且可复签 | 03 + 06 |
+| `alg` 为 RS/ES | 公钥格式枚举 + HS 重签 | 同 token body 被接受 | 02 |
+| 存在 `kid` | 路径/SQL/空字节/远程 key | key 选择可控 | 04 |
+| 存在 `jku/x5u` | URL 解析绕过 + 自控 JWKS | 服务端拉取新 key | 05 |
+| claim 很少 | 删除/替换 `exp/aud/iss/typ` | 跨接口/过期仍 200 | 06 |
+| token 出现在 URL/日志/JS | 重放和持久化 | 换设备/登出后仍可用 | 07 |
+| 库版本可识别 | CVE 指纹 | 版本与绕过条件匹配 | 08 |
+
+```python
+# jwt_route_hint.py — 从 header/payload 粗路由到子文档
+def route_jwt(header, payload):
+    out = []
+    alg = str(header.get("alg", "")).upper()
+    if alg.startswith("HS"):
+        out.append("03-weak-key-bruteforce.md")
+    if alg.startswith(("RS", "ES")):
+        out.append("02-algorithm-confusion.md")
+    if alg in ("NONE", ""):
+        out.append("01-alg-none.md")
+    if "kid" in header:
+        out.append("04-kid-injection.md")
+    if "jku" in header or "x5u" in header:
+        out.append("05-jku-x5u-abuse.md")
+    if any(k not in payload for k in ("exp", "aud", "iss")) or "typ" not in header:
+        out.append("06-claim-missing.md")
+    return out
+```
 
 ## 快速决策树
 
