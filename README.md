@@ -1,6 +1,6 @@
 # ReverseLab
 
-Open-source reverse engineering lab — 172-article knowledge base, 100+ MCP automation tools, covering CTF pentesting / APK reverse engineering / PE binary analysis / cryptography & protocol cracking / game cheating analysis. Agent-native, directory-as-convention.
+Open-source reverse engineering lab — 178-article knowledge base, 100+ MCP automation tools, covering CTF pentesting / APK reverse engineering / PE binary analysis / cryptography & protocol cracking / game cheating analysis. Agent-native, directory-as-convention.
 
 > [中文版](README.zh.md)
 
@@ -13,8 +13,8 @@ Signal → kb_router(board=) → kb_read_file → Attack chain → MCP tool mapp
 | Signal Type | Board | KB Categories / Files | MCP Tool Family |
 |---|---|---|---|
 | HTTP/Web/API/CVE/Cloud/CAPTCHA | `ctf-website` | 26/118 | `http_probe` `run_ctf_tool` `kb_router` |
-| APK/DEX/SO/Frida/Java | `apk-reverse` | 8/17 | `android_app_baseline` `android_crypto_unpack_recipe` `android_frida_*` |
-| PE/x64/x86/malware/driver | `pe-reverse` | 9/19 | `triage_pe` `ghidra_headless_analyze` `make_x64dbg_breakpoint_script` `sample_full_workup` |
+| APK/DEX/SO/Frida/Java | `apk-reverse` | 8/20 | `android_app_baseline` `android_crypto_unpack_recipe` `android_frida_*` |
+| PE/x64/x86/malware/driver | `pe-reverse` | 9/22 | `triage_pe` `ghidra_headless_analyze` `make_x64dbg_breakpoint_script` `sample_full_workup` |
 | Crypto/Protocol/Cheat/IoT/Radio | `general` | 5/17 | `die_scan` `ghidra_*` `rizin_*` `python_re_tool_*` |
 
 ## Knowledge Base
@@ -22,8 +22,8 @@ Signal → kb_router(board=) → kb_read_file → Attack chain → MCP tool mapp
 ```
 kb/
 ├── ctf-website/techniques/   26 categories, 118 articles — Full web attack surface
-├── apk-reverse/techniques/    8 categories, 17 articles — APK/DEX reverse engineering
-├── pe-reverse/techniques/     9 categories, 19 articles — PE binary analysis
+├── apk-reverse/techniques/    8 categories, 20 articles — APK/DEX reverse engineering
+├── pe-reverse/techniques/     9 categories, 22 articles — PE binary analysis
 └── general/techniques/        5 categories, 17 articles — Cryptography / Protocols / Kernel / Cheating / Methodology
 ```
 

@@ -21,11 +21,11 @@
     "mainEntity": [
       {
         "@type": "Question", "name": "什么是 ReverseLab？",
-        "acceptedAnswer": {"@type": "Answer", "text": "ReverseLab 是一个开源逆向工程实验环境，包含 172 篇深度技术文章组成的知识库、100+ MCP (Model Context Protocol) 自动化工具、以及 CTF/APK/PE 全链路自动化工作流。项目采用 '目录即约定' 设计，专为 AI Agent 辅助分析而构建。"}
+        "acceptedAnswer": {"@type": "Answer", "text": "ReverseLab 是一个开源逆向工程实验环境，包含 178 篇深度技术文章组成的知识库、100+ MCP (Model Context Protocol) 自动化工具、以及 CTF/APK/PE 全链路自动化工作流。项目采用 '目录即约定' 设计，专为 AI Agent 辅助分析而构建。"}
       },
       {
         "@type": "Question", "name": "ReverseLab 的知识库覆盖哪些领域？",
-        "acceptedAnswer": {"@type": "Answer", "text": "CTF Website（23分类97篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall；APK Reverse（8分类17篇）：DEX/Native/IL2CPP/Frida/脱壳/重打包；PE Reverse（8分类18篇）：Ghidra/x64dbg/Triage/YARA/Patch/免杀；General（12篇）：Linux内核利用/加密算法/PRNG/游戏作弊/协议逆向/固件/硬件。"}
+        "acceptedAnswer": {"@type": "Answer", "text": "CTF Website（26分类118篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall/云原生；APK Reverse（8分类20篇）：DEX/Native/JNI/Frida/Pinning/脱壳/重打包；PE Reverse（9分类22篇）：Ghidra/x64dbg/TLS Callback/API Resolver/IOC/YARA/Patch/免杀；General（5分类17篇）：Linux内核利用/加密算法/PRNG/游戏作弊/协议逆向/固件/硬件。"}
       },
       {
         "@type": "Question", "name": "什么是 MCP (Model Context Protocol) 工具？",
@@ -79,9 +79,9 @@
     </section>
 
     <section class="faq-list">
-      <div class="faq-item"><h3>1. 什么是 ReverseLab？</h3><p>ReverseLab 是一个开源逆向工程实验环境，包含 <strong>172 篇深度技术文章</strong>组成的知识库、<strong>100+ MCP (Model Context Protocol) 自动化工具</strong>、以及 CTF/APK/PE 全链路自动化工作流。项目采用"目录即约定"设计，专为 AI Agent 辅助分析而构建。</p></div>
+      <div class="faq-item"><h3>1. 什么是 ReverseLab？</h3><p>ReverseLab 是一个开源逆向工程实验环境，包含 <strong>178 篇深度技术文章</strong>组成的知识库、<strong>100+ MCP (Model Context Protocol) 自动化工具</strong>、以及 CTF/APK/PE 全链路自动化工作流。项目采用"目录即约定"设计，专为 AI Agent 辅助分析而构建。</p></div>
 
-      <div class="faq-item"><h3>2. ReverseLab 的知识库覆盖哪些领域？</h3><p>🌐 <strong>CTF Website</strong>（26 分类 118 篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall/签名攻击/API/OAuth/云原生/IAM<br>📱 <strong>APK Reverse</strong>（8 分类 17 篇）：DEX/Native/IL2CPP/Frida 动态插桩/脱壳/重打包<br>🖥️ <strong>PE Reverse</strong>（9 分类 19 篇）：Ghidra 静态分析/x64dbg 动态调试/YARA/Sigma/Patch/免杀<br>🔬 <strong>General</strong>（5 分类 17 篇）：Linux 内核利用/加密算法识别/PRNG 破解/游戏作弊与反作弊/协议逆向/固件/硬件</p></div>
+      <div class="faq-item"><h3>2. ReverseLab 的知识库覆盖哪些领域？</h3><p>🌐 <strong>CTF Website</strong>（26 分类 118 篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall/签名攻击/API/OAuth/云原生/IAM<br>📱 <strong>APK Reverse</strong>（8 分类 20 篇）：DEX/Native/JNI/IL2CPP/Frida/Pinning/脱壳/重打包<br>🖥️ <strong>PE Reverse</strong>（9 分类 22 篇）：Ghidra 静态分析/x64dbg 动态调试/TLS Callback/API Resolver/IOC/YARA/Sigma/Patch/免杀<br>🔬 <strong>General</strong>（5 分类 17 篇）：Linux 内核利用/加密算法识别/PRNG 破解/游戏作弊与反作弊/协议逆向/固件/硬件</p></div>
 
       <div class="faq-item"><h3>3. 什么是 MCP (Model Context Protocol) 工具？为什么它很重要？</h3><p>MCP 是 AI 模型与外部工具交互的<strong>标准协议</strong>（由 Anthropic 提出）。ReverseLab 的 MCP 工具让 AI Agent 可以<strong>直接调用</strong>逆向分析工具，无需人工手动执行。例如：AI 检测到 JWT Token → 自动调用 <code>kb_router</code> 查技术 → <code>kb_read_file</code> 读攻击方法 → <code>http_probe</code> 发探测请求 → 判断是否存在漏洞。这在整个开源工具生态中<strong>非常罕见</strong>，是 ReverseLab 的核心差异化优势。</p></div>
 

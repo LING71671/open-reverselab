@@ -1,6 +1,6 @@
 # ReverseLab — Full Knowledge Base Dump for LLM Ingestion
 
-Total articles: 172
+Total articles: 178
 Generated: 2026-07-03
 
 ---
@@ -32163,6 +32163,162 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 
 
 ---
+## [apk-reverse] JNI RegisterNatives 追踪与 Native 入口还原
+### JNI RegisterNatives Tracing and Native Entry Recovery
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/06-jni-register-natives-tracing/
+Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/06-jni-register-natives-tracing.md
+
+> >
+
+# JNI RegisterNatives 追踪与 Native 入口还原
+
+## 1. 入口信号
+
+```text
+jadx: native byte[] encrypt(byte[] in)
+jadx: System.loadLibrary("guard")
+logcat: UnsatisfiedLinkError / JNI DETECTED ERROR
+readelf: JNI_OnLoad exported
+strings: Java_com_vendor_app_Sign_sign
+Ghidra: RegisterNatives xref 指向函数表
+```
+
+目标是把 “Java native 方法名” 映射到 “SO 内真实函数地址”，再沿调用者/被调用者走到 crypto、license、packet 或 anti-tamper 节点。
+
+## 2. 静态定位
+
+```powershell
+jadx -d exports/android/app-jadx samples/app.apk
+rg -n "native |loadLibrary|System\\.load|JNI" exports/android/app-jadx
+apktool d samples/app.apk -o exports/android/app-apktool
+llvm-readelf -Ws exports/android/app-apktool/lib/arm64-v8a/*.so | rg "JNI_OnLoad|Java_"
+strings exports/android/app-apktool/lib/arm64-v8a/*.so | rg -i "RegisterNatives|encrypt|sign|verify|packet|token"
+```
+
+如果导出表只有 `JNI_OnLoad`，说明很可能使用动态注册；下一步 hook `RegisterNatives`。
+
+## 3. RegisterNatives Frida 打点
+
+```javascript
+function readJniString(ptrValue) {
+  return ptrValue.isNull() ? "" : ptrValue.readCString();
+}
+
+const reg = Module.findExportByName("libart.so", "_ZN3art3JNI15RegisterNativesEP7_JNIEnvP7_jclassPK15JNINativeMethodi")
+  || Module.findExportByName("libart.so", "RegisterNatives");
+
+Interceptor.attach(reg, {
+  onEnter(args) {
+    const env = args[0];
+    const clazz = args[1];
+    const methods = args[2];
+    const count = args[3].toInt32();
+    console.log("[jni] RegisterNatives count=" + count + " methods=" + methods);
+    for (let i = 0; i < count; i++) {
+      const item = methods.add(i * Process.pointerSize * 3);
+      const name = readJniString(item.readPointer());
+      const sig = readJniString(item.add(Process.pointerSize).readPointer());
+      const fn = item.add(Process.pointerSize * 2).readPointer();
+      const mod = Process.findModuleByAddress(fn);
+      console.log("[jni] " + name + sig + " -> " + fn + " " + (mod ? mod.name : "unknown"));
+    }
+  }
+});
+```
+
+成功标志：输出 `nativeName(signature) -> address module`，地址可直接丢给 Ghidra/x64dbg 风格的函数定位。
+
+## 4. JNI_OnLoad 调用链
+
+```powershell
+# Ghidra headless 后搜索 JNI_OnLoad、RegisterNatives xref
+python scripts/misc/ai_tool.py run ghidra_headless_analyze -- samples/app.apk --out exports/android/ghidra
+```
+
+Ghidra 中按这个顺序命名：
+
+```text
+JNI_OnLoad
+  -> register_native_methods
+     -> native_sign
+     -> native_encrypt_packet
+     -> native_check_license
+```
+
+对每个 native 函数记录：
+
+```text
+Java method:
+JNI signature:
+SO:
+VA/RVA:
+Inputs from Java:
+Return to Java:
+Next hop:
+```
+
+## 5. 参数/返回值打点
+
+```javascript
+const target = ptr("0x7a12345678"); // RegisterNatives 输出的函数地址
+Interceptor.attach(target, {
+  onEnter(args) {
+    console.log("[native] enter target");
+    this.arg2 = args[2];
+  },
+  onLeave(ret) {
+    console.log("[native] ret=" + ret);
+  }
+});
+```
+
+Java 层 byte[] 参数可以再 hook 调用者：
+
+```javascript
+Java.perform(function () {
+  const C = Java.use("com.vendor.app.NativeBridge");
+  C.sign.implementation = function (data) {
+    console.log("[java] sign len=" + data.length);
+    const out = this.sign(data);
+    console.log("[java] sign ret len=" + out.length);
+    return out;
+  };
+});
+```
+
+## 6. 路径分叉
+
+| 发现 | 下一跳 |
+|---|---|
+| `sign(String, byte[])` | 请求签名、重放、参数篡改 |
+| `encrypt/decrypt` | `android_crypto_unpack_recipe` 捕获 key/input/output |
+| `checkLicense` | 在线验证绕过或 patch |
+| `checkSignature/checkRoot` | 完整性路径 |
+| `pack/unpack` | 协议字段还原 |
+
+## 7. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| Java 入口 | 类名、方法名、JNI 签名 |
+| Native 映射 | SO、VA/RVA、RegisterNatives 输出 |
+| 参数 | Java 入参长度、hex 摘要、返回值类型 |
+| Ghidra | 函数名、调用者、被调用者、关键字符串 |
+| 下一跳 | crypto、network、license、patch 或 packer |
+
+## 8. MCP 工具映射
+
+| 步骤 | MCP 工具 | 用途 |
+|---|---|---|
+| JNI/crypto 模板 | `android_crypto_unpack_recipe` | 生成 RegisterNatives 和 crypto hook |
+| SO 静态分析 | `ghidra_headless_analyze` | 函数边界、xref、伪代码 |
+| 动态执行 | `android_frida_run_script` | spawn 早期捕获注册表 |
+| 知识路由 | `kb_router` | 按 JNI/native/crypto 信号查文档 |
+
+
+
+
+---
 ## [apk-reverse] 入口点追踪与组件分析
 ### Entry Point Tracing and Component Analysis
 URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/03-manifest/01-entry-point-tracing/
@@ -32982,6 +33138,150 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 | Frida Hook 验证函数入口 + 签名校验 | `android_crypto_unpack_recipe` | Frida Hook 验证函数入口 + 签名校验 |
 | 分析 native 验证函数 | `ghidra_headless_analyze` | 分析 native 验证函数 |
 | 观察验证 HTTP 请求 | `android_http_observation_recipe` | 观察验证 HTTP 请求 |
+
+
+
+---
+## [apk-reverse] TLS Pinning 定位与 Unpinning
+### TLS Pinning Location and Unpinning
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/03-tls-pinning-unpinning/
+Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/03-tls-pinning-unpinning.md
+
+> >
+
+# TLS Pinning 定位与 Unpinning
+
+## 1. 入口信号
+
+看到这些信号时，优先把网络链路转到 pinning 路径：
+
+```text
+logcat: javax.net.ssl.SSLPeerUnverifiedException: Certificate pinning failure
+logcat: Trust anchor for certification path not found
+jadx: okhttp3.CertificatePinner.check
+jadx: X509TrustManager.checkServerTrusted
+native: SSL_get_verify_result / X509_verify_cert / SSL_set_custom_verify
+抓包: 代理 CA 已安装但 App 仍拒绝连接
+```
+
+第一轮目标不是“全局绕过”，而是确定校验落在哪一层：Java OkHttp、系统 TrustManager、Cronet，还是 native TLS。
+
+## 2. 静态定位
+
+```powershell
+jadx -d exports/android/app-jadx samples/app.apk
+rg -n "CertificatePinner|checkServerTrusted|TrustManager|SSLSocketFactory|HostnameVerifier|Cronet|pin" exports/android/app-jadx
+apktool d samples/app.apk -o exports/android/app-apktool
+rg -n "network_security_config|usesCleartextTraffic" exports/android/app-apktool
+```
+
+Native 层继续看 SO：
+
+```powershell
+llvm-readelf -Ws exports/android/app-apktool/lib/arm64-v8a/*.so | rg "SSL_|X509_|verify|pin"
+strings exports/android/app-apktool/lib/arm64-v8a/*.so | rg -i "cert|pin|sha256|ssl|boringssl|cronet"
+```
+
+## 3. Java 层打点脚本
+
+```javascript
+Java.perform(function () {
+  const CertificatePinner = Java.use("okhttp3.CertificatePinner");
+  CertificatePinner.check.overload("java.lang.String", "java.util.List").implementation = function (host, peerCerts) {
+    console.log("[pin] CertificatePinner.check host=" + host + " certs=" + peerCerts.size());
+    return;
+  };
+
+  const TrustManagerImpl = Java.use("com.android.org.conscrypt.TrustManagerImpl");
+  TrustManagerImpl.verifyChain.implementation = function (chain, anchors, host, clientAuth, ocsp, sct) {
+    console.log("[pin] TrustManagerImpl.verifyChain host=" + host + " chain=" + chain.size());
+    return chain;
+  };
+
+  const HostnameVerifier = Java.use("javax.net.ssl.HostnameVerifier");
+  console.log("[pin] HostnameVerifier interface loaded: " + HostnameVerifier);
+});
+```
+
+成功标志：代理中能看到原始请求/响应；logcat 出现 host 与证书链长度；App 不再在握手阶段退出。
+
+## 4. Native 层打点脚本
+
+```javascript
+const symbols = [
+  "SSL_get_verify_result",
+  "X509_verify_cert",
+  "SSL_set_custom_verify"
+];
+
+for (const name of symbols) {
+  const p = Module.findExportByName(null, name);
+  if (!p) continue;
+  Interceptor.attach(p, {
+    onEnter(args) {
+      this.name = name;
+      console.log("[tls] enter " + name + " @ " + p);
+    },
+    onLeave(ret) {
+      console.log("[tls] leave " + this.name + " ret=" + ret);
+      if (this.name === "SSL_get_verify_result") ret.replace(0);
+      if (this.name === "X509_verify_cert") ret.replace(1);
+    }
+  });
+}
+```
+
+如果 App 使用 Cronet，优先 hook Java builder，再看 native：
+
+```javascript
+Java.perform(function () {
+  const Builder = Java.use("org.chromium.net.CronetEngine$Builder");
+  Builder.enablePublicKeyPinningBypassForLocalTrustAnchors.implementation = function (v) {
+    console.log("[cronet] force local trust anchor bypass");
+    return this.enablePublicKeyPinningBypassForLocalTrustAnchors(true);
+  };
+});
+```
+
+## 5. 路径分叉
+
+| 入口 | 打点动作 | 下一跳 |
+|---|---|---|
+| OkHttp `CertificatePinner` | hook `check()` 返回 | 抓 HTTP API / license verify |
+| 自定义 `TrustManager` | hook `checkServerTrusted()` | 提取请求签名参数 |
+| `network_security_config` | 添加代理 CA 或改 smali | 重打包复验 |
+| Cronet | hook Builder / native verify | HTTP/2/gRPC 流量解析 |
+| Native OpenSSL | hook `SSL_get_verify_result` | Ghidra 定位调用者 |
+
+## 6. 攻击链 / 工作流
+
+```text
+代理失败 / SSLHandshakeException
+  → jadx/strings 定位 CertificatePinner / TrustManager / Cronet / native TLS
+  → Frida Java 层 unpin；若无效转 native SSL_get_verify_result/X509_verify_cert
+  → 代理看到 API 请求和响应
+  → 提取 sign/token/nonce 字段
+  → 跳到 JNI RegisterNatives、请求签名或 license verify 路径
+```
+
+## 7. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| 包与版本 | package name、versionCode、签名证书 SHA256 |
+| 静态信号 | 类名、方法签名、SO 名称、字符串 |
+| 动态输出 | host、证书链长度、hook 命中次数、返回值替换 |
+| 网络结果 | 代理中的 URL、method、状态码、响应摘要 |
+| 下一跳 | API 参数逆向、license 绕过、协议还原或重打包 |
+
+## 8. MCP 工具映射
+
+| 步骤 | MCP 工具 | 用途 |
+|---|---|---|
+| 网络观察 | `android_http_observation_recipe` | 抓取 HTTP/HTTPS 行为和代理状态 |
+| Hook 生成 | `android_crypto_unpack_recipe` | 生成 Java/native Frida 模板 |
+| 脚本执行 | `android_frida_run_script` | spawn/attach 运行 unpinning 脚本 |
+| 知识路由 | `kb_router` | 按 pinning、OkHttp、Cronet 信号查下一篇 |
 
 
 
@@ -33832,6 +34132,162 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 
 
 ---
+## [apk-reverse] 签名与完整性检查绕过
+### Signature and Integrity Check Bypass
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/02-signature-integrity-bypass/
+Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/02-signature-integrity-bypass.md
+
+> >
+
+# 签名与完整性检查绕过
+
+## 1. 入口信号
+
+```text
+repack 后安装成功但启动闪退
+logcat: signature mismatch / integrity failed / invalid channel
+jadx: getPackageInfo(..., GET_SIGNATURES|GET_SIGNING_CERTIFICATES)
+jadx: MessageDigest.getInstance("SHA-256")
+native: open/read classes.dex 或 lib*.so 后计算 hash
+网络: 启动请求携带 sign_hash / cert_md5 / channel
+```
+
+先定位检查点，再选择 Java hook、smali patch、native patch 或签名参数重算。
+
+## 2. 静态定位
+
+```powershell
+jadx -d exports/android/app-jadx samples/app.apk
+rg -n "GET_SIGNATURES|GET_SIGNING_CERTIFICATES|SigningInfo|getInstallerPackageName|MessageDigest|SHA-256|MD5|integrity|signature" exports/android/app-jadx
+apktool d samples/app.apk -o exports/android/app-apktool
+rg -n "signature|digest|hash|classes.dex|base.apk|sourceDir" exports/android/app-apktool
+strings exports/android/app-apktool/lib/arm64-v8a/*.so | rg -i "signature|sha256|md5|classes.dex|base.apk|integrity"
+```
+
+## 3. Java 层打点
+
+```javascript
+Java.perform(function () {
+  const PM = Java.use("android.app.ApplicationPackageManager");
+  PM.getPackageInfo.overload("java.lang.String", "int").implementation = function (pkg, flags) {
+    const r = this.getPackageInfo(pkg, flags);
+    if ((flags & 0x40) || (flags & 0x08000000)) {
+      console.log("[sig] getPackageInfo pkg=" + pkg + " flags=0x" + flags.toString(16));
+    }
+    return r;
+  };
+
+  const MD = Java.use("java.security.MessageDigest");
+  MD.getInstance.overload("java.lang.String").implementation = function (alg) {
+    console.log("[digest] getInstance " + alg);
+    return this.getInstance(alg);
+  };
+});
+```
+
+成功标志：能看到检查发生在哪个类/线程，结合堆栈定位调用者。
+
+```javascript
+function printStack(tag) {
+  const Exception = Java.use("java.lang.Exception");
+  const Log = Java.use("android.util.Log");
+  console.log(tag + "\n" + Log.getStackTraceString(Exception.$new()));
+}
+```
+
+## 4. Native 层文件 hash 打点
+
+```javascript
+["open", "openat", "read", "fopen"].forEach(function (name) {
+  const p = Module.findExportByName(null, name);
+  if (!p) return;
+  Interceptor.attach(p, {
+    onEnter(args) {
+      const path = name === "openat" ? args[1].readCString() : args[0].readCString();
+      if (path && (path.indexOf("base.apk") >= 0 || path.indexOf("classes.dex") >= 0 || path.indexOf(".so") >= 0)) {
+        console.log("[file] " + name + " " + path);
+      }
+    }
+  });
+});
+```
+
+如果后续进入 `SHA256_Update` / `MD5_Update`，继续 hook 输入长度和调用者地址：
+
+```javascript
+["SHA256_Update", "MD5_Update"].forEach(function (name) {
+  const p = Module.findExportByName(null, name);
+  if (!p) return;
+  Interceptor.attach(p, {
+    onEnter(args) {
+      console.log("[hash] " + name + " len=" + args[2] + " caller=" + this.returnAddress);
+    }
+  });
+});
+```
+
+## 5. 路径分叉
+
+| 检查类型 | 打点动作 | 下一跳 |
+|---|---|---|
+| APK 签名证书 | hook `getPackageInfo` / `SigningInfo` | 返回原证书摘要或 patch 比较分支 |
+| `classes.dex` hash | hook `MessageDigest` / native hash | 重新计算白名单或 patch 结果 |
+| SO hash | hook `open/read` + `SHA256_Update` | Ghidra 定位校验函数 |
+| Installer 来源 | hook `getInstallerPackageName` | 返回期望 installer |
+| Play Integrity | 定位 nonce/request token | 网络验证或响应处理路径 |
+
+## 6. 攻击链 / 工作流
+
+```text
+repack 后闪退 / 功能锁定
+  → logcat 找 signature/hash/integrity 关键字
+  → hook getPackageInfo / MessageDigest / open(base.apk)
+  → 结合堆栈定位 Java 类或 native VA
+  → smali patch、native patch 或返回原始摘要
+  → reinstall 后复验启动、目标功能和网络请求
+```
+
+## 7. Smali patch 模式
+
+```smali
+# 原始：if-eqz v0, :fail
+# 修改：强制进入 pass 分支
+const/4 v0, 0x1
+if-nez v0, :pass
+```
+
+记录 patch：
+
+```text
+file: smali_classes*/com/vendor/Guard.smali
+method: checkSignature()Z
+old: if-eqz v0, :cond_fail
+new: const/4 v0, 0x1
+effect: repack 后启动进入主界面
+```
+
+## 8. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| 检查点 | Java 类/方法或 native VA/RVA |
+| 原始值 | 原证书 hash、原 dex hash、期望 channel |
+| 运行证据 | hook 日志、调用堆栈、文件访问路径 |
+| Patch | smali diff、SO offset、原始字节/新字节 |
+| 复验 | install、launch、目标功能、网络响应 |
+
+## 9. MCP 工具映射
+
+| 步骤 | MCP 工具 | 用途 |
+|---|---|---|
+| 动态打点 | `android_frida_run_script` | 捕获签名/hash/installer 调用 |
+| crypto/hash 证据 | `android_crypto_unpack_recipe` | 生成 MessageDigest/native hash hook |
+| SO 定位 | `ghidra_headless_analyze` | 找比较分支和返回值 |
+| 知识路由 | `kb_router` | 按 signature、integrity、repack 查下一篇 |
+
+
+
+---
 ## [pe-reverse] AOB 特征码扫描
 ### AOB Signature Scanning
 URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/01-triage/01-aob-signature-scan/
@@ -34216,6 +34672,144 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 - 静态结论绑定函数、Xref、导入、字符串和反编译片段；动态结论绑定断点、寄存器、栈、内存与调用时序。
 - 记录样本哈希、dump/patch 路径、原始字节、新字节和行为差异。
 - 将 x64dbg/Frida/Procmon/Ghidra 输出保存到 `exports/windows/`，按同一输入重跑，确认断点命中、内存变化和输出差异。
+
+
+
+---
+## [pe-reverse] TLS Callback 定位与早期执行链
+### TLS Callback Location and Early Execution Chain
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/02-pe-structure/02-tls-callback-analysis/
+Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/02-pe-structure/02-tls-callback-analysis.md
+
+> >
+
+# TLS Callback 定位与早期执行链
+
+## 1. 入口信号
+
+```text
+程序在 EntryPoint 前退出或弹窗
+DiE/PE-bear 显示 TLS Directory 非空
+Ghidra Memory Map 有 .tls / IMAGE_DIRECTORY_ENTRY_TLS
+x64dbg 停在 ntdll!LdrpCallTlsInitializers
+OEP 前发生解密、反调试或进程环境检查
+```
+
+TLS Callback 是 PE 入口点之前的执行节点。遇到早期崩溃、OEP 不落地、反调试先触发时，先看 TLS。
+
+## 2. 静态定位
+
+```powershell
+python scripts/misc/ai_tool.py run triage_pe -- samples/app.exe --out exports/pe/app/triage.json
+python scripts/misc/ai_tool.py run ghidra_headless_analyze -- samples/app.exe --out exports/pe/app/ghidra
+```
+
+手动结构字段：
+
+```text
+OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS]
+  VirtualAddress -> IMAGE_TLS_DIRECTORY
+  AddressOfCallBacks -> callback pointer array
+```
+
+Python 快速列 TLS callback：
+
+```python
+import pefile
+
+pe = pefile.PE("samples/app.exe")
+tls = getattr(pe, "DIRECTORY_ENTRY_TLS", None)
+if tls:
+    callbacks = tls.struct.AddressOfCallBacks
+    va = callbacks
+    while True:
+        off = pe.get_offset_from_rva(va - pe.OPTIONAL_HEADER.ImageBase)
+        ptr = int.from_bytes(pe.__data__[off:off + pe.OPTIONAL_HEADER.Magic.to_bytes(2, "little")[0] // 0x10], "little")
+        if ptr == 0:
+            break
+        print(hex(ptr))
+        va += 8 if pe.PE_TYPE == pefile.OPTIONAL_HEADER_MAGIC_PE_PLUS else 4
+```
+
+## 3. x64dbg 打点
+
+```text
+bp ntdll.LdrpCallTlsInitializers
+bp ntdll.LdrpCallInitRoutine
+bp kernel32.IsDebuggerPresent
+bp ntdll.NtQueryInformationProcess
+bp kernel32.VirtualProtect
+```
+
+命中后记录：
+
+```text
+callback VA:
+return address:
+RCX/EDX/R8 参数:
+是否修改 .text/.rdata:
+是否跳转到 unpacked OEP:
+```
+
+## 4. Ghidra 命名策略
+
+```text
+tls_callback_0_anti_debug
+tls_callback_1_decrypt_text
+tls_callback_2_resolve_imports
+```
+
+对 callback 输出：
+
+```text
+作用:
+输入:
+输出:
+副作用:
+调用者:
+被调用者:
+下一跳:
+```
+
+## 5. 路径分叉
+
+| TLS 行为 | 打点动作 | 下一跳 |
+|---|---|---|
+| 调 `IsDebuggerPresent` | patch 返回值 / 条件断点 | anti-debug bypass |
+| 调 `VirtualProtect` 后写 `.text` | dump 内存 | unpack |
+| 遍历 PEB / BeingDebugged | 断在 PEB 读取 | patch flag |
+| 解密字符串 | hook 解密函数返回 | IOC/crypto |
+| 动态解析 API | 跟 `GetProcAddress` | API resolver |
+
+## 6. 攻击链 / 工作流
+
+```text
+EntryPoint 前退出 / OEP 不落地
+  → triage_pe / PE-bear 确认 TLS Directory
+  → x64dbg 断 LdrpCallTlsInitializers / LdrpCallInitRoutine
+  → 记录 callback VA、参数和节区改写
+  → 若触发反调试则 patch 条件；若解密代码则 dump 内存
+  → 回到 Ghidra 重命名 callback 和下一跳函数
+```
+
+## 7. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| TLS Directory | RVA、file offset、AddressOfCallBacks |
+| Callback | VA/RVA、函数名、调用顺序 |
+| 动态命中 | x64dbg 断点、寄存器、调用栈 |
+| 副作用 | 改写节区、解密字符串、解析 API |
+| 下一跳 | anti-debug、unpack、crypto、IOC |
+
+## 8. MCP 工具映射
+
+| 步骤 | MCP 工具 | 用途 |
+|---|---|---|
+| PE 初筛 | `triage_pe` | 抽取 TLS Directory、节区和入口信息 |
+| 静态分析 | `ghidra_headless_analyze` | callback 函数和调用图 |
+| 断点脚本 | `make_x64dbg_breakpoint_script` | 生成 TLS/anti-debug 断点 |
+| 知识路由 | `kb_router` | 按 TLS callback、OEP、anti-debug 查下一篇 |
 
 
 
@@ -35035,6 +35629,157 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 - 静态结论绑定函数、Xref、导入、字符串和反编译片段；动态结论绑定断点、寄存器、栈、内存与调用时序。
 - 记录样本哈希、dump/patch 路径、原始字节、新字节和行为差异。
 - 将 x64dbg/Frida/Procmon/Ghidra 输出保存到 `exports/windows/`，按同一输入重跑，确认断点命中、内存变化和输出差异。
+
+
+
+---
+## [pe-reverse] 动态 API 解析链还原
+### Dynamic API Resolution Chain Recovery
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/05-dynamic-api-resolution/
+Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/03-static-analysis/05-dynamic-api-resolution.md
+
+> >
+
+# 动态 API 解析链还原
+
+## 1. 入口信号
+
+```text
+Import Table 很少或为空
+字符串里没有 WinAPI 名称，但行为明显调用网络/进程/注册表
+Ghidra 看到 fs:[0x30] / gs:[0x60] / PEB_LDR_DATA
+循环遍历 export name table 并计算 hash
+大量常量形如 0xEC0E4E8E、0x7C0DFCAA
+```
+
+目标是把 hash/函数指针恢复成 API 名称，并给后续 x64dbg/Frida 断点提供真实函数表。
+
+## 2. 静态定位
+
+```powershell
+python scripts/misc/ai_tool.py run triage_pe -- samples/app.exe --out exports/pe/app/triage.json
+python scripts/misc/ai_tool.py run ghidra_headless_analyze -- samples/app.exe --out exports/pe/app/ghidra
+rg -n "GetProcAddress|LoadLibrary|VirtualAlloc|WinHttp|RegSetValue" exports/pe/app
+```
+
+Ghidra 里优先找这些形态：
+
+```c
+// PEB walk
+peb = *(longlong *)(in_GS_OFFSET + 0x60);
+ldr = *(longlong *)(peb + 0x18);
+
+// export parser
+names = image + export->AddressOfNames;
+ordinals = image + export->AddressOfNameOrdinals;
+functions = image + export->AddressOfFunctions;
+
+// hash loop
+hash = ror(hash, 13);
+hash += tolower(ch);
+```
+
+## 3. Hash 反解脚本
+
+```python
+import pefile
+
+def ror32(v, n):
+    return ((v >> n) | (v << (32 - n))) & 0xffffffff
+
+def api_hash(name: str) -> int:
+    h = 0
+    for ch in name:
+        h = ror32(h, 13)
+        h = (h + ord(ch.lower())) & 0xffffffff
+    return h
+
+targets = {0xec0e4e8e, 0x7c0dfcaa}
+for dll in ["C:/Windows/System32/kernel32.dll", "C:/Windows/System32/advapi32.dll", "C:/Windows/System32/wininet.dll"]:
+    pe = pefile.PE(dll)
+    for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
+        if not exp.name:
+            continue
+        name = exp.name.decode(errors="ignore")
+        h = api_hash(name)
+        if h in targets:
+            print(hex(h), dll, name)
+```
+
+把匹配结果回填到 Ghidra：
+
+```text
+api_hash_0xec0e4e8e -> VirtualAlloc
+api_hash_0x7c0dfcaa -> CreateThread
+```
+
+## 4. 动态断点
+
+```text
+bp kernel32.LoadLibraryA
+bp kernel32.LoadLibraryW
+bp kernel32.GetProcAddress
+bp ntdll.LdrGetProcedureAddress
+bp kernel32.VirtualAlloc
+bp kernel32.WriteProcessMemory
+```
+
+如果样本手写 EAT parser，不会命中 `GetProcAddress`。改断 hash compare：
+
+```text
+findallmem 8E4E0EEC
+bp <hash_compare_addr>
+```
+
+命中后记录：
+
+```text
+module base:
+export name candidate:
+computed hash:
+matched constant:
+resolved function pointer:
+```
+
+## 5. 路径分叉
+
+| 解析结果 | 下一跳 |
+|---|---|
+| `VirtualAlloc/VirtualProtect` | unpack / shellcode dump |
+| `CreateRemoteThread/WriteProcessMemory` | injection 行为链 |
+| `WinHttpSendRequest/InternetOpenUrl` | C2 / protocol |
+| `RegSetValueEx/CreateService` | persistence / IOC |
+| `BCrypt/CryptDecrypt` | crypto replay |
+
+## 6. 攻击链 / 工作流
+
+```text
+Import Table 稀疏 / 行为与导入不匹配
+  → Ghidra 找 PEB walk、EAT parser 或 hash loop
+  → 用脚本反解 hash 常量并回填 API 名称
+  → x64dbg 断 LoadLibrary/GetProcAddress 或 hash compare
+  → 建立函数指针表
+  → 按解析结果跳到 unpack、network、injection、persistence 或 crypto
+```
+
+## 7. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| Hash 算法 | rotate、大小写、初始值、DLL 名是否参与 |
+| 常量表 | hash 常量、匹配 API、DLL |
+| 函数指针表 | table VA/RVA、slot、写入位置 |
+| 动态命中 | `GetProcAddress` 参数或 hash compare |
+| 下一跳 | unpack、IOC、crypto、patch |
+
+## 8. MCP 工具映射
+
+| 步骤 | MCP 工具 | 用途 |
+|---|---|---|
+| 初筛 | `triage_pe` | 判断 import 稀疏、节区异常 |
+| 静态图 | `ghidra_headless_analyze` | 定位 PEB walk 和 hash loop |
+| 断点 | `make_x64dbg_breakpoint_script` | 生成 LoadLibrary/GetProcAddress 断点 |
+| 知识路由 | `kb_router` | 按 api hash、PEB、resolver 查下一篇 |
 
 
 
@@ -37166,6 +37911,143 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 - 静态结论绑定函数、Xref、导入、字符串和反编译片段；动态结论绑定断点、寄存器、栈、内存与调用时序。
 - 记录样本哈希、dump/patch 路径、原始字节、新字节和行为差异。
 - 将 x64dbg/Frida/Procmon/Ghidra 输出保存到 `exports/windows/`，按同一输入重跑，确认断点命中、内存变化和输出差异。
+
+
+
+---
+## [pe-reverse] 持久化与启动链 IOC 提取
+### Persistence and Startup Chain IOC Extraction
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/06-ioc-extraction/02-persistence-startup-chain/
+Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/06-ioc-extraction/02-persistence-startup-chain.md
+
+> >
+
+# 持久化与启动链 IOC 提取
+
+## 1. 入口信号
+
+```text
+Procmon: RegSetValue / CreateFile / Process Create
+strings: Software\Microsoft\Windows\CurrentVersion\Run
+strings: schtasks /Create /SC /TN
+imports: RegSetValueExW / CreateServiceW / StartServiceW
+行为: 重启后进程恢复、服务多出、任务计划多出
+```
+
+目标是把“启动路径”拆成可查询 IOC：注册表键、服务名、任务名、文件落点、命令行和触发条件。
+
+## 2. 静态打点
+
+```powershell
+python scripts/misc/ai_tool.py run triage_pe -- samples/app.exe --out exports/pe/app/triage.json
+strings samples/app.exe | rg -i "Run\\|RunOnce|Services|schtasks|Startup|WMI|CurrentVersion|Image File Execution Options|AppInit_DLLs"
+```
+
+Ghidra 中优先追：
+
+```text
+RegCreateKeyExW
+RegSetValueExW
+CreateServiceW
+OpenSCManagerW
+ShellExecuteW("schtasks")
+IWbemServices::PutInstance
+CopyFileW / MoveFileExW
+```
+
+## 3. Procmon 过滤器
+
+```text
+Process Name is sample.exe Include
+Operation is RegSetValue Include
+Operation is RegCreateKey Include
+Operation is CreateFile Include
+Operation is Process Create Include
+Path contains \CurrentVersion\Run Include
+Path contains \Services\ Include
+Path contains \Startup Include
+Path contains \Schedule\TaskCache Include
+```
+
+导出 CSV 后提取 IOC：
+
+```python
+import csv
+from pathlib import Path
+
+rows = csv.DictReader(Path("exports/pe/app/procmon.csv").open(encoding="utf-8", errors="replace"))
+for r in rows:
+    path = r.get("Path", "")
+    op = r.get("Operation", "")
+    if any(x.lower() in path.lower() for x in ["currentversion\\run", "\\services\\", "\\startup", "taskcache"]):
+        print(op, path, r.get("Detail", ""))
+```
+
+## 4. 常见路径表
+
+| 路径 | 成功标志 | 下一跳 |
+|---|---|---|
+| `HKCU/HKLM\...\Run` | 值名 + 命令行落盘 | Sigma registry rule |
+| `CreateServiceW` | 服务名、ImagePath、StartType | service IOC |
+| `schtasks /Create` | 任务名、触发器、Action | task XML |
+| Startup folder | `.lnk` 或 exe 落地 | file IOC |
+| WMI EventFilter | Filter/Consumer/Binding | WMI IOC |
+| IFEO Debugger | 目标进程 + Debugger 值 | hijack chain |
+| AppInit_DLLs | DLL 路径 + LoadAppInit_DLLs | DLL load chain |
+
+## 5. 攻击链 / 工作流
+
+```text
+strings/imports/Procmon 出现启动项信号
+  → 过滤 RegSetValue/CreateService/schtasks/CreateFile
+  → 提取 key、value、service name、task name、file path
+  → x64dbg 断对应 API 回溯 caller
+  → Ghidra 命名 persistence 函数
+  → 输出 IOC 表并生成 Sigma/YARA 草案
+```
+
+## 6. x64dbg 断点
+
+```text
+bp advapi32.RegSetValueExW
+bp advapi32.CreateServiceW
+bp kernel32.CreateFileW
+bp kernel32.CopyFileW
+bp shell32.ShellExecuteW
+bp kernel32.CreateProcessW
+```
+
+命中时记录：
+
+```text
+API:
+caller VA:
+key/path:
+value name:
+data/command:
+return code:
+```
+
+## 7. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| 文件落点 | path、size、SHA256、创建 API |
+| 注册表 | hive、key、value、data、caller |
+| 服务 | service name、display name、ImagePath、StartType |
+| 任务计划 | task name、trigger、action、XML path |
+| WMI | Filter、Consumer、Binding |
+| 检测产物 | YARA/Sigma 草案路径 |
+
+## 8. MCP 工具映射
+
+| 步骤 | MCP 工具 | 用途 |
+|---|---|---|
+| 初筛 | `triage_pe` | imports/strings/节区线索 |
+| Procmon | `make_procmon_filters` | 生成行为过滤器 |
+| IOC 汇总 | `extract_iocs_from_summary` | 从摘要提取键值、路径和命令 |
+| Sigma | `make_sigma_stub` | 生成注册表/服务/任务规则草案 |
+| 知识路由 | `kb_router` | 按 persistence、Run Key、service 查下一篇 |
 
 
 

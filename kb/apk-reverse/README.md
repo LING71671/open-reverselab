@@ -1,6 +1,6 @@
-# APK Reverse 逆向工程知识库 — Android 逆向 17 篇
+# APK Reverse 逆向工程知识库 — Android 逆向 20 篇
 
-APK/DEX/SO 逆向技术库，共 **8 类、17 篇正文**。
+APK/DEX/SO 逆向技术库，共 **8 类、20 篇正文**。
 
 ## 入口
 

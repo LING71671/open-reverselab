@@ -2,19 +2,20 @@
 
 APK/DEX/SO 逆向技术库。覆盖静态分析、Frida 动态验证、脱壳、Patch 与重打包。
 
-## 完整目录（8 类 / 17 篇）
+## 完整目录（8 类 / 20 篇）
 
 ### 01-dex-java — DEX/Java（1）
 
 - [`01-dex-java/01-smali-injection.md`](01-dex-java/01-smali-injection.md) — Smali 代码注入与 DEX 修改
 
-### 02-native — Native/SO（5）
+### 02-native — Native/SO（6）
 
 - [`02-native/01-il2cpp-offset-discovery.md`](02-native/01-il2cpp-offset-discovery.md) — Unity IL2CPP 静态逆向与偏移发现
 - [`02-native/02-pointer-chain-patterns.md`](02-native/02-pointer-chain-patterns.md) — 指针链遍历模式
 - [`02-native/03-ue4-offset-hunting.md`](02-native/03-ue4-offset-hunting.md) — UE4 引擎游戏偏移发现
 - [`02-native/04-kernel-procfs-driver.md`](02-native/04-kernel-procfs-driver.md) — Kernel Driver 注入：proc 节点读写
 - [`02-native/05-virt-phys-memory.md`](02-native/05-virt-phys-memory.md) — 虚拟地址 → 物理地址转换
+- [`02-native/06-jni-register-natives-tracing.md`](02-native/06-jni-register-natives-tracing.md) — JNI RegisterNatives 追踪与 Native 入口还原
 
 ### 03-manifest — Manifest/入口（1）
 
@@ -25,10 +26,11 @@ APK/DEX/SO 逆向技术库。覆盖静态分析、Frida 动态验证、脱壳、
 - [`04-crypto/01-game-encryption-patterns.md`](04-crypto/01-game-encryption-patterns.md) — 游戏数据加解密识别与绕过
 - [`04-crypto/02-rc4-custom-crypto.md`](04-crypto/02-rc4-custom-crypto.md) — 自定义对称加密：RC4 与组合模式
 
-### 05-network — 网络协议（2）
+### 05-network — 网络协议（3）
 
 - [`05-network/01-game-protocol-hook.md`](05-network/01-game-protocol-hook.md) — 游戏协议 Hook 与封包分析
 - [`05-network/02-license-verification-bypass.md`](05-network/02-license-verification-bypass.md) — 在线验证系统分析与绕过
+- [`05-network/03-tls-pinning-unpinning.md`](05-network/03-tls-pinning-unpinning.md) — TLS Pinning 定位与 Unpinning
 
 ### 06-dynamic — 动态插桩（3）
 
@@ -41,9 +43,10 @@ APK/DEX/SO 逆向技术库。覆盖静态分析、Frida 动态验证、脱壳、
 - [`07-packer/01-obfuscation-detection.md`](07-packer/01-obfuscation-detection.md) — 编译期混淆检测与识别
 - [`07-packer/02-self-extracting-payload.md`](07-packer/02-self-extracting-payload.md) — 自解压 Payload 与脚本嵌入
 
-### 08-patch-repack — Patch/重打包（1）
+### 08-patch-repack — Patch/重打包（2）
 
 - [`08-patch-repack/01-so-injection-repack.md`](08-patch-repack/01-so-injection-repack.md) — Native SO 注入与 APK 重打包
+- [`08-patch-repack/02-signature-integrity-bypass.md`](08-patch-repack/02-signature-integrity-bypass.md) — 签名与完整性检查绕过
 
 ## 文档质量基线
 

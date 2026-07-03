@@ -1,6 +1,6 @@
-# PE Reverse 逆向工程知识库 — Windows 二进制分析 19 篇
+# PE Reverse 逆向工程知识库 — Windows 二进制分析 22 篇
 
-Windows PE/二进制逆向技术库，共 **9 类、19 篇正文**。
+Windows PE/二进制逆向技术库，共 **9 类、22 篇正文**。
 
 ## 入口
 
@@ -15,4 +15,4 @@ Windows PE/二进制逆向技术库，共 **9 类、19 篇正文**。
 → 脱壳/配置恢复 → IOC → YARA/Sigma → Patch 副本 → 报告
 ```
 
-`06-ioc-extraction` 与 `07-yara-sigma` 已有正文，不再是待补充分类。原始样本只读保留，动态输出和 patch 必须与原件分离。
+`06-ioc-extraction` 与 `07-yara-sigma` 已有正文，不再是待补充分类。分析时记录样本哈希、dump/patch 路径、原始字节、新字节和行为差异。

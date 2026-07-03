@@ -27,6 +27,7 @@ graph TD
     UE4["UE4<br/>02-native"]
     STRINGS_SO["SO Strings<br/>02-native"]
     IMPORT_SO["SO Imports<br/>02-native"]
+    JNI_REG["JNI RegisterNatives<br/>02-native"]
 
     %% === Layer 3: Crypto Detection ===
     CRYPTO_APK["Crypto Discovery<br/>04-crypto"]
@@ -40,6 +41,7 @@ graph TD
     LICENSE_VERIFY["License Verify<br/>05-network"]
     OKHTTP["OkHttp Hook<br/>05-network"]
     CERTPIN["Cert Pinning<br/>05-network"]
+    UNPIN["TLS Unpinning<br/>05-network"]
 
     %% === Layer 5: Dynamic Instrumentation ===
     FRIDA_APK["Frida<br/>06-dynamic"]
@@ -62,6 +64,7 @@ graph TD
     SO_INJECT["SO Inject<br/>08-patch-repack"]
     APK_SIGN["APK Sign<br/>08-patch-repack"]
     INTEGRITY["Integrity Bypass<br/>08-patch-repack"]
+    SIGNATURE_CHECK["Signature/Hash Check<br/>08-patch-repack"]
 
     %% === Layer 8: Output ===
     REPORT_APK["分析报告<br/>reports/android/"]
@@ -95,6 +98,8 @@ graph TD
     SMALI -->|ClassLoader| DEX_LOADER
     NATIVE -->|readelf| IMPORT_SO
     NATIVE -->|strings| STRINGS_SO
+    NATIVE -->|JNI_OnLoad| JNI_REG
+    JADX -->|native method| JNI_REG
 
     %% --- Edges: Static → Crypto ---
     CRYPTO_APK -->|Cipher.getInstance| ENC_PATTERN
@@ -109,12 +114,14 @@ graph TD
     NETWORK -->|SSLSocketFactory| CERTPIN
     NETWORK -->|license/verify API| LICENSE_VERIFY
     PROTOCOL_GAME -->|protobuf field| PROTO_REV
+    CERTPIN -->|Frida unpin| UNPIN
 
     %% --- Edges: Static → Dynamic ---
     NATIVE -->|hook target| FRIDA_APK
     CRYPTO_APK -->|encrypt/decrypt hook| FRIDA_APK
     NETWORK -->|send/recv hook| FRIDA_APK
     DEX_LOADER -->|ClassLoader hook| FRIDA_APK
+    JNI_REG -->|native addr| FRIDA_APK
 
     %% --- Edges: Dynamic → Dynamic (internal) ---
     FRIDA_APK -->|android_frida_run_script| FRIDA_SPAWN
@@ -153,6 +160,8 @@ graph TD
     CRYPTO_APK -->|patch bypass| SMALI_INJECT
     LICENSE_VERIFY -->|always true| SMALI_INJECT
     CERTPIN -->|remove pinning| SMALI_INJECT
+    SIGNATURE_CHECK -->|patch compare| SMALI_INJECT
+    SIGNATURE_CHECK -->|hash hook| FRIDA_APK
 
     %% --- Edges: Patch → Repack → Output ---
     SMALI_INJECT -->|apktool b| REPACK
@@ -160,6 +169,7 @@ graph TD
     REPACK -->|uber-apk-signer| APK_SIGN
     APK_SIGN -->|adb install| PATCHED_APK
     INTEGRITY -->|hook bypass| SMALI_INJECT
+    REPACK -->|signature mismatch| SIGNATURE_CHECK
 
     %% --- Edges: Everything → Output ---
     JADX -->|decompiled src| DECRYPT_DATA
@@ -179,6 +189,8 @@ graph TD
     OVERLAY_RENDER -.->|ImGui overlay| FRIDA_APK
     SO_INJECT -.->|native hook| MEM_RW
     APK_SIGN -.->|signature check bypass| INTEGRITY
+    JNI_REG -.->|native crypto entry| CRYPTO_APK
+    UNPIN -.->|proxy traffic| PROTOCOL_GAME
 ```
 
 ## 典型攻击网路径
@@ -219,6 +231,14 @@ APK → jadx → OkHttp/Retrofit → license/verify endpoint
     └─ → bypass: SSL pinning remove → Burp/Charles proxy → inspect
 ```
 
+### 路径 4.1: TLS Pinning 到 API 参数 (Network→Pinning→Protocol)
+```
+APK → jadx/strings → CertificatePinner/TrustManager/Cronet
+  → Frida unpin → 代理看到请求
+  → 提取 sign/token/nonce 字段 → JNI/native sign 入口
+  → RegisterNatives → native_sign → 参数重放/patch
+```
+
 ### 路径 5: 协议逆向 (APK→Network→Protocol→Frida→Script)
 ```
 APK → jadx → Retrofit interface methods → protobuf field names
@@ -234,6 +254,14 @@ APK → apktool d → lib/arm64-v8a/libtarget.so → analyze
   → inject into lib/ + smali System.loadLibrary("inject")
   → modify AndroidManifest if needed (permissions)
   → apktool b → uber-apk-signer → adb install → Frida verify
+```
+
+### 路径 7: Repack 后完整性恢复 (Patch→Integrity→Repack)
+```
+smali/native patch → apktool b → sign → launch crash
+  → hook getPackageInfo / MessageDigest / open(base.apk)
+  → 定位签名/hash/installer 检查
+  → patch 比较分支或返回原始摘要 → reinstall → 功能复验
 ```
 
 ## 关键枢纽节点

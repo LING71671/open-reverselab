@@ -1,6 +1,6 @@
 # ReverseLab — Open-Source Reverse Engineering Lab & MCP Tool Ecosystem
 
-> 172-article knowledge base, 100+ MCP automation tools for reverse engineering.
+> 178-article knowledge base, 100+ MCP automation tools for reverse engineering.
 > Agent-native architecture. Covers CTF, APK, PE, cryptography, game cheating, and more.
 
 ## Quick Links
@@ -250,7 +250,7 @@
 - [Database Dump Cleaning — Leaked Data Cleaning Methodology](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/07-data-cleaning/)
   >
 
-## APK Reverse — Android 逆向工程 (17 articles)
+## APK Reverse — Android 逆向工程 (20 articles)
 
 - [Smali Code Injection and DEX Modification](https://ling71671.github.io/open-reverselab/kb/apk-reverse/01-dex-java/01-smali-injection/)
   >
@@ -264,6 +264,8 @@
   >
 - [Virtual-to-Physical Address Translation](https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/05-virt-phys-memory/)
   >
+- [JNI RegisterNatives Tracing and Native Entry Recovery](https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/06-jni-register-natives-tracing/)
+  >
 - [Entry Point Tracing and Component Analysis](https://ling71671.github.io/open-reverselab/kb/apk-reverse/03-manifest/01-entry-point-tracing/)
   >
 - [Game Data Encryption Identification and Bypass](https://ling71671.github.io/open-reverselab/kb/apk-reverse/04-crypto/01-game-encryption-patterns/)
@@ -273,6 +275,8 @@
 - [Game Protocol Hooking and Packet Analysis](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/01-game-protocol-hook/)
   >
 - [Online License Verification Analysis and Bypass](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/02-license-verification-bypass/)
+  >
+- [TLS Pinning Location and Unpinning](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/03-tls-pinning-unpinning/)
   >
 - [Process Memory Read/Write Detection and Hook](https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/01-memory-rw-hook/)
   >
@@ -286,12 +290,16 @@
   >
 - [Native SO Injection and APK Repacking](https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/01-so-injection-repack/)
   >
+- [Signature and Integrity Check Bypass](https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/02-signature-integrity-bypass/)
+  >
 
-## PE Reverse — Windows 二进制分析 (19 articles)
+## PE Reverse — Windows 二进制分析 (22 articles)
 
 - [AOB Signature Scanning](https://ling71671.github.io/open-reverselab/kb/pe-reverse/01-triage/01-aob-signature-scan/)
   >
 - [PE Header Parsing and Section Location](https://ling71671.github.io/open-reverselab/kb/pe-reverse/02-pe-structure/01-pe-header-parsing/)
+  >
+- [TLS Callback Location and Early Execution Chain](https://ling71671.github.io/open-reverselab/kb/pe-reverse/02-pe-structure/02-tls-callback-analysis/)
   >
 - [Memory Structure Reverse Reconstruction](https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/01-struct-reconstruction/)
   >
@@ -300,6 +308,8 @@
 - [x64dbg Breakpoint Strategies](https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/03-x64dbg-breakpoints/)
   >
 - [ReClass Real-Time Structure Reconstruction](https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/04-reclass-reconstruction/)
+  >
+- [Dynamic API Resolution Chain Recovery](https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/05-dynamic-api-resolution/)
   >
 - [DLL Injection: Three Patterns](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/01-dll-injection/)
   >
@@ -320,6 +330,8 @@
 - [PE Unpacking and Memory Dumping](https://ling71671.github.io/open-reverselab/kb/pe-reverse/05-crypto-unpack/01-pe-unpack-dump/)
   >
 - [IOC Extraction Techniques](https://ling71671.github.io/open-reverselab/kb/pe-reverse/06-ioc-extraction/01-ioc-extraction/)
+  >
+- [Persistence and Startup Chain IOC Extraction](https://ling71671.github.io/open-reverselab/kb/pe-reverse/06-ioc-extraction/02-persistence-startup-chain/)
   >
 - [YARA Rule Writing (Reverse Engineering Perspective)](https://ling71671.github.io/open-reverselab/kb/pe-reverse/07-yara-sigma/01-yara-rule-writing/)
   >
@@ -372,4 +384,4 @@
 
 ---
 Generated: 2026-07-03
-Total articles: 172
+Total articles: 178

@@ -5,7 +5,7 @@
       "@type": "SoftwareSourceCode",
       "@id": "https://github.com/LING71671/open-reverselab#software",
       "name": "ReverseLab",
-      "description": "Open-source reverse engineering lab: 172-article knowledge base with 100+ MCP automation tools. Covers CTF pentesting, APK reverse engineering, PE binary analysis, cryptography, protocol reversing, and game cheating analysis. Agent-native architecture, directory-as-convention.",
+      "description": "Open-source reverse engineering lab: 178-article knowledge base with 100+ MCP automation tools. Covers CTF pentesting, APK reverse engineering, PE binary analysis, cryptography, protocol reversing, and game cheating analysis. Agent-native architecture, directory-as-convention.",
       "url": "https://github.com/LING71671/open-reverselab",
       "codeRepository": "https://github.com/LING71671/open-reverselab",
       "programmingLanguage": ["Python", "JavaScript", "PowerShell", "C++"],

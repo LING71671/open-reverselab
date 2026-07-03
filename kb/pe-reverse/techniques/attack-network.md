@@ -18,6 +18,7 @@ graph TD
     PESTRUCT["PE Structure<br/>02-pe-structure"]
     AOB["AOB Scan<br/>01-triage"]
     PE_HEADER["PE Header<br/>02-pe-structure"]
+    TLS_CALLBACK["TLS Callback<br/>02-pe-structure"]
     DIE["DiE<br/>01-triage"]
     HASH["Hash<br/>01-triage"]
     STRINGS["Strings<br/>01-triage"]
@@ -30,6 +31,7 @@ graph TD
     STRUCT["Struct Rebuild<br/>03-static-analysis"]
     DISASM["Disasm/JIT<br/>03-static-analysis"]
     RECLASS["ReClass<br/>03-static-analysis"]
+    API_RESOLVER["Dynamic API Resolver<br/>03-static-analysis"]
 
     %% === Layer 3: Dynamic Analysis ===
     X64DBG["x64dbg<br/>04-dynamic-analysis"]
@@ -55,6 +57,7 @@ graph TD
     C2["C2 Address<br/>06-ioc-extraction"]
     MUTEX["Mutex<br/>06-ioc-extraction"]
     REGISTRY["Registry<br/>06-ioc-extraction"]
+    PERSISTENCE["Persistence Chain<br/>06-ioc-extraction"]
     YARA["YARA Rule<br/>07-yara-sigma"]
     SIGMA["Sigma Rule<br/>07-yara-sigma"]
 
@@ -84,6 +87,7 @@ graph TD
     %% --- Edges: Triage → Static ---
     DIE -->|packer detected| UNPACK
     PE_HEADER -->|section table| GHIDRA
+    PE_HEADER -->|TLS directory| TLS_CALLBACK
     IMPORTS -->|API usage| GHIDRA
     STRINGS -->|xref search| XREF
     AOB -->|locate function| FUNC_MAP
@@ -95,9 +99,11 @@ graph TD
     FUNC_MAP -->|struct hints| STRUCT
     FUNC_MAP -->|reclass| RECLASS
     XREF -->|JIT asm| DISASM
+    XREF -->|PEB/API hash| API_RESOLVER
 
     %% --- Edges: Static → Dynamic ---
     FUNC_MAP -->|breakpoint plan| BREAKPOINT
+    TLS_CALLBACK -->|pre-EP bp| BREAKPOINT
     FUNC_MAP -->|hook target| FRIDA
     FUNC_MAP -->|inject point| DLL_INJECT
     FUNC_MAP -->|detour target| TRAMPOLINE
@@ -106,6 +112,7 @@ graph TD
     %% --- Edges: Dynamic → Dynamic ---
     BREAKPOINT -->|make_x64dbg_breakpoint_script| X64DBG
     X64DBG -->|dump memory| MEMDUMP
+    API_RESOLVER -->|resolved funcs| BREAKPOINT
     DLL_INJECT -->|manual map| MANUAL_MAP
     TRAMPOLINE -->|naked variant| NAKED_HOOK
     EXTMEM_RW -->|anti-debug detected| ANTIDEBUG
@@ -129,6 +136,7 @@ graph TD
     %% --- Edges: Dynamic → IOC ---
     PROCMON -->|procmon_export_csv| IOC
     PROCMON -->|registry activity| REGISTRY
+    PROCMON -->|startup artifacts| PERSISTENCE
     PROCMON -->|create mutex| MUTEX
     X64DBG -->|network connect| C2
     FRIDA -->|extract_frida_buffers| IOC
@@ -137,6 +145,7 @@ graph TD
     C2 -->|refine_ioc_sources| YARA
     MUTEX -->|make_yara_stub| YARA
     REGISTRY -->|procmon filter| SIGMA
+    PERSISTENCE -->|startup rule| SIGMA
     IOC -->|extract_iocs_from_summary| YARA
     IOC -->|make_sigma_stub| SIGMA
 
@@ -174,6 +183,9 @@ graph TD
 
     %% --- Cross-category edges ---
     ANTIDEBUG -.->|bypass pattern| DIRECT_SYSCALL
+    TLS_CALLBACK -.->|early anti-debug| ANTIDEBUG
+    API_RESOLVER -.->|hidden import map| IOC
+    PERSISTENCE -.->|service/task/runkey| IOC
     DIRECT_SYSCALL -.->|syscall stub| LOADER
     DIREST_SYSCALL -.->|syscall stub| LOADER
     PROCMON -.->|behavior verify| PAYLOAD
@@ -203,6 +215,14 @@ graph TD
   → carve_payloads_from_dump → Ghidra → Function Map → Report
 ```
 
+### 路径 2.1: TLS Callback 早期链 (PE Structure→Anti-Debug→Unpack)
+```
+样本 → PE Header → TLS Directory/AddressOfCallBacks
+  → x64dbg 断 LdrpCallTlsInitializers
+  → callback 内反调试/解密/import resolver
+  → patch 条件或 dump 解密后内存 → 回到 Ghidra 重分析
+```
+
 ### 路径 3: 加密/协议逆向 (Crypto→Protocol→Key→Decrypt)
 ```
 样本 → Imports (CryptEncrypt, BCrypt, send/recv)
@@ -210,6 +230,13 @@ graph TD
   → algorithm identification (AES/RC4/XOR)
   → key recovery → solve_crypto_from_evidence
   → write decrypt script → decrypt config/C2 → IOC
+```
+
+### 路径 3.1: 动态 API 解析 (Static→Resolver→Behavior)
+```
+Import Table 稀疏 → Ghidra 找 PEB walk/API hash
+  → 反解 hash 常量 → 命名函数指针表
+  → x64dbg 断 resolved API → 网络/注入/持久化行为链
 ```
 
 ### 路径 4: 游戏外挂/反外挂 (Injection→Hook→Memory→Patch)
@@ -245,6 +272,14 @@ graph TD
   → extract_iocs_from_summary
   → make_yara_stub + make_sigma_stub
   → generate_patch_report
+```
+
+### 路径 6.1: 持久化启动链 (Procmon→IOC→Sigma)
+```
+Procmon → RegSetValue/CreateService/schtasks/CreateFile
+  → 提取 Run Key、服务名、任务名、落地文件
+  → x64dbg 回溯 caller → Ghidra 命名 persistence 函数
+  → Sigma/YARA 草案 → Report
 ```
 
 ## 攻击网中的关键枢纽节点
