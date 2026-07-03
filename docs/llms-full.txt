@@ -21228,6 +21228,42 @@ def rank_endpoint(method, path, params=None, auth_hint="unknown"):
     return {"score": score, "reasons": reasons}
 ```
 
+### 0.1 端点到攻击面的路由矩阵
+
+发现端点后，优先把它变成可执行任务队列。每个端点都要带上 method、auth hint、对象字段、角色差异和下一跳。
+
+| 端点信号 | 高价值字段 | 下一跳 |
+|---|---|---|
+| `/auth`, `/login`, `/refresh`, `/jwt` | token、cookie、refresh、scope | JWT / OAuth / session fixation |
+| `/orders`, `/invoice`, `/payment`, `/refund` | order_id、amount、status、coupon | 支付逻辑 / SQLi / IDOR |
+| `/admin`, `/internal`, `/debug`, `/actuator` | env、routes、heap、build | 配置泄露 / SSRF / cloud |
+| `/graphql` | mutation、type、resolver error | GraphQL 注入 / BAC |
+| `/upload`, `/file`, `/download`, `/export` | path、filename、format | LFI / XXE / dump leak |
+| `/users/{id}`, `/orgs/{id}`, `/tenants/{id}` | user_id、org_id、tenant_id | IDOR / mass assignment |
+| `/keys`, `/integrations`, `/webhook` | api_key、secret、signing_secret | API key leak / signature |
+
+```python
+# api_next_hop_router.py — 端点下一跳任务生成
+ROUTES = [
+    ("jwt", ["jwt", "token", "refresh", "bearer"], ["02-auth/jwt/00-overview.md"]),
+    ("payment", ["order", "invoice", "payment", "refund", "coupon"], ["12-payment/payment-logic.md", "24-database/01-sqli-fundamentals.md"]),
+    ("graphql", ["graphql", "mutation", "query"], ["03-injection/graphql.md"]),
+    ("config", ["debug", "actuator", "env", "config"], ["24-database/04-config-exposure.md"]),
+    ("secret", ["key", "secret", "integration", "webhook"], ["17-api-attacks/02-api-key-leak.md", "13-signature/02-implementation.md"]),
+    ("idor", ["user_id", "org_id", "tenant_id", "{id}"], ["14-idor/01-idor-enumeration.md"]),
+]
+
+def next_hops(endpoint):
+    text = " ".join(str(endpoint.get(k, "")) for k in ("method", "path", "params", "response_keys")).lower()
+    tasks = []
+    for name, hints, docs in ROUTES:
+        if any(h in text for h in hints):
+            tasks.append({"route": name, "docs": docs})
+    return tasks
+```
+
+Evidence 新增 `api_next_hops.jsonl`：每行保存 endpoint、rank、role matrix、next_hops、触发理由。这样 API discovery 的输出可以直接交给 IDOR、SQL、支付、JWT、GraphQL、API key 文档继续跑。
+
 ### 1. Swagger / OpenAPI 文档枚举
 
 ```python
@@ -21416,72 +21452,7 @@ def test_graphql_introspection(base_url, endpoint="/graphql"):
 def graphql_error_field_discovery(base_url, endpoint="/graphql"):
     """
     利用 GraphQL error 消息发现字段名
-    原理: 即使 introspection 关闭, 查询不存在的字段返回错误:
-    "Cannot query field 'xxx' on type 'Query'
-    "
-    → 可以用"这字段不存在"的反面来推断"这字段存在"
-    """
-    s = requests.Session()
-    url = f"{base_url}{endpoint}"
-
-    # 常见字段名字典
-    common_fields = [
-        "user", "users", "order", "orders", "product", "products",
-        "account", "accounts", "profile", "profiles", "payment", "payments",
-        "transaction", "transactions", "invoice", "invoices", "admin", "admins",
-        "config", "configuration", "settings", "secret", "flag",
-        "me", "self", "viewer", "node", "query",
-        "login", "register", "logout", "refresh",
-    ]
-
-    found = []
-    for field in common_fields:
-        # 测试简单查询: { field } 或 { field { id } }
-        for query in [
-            f"query {{ {field} {{ id }} }}",
-            f"query {{ {field}(id: 1) {{ id }} }}",
-            f"query {{ {field}(first: 1) {{ edges {{ node {{ id }} }} }} }}",
-        ]:
-            r = s.post(url, json={"query": query})
-            if r.status_code == 200:
-                data = r.json()
-                # 如果有 data 且不是 null → field 存在
-                if data.get("data") and data["data"].get(field) is not None:
-                    found.append(field)
-                    break
-                # 如果错误消息包含 "Field 'xxx' is not defined"
-                # → 排除, 继续
-    return found
-```
-
-### 3. JavaScript Source Map 反解
-
-```python
-# sourcemap_extract.py — JS Source Map 反解
-
-import re, requests, json, base64, zlib
-from urllib.parse import urljoin
-
-class SourceMapExtractor:
-    """
-    JS Source Map 提取 API 端点
-
-    原理: 生产环境 JS bundle 附带 source map
-    .js.map 文件包含原始源码的映射
-    从中可以提取:
-    - API 端点路径
-    - 内部函数名
-    - 管理/隐藏路由
-    - API key 和 secret (粗心放置)
-    - 注释中的隐藏功能
-    """
-
-    def __init__(self, base_url):
-        self.base = base_url.rstrip('/')
-        self.s = requests.Session()
-
-    def find_js_bundles(self, html: str = None) -> list:
-        """在页面 HTML 中查找 JS bundle UR
+    原理: 即使 introsp
 
 [... content truncated for size ...]
 
@@ -21564,6 +21535,41 @@ def triage_key(value):
             return {"provider": provider, "kind": kind, "environment": env}
     return {"provider": "unknown", "kind": "unknown", "environment": "unknown"}
 ```
+
+### 0.1 Key 到能力矩阵
+
+Key 验证的目标不是“valid/invalid”二分，而是确认它能触发哪类业务能力：读资源、写资源、签名、发货、退款、部署、CI package 发布、云角色跳转。
+
+| Provider / Key | 能力样本 | 下一跳 |
+|---|---|---|
+| Stripe `sk_live_` | balance、customers、payment_intents、refunds | 支付逻辑 / webhook |
+| Stripe `whsec_` | webhook 签名复放 | signature implementation |
+| AWS `AKIA` | STS identity、S3、Secrets Manager、ECR | IAM / CI-CD / supply chain |
+| GitHub PAT | repo/package/actions/secrets scope | CI/CD / dependency confusion |
+| Firebase `AIza` | anonymous login、Firestore、Storage | NoSQL / mobile / API discovery |
+| Slack `xoxb/xoxp` | workspace、channel、files | token replay / data extraction |
+| SendGrid/Mailgun/Twilio | send/list/verify capability | 邮件/短信/订单通知 |
+
+```python
+# key_capability_matrix.py — provider 能力任务
+CAPS = {
+    "stripe": ["balance", "customers", "payment_intents", "refunds", "webhook_sign"],
+    "aws": ["sts_identity", "s3_list", "secretsmanager_list", "ecr_describe", "iam_policy"],
+    "github": ["user", "repos", "packages", "actions", "secrets"],
+    "google_firebase": ["identitytoolkit", "firestore", "storage", "realtime_db"],
+    "slack": ["auth_test", "team_info", "conversations", "files"],
+}
+
+def capability_plan(provider, kind):
+    tasks = CAPS.get(provider, [])
+    if provider == "stripe" and kind == "publishable":
+        tasks = ["checkout_session_probe", "payment_intent_client_secret"]
+    if kind == "webhook":
+        tasks = ["webhook_sign"]
+    return [{"capability": t, "result": "pending"} for t in tasks]
+```
+
+Evidence 新增 `capability_matrix.csv`：provider、kind、environment、capability、status、scope_hint、next_doc。只保存 key 指纹和响应摘要，不保存完整 secret。
 
 ### 1. GitHub Dorking 自动化
 
@@ -21704,40 +21710,7 @@ class GitHubDorker:
 密钥分类矩阵:
 
 类型              | 公开 (可放客户端) | 秘密 (仅服务端) | 泄露风险
-──────────────────┼─────────────────┼─────────────────┼─────────
-Stripe pk_live    | ✅              | ❌              | 低-中 (可用于钓鱼)
-Stripe sk_live    | ❌              | ✅              | 极高 (可退款/转账)
-AWS IAM User Key  | ❌              | ✅              | 极高 (可调 AWS API)
-AWS Cognito ID    | ✅              | ❌              | 低 (仅初始化)
-Firebase apiKey   | ✅              | ❌              | 中 (可访问 Firestore)
-Firebase FCM Key  | ❌              | ✅              | 高 (可发推送)
-Google OAuth Client ID | ✅       | ❌              | 低-中 (可模拟登录)
-PayPal Client ID  | ✅              | ❌              | 低
-PayPal Secret     | ❌              | ✅              | 极高
-JWT Secret        | ❌              | ✅              | 极高 (可伪造 token)
-GitHub PAT        | ❌              | ✅              | 极高 (可读写仓库)
-Slack Bot Token   | ❌              | ✅              | 高 (可读取消息)
-Mailgun API Key   | ❌              | ✅              | 高 (可发邮件钓鱼)
-Twilio SID+Token  | ❌              | ✅              | 高 (可发 SMS/打电话)
-"""
-
-class KeyClassifier:
-    """密钥类型分类器"""
-
-    PUBLIC_KEY_PREFIXES = [
-        "pk_live_", "pk_test_",        # Stripe publishable
-        "AIza",                        # Firebase / GCP (部分)
-        "ya29.",                       # Google OAuth access token
-        "APP_USR-",                    # Mercado Pago public
-    ]
-
-    SECRET_KEY_PREFIXES = [
-        "sk_live_", "sk_test_",        # Stripe secret
-        "rk_live_",                    # Stripe restricted
-        "AKIA",                        # AWS Access Key (secret部分)
-        "xoxb-", "xoxp-",             # Slack tokens
-        "ghp_", "gho_", "github_pat_", # GitHub
-        "whsec_",                      # Stripe
+──────────────────┼─────────────
 
 [... content truncated for size ...]
 

@@ -11,11 +11,11 @@ category: "17-api-attacks"
 signals: ["API key leak", "GitHub dorking", "Firebase", "Stripe", "AWS", "密钥泄露", "云服务滥用", "硬编码凭据"]
 mcp_tools: ["http_probe", "kb_router", "kb_read_file", "run_ctf_tool"]
 keywords: ["API密钥泄露", "GitHub搜索", "Firebase配置泄露", "Stripe密钥滥用", "AWS密钥验证", "API key leak", "hardcoded credentials", "cloud service abuse"]
-difficulty: "intermediate"
-tags: ["api-security", "api-keys", "github-dorking", "firebase", "stripe", "aws", "cloud-security"]
+difficulty: "advanced"
+tags: ["api", "api-keys", "github-dorking", "firebase", "stripe", "aws", "cloud"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/17-api-attacks/01-api-discovery-leak", "ctf-website/10-cloud/aws-iam-privesc", "ctf-website/10-cloud/ci-cd-pipeline", "ctf-website/12-payment/payment-logic", "ctf-website/13-signature/03-key-attacks"]
 ---
 
 # API 密钥泄露与利用 — GitHub Dorking、客户端密钥链、云服务滥用
@@ -88,6 +88,41 @@ def triage_key(value):
             return {"provider": provider, "kind": kind, "environment": env}
     return {"provider": "unknown", "kind": "unknown", "environment": "unknown"}
 ```
+
+### 0.1 Key 到能力矩阵
+
+Key 验证的目标不是“valid/invalid”二分，而是确认它能触发哪类业务能力：读资源、写资源、签名、发货、退款、部署、CI package 发布、云角色跳转。
+
+| Provider / Key | 能力样本 | 下一跳 |
+|---|---|---|
+| Stripe `sk_live_` | balance、customers、payment_intents、refunds | 支付逻辑 / webhook |
+| Stripe `whsec_` | webhook 签名复放 | signature implementation |
+| AWS `AKIA` | STS identity、S3、Secrets Manager、ECR | IAM / CI-CD / supply chain |
+| GitHub PAT | repo/package/actions/secrets scope | CI/CD / dependency confusion |
+| Firebase `AIza` | anonymous login、Firestore、Storage | NoSQL / mobile / API discovery |
+| Slack `xoxb/xoxp` | workspace、channel、files | token replay / data extraction |
+| SendGrid/Mailgun/Twilio | send/list/verify capability | 邮件/短信/订单通知 |
+
+```python
+# key_capability_matrix.py — provider 能力任务
+CAPS = {
+    "stripe": ["balance", "customers", "payment_intents", "refunds", "webhook_sign"],
+    "aws": ["sts_identity", "s3_list", "secretsmanager_list", "ecr_describe", "iam_policy"],
+    "github": ["user", "repos", "packages", "actions", "secrets"],
+    "google_firebase": ["identitytoolkit", "firestore", "storage", "realtime_db"],
+    "slack": ["auth_test", "team_info", "conversations", "files"],
+}
+
+def capability_plan(provider, kind):
+    tasks = CAPS.get(provider, [])
+    if provider == "stripe" and kind == "publishable":
+        tasks = ["checkout_session_probe", "payment_intent_client_secret"]
+    if kind == "webhook":
+        tasks = ["webhook_sign"]
+    return [{"capability": t, "result": "pending"} for t in tasks]
+```
+
+Evidence 新增 `capability_matrix.csv`：provider、kind、environment、capability、status、scope_hint、next_doc。只保存 key 指纹和响应摘要，不保存完整 secret。
 
 ### 1. GitHub Dorking 自动化
 
@@ -506,7 +541,7 @@ class FirebaseExploit:
         self.database_url = database_url
 
     def check_firestore_rules(self) -> dict:
-        """检查 Firestore 安全规则"""
+        """检查 Firestore rules 响应"""
         url = f"https://firestore.googleapis.com/v1/projects/{self.project_id}/databases/(default)/documents"
         r = requests.get(url)
         return {
@@ -682,6 +717,12 @@ Phase 4 — Evidence 固化
   ├── 保存 key 类型、来源、环境、provider、scope
   ├── 记录 valid / invalid / scope_denied 的原始响应摘要
   └── 连接 API discovery、Firebase、JWT、CI/CD 泄露等后续板块
+
+Phase 5 — 能力分发
+  ├── payment/refund/webhook → payment + signature
+  ├── cloud role/storage/secret → cloud/IAM/CI-CD
+  ├── repo/package/actions → supply-chain/CI-CD
+  └── firebase/storage/db → NoSQL/API/mobile
 ```
 
 ## Evidence
@@ -689,6 +730,7 @@ Phase 4 — Evidence 固化
 - `key_findings.json`: key 前缀、provider、kind、environment、来源文件或 URL、上下文片段 hash。
 - `validation.json`: 验证 endpoint、状态码、provider 错误码、scope hint、账号/项目归属。
 - `scope_matrix.csv`: read/list/write/admin/webhook 等动作的允许、拒绝、错误信息。
+- `capability_matrix.csv`: provider key 能力、scope hint、下一跳文档。
 - `source_chain.md`: GitHub/Source Map/APK/Postman/.env 到 key 的定位路径。
 - 成功样本: provider 返回有效身份、scope、项目 ID、可访问资源列表或 CTF flag。
 - 失败样本: key 格式误报、test 环境不可用、provider 明确 `invalid_key`、只有 public 初始化能力。
@@ -706,11 +748,11 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 
 ## 参考资料
 
-- OWASP: API7 — Security Misconfiguration (API Key Leakage)
+- OWASP API Top 10: API7 — Misconfiguration (API Key Leakage)
 - GitGuardian: "2024 State of Secrets Sprawl" Report
 - GitHub: "Token Scanning" — 自动扫描已推送的密钥
 - Stripe API Reference: Authentication
-- Firebase Security Documentation: Securing Your Data
+- Firebase Documentation: data access rules
 - "LAPSUS$ Techniques: How They Stole Source Code" — MITRE ATT&CK Case Study
 - CWE-798: Use of Hard-coded Credentials
 - CWE-200: Exposure of Sensitive Information to an Unauthorized Actor

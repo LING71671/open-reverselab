@@ -11,11 +11,11 @@ category: "17-api-attacks"
 signals: ["API discovery", "Swagger", "OpenAPI", "GraphQL", "Source Map", "端点发现", "信息泄露", "APK"]
 mcp_tools: ["http_probe", "kb_router", "kb_read_file", "run_ctf_tool"]
 keywords: ["API发现", "端点枚举", "Swagger文档", "GraphQL内省", "Source Map反解", "APK逆向", "API discovery", "endpoint enumeration", "information disclosure"]
-difficulty: "intermediate"
-tags: ["api-security", "swagger", "graphql", "source-map", "mobile", "information-disclosure"]
+difficulty: "advanced"
+tags: ["api", "swagger", "graphql", "source-map", "mobile", "information-disclosure"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/17-api-attacks/02-api-key-leak", "ctf-website/02-auth/jwt/00-overview", "ctf-website/03-injection/graphql", "ctf-website/24-database/01-sqli-fundamentals", "ctf-website/12-payment/payment-logic"]
 ---
 
 # API 发现与信息泄露 — Swagger、GraphQL、Source Map 与移动端提取
@@ -97,6 +97,42 @@ def rank_endpoint(method, path, params=None, auth_hint="unknown"):
         reasons.append("weak_auth_hint")
     return {"score": score, "reasons": reasons}
 ```
+
+### 0.1 端点到攻击面的路由矩阵
+
+发现端点后，优先把它变成可执行任务队列。每个端点都要带上 method、auth hint、对象字段、角色差异和下一跳。
+
+| 端点信号 | 高价值字段 | 下一跳 |
+|---|---|---|
+| `/auth`, `/login`, `/refresh`, `/jwt` | token、cookie、refresh、scope | JWT / OAuth / session fixation |
+| `/orders`, `/invoice`, `/payment`, `/refund` | order_id、amount、status、coupon | 支付逻辑 / SQLi / IDOR |
+| `/admin`, `/internal`, `/debug`, `/actuator` | env、routes、heap、build | 配置泄露 / SSRF / cloud |
+| `/graphql` | mutation、type、resolver error | GraphQL 注入 / BAC |
+| `/upload`, `/file`, `/download`, `/export` | path、filename、format | LFI / XXE / dump leak |
+| `/users/{id}`, `/orgs/{id}`, `/tenants/{id}` | user_id、org_id、tenant_id | IDOR / mass assignment |
+| `/keys`, `/integrations`, `/webhook` | api_key、secret、signing_secret | API key leak / signature |
+
+```python
+# api_next_hop_router.py — 端点下一跳任务生成
+ROUTES = [
+    ("jwt", ["jwt", "token", "refresh", "bearer"], ["02-auth/jwt/00-overview.md"]),
+    ("payment", ["order", "invoice", "payment", "refund", "coupon"], ["12-payment/payment-logic.md", "24-database/01-sqli-fundamentals.md"]),
+    ("graphql", ["graphql", "mutation", "query"], ["03-injection/graphql.md"]),
+    ("config", ["debug", "actuator", "env", "config"], ["24-database/04-config-exposure.md"]),
+    ("secret", ["key", "secret", "integration", "webhook"], ["17-api-attacks/02-api-key-leak.md", "13-signature/02-implementation.md"]),
+    ("idor", ["user_id", "org_id", "tenant_id", "{id}"], ["14-idor/01-idor-enumeration.md"]),
+]
+
+def next_hops(endpoint):
+    text = " ".join(str(endpoint.get(k, "")) for k in ("method", "path", "params", "response_keys")).lower()
+    tasks = []
+    for name, hints, docs in ROUTES:
+        if any(h in text for h in hints):
+            tasks.append({"route": name, "docs": docs})
+    return tasks
+```
+
+Evidence 新增 `api_next_hops.jsonl`：每行保存 endpoint、rank、role matrix、next_hops、触发理由。这样 API discovery 的输出可以直接交给 IDOR、SQL、支付、JWT、GraphQL、API key 文档继续跑。
 
 ### 1. Swagger / OpenAPI 文档枚举
 
@@ -780,6 +816,12 @@ Phase 4 — 利用
   ├── 利用过时 API 版本绕过鉴权
   ├── GraphQL mutation 注入
   └── 硬编码密钥外部服务利用
+
+Phase 5 — 下一跳分发
+  ├── auth/token → JWT/OAuth/session
+  ├── order/payment/refund → 支付/SQLi/IDOR
+  ├── key/secret/webhook → API key/signature
+  └── debug/export/download → 配置/备份/文件攻击
 ```
 
 ## MCP 工具映射
@@ -795,7 +837,7 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 
 ## 参考资料
 
-- OWASP API Security Top 10 (2023): API1 — Broken Object Level Authorization; API3 — Broken Object Property Level Authorization
+- OWASP API Top 10 (2023): API1 — Broken Object Level Authorization; API3 — Broken Object Property Level Authorization
 - OWASP: GraphQL Introspection & Field Suggestions
 - PortSwigger Research: "Source code disclosure via exposed source maps"
 - Clairvoyance: GraphQL Schema Brute-forcing Tool
@@ -804,6 +846,7 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 ## Evidence
 
 - `api_inventory.json`: 来源、端点、方法、参数、认证提示、rank、下一跳测试。
+- `api_next_hops.jsonl`: endpoint 到 JWT/SQL/支付/IDOR/GraphQL/API key 的路由结果。
 - `openapi_diff.json`: 版本差异、删除但仍可访问的 path、旧 schema 字段。
 - `role_matrix.csv`: anon/user/admin 或多租户账号的状态码、长度、关键字段 diff。
 - `graphql_schema.json`: introspection/error suggestion 还原出的 Query/Mutation/Type。
