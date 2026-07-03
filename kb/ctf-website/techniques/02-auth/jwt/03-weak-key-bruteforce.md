@@ -14,11 +14,38 @@ keywords: ["JWT爆破", "HMAC密钥", "hashcat jwt", "弱密钥", "jwt-cracker",
 difficulty: "beginner"
 tags: ["authentication", "jwt", "bruteforce", "web-security", "crypto", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # JWT 弱 HMAC 密钥爆破
+
+## 输入信号
+
+- Header 中 `alg` 为 `HS256/HS384/HS512`
+- Token 来自开发、测试、比赛靶场、默认部署、开源项目 demo
+- `.env`, `config`, `package.json`, `docker-compose.yml` 暴露 `JWT_SECRET/APP_KEY/SECRET_KEY`
+- 项目名、域名、公司名、题目名、环境名明显，可生成定制字典
+- 多个 token 的 header/payload 结构一致，说明离线爆破稳定可复现
+
+## 0. 字典优先级矩阵
+
+| 来源 | 生成方式 | 命中倾向 |
+|------|----------|----------|
+| 配置泄露 | `JWT_SECRET`, `SECRET`, `APP_KEY` 原值及变体 | 最高 |
+| 域名/项目名 | `target`, `target2026`, `target_secret` | CTF/开发环境 |
+| 框架默认 | `secret`, `jwtsecret`, `changeme`, `your-256-bit-secret` | demo 项目 |
+| Git 历史 | `git grep secret $(git rev-list --all)` | 迁移残留 |
+| 题目语境 | 题目名、hint、作者名、flag 前缀 | CTF |
+
+## 0.1 爆破结果判定
+
+| 结果 | 判断 | 下一步 |
+|------|------|--------|
+| hashcat 命中 | secret 可复现签原 token | 伪造 role/uid/aud |
+| 字典未命中 | HS 仍可能强密钥 | 转 claim/kid/jku |
+| 多个 secret 命中 | 可能 token 被截断或算法错 | 用服务端 oracle 验证 |
+| 伪造后 401 | claim/aud/iss 仍卡住 | 转 `06-claim-missing` |
 
 ## 原理
 
@@ -237,7 +264,8 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `jwt_crack_manifest.json`: token header/payload hash、alg、wordlist 来源、工具、命中 secret hash。
+- `forged_token_diff.json`: 原始用户 token、伪造 claims、接口响应、权限字段 diff。
+- 成功样本: 破解出的 secret 能重新签原 token，伪造 `sub/role/aud` 后触发高权限响应或 flag。
+- 失败样本: 字典/规则未命中、伪造签名通过但 claim 被拒、服务端 token 绑定 session。
+- 下一跳: 爆破失败转 `01-alg-none`, `02-algorithm-confusion`, `04-kid-injection`；签名过了但权限未变转 `06-claim-missing`。

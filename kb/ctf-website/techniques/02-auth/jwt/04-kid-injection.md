@@ -14,11 +14,38 @@ keywords: ["kid注入", "JWT kid", "路径穿越", "SQL注入", "命令注入", 
 difficulty: "advanced"
 tags: ["authentication", "jwt", "injection", "web-security", "path-traversal", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # JWT `kid` 参数注入
+
+## 输入信号
+
+- Header 包含 `kid`，且修改后错误消息、响应时间或状态码发生变化
+- 错误中出现 key path、SQL、keystore、JWK cache、文件名或 `key not found`
+- `kid` 为文件名、UUID、数字 ID、URL、SQL 主键或租户 ID
+- 同一 token 改 payload 必失败，但改 `kid` 会进入不同错误分支
+
+## 0. kid 路由矩阵
+
+| kid 形态 | 服务端可能动作 | Payload 方向 | 命中样本 |
+|----------|----------------|--------------|----------|
+| `key-001.pem` | 文件读取 | `../../dev/null`, `%2e%2e/` | 文件错误变化 |
+| 数字/UUID | SQL 查 key | `' UNION SELECT 'secret'--` | 可控 secret 通过 |
+| URL/路径 | 远程 keystore | `http://host/jwks` | 外连日志 |
+| 命令参数 | shell/curl | `;id;#`, `$(id)` | 命令输出/延迟 |
+| 租户 ID | 多租户 key | 换其他 tenant | 跨租户 token 接受 |
+
+## 0.1 kid oracle
+
+| 探针 | 观察 | 结论 |
+|------|------|------|
+| 随机 kid | `key not found` | kid 被查询 |
+| 超长 kid | 500/截断 | DB/日志/文件路径参与 |
+| `../../dev/null` | 签名错误变 key 长度错误 | 文件路径参与 |
+| `'` | SQL syntax | SQL 参与 |
+| `http://127.0.0.1` | 延迟/外连 | URL fetch 参与 |
 
 ## 原理
 
@@ -286,7 +313,8 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `kid_oracle_matrix.csv`: kid、alg、签名 key、状态码、错误片段、响应时间、body hash。
+- `kid_payloads.json`: 路径穿越、SQLi、命令注入、URL fetch、tenant switch 的 payload 与结果。
+- 成功样本: 可控 kid 让服务端使用空 key/攻击者 secret/外部 key，伪造 token 被业务接口接受。
+- 失败样本: 任意 kid 都同一 `key not found`、路径归一化、SQL 参数化、外部 URL 不被请求。
+- 下一跳: SQLi 命中转数据库板块；URL fetch 命中转 SSRF/JKU；拿到 secret 后转弱密钥伪造流程。

@@ -14,11 +14,38 @@ keywords: ["JWT算法混淆", "RS256转HS256", "JWT bypass", "公钥泄露", "jw
 difficulty: "intermediate"
 tags: ["authentication", "jwt", "algorithm-confusion", "web-security", "crypto", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # JWT 算法混淆 (Algorithm Confusion)
+
+## 输入信号
+
+- 原 token 使用 `RS256/RS384/RS512/ES256`，同时公开 JWKS、公钥、证书或 OpenID 配置
+- 修改 `alg` 后错误从 `invalid signature` 变成 `invalid key`、`algorithm not allowed` 或不同耗时
+- 服务端同时支持 HS 和 RS/ES 系列算法，且未固定 token 类型
+- TLS 证书、公钥文件、`/.well-known/jwks.json`、移动端包或前端配置能拿到验证公钥
+
+## 0. 公钥来源矩阵
+
+| 来源 | 获取方式 | 价值 | 失败样本 |
+|------|----------|------|----------|
+| JWKS | `/.well-known/jwks.json` | 直接转 PEM 做 HMAC key | `kid` 不匹配或只支持 RS |
+| OpenID config | `jwks_uri` | 找真实 JWKS 地址 | 地址需内网访问 |
+| TLS 证书 | `openssl s_client` | 公钥可能复用 | 与 JWT key 不同 |
+| 源码/移动端 | `public.pem`, `cert.pem` | 常见硬编码 | 只有测试环境 key |
+| 错误页 | stack trace / config dump | 泄露 key path | 只泄露路径不泄露内容 |
+
+## 0.1 判定矩阵
+
+| 变体 | 动作 | 命中样本 | 下一步 |
+|------|------|----------|--------|
+| RS -> HS | 用 PEM 原文作 HMAC secret | 管理接口 200 | 固化伪造器 |
+| JWK -> HS | 用 JWK 转 PEM/DER 多格式尝试 | 其中一种格式通过 | 记录 key format |
+| ES -> HS | 用 EC public key bytes 作 HMAC secret | 错误变业务响应 | 跟进库实现 |
+| alg 大小写 | `hs256`, `HS256` | parser 归一化差异 | 组合 none/kid |
+| kid 指向公开 key | 换 `kid` + HS256 | key 选择可控 | 转 kid injection |
 
 ## 原理
 
@@ -220,7 +247,8 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `public_key_sources.json`: JWKS、PEM、DER、证书、来源 URL、kid、hash。
+- `alg_confusion_attempts.csv`: key format、alg、kid、payload diff、状态码、body hash。
+- 成功样本: 使用公开公钥作 HMAC secret 后，伪造 `role=admin` token 被目标接口接受。
+- 失败样本: 只接受固定 RS/ES 算法、HS 分支不启用、公钥格式全部返回同一签名错误。
+- 下一跳: 公钥不可得转 `05-jku-x5u-abuse`；发现 `kid` 参与选 key 转 `04-kid-injection`。

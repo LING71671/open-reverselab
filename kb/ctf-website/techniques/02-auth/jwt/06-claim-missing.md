@@ -14,11 +14,45 @@ keywords: ["JWT claim", "过期Token", "aud验证", "iss验证", "Token混用", 
 difficulty: "intermediate"
 tags: ["authentication", "jwt", "claim-validation", "token-confusion", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # JWT Claim 验证缺失 & Token 混用
+
+## 输入信号
+
+- 签名正确但修改 `exp/nbf/iss/aud/typ/scope/role` 后响应差异很大
+- ID Token、Access Token、Refresh Token 都是 JWT，且 API 只看 `sub/role`
+- 多服务共享同一签名 key，但 `aud`/`azp`/`client_id` 未严格区分
+- 登出、改密、禁用账号后旧 token 仍能访问接口
+
+## 0. Claim oracle 矩阵
+
+| Claim | 变体 | 命中样本 | 失败样本 |
+|-------|------|----------|----------|
+| `exp` | 过去时间/删除/超远未来 | 过期 token 仍 200 | `Token expired` |
+| `nbf` | 未来时间/删除 | 未来 token 提前生效 | `not yet valid` |
+| `iss` | 其他 issuer/删除 | 跨 IdP token 可用 | `invalid issuer` |
+| `aud` | 其他服务/数组/删除 | A token 打 B API | `invalid audience` |
+| `typ` | `id`, `access`, `refresh` | ID token 调 API | token type rejected |
+| `scope/role` | `admin`, `*`, array | 权限提升 | 服务端查库覆盖 |
+| `jti` | 重复/删除 | 无限重放 | replay rejected |
+
+## 0.1 Token 混用状态机
+
+```
+login -> id_token
+      -> access_token
+      -> refresh_token
+
+测试顺序:
+1. id_token 打资源 API
+2. access_token 打登录回调/绑定账号接口
+3. refresh_token 打资源 API
+4. A client 的 token 打 B client API
+5. 登出后旧 access_token 重放
+```
 
 ## 原理
 
@@ -290,3 +324,12 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ## 工作流
 
 捕获原始 Token → 解码 header/claims → 一次验证一个签名或校验假设 → 构造最小变体 → 访问同一权限 oracle → 对比身份/权限/Flag。
+
+## Evidence
+
+- `claim_oracle_matrix.csv`: claim、原值、变体、签名方式、状态码、body hash、身份/权限字段。
+- `token_type_matrix.json`: id/access/refresh token 对不同接口的接受情况。
+- `revocation_replay.json`: 登出/改密/禁用前后的 token 重放结果、jti、exp、session 绑定情况。
+- 成功样本: 过期/跨 aud/跨 typ/改 role token 被业务接口接受，并产生权限、数据或 flag 差异。
+- 失败样本: 明确 `expired`, `invalid audience`, `invalid issuer`, `token type invalid`, `replay rejected`。
+- 下一跳: 如果 claim 变体必须重新签名，先走 `03-weak-key-bruteforce`、`02-algorithm-confusion` 或 `05-jku-x5u-abuse`。

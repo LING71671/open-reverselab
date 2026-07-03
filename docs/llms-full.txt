@@ -2028,6 +2028,25 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 # JWT `alg: none` 无签名绕过
 
+## 输入信号
+
+- Header 中 `alg` 为 `HS256/RS256/ES256`，但错误信息会回显算法名
+- 篡改 payload 后不是固定 `401`，而是进入业务错误、跳转或不同 JSON
+- Token 末尾 signature 为空、缺失、补一个点后，服务端仍尝试解析
+- 旧库、CTF 题、调试环境、网关和后端都解析 JWT，存在双解析窗口
+
+## 0. 判定矩阵
+
+| 变体 | Header | Signature | 命中样本 | 失败样本 |
+|------|--------|-----------|----------|----------|
+| 标准 none | `{"alg":"none"}` | 空字符串 | 返回高权限数据 | `alg none not allowed` |
+| 大小写 | `None`, `NONE`, `nOnE` | 空字符串 | 库归一化后跳过验证 | `invalid algorithm` |
+| 空算法 | `{"alg":""}` | 空字符串 | fallback 到 none 分支 | `missing alg` |
+| 缺失算法 | 无 `alg` | 空字符串 | 网关解析、后端信任 payload | `malformed token` |
+| 双点 token | `header.payload.` | 空字符串 | 业务身份变化 | signature required |
+
+核心 oracle：同一接口、同一会话下，只有 token 变体不同；如果身份、权限、订单、flag 或响应字段稳定变化，才进入下一步。
+
 ## 原理
 
 JWT 规范 (RFC 7519) 允许 `alg: "none"` 表示不签名，用于调试场景。如果服务端的 JWT 库**未显式禁用 `none` 算法**，攻击者可将 Header 的 `alg` 改为 `none`，Payload 任意伪造，Signature 留空，服务端照单全收。
@@ -2204,10 +2223,11 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `alg_none_matrix.json`: 原 token、header 变体、signature 形态、状态码、body hash、身份字段。
+- `oracle_diff.md`: 普通 token、none token、篡改但仍签名错误 token 的响应差异。
+- 成功样本: `alg=none` 后 `sub/role/isAdmin` 生效，接口返回管理员数据、订单/flag 或更高权限菜单。
+- 失败样本: 明确 `none not allowed`、`signature required`、所有变体同一 `401` body hash。
+- 下一跳: 如果 none 失败但算法名被信任，转 `02-algorithm-confusion`；如果错误跟 `kid` 变化，转 `04-kid-injection`。
 
 
 ---
@@ -2219,6 +2239,33 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 > >
 
 # JWT 算法混淆 (Algorithm Confusion)
+
+## 输入信号
+
+- 原 token 使用 `RS256/RS384/RS512/ES256`，同时公开 JWKS、公钥、证书或 OpenID 配置
+- 修改 `alg` 后错误从 `invalid signature` 变成 `invalid key`、`algorithm not allowed` 或不同耗时
+- 服务端同时支持 HS 和 RS/ES 系列算法，且未固定 token 类型
+- TLS 证书、公钥文件、`/.well-known/jwks.json`、移动端包或前端配置能拿到验证公钥
+
+## 0. 公钥来源矩阵
+
+| 来源 | 获取方式 | 价值 | 失败样本 |
+|------|----------|------|----------|
+| JWKS | `/.well-known/jwks.json` | 直接转 PEM 做 HMAC key | `kid` 不匹配或只支持 RS |
+| OpenID config | `jwks_uri` | 找真实 JWKS 地址 | 地址需内网访问 |
+| TLS 证书 | `openssl s_client` | 公钥可能复用 | 与 JWT key 不同 |
+| 源码/移动端 | `public.pem`, `cert.pem` | 常见硬编码 | 只有测试环境 key |
+| 错误页 | stack trace / config dump | 泄露 key path | 只泄露路径不泄露内容 |
+
+## 0.1 判定矩阵
+
+| 变体 | 动作 | 命中样本 | 下一步 |
+|------|------|----------|--------|
+| RS -> HS | 用 PEM 原文作 HMAC secret | 管理接口 200 | 固化伪造器 |
+| JWK -> HS | 用 JWK 转 PEM/DER 多格式尝试 | 其中一种格式通过 | 记录 key format |
+| ES -> HS | 用 EC public key bytes 作 HMAC secret | 错误变业务响应 | 跟进库实现 |
+| alg 大小写 | `hs256`, `HS256` | parser 归一化差异 | 组合 none/kid |
+| kid 指向公开 key | 换 `kid` + HS256 | key 选择可控 | 转 kid injection |
 
 ## 原理
 
@@ -2420,10 +2467,11 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `public_key_sources.json`: JWKS、PEM、DER、证书、来源 URL、kid、hash。
+- `alg_confusion_attempts.csv`: key format、alg、kid、payload diff、状态码、body hash。
+- 成功样本: 使用公开公钥作 HMAC secret 后，伪造 `role=admin` token 被目标接口接受。
+- 失败样本: 只接受固定 RS/ES 算法、HS 分支不启用、公钥格式全部返回同一签名错误。
+- 下一跳: 公钥不可得转 `05-jku-x5u-abuse`；发现 `kid` 参与选 key 转 `04-kid-injection`。
 
 
 ---
@@ -2435,6 +2483,33 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 > >
 
 # JWT 弱 HMAC 密钥爆破
+
+## 输入信号
+
+- Header 中 `alg` 为 `HS256/HS384/HS512`
+- Token 来自开发、测试、比赛靶场、默认部署、开源项目 demo
+- `.env`, `config`, `package.json`, `docker-compose.yml` 暴露 `JWT_SECRET/APP_KEY/SECRET_KEY`
+- 项目名、域名、公司名、题目名、环境名明显，可生成定制字典
+- 多个 token 的 header/payload 结构一致，说明离线爆破稳定可复现
+
+## 0. 字典优先级矩阵
+
+| 来源 | 生成方式 | 命中倾向 |
+|------|----------|----------|
+| 配置泄露 | `JWT_SECRET`, `SECRET`, `APP_KEY` 原值及变体 | 最高 |
+| 域名/项目名 | `target`, `target2026`, `target_secret` | CTF/开发环境 |
+| 框架默认 | `secret`, `jwtsecret`, `changeme`, `your-256-bit-secret` | demo 项目 |
+| Git 历史 | `git grep secret $(git rev-list --all)` | 迁移残留 |
+| 题目语境 | 题目名、hint、作者名、flag 前缀 | CTF |
+
+## 0.1 爆破结果判定
+
+| 结果 | 判断 | 下一步 |
+|------|------|--------|
+| hashcat 命中 | secret 可复现签原 token | 伪造 role/uid/aud |
+| 字典未命中 | HS 仍可能强密钥 | 转 claim/kid/jku |
+| 多个 secret 命中 | 可能 token 被截断或算法错 | 用服务端 oracle 验证 |
+| 伪造后 401 | claim/aud/iss 仍卡住 | 转 `06-claim-missing` |
 
 ## 原理
 
@@ -2653,10 +2728,11 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `jwt_crack_manifest.json`: token header/payload hash、alg、wordlist 来源、工具、命中 secret hash。
+- `forged_token_diff.json`: 原始用户 token、伪造 claims、接口响应、权限字段 diff。
+- 成功样本: 破解出的 secret 能重新签原 token，伪造 `sub/role/aud` 后触发高权限响应或 flag。
+- 失败样本: 字典/规则未命中、伪造签名通过但 claim 被拒、服务端 token 绑定 session。
+- 下一跳: 爆破失败转 `01-alg-none`, `02-algorithm-confusion`, `04-kid-injection`；签名过了但权限未变转 `06-claim-missing`。
 
 
 ---
@@ -2668,6 +2744,33 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 > >
 
 # JWT `kid` 参数注入
+
+## 输入信号
+
+- Header 包含 `kid`，且修改后错误消息、响应时间或状态码发生变化
+- 错误中出现 key path、SQL、keystore、JWK cache、文件名或 `key not found`
+- `kid` 为文件名、UUID、数字 ID、URL、SQL 主键或租户 ID
+- 同一 token 改 payload 必失败，但改 `kid` 会进入不同错误分支
+
+## 0. kid 路由矩阵
+
+| kid 形态 | 服务端可能动作 | Payload 方向 | 命中样本 |
+|----------|----------------|--------------|----------|
+| `key-001.pem` | 文件读取 | `../../dev/null`, `%2e%2e/` | 文件错误变化 |
+| 数字/UUID | SQL 查 key | `' UNION SELECT 'secret'--` | 可控 secret 通过 |
+| URL/路径 | 远程 keystore | `http://host/jwks` | 外连日志 |
+| 命令参数 | shell/curl | `;id;#`, `$(id)` | 命令输出/延迟 |
+| 租户 ID | 多租户 key | 换其他 tenant | 跨租户 token 接受 |
+
+## 0.1 kid oracle
+
+| 探针 | 观察 | 结论 |
+|------|------|------|
+| 随机 kid | `key not found` | kid 被查询 |
+| 超长 kid | 500/截断 | DB/日志/文件路径参与 |
+| `../../dev/null` | 签名错误变 key 长度错误 | 文件路径参与 |
+| `'` | SQL syntax | SQL 参与 |
+| `http://127.0.0.1` | 延迟/外连 | URL fetch 参与 |
 
 ## 原理
 
@@ -2935,10 +3038,11 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `kid_oracle_matrix.csv`: kid、alg、签名 key、状态码、错误片段、响应时间、body hash。
+- `kid_payloads.json`: 路径穿越、SQLi、命令注入、URL fetch、tenant switch 的 payload 与结果。
+- 成功样本: 可控 kid 让服务端使用空 key/攻击者 secret/外部 key，伪造 token 被业务接口接受。
+- 失败样本: 任意 kid 都同一 `key not found`、路径归一化、SQL 参数化、外部 URL 不被请求。
+- 下一跳: SQLi 命中转数据库板块；URL fetch 命中转 SSRF/JKU；拿到 secret 后转弱密钥伪造流程。
 
 
 ---
@@ -2950,6 +3054,33 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 > >
 
 # JWT `jku` / `x5u` 密钥源劫持
+
+## 输入信号
+
+- Header 中存在 `jku`, `x5u`, `jwk`, `x5c`，或错误信息提到 JWKS/certificate fetch
+- 修改 URL 后目标服务有明显延迟，或可控服务器收到请求
+- OpenID 配置暴露 `jwks_uri`，但服务端仍读取 token header 中的 URL
+- URL 白名单只做字符串包含、后缀、前缀或 parser 不一致
+
+## 0. URL 绕过矩阵
+
+| 场景 | Payload 形态 | 命中样本 | 失败样本 |
+|------|--------------|----------|----------|
+| 后缀检查 | `https://trusted.com.evil.test/jwks.json` | 访问 evil | host 精确匹配 |
+| userinfo 混淆 | `https://trusted.com@evil.test/jwks.json` | 访问 evil | parser 取 hostname |
+| fragment 混淆 | `https://evil.test/#trusted.com/jwks.json` | 白名单过、请求 evil | fragment 被丢弃后校验 |
+| open redirect | `https://trusted.com/redirect?u=https://evil/jwks` | 跟随跳转 | 不跟随 30x |
+| DNS rebinding | `https://allowed.test/jwks` | 首次外网、二次内网 | 固定解析结果 |
+| scheme 降级 | `http://trusted.com/jwks` | 明文抓取 | 强制 https |
+
+## 0.1 JWKS 命中判定
+
+| 证据 | 含义 |
+|------|------|
+| access.log 出现目标 IP | 服务端确实取了 header URL |
+| `kid` 命中攻击者 JWKS | key 选择可控 |
+| 伪造 token 进入业务接口 | 密钥源劫持成立 |
+| 只请求但 token 仍失败 | key 格式、kid、alg 或 claim 卡住 |
 
 ## 原理
 
@@ -3212,10 +3343,12 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `jwks_access.log`: 目标 IP、User-Agent、请求路径、kid、时间戳。
+- `attacker_jwks.json`: 攻击者 JWK、kid、alg、key thumbprint。
+- `jku_x5u_matrix.csv`: URL 变体、是否回连、是否跟随跳转、接口响应、body hash。
+- 成功样本: 目标抓取攻击者 JWKS/x5u 证书，并接受攻击者私钥签出的高权限 token。
+- 失败样本: 无回连、只允许固定 host、回连但 kid 不匹配、key 格式不接受、claim 校验失败。
+- 下一跳: URL fetch 只回连不接受时转 URL parser/open redirect/SSRF；签名接受但权限不变转 `06-claim-missing`。
 
 
 ---
@@ -3227,6 +3360,40 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 > >
 
 # JWT Claim 验证缺失 & Token 混用
+
+## 输入信号
+
+- 签名正确但修改 `exp/nbf/iss/aud/typ/scope/role` 后响应差异很大
+- ID Token、Access Token、Refresh Token 都是 JWT，且 API 只看 `sub/role`
+- 多服务共享同一签名 key，但 `aud`/`azp`/`client_id` 未严格区分
+- 登出、改密、禁用账号后旧 token 仍能访问接口
+
+## 0. Claim oracle 矩阵
+
+| Claim | 变体 | 命中样本 | 失败样本 |
+|-------|------|----------|----------|
+| `exp` | 过去时间/删除/超远未来 | 过期 token 仍 200 | `Token expired` |
+| `nbf` | 未来时间/删除 | 未来 token 提前生效 | `not yet valid` |
+| `iss` | 其他 issuer/删除 | 跨 IdP token 可用 | `invalid issuer` |
+| `aud` | 其他服务/数组/删除 | A token 打 B API | `invalid audience` |
+| `typ` | `id`, `access`, `refresh` | ID token 调 API | token type rejected |
+| `scope/role` | `admin`, `*`, array | 权限提升 | 服务端查库覆盖 |
+| `jti` | 重复/删除 | 无限重放 | replay rejected |
+
+## 0.1 Token 混用状态机
+
+```
+login -> id_token
+      -> access_token
+      -> refresh_token
+
+测试顺序:
+1. id_token 打资源 API
+2. access_token 打登录回调/绑定账号接口
+3. refresh_token 打资源 API
+4. A client 的 token 打 B client API
+5. 登出后旧 access_token 重放
+```
 
 ## 原理
 
@@ -3498,6 +3665,15 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ## 工作流
 
 捕获原始 Token → 解码 header/claims → 一次验证一个签名或校验假设 → 构造最小变体 → 访问同一权限 oracle → 对比身份/权限/Flag。
+
+## Evidence
+
+- `claim_oracle_matrix.csv`: claim、原值、变体、签名方式、状态码、body hash、身份/权限字段。
+- `token_type_matrix.json`: id/access/refresh token 对不同接口的接受情况。
+- `revocation_replay.json`: 登出/改密/禁用前后的 token 重放结果、jti、exp、session 绑定情况。
+- 成功样本: 过期/跨 aud/跨 typ/改 role token 被业务接口接受，并产生权限、数据或 flag 差异。
+- 失败样本: 明确 `expired`, `invalid audience`, `invalid issuer`, `token type invalid`, `replay rejected`。
+- 下一跳: 如果 claim 变体必须重新签名，先走 `03-weak-key-bruteforce`、`02-algorithm-confusion` 或 `05-jku-x5u-abuse`。
 
 
 ---

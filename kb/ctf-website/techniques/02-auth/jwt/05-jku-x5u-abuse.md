@@ -14,11 +14,38 @@ keywords: ["jku劫持", "x5u攻击", "JWKS", "JWT密钥劫持", "jwt_tool", "jku
 difficulty: "advanced"
 tags: ["authentication", "jwt", "key-hijacking", "web-security", "ssrf", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # JWT `jku` / `x5u` 密钥源劫持
+
+## 输入信号
+
+- Header 中存在 `jku`, `x5u`, `jwk`, `x5c`，或错误信息提到 JWKS/certificate fetch
+- 修改 URL 后目标服务有明显延迟，或可控服务器收到请求
+- OpenID 配置暴露 `jwks_uri`，但服务端仍读取 token header 中的 URL
+- URL 白名单只做字符串包含、后缀、前缀或 parser 不一致
+
+## 0. URL 绕过矩阵
+
+| 场景 | Payload 形态 | 命中样本 | 失败样本 |
+|------|--------------|----------|----------|
+| 后缀检查 | `https://trusted.com.evil.test/jwks.json` | 访问 evil | host 精确匹配 |
+| userinfo 混淆 | `https://trusted.com@evil.test/jwks.json` | 访问 evil | parser 取 hostname |
+| fragment 混淆 | `https://evil.test/#trusted.com/jwks.json` | 白名单过、请求 evil | fragment 被丢弃后校验 |
+| open redirect | `https://trusted.com/redirect?u=https://evil/jwks` | 跟随跳转 | 不跟随 30x |
+| DNS rebinding | `https://allowed.test/jwks` | 首次外网、二次内网 | 固定解析结果 |
+| scheme 降级 | `http://trusted.com/jwks` | 明文抓取 | 强制 https |
+
+## 0.1 JWKS 命中判定
+
+| 证据 | 含义 |
+|------|------|
+| access.log 出现目标 IP | 服务端确实取了 header URL |
+| `kid` 命中攻击者 JWKS | key 选择可控 |
+| 伪造 token 进入业务接口 | 密钥源劫持成立 |
+| 只请求但 token 仍失败 | key 格式、kid、alg 或 claim 卡住 |
 
 ## 原理
 
@@ -281,7 +308,9 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `jwks_access.log`: 目标 IP、User-Agent、请求路径、kid、时间戳。
+- `attacker_jwks.json`: 攻击者 JWK、kid、alg、key thumbprint。
+- `jku_x5u_matrix.csv`: URL 变体、是否回连、是否跟随跳转、接口响应、body hash。
+- 成功样本: 目标抓取攻击者 JWKS/x5u 证书，并接受攻击者私钥签出的高权限 token。
+- 失败样本: 无回连、只允许固定 host、回连但 kid 不匹配、key 格式不接受、claim 校验失败。
+- 下一跳: URL fetch 只回连不接受时转 URL parser/open redirect/SSRF；签名接受但权限不变转 `06-claim-missing`。

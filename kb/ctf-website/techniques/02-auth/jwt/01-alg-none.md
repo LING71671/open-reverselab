@@ -14,11 +14,30 @@ keywords: ["JWT alg:none", "无签名绕过", "none攻击", "JWT签名绕过", "
 difficulty: "beginner"
 tags: ["authentication", "jwt", "signature-bypass", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # JWT `alg: none` 无签名绕过
+
+## 输入信号
+
+- Header 中 `alg` 为 `HS256/RS256/ES256`，但错误信息会回显算法名
+- 篡改 payload 后不是固定 `401`，而是进入业务错误、跳转或不同 JSON
+- Token 末尾 signature 为空、缺失、补一个点后，服务端仍尝试解析
+- 旧库、CTF 题、调试环境、网关和后端都解析 JWT，存在双解析窗口
+
+## 0. 判定矩阵
+
+| 变体 | Header | Signature | 命中样本 | 失败样本 |
+|------|--------|-----------|----------|----------|
+| 标准 none | `{"alg":"none"}` | 空字符串 | 返回高权限数据 | `alg none not allowed` |
+| 大小写 | `None`, `NONE`, `nOnE` | 空字符串 | 库归一化后跳过验证 | `invalid algorithm` |
+| 空算法 | `{"alg":""}` | 空字符串 | fallback 到 none 分支 | `missing alg` |
+| 缺失算法 | 无 `alg` | 空字符串 | 网关解析、后端信任 payload | `malformed token` |
+| 双点 token | `header.payload.` | 空字符串 | 业务身份变化 | signature required |
+
+核心 oracle：同一接口、同一会话下，只有 token 变体不同；如果身份、权限、订单、flag 或响应字段稳定变化，才进入下一步。
 
 ## 原理
 
@@ -196,7 +215,8 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `alg_none_matrix.json`: 原 token、header 变体、signature 形态、状态码、body hash、身份字段。
+- `oracle_diff.md`: 普通 token、none token、篡改但仍签名错误 token 的响应差异。
+- 成功样本: `alg=none` 后 `sub/role/isAdmin` 生效，接口返回管理员数据、订单/flag 或更高权限菜单。
+- 失败样本: 明确 `none not allowed`、`signature required`、所有变体同一 `401` body hash。
+- 下一跳: 如果 none 失败但算法名被信任，转 `02-algorithm-confusion`；如果错误跟 `kid` 变化，转 `04-kid-injection`。
