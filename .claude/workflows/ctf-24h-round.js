@@ -15,24 +15,41 @@ export const meta = {
 //   object.target      → 目标 URL/domain
 //   object.caseName    → case 名；默认从 target 生成
 //   object.manifest    → ai_manifest.json 路径；有则优先使用
+//   object.caseRoot    → case 根目录，默认 cases
+//   object.reportRoot  → report 根目录，默认 reports/ctf-website
 //   object.maxActions  → ctf_autopilot 单轮最多动作数，默认 4
+//   object.maxWorkflows → attack-router 本轮最多 worker 数，默认 4
+//   object.workerIds   → 可选攻击 worker allowlist
 //   object.execute     → 是否执行 allowlist 动作，默认 true
 //   object.stopOnExhausted → 全路径耗尽时停止，默认 true
 // ================================================================
 
 const rawTarget = typeof args === 'string' ? args : args?.target || ''
-const target = rawTarget || 'https://target.example/'
+if (!rawTarget) {
+  throw new Error('ctf-24h-round requires args.target or string target')
+}
+const target = rawTarget
 const safeTarget = target
   .replace(/^https?:\/\//, '')
   .replace(/[^a-zA-Z0-9._-]+/g, '-')
   .replace(/^-+|-+$/g, '')
   .toLowerCase()
-const caseName = typeof args === 'object' && args?.caseName ? args.caseName : safeTarget || 'ctf-target'
+const caseRoot = typeof args === 'object' && args?.caseRoot ? args.caseRoot : 'cases'
+const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const caseName = typeof args === 'object' && args?.caseName ? args.caseName : safeTarget
+const caseDir = `${caseRoot}/${caseName}`
 const manifest =
   typeof args === 'object' && args?.manifest
     ? args.manifest
-    : `cases/${caseName}/ai_manifest.json`
+    : `${caseDir}/ai_manifest.json`
 const maxActions = typeof args === 'object' && args?.maxActions ? args.maxActions : 4
+const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? args.maxWorkflows : 4
+const workerIds = typeof args === 'object' && args?.workerIds ? args.workerIds : []
+const testOrigin = typeof args === 'object' && args?.testOrigin ? args.testOrigin : undefined
+const redirectProbeHost = typeof args === 'object' && args?.redirectProbeHost ? args.redirectProbeHost : undefined
+const ssrfProbeTargets = typeof args === 'object' && args?.ssrfProbeTargets ? args.ssrfProbeTargets : undefined
+const credentialPairs = typeof args === 'object' && args?.credentialPairs ? args.credentialPairs : undefined
+const forwardedIp = typeof args === 'object' && args?.forwardedIp ? args.forwardedIp : undefined
 const execute = !(typeof args === 'object' && args?.execute === false)
 const stopOnExhausted = !(typeof args === 'object' && args?.stopOnExhausted === false)
 
@@ -46,7 +63,10 @@ const checkpoint = await agent(
 - Target: ${target}
 - Case name: ${caseName}
 - Manifest path: ${manifest}
+- Case root: ${caseRoot}
+- Report root: ${reportRoot}
 - Max actions: ${maxActions}
+- Max attack workflows: ${maxWorkflows}
 - Execute allowlist actions: ${execute}
 
 ## 必读
@@ -60,7 +80,7 @@ const checkpoint = await agent(
 如果 \`${manifest}\` 不存在：
 
 \`\`\`bash
-python3 scripts/ctf-website/ctf_intake.py "${caseName}" --url "${target}" --root . --case-dir "cases/${caseName}" --case-name "${caseName}"
+python3 scripts/ctf-website/ctf_intake.py "${caseName}" --url "${target}" --root . --case-dir "${caseDir}" --case-name "${caseName}"
 \`\`\`
 
 该命令确保 manifest 固定为 \`${manifest}\`。如果旧 case 已存在且路径不同，以现有 manifest 为准，并在本轮报告中说明。
@@ -123,7 +143,15 @@ const attackRound = await workflow('ctf-attack-router', {
   manifest,
   signals: [autopilot],
   focus: [checkpoint, autopilot],
-  maxWorkflows: 4,
+  maxWorkflows,
+  workerIds,
+  caseRoot,
+  reportRoot,
+  testOrigin,
+  redirectProbeHost,
+  ssrfProbeTargets,
+  credentialPairs,
+  forwardedIp,
   execute,
 })
 
@@ -147,7 +175,7 @@ ${attackRound}
 
 1. 读取实际 \`ai_manifest.json\`。
 2. 如果 attack round 有 \`evidence_added\` / \`dead_ends_added\` / \`next_round_focus\`，合并到 manifest。
-3. 在 case 或 reports 目录写一份本轮摘要，例如 \`reports/ctf-website/<case>/loop-round-<timestamp>.md\`。
+3. 在 case 或 reports 目录写一份本轮摘要，例如 \`${reportRoot}/<case>/loop-round-<timestamp>.md\`。
 4. 写回后运行程序化状态判定：
    \`\`\`bash
    python3 scripts/ctf-website/ctf_loop_status.py <实际 manifest 路径> --write

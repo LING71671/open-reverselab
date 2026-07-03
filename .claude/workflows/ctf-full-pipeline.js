@@ -18,13 +18,28 @@ export const meta = {
 //   object.skipDos  → 跳过 DoS 阶段（默认 false）
 //   object.skipVerify → 跳过验证阶段（默认 false）
 // ================================================================
-const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
+const domain = typeof args === 'string' ? args : args?.domain || args?.target || ''
+if (!domain) {
+  throw new Error('ctf-full-pipeline requires args.domain/args.target or string domain')
+}
+const caseRoot = typeof args === 'object' && args?.caseRoot ? args.caseRoot : 'cases'
 const caseDir =
   typeof args === 'object' && args?.caseDir
     ? args.caseDir
-    : `cases/${domain.replace(/\./g, '-')}`
+    : `${caseRoot}/${domain.replace(/\./g, '-')}`
 const skipDos = typeof args === 'object' && args?.skipDos === true
 const skipVerify = typeof args === 'object' && args?.skipVerify === true
+const sharedOptions = typeof args === 'object' ? {
+  caseRoot,
+  testOrigin: args?.testOrigin,
+  redirectProbeHost: args?.redirectProbeHost,
+  ssrfProbeTargets: args?.ssrfProbeTargets,
+  credentialPairs: args?.credentialPairs,
+  forwardedIp: args?.forwardedIp,
+  dnsNs: args?.dnsNs,
+  geofenced: args?.geofenced,
+  unprobed: args?.unprobed,
+} : { caseRoot }
 
 // 确保 caseDir 存在（Write 工具通常自行创建目录，此处仅做占位）
 // 如需强制创建，可在执行前通过 Bash 工具运行: mkdir -p "<caseDir>"
@@ -34,7 +49,7 @@ const skipVerify = typeof args === 'object' && args?.skipVerify === true
 // ================================================================
 phase('阶段一：资产发现')
 
-const recon = await workflow('ctf-asset-discovery', domain)
+const recon = await workflow('ctf-asset-discovery', { domain, caseDir, ...sharedOptions })
 
 // ================================================================
 // 数据提取：从资产发现产出中解析结构化数据供下游使用
@@ -74,7 +89,7 @@ ${recon.search || '(无)'}
   "subdomains": ["www", "mail", "cas", ...],
   "ip_addresses": ["1.2.3.4", ...],
   "targets": [
-    {"host": "www.example.edu.cn", "ip": "1.2.3.4", "stack": "Java/Tomcat", "cdn": false, "waf": false, "h2": true}
+    {"host": "<host>", "ip": "<ip>", "stack": "Java/Tomcat", "cdn": false, "waf": false, "h2": true}
   ],
   "tech_stack": {
     "web": ["Java/JSP", "nginx"],
@@ -119,6 +134,8 @@ if (!skipDos) {
     domain,
     targets: dosTargets,
     fingerprints: dosFingerprints,
+    caseDir,
+    ...sharedOptions,
   })
 }
 
@@ -137,6 +154,7 @@ const vuln = await workflow('ctf-vuln-discovery', {
   domain,
   subdomains: subdomainsForVuln.length > 0 ? subdomainsForVuln : undefined,
   caseDir,
+  ...sharedOptions,
 })
 
 // ================================================================
@@ -157,6 +175,7 @@ if (!skipVerify) {
     techStack: vuln.fingerprint,
     targets: verifyTargets,
     caseDir,
+    ...sharedOptions,
   })
 }
 

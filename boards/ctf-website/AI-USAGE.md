@@ -28,7 +28,7 @@
 初始化 case：
 
 ```bash
-python scripts/ctf-website/ctf_intake.py <case-name> --url "https://target.example/" --root .
+python scripts/ctf-website/ctf_intake.py <case-name> --url "<target-url>" --root .
 ```
 
 单轮规划/检查（默认 dry-run，只写 checkpoint，不执行网络/CVE 扩展动作）：
@@ -40,13 +40,13 @@ python scripts/ctf-website/ctf_autopilot.py cases/<case>/ai_manifest.json --max-
 Claude Code 中推荐用 `/loop + workflow`：
 
 ```text
-/loop /ctf-24h https://target.example/ my-case
+/loop /ctf-24h <target-url-or-domain> <case-name>
 ```
 
 多个目标并行：
 
 ```text
-/loop /ctf-24h-fleet https://a.example,https://b.example my-fleet
+/loop /ctf-24h-fleet <target1,target2,...> <fleet-name>
 ```
 
 无 Claude workflow runner 时可用 Python fallback 做 checkpoint 心跳：

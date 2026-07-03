@@ -13,7 +13,10 @@ export const meta = {
 }
 
 // args: { domain, targets: [...], fingerprints: {...}, caseDir?: string }
-const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
+const domain = typeof args === 'string' ? args : args?.domain || args?.target || ''
+if (!domain) {
+  throw new Error('ctf-dos-assessment requires args.domain/args.target or string domain')
+}
 const targets = (typeof args === 'object' && args?.targets) ? args.targets : [
   { host: domain, ip: null, stack: 'unknown', cdn: null, waf: null, h2: null },
   { host: `www.${domain}`, ip: null, stack: 'unknown', cdn: null, waf: null, h2: null },
@@ -27,7 +30,8 @@ const unprobed = (typeof args === 'object' && args?.unprobed) ? args.unprobed : 
 
 const targetsList = targets.map(t => `https://${t.host}`).join('\n')
 const targetDetails = JSON.stringify(targets, null, 2)
-const dosCaseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : null
+const caseRoot = typeof args === 'object' && args?.caseRoot ? args.caseRoot : 'cases'
+const dosCaseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `${caseRoot}/${domain.replace(/\./g, '-')}`
 
 // ============================================================
 // Phase 1: Map techniques to targets

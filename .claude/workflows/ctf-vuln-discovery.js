@@ -16,9 +16,27 @@ export const meta = {
 }
 
 // args: domain string, or object { domain, subdomains?, caseDir? }
-const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
+const domain = typeof args === 'string' ? args : args?.domain || args?.target || ''
+if (!domain) {
+  throw new Error('ctf-vuln-discovery requires args.domain/args.target or string domain')
+}
 const knownSubdomains = (typeof args === 'object' && args?.subdomains) ? args.subdomains : []
-const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `cases/${domain.replace(/\./g, '-')}`
+const caseRoot = typeof args === 'object' && args?.caseRoot ? args.caseRoot : 'cases'
+const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `${caseRoot}/${domain.replace(/\./g, '-')}`
+const testOrigin = (typeof args === 'object' && args?.testOrigin) ? args.testOrigin : 'https://origin.invalid'
+const redirectProbeHost = (typeof args === 'object' && args?.redirectProbeHost) ? args.redirectProbeHost : 'redirect.invalid'
+const ssrfProbeTargets = (typeof args === 'object' && args?.ssrfProbeTargets) ? args.ssrfProbeTargets : [
+  'http://127.0.0.1/',
+  'http://localhost/',
+  'http://169.254.169.254/',
+  'http://100.100.100.200/',
+]
+const credentialPairs = (typeof args === 'object' && args?.credentialPairs) ? args.credentialPairs : [
+  'admin/admin',
+  'admin/123456',
+  'test/test',
+  'guest/guest',
+]
 
 const COMMON_SUBDOMAINS = [
   'www', 'mail', 'webmail', 'cas', 'idp', 'sso', 'login', 'auth', 'authserver',
@@ -143,7 +161,7 @@ const XSS_PROMPT = [
   'Check: HttpOnly? Secure? SameSite? Path scope?',
   '',
   '## 4. CORS check',
-  'Per target: send Origin: https://evil.com, check Access-Control-Allow-Origin response.',
+  `Per target: send Origin: ${testOrigin}, check Access-Control-Allow-Origin response.`,
   '',
   '## 5. CSP check',
   'Check Content-Security-Policy header presence and strictness.',
@@ -303,8 +321,8 @@ const AUTH_SESSION_PROMPT = [
   '- Entropy analysis: is session ID predictable? (collect 3-5 samples, check pattern)',
   '',
   '## 4. Default credentials (careful, non-destructive):',
-  'Try only: admin/admin, admin/123456, test/test, guest/guest',
-  'For CAS: casuser/Mellon',
+  `Try only configured credential pairs: ${credentialPairs.join(', ')}`,
+  'For CAS or other SSO defaults, only test values provided through args.credentialPairs.',
   'Check if account lockout exists before trying multiple.',
   '',
   'Return: auth portal details, session config, user enum risk, credential findings.',
@@ -324,29 +342,21 @@ const SSRF_PROMPT = [
   'url, uri, path, redirect, redirect_uri, callback, forward, goto, next, return, return_to, redirect_to, link, target, dest, destination, proxy, fetch, download, load, src, source, origin, host, domain, server, api, endpoint, webhook, pingback, avatar, image, img, photo, file, doc, attachment, resource',
   '',
   'For found parameters, test SSRF payloads:',
-  '- http://127.0.0.1/',
-  '- http://localhost/',
-  '- http://0.0.0.0/',
-  '- http://[::1]/',
-  '- http://169.254.169.254/ (cloud metadata)',
-  '- http://100.100.100.200/ (Alibaba Cloud metadata)',
-  '- http://metadata.tencentyun.com/ (Tencent Cloud metadata)',
-  '- dict://127.0.0.1:6379/ (Redis)',
-  '- gopher://127.0.0.1:3306/ (MySQL)',
+  ...ssrfProbeTargets.map(value => `- ${value}`),
   '- file:///etc/passwd',
   '',
   'For cloud-hosted targets (check WHOIS/ASN), test corresponding metadata endpoints.',
   '',
   '## 2. Open Redirect',
   'Test redirect-related params:',
-  '- ?redirect=https://evil.com',
-  '- ?return=https://evil.com',
-  '- ?next=https://evil.com',
-  '- ?goto=https://evil.com',
-  '- ?url=https://evil.com',
-  '- Protocol-relative: ?redirect=//evil.com',
-  '- Backslash bypass: ?redirect=\\\\evil.com',
-  '- Encoded: ?redirect=https:%2F%2Fevil.com',
+  `- ?redirect=https://${redirectProbeHost}`,
+  `- ?return=https://${redirectProbeHost}`,
+  `- ?next=https://${redirectProbeHost}`,
+  `- ?goto=https://${redirectProbeHost}`,
+  `- ?url=https://${redirectProbeHost}`,
+  `- Protocol-relative: ?redirect=//${redirectProbeHost}`,
+  `- Backslash bypass: ?redirect=\\\\${redirectProbeHost}`,
+  `- Encoded: ?redirect=https:%2F%2F${redirectProbeHost}`,
   '',
   'For CAS SSO: test service= parameter whitelist bypass.',
   '',

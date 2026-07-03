@@ -9,8 +9,11 @@ export const meta = {
 }
 
 const target = typeof args === 'string' ? args : args?.target || ''
-const caseName = typeof args === 'object' && args?.caseName ? args.caseName : 'ctf-case'
-const manifest = typeof args === 'object' && args?.manifest ? args.manifest : `cases/${caseName}/ai_manifest.json`
+if (!target) throw new Error('ctf-attack-cve_cloud_dos requires args.target or string target')
+const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
+const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
+if (!caseName || !manifest) throw new Error('ctf-attack-cve_cloud_dos requires args.caseName and args.manifest')
+const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
 
 phase('KB 路由')
 const kb = await agent(
@@ -44,7 +47,7 @@ ${kb}
 
 phase('证据写回')
 const summary = await agent(
-  `合并 CVE/cloud/DoS/database 结果到 ${manifest}，写 reports/ctf-website/${caseName}/attack-cve-cloud-dos.md。
+  `合并 CVE/cloud/DoS/database 结果到 ${manifest}，写 ${reportRoot}/${caseName}/attack-cve-cloud-dos.md。
 
 CVE/cloud/DoS/database result:
 ${result}

@@ -13,21 +13,21 @@ allowed-tools: Bash, Read, Write, Edit, MultiEdit, Glob, Grep, LS, WebFetch, Web
 ## 用法
 
 ```text
-/loop /ctf-24h-fleet https://a.example,https://b.example my-fleet
+/loop /ctf-24h-fleet <target1,target2,...> <fleet-name>
 ```
 
 或在 Claude Code 中先进入 loop：
 
 ```text
 /loop
-/ctf-24h-fleet https://a.example,https://b.example my-fleet
+/ctf-24h-fleet <target1,target2,...> <fleet-name>
 ```
 
 ## 执行协议
 
 1. 解析 `$ARGUMENTS`：
    - 第一个参数：逗号/空白/换行分隔的 target 列表。
-   - 第二个参数：fleetName；缺省为 `ctf-fleet`。
+   - 第二个参数：fleetName；缺省时由 targets 派生，可用参数覆盖。
 2. 确保无人值守 runner 已配置：
    ```bash
    python3 scripts/misc/setup_unattended_ctf_runner.py --overwrite
@@ -40,6 +40,10 @@ allowed-tools: Bash, Read, Write, Edit, MultiEdit, Glob, Grep, LS, WebFetch, Web
      fleetName: <fleetName>
      batchSize: 4
      maxActions: 4
+     maxWorkflows: 4
+     caseRoot: <case-root>
+     reportRoot: <report-root>
+     workerIds: <optional-worker-list>
      execute: true
    ```
 4. 每个 target 使用独立 case：

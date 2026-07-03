@@ -15,10 +15,24 @@ export const meta = {
 }
 
 // args: { domain: string, findings?: object, techStack?: object, targets?: string[], caseDir?: string }
-const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
+const domain = typeof args === 'string' ? args : args?.domain || args?.target || ''
+if (!domain) {
+  throw new Error('ctf-vuln-verify requires args.domain/args.target or string domain')
+}
 const priorFindings = (typeof args === 'object' && args?.findings) ? args.findings : null
 const techStack = (typeof args === 'object' && args?.techStack) ? args.techStack : null
-const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `cases/${domain.replace(/\./g, '-')}`
+const caseRoot = typeof args === 'object' && args?.caseRoot ? args.caseRoot : 'cases'
+const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `${caseRoot}/${domain.replace(/\./g, '-')}`
+const testOrigin = (typeof args === 'object' && args?.testOrigin) ? args.testOrigin : 'https://origin.invalid'
+const redirectProbeHost = (typeof args === 'object' && args?.redirectProbeHost) ? args.redirectProbeHost : 'redirect.invalid'
+const forwardedIp = (typeof args === 'object' && args?.forwardedIp) ? args.forwardedIp : '127.0.0.1'
+const credentialPairs = (typeof args === 'object' && args?.credentialPairs) ? args.credentialPairs : [
+  'admin/admin',
+  'admin/admin123',
+  'admin/123456',
+  'test/test',
+  'guest/guest',
+]
 const targets = (typeof args === 'object' && args?.targets) ? args.targets : [
   domain, `www.${domain}`, `mail.${domain}`, `cas.${domain}`,
   `authserver.${domain}`, `vpn.${domain}`, `lib.${domain}`,
@@ -47,15 +61,15 @@ const CORS_CAS_PROMPT = [
   '',
   '## 1. CORS verification',
   'Test each target with curl:',
-  'curl -sI -H "Origin: https://attacker.evil.com" <target>',
+  `curl -sI -H "Origin: ${testOrigin}" <target>`,
   'Check three key headers:',
   '- Access-Control-Allow-Origin: should NOT reflect arbitrary origins',
   '- Access-Control-Allow-Credentials: should NOT be true for arbitrary origins',
   '- Vary: Origin',
   '',
   'Test multiple Origin variations:',
-  '- Origin: https://evil.com',
-  `- Origin: https://${domain}.evil.com (subdomain spoof)`,
+  `- Origin: ${testOrigin}`,
+  `- Origin: https://${domain}.${redirectProbeHost} (subdomain spoof)`,
   '- Origin: null (sandboxed iframe)',
   `- Origin: https://mail.${domain} (legitimate subdomain)`,
   '- No Origin header (baseline)',
@@ -66,12 +80,12 @@ const CORS_CAS_PROMPT = [
   '',
   '## 2. SSO/CAS @ bypass (if CAS detected)',
   'Test service/redirect parameter whitelist bypass:',
-  `- service=http://mail.${domain}@evil.com`,
-  `- service=http://mail.${domain}%40evil.com (%40 = @)`,
-  `- service=http://evil.com#mail.${domain} (fragment)`,
-  `- service=http://evil.com?${domain} (query)`,
-  `- service=http://mail.${domain}.evil.com (subdomain phishing)`,
-  `- service=https://mail.${domain}:443@evil.com/`,
+  `- service=http://mail.${domain}@${redirectProbeHost}`,
+  `- service=http://mail.${domain}%40${redirectProbeHost} (%40 = @)`,
+  `- service=http://${redirectProbeHost}#mail.${domain} (fragment)`,
+  `- service=http://${redirectProbeHost}?${domain} (query)`,
+  `- service=http://mail.${domain}.${redirectProbeHost} (subdomain phishing)`,
+  `- service=https://mail.${domain}:443@${redirectProbeHost}/`,
   '',
   'Check whitelist logic: exact match? substring? regex?',
   'Test known-good service URLs to map the whitelist.',
@@ -136,17 +150,10 @@ const DEFAULT_PASSWORD_PROMPT = [
   '- Check if password is transmitted plaintext or hashed client-side',
   '',
   '## 2. Test common default credentials (1 attempt each to avoid lockout):',
-  '- admin/admin',
-  '- admin/admin123',
-  '- admin/123456',
-  '- admin/<domain acronym>2024, <domain acronym>2025, <domain acronym>2026',
-  '- test/test',
-  '- guest/guest',
-  '- sa/sa (MSSQL)',
-  '- root/root',
+  ...credentialPairs.map(value => `- ${value}`),
   '',
   '## 3. CAS SSO defaults (if CAS detected):',
-  '- casuser/Mellon (Apereo CAS default)',
+  '- CAS/SSO defaults only if explicitly provided via args.credentialPairs',
   '- Check if password encryption can be bypassed (try plaintext password field)',
   '',
   '## 4. CMS-specific defaults:',
@@ -230,11 +237,11 @@ const CMS_CVE_VERIFY_PROMPT = [
   '- Record: CVE ID, CVSS score, exploitability, PoC status',
   '',
   '## 3. IP whitelist bypass (if admin panels return 403):',
-  '- X-Forwarded-For: 127.0.0.1',
-  '- X-Real-IP: 127.0.0.1',
-  '- X-Originating-IP: 127.0.0.1',
-  '- X-Remote-Addr: 127.0.0.1',
-  '- Client-IP: 127.0.0.1',
+  `- X-Forwarded-For: ${forwardedIp}`,
+  `- X-Real-IP: ${forwardedIp}`,
+  `- X-Originating-IP: ${forwardedIp}`,
+  `- X-Remote-Addr: ${forwardedIp}`,
+  `- Client-IP: ${forwardedIp}`,
   '- X-Forwarded-Host: localhost',
   '- Try internal IP ranges: 10.x.x.x, 172.16-31.x.x, 192.168.x.x',
   '',

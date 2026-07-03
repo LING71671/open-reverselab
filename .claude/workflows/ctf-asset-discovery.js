@@ -18,7 +18,10 @@ export const meta = {
 //   object.domain        → 目标域名
 //   object.caseDir       → 案例目录（可选，不传则不写文件）
 // ============================================================
-const _domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
+const _domain = typeof args === 'string' ? args : args?.domain || args?.target || ''
+if (!_domain) {
+  throw new Error('ctf-asset-discovery requires args.domain/args.target or string domain')
+}
 const _caseDir = typeof args === 'object' && args?.caseDir ? args.caseDir : null
 const domain = _domain
 const caseDir = _caseDir

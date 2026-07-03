@@ -12,7 +12,7 @@ Case 目录的 AI 可读索引文件结构说明。Web CTF 当前使用
   "case": "2026-07-example",
   "board": "ctf-website",
   "target": {
-    "url": "https://target.example/"
+    "url": "<target-url>"
   },
   "paths": {
     "case": "cases/2026-07-example",

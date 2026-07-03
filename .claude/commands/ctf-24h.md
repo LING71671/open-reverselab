@@ -84,14 +84,14 @@ python3 scripts/misc/setup_unattended_ctf_runner.py --overwrite
 在 Claude Code 中推荐这样启动：
 
 ```text
-/loop /ctf-24h https://target.example/ my-case
+/loop /ctf-24h <target-url-or-domain> <case-name>
 ```
 
 如果你的 Claude Code 版本要求先进入 loop，再输入命令，则使用：
 
 ```text
 /loop
-/ctf-24h https://target.example/ my-case
+/ctf-24h <target-url-or-domain> <case-name>
 ```
 
 每轮 workflow 必须输出以下状态之一：

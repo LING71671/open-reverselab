@@ -8,14 +8,36 @@ export const meta = {
   ],
 }
 
-// args: { target, caseName, manifest, signals?, focus?, maxWorkflows?, execute? }
+// args: { target, caseName, manifest, signals?, focus?, maxWorkflows?, workerIds?, reportRoot?, execute? }
 const target = typeof args === 'string' ? args : args?.target || ''
-const caseName = typeof args === 'object' && args?.caseName ? args.caseName : 'ctf-case'
-const manifest = typeof args === 'object' && args?.manifest ? args.manifest : `cases/${caseName}/ai_manifest.json`
+if (!target) {
+  throw new Error('ctf-attack-router requires args.target or string target')
+}
+const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
+const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
+if (!caseName || !manifest) {
+  throw new Error('ctf-attack-router requires args.caseName and args.manifest')
+}
 const signals = typeof args === 'object' && args?.signals ? args.signals : []
 const focus = typeof args === 'object' && args?.focus ? args.focus : []
 const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? Number(args.maxWorkflows) : 4
+const workerIds = typeof args === 'object' && args?.workerIds ? args.workerIds : []
+const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const testOrigin = typeof args === 'object' && args?.testOrigin ? args.testOrigin : undefined
+const redirectProbeHost = typeof args === 'object' && args?.redirectProbeHost ? args.redirectProbeHost : undefined
+const ssrfProbeTargets = typeof args === 'object' && args?.ssrfProbeTargets ? args.ssrfProbeTargets : undefined
+const credentialPairs = typeof args === 'object' && args?.credentialPairs ? args.credentialPairs : undefined
+const forwardedIp = typeof args === 'object' && args?.forwardedIp ? args.forwardedIp : undefined
 const execute = !(typeof args === 'object' && args?.execute === false)
+const allowedWorkerIds = workerIds.length ? workerIds : [
+  'recon',
+  'auth',
+  'injection',
+  'file_ssrf',
+  'client',
+  'api_business',
+  'cve_cloud_dos',
+]
 
 phase('攻击信号路由')
 
@@ -37,20 +59,14 @@ ${JSON.stringify(focus, null, 2)}
 
 ## 可选 worker
 
-- recon: 资产/路由/JS/API/fingerprint/子域接管
-- auth: JWT/OAuth/SAML/Host Header/session/cookie
-- injection: SQLi/NoSQLi/SSTI/GraphQL/HPP/CRLF/Prototype Pollution
-- file_ssrf: LFI/path traversal/upload/XXE/SSRF/open redirect
-- client: XSS/CORS/CSP/postMessage/WebSocket/admin bot
-- api_business: API discovery/IDOR/mass assignment/rate limit/payment/signature
-- cve_cloud_dos: CVE graph/cloud/supply chain/DoS/database DoS
+${allowedWorkerIds.map(id => `- ${id}`).join('\n')}
 
 ## 规则
 
 1. 先读 \`kb/ctf-website/techniques/attack-network.md\`。
 2. 为每个信号运行 \`python3 scripts/ctf-website/kb_router.py "<signal>"\`。
 3. 本轮最多选择 ${maxWorkflows} 个 worker，优先能通向 Credential/DB/Admin/RCE/Flag 的路径。
-4. 输出 JSON，routes 数组只使用上面的 worker id：
+4. 输出 JSON，routes 数组只使用允许的 worker id：
 
 {
   "routes": ["recon", "injection"],
@@ -72,13 +88,21 @@ if (routeText.includes('client')) selected.push('client')
 if (routeText.includes('api_business')) selected.push('api_business')
 if (routeText.includes('cve_cloud_dos')) selected.push('cve_cloud_dos')
 
-const routes = (selected.length ? selected : ['recon', 'injection']).slice(0, maxWorkflows)
+const filtered = selected.filter(route => allowedWorkerIds.includes(route))
+const fallback = allowedWorkerIds.filter(route => ['recon', 'injection'].includes(route))
+const routes = (filtered.length ? filtered : fallback.length ? fallback : allowedWorkerIds).slice(0, maxWorkflows)
 const workers = routes.map(route => () => workflow(`ctf-attack-${route}`, {
   target,
   caseName,
   manifest,
   signals,
   focus,
+  reportRoot,
+  testOrigin,
+  redirectProbeHost,
+  ssrfProbeTargets,
+  credentialPairs,
+  forwardedIp,
   execute,
 }))
 
@@ -101,7 +125,7 @@ ${JSON.stringify(workerResults, null, 2)}
 2. 将每个 worker 的 confirmed evidence 合并到 \`evidence[]\`。
 3. 将失败但有价值的路径合并到 \`dead_ends[]\`。
 4. 将下一轮建议合并到 \`next_round_focus[]\`。
-5. 写 \`reports/ctf-website/${caseName}/attack-router-round-<timestamp>.md\`。
+5. 写 \`${reportRoot}/${caseName}/attack-router-round-<timestamp>.md\`。
 
 ## 输出 JSON
 

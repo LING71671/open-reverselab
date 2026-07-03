@@ -9,8 +9,16 @@ export const meta = {
 }
 
 const target = typeof args === 'string' ? args : args?.target || ''
-const caseName = typeof args === 'object' && args?.caseName ? args.caseName : 'ctf-case'
-const manifest = typeof args === 'object' && args?.manifest ? args.manifest : `cases/${caseName}/ai_manifest.json`
+if (!target) throw new Error('ctf-attack-file_ssrf requires args.target or string target')
+const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
+const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
+if (!caseName || !manifest) throw new Error('ctf-attack-file_ssrf requires args.caseName and args.manifest')
+const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const ssrfProbeTargets = typeof args === 'object' && args?.ssrfProbeTargets ? args.ssrfProbeTargets : [
+  'http://127.0.0.1/',
+  'http://localhost/',
+  'http://169.254.169.254/',
+]
 
 phase('KB 路由')
 const kb = await agent(
@@ -35,7 +43,7 @@ ${kb}
 2. 平台特定文件：/etc/passwd、/proc/self/environ、WEB-INF/web.xml、web.config、.env、config.php。
 3. Upload/XXE：上传表单、content-type 绕过、SVG/XML XXE、zip slip，仅做有界验证。
 4. SSRF 参数：url/uri/redirect/callback/proxy/fetch/webhook/avatar/image。
-5. SSRF 目标：127.0.0.1、localhost、169.254.169.254、100.100.100.200、internal host，优先 timing/response 差异。
+5. SSRF 目标使用 args.ssrfProbeTargets；当前配置：${ssrfProbeTargets.join(', ')}，优先 timing/response 差异。
 6. Open Redirect：OAuth/CAS service/redirect_uri 链接到凭据/SSRF。
 
 输出 JSON: evidence_added, dead_ends_added, next_round_focus, payloads_tested, saved_requests。`,
@@ -44,7 +52,7 @@ ${kb}
 
 phase('证据写回')
 const summary = await agent(
-  `合并 file/SSRF 结果到 ${manifest}，写 reports/ctf-website/${caseName}/attack-file-ssrf.md。
+  `合并 file/SSRF 结果到 ${manifest}，写 ${reportRoot}/${caseName}/attack-file-ssrf.md。
 
 File/SSRF result:
 ${result}
