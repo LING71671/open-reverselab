@@ -14,17 +14,17 @@ category: "14-idor"
 signals: ["IDOR", "越权", "枚举", "UUID预测", "GraphQL别名", "批量端点", "跨租户", "CWE-639", "多步链"]
 mcp_tools: ["http_probe", "kb_router", "kb_read_file", "run_ctf_tool"]
 keywords: ["IDOR", "越权漏洞", "水平越权", "GraphQL IDOR", "UUID预测", "批量枚举", "CWE-639", "访问控制"]
-difficulty: "intermediate"
-tags: ["idor", "authorization", "enumeration", "graphql", "multi-tenant", "web-security", "ctf"]
+difficulty: "advanced"
+tags: ["idor", "access-control", "enumeration", "graphql", "multi-tenant", "web", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/14-idor/02-bac-business-logic", "ctf-website/12-payment/payment-email-bounce-idor"]
+related_articles: ["ctf-website/14-idor/02-bac-business-logic", "ctf-website/12-payment/payment-email-bounce-idor", "ctf-website/17-api-attacks/01-api-discovery-leak", "ctf-website/12-payment/payment-logic", "ctf-website/24-database/02-sqli-advanced"]
 ---
 # IDOR 深度枚举与利用 — 水平/垂直越权实战方法论
 
 ## 场景
 
-IDOR (Insecure Direct Object Reference) 是 CTF 和实战中出现频率最高的漏洞类别之一，核心问题并非"使用了可预测的 ID"，而是"服务端未验证请求主体是否对目标对象有访问权限"。高水平选手关注的是：UUID 不等于安全、多步 IDOR 链、跨租户利用、以及 GraphQL/API Batching 等协议层面的越权放大。
+IDOR (Insecure Direct Object Reference) 是 CTF 和实战中出现频率最高的漏洞类别之一，核心问题并非"使用了可预测的 ID"，而是"服务端未验证请求主体是否对目标对象有访问权限"。高水平选手关注的是：UUID 不等于授权边界、多步 IDOR 链、跨租户利用、以及 GraphQL/API Batching 等协议层面的越权放大。
 
 ## 输入信号
 
@@ -69,6 +69,81 @@ def classify_idor_response(resp, own_markers, foreign_markers):
 ```
 
 成功样本：目标对象字段、邮箱、订单号、租户名、金额、状态等任一稳定 marker 出现在响应中。失败样本也要保留：`403` 是鉴权点，`404` 可能是真不存在，也可能是“隐藏式拒绝”，需要用已知合法 ID 校准。
+
+#### 0.1 对象图谱到 SQL/支付下一跳
+
+把 API discovery 里抓到的端点先归成对象图谱，再决定下一跳。IDOR 的高价值不只在读数据，而在于它经常暴露数据库主键、订单流水、账单状态和支付回调对象，这些信号会直接喂给 SQL、支付和批量赋值链。
+
+| 对象/字段 | 常见来源 | 立即验证 | 下一跳 |
+|---|---|---|---|
+| `user_id`, `account_id`, `owner_id` | `/me`, JWT claim, profile API | 换对象后 marker 是否变化 | BAC 角色矩阵、Mass Assignment 角色字段 |
+| `tenant_id`, `org_id`, `project_id` | SaaS URL、响应头、GraphQL node | 父子 ID 交叉替换 | 跨租户 IDOR、数据库多租户隔离 |
+| `order_id`, `cart_id`, `checkout_id` | 购物车、订单详情、邮件链接 | 订单金额/状态/商品是否串号 | 支付状态机、优惠券和回调重放 |
+| `invoice_id`, `payment_id`, `transaction_id` | 发票、支付结果页、webhook 日志 | 发票归属、支付状态、退款按钮 | 支付逻辑、签名字段、异步任务 |
+| `file_id`, `attachment_id`, `export_id` | 导出任务、客服附件、报表下载 | 文件内容 marker | 任意文件下载、导出队列 BAC |
+| `coupon_id`, `gift_card_id`, `license_id` | 优惠码、卡密、订阅页 | 余额/可用次数是否串号 | 支付折扣、库存和卡密泄露 |
+| SQL 主键/分页游标 | `id`, `cursor`, `next`, `last_id` | 连续性、空洞、排序字段 | SQLi、数据库 dump、二分枚举 |
+
+对象图谱执行器：
+
+```python
+# idor_object_graph_builder.py
+import csv
+import json
+import re
+from pathlib import Path
+
+ID_HINTS = re.compile(r"(user|account|tenant|org|project|order|cart|checkout|invoice|payment|transaction|file|export|coupon|gift|license)[_-]?id", re.I)
+MONEY_HINTS = re.compile(r"(amount|price|total|balance|credit|paid|refund|discount|currency)", re.I)
+SQL_HINTS = re.compile(r"(^id$|last_id|cursor|offset|limit|sort|where|filter|ids?$)", re.I)
+
+def flatten(obj, prefix=""):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            key = f"{prefix}.{k}" if prefix else k
+            yield key, v
+            yield from flatten(v, key)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj[:5]):
+            yield from flatten(v, f"{prefix}[{i}]")
+
+def classify_field(name, value):
+    text = f"{name}={value}"
+    if ID_HINTS.search(name):
+        return "object-id"
+    if MONEY_HINTS.search(name):
+        return "payment-signal"
+    if SQL_HINTS.search(name):
+        return "sql-enum-signal"
+    if isinstance(value, str) and re.fullmatch(r"[0-9a-f-]{32,36}", value, re.I):
+        return "uuid-or-token-id"
+    return "context"
+
+def build_graph(samples_dir, out_json, out_csv):
+    nodes = []
+    for path in Path(samples_dir).glob("*.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for key, value in flatten(data):
+            kind = classify_field(key, value)
+            if kind != "context":
+                nodes.append({"source": path.name, "field": key, "value": value, "kind": kind})
+    Path(out_json).write_text(json.dumps(nodes, ensure_ascii=False, indent=2), encoding="utf-8")
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["source", "field", "value", "kind"])
+        w.writeheader()
+        w.writerows(nodes)
+
+if __name__ == "__main__":
+    build_graph("exports/api_samples", "exports/idor_object_graph.json", "exports/idor_role_matrix.csv")
+```
+
+判定节奏：
+
+1. 用自身资源生成 baseline，保存 `own_marker`：邮箱、订单号、金额、租户名、商品名。
+2. 混入一个外部对象 ID，只替换一个变量，输出 `idor_foreign_marker.jsonl`。
+3. 如果命中 `order_id/payment_id/invoice_id`，立刻跳支付状态机：看 `paid_at/status/refund/amount/currency` 是否能被读取或影响。
+4. 如果命中连续主键、分页游标、排序字段，跳 SQL：用 `id__in`, `sort`, `filter`, `where`, `ids[]` 观察报错和返回顺序。
+5. 如果命中 `tenant_id/org_id`，把同一目标对象挂到不同父对象下，区分“对象归属校验缺失”和“父对象边界缺失”。
 
 ### 1. ID 类型识别与预测
 

