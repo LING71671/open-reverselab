@@ -40,7 +40,7 @@ tags:
   - "data-analysis"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/24-database/00-overview", "ctf-website/24-database/05-backup-log-leak", "ctf-website/24-database/06-card-platform", "ctf-website/12-payment/payment-digital-goods", "ctf-website/12-payment/payment-email-bounce-idor"]
 ---
 # Database Dump Cleaning — 泄露数据清洗方法论
 
@@ -415,6 +415,48 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+### 8.1 支付/卡密字段字典
+
+整理 dump 时优先给字段打业务标签，后续才能直接接订单、发货和回调链。
+
+| 标签 | 字段/值信号 | 输出列 |
+|---|---|---|
+| `order_id` | `order`, `trade`, `out_trade_no`, 长数字订单号 | `entity_id`, `order_hint` |
+| `payment` | `amount`, `money`, `paid`, `status`, `transaction_id` | `amount`, `pay_state` |
+| `card_secret` | `card`, `kami`, `cdk`, `license`, `secret`, 短码/长码 | `value`, `secret_type` |
+| `delivery` | `download_url`, `delivered_at`, `result`, `kminfo` | `delivery_hint` |
+| `callback` | `notify`, `sign`, `raw`, `xml`, `json` | `callback_seed` |
+| `identity` | email、手机号、uid、session、cookie | `owner_hint` |
+
+```python
+# dump_business_tagger.py — 给泄露记录打业务标签
+import re
+
+RULES = {
+    "order_id": re.compile(r"(out_trade_no|order[_-]?id|trade[_-]?no)|\b\d{10,20}\b", re.I),
+    "payment": re.compile(r"(amount|money|total_fee|paid|pay_status|transaction_id)", re.I),
+    "card_secret": re.compile(r"(card|kami|cdk|license|secret|key)|[A-Z0-9]{8,40}", re.I),
+    "delivery": re.compile(r"(download_url|delivered_at|kminfo|result)", re.I),
+    "callback": re.compile(r"(notify|sign_type|sign=|<xml>|callback|webhook)", re.I),
+    "identity": re.compile(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b1[3-9]\d{9}\b|PHPSESSID|session", re.I),
+}
+
+def tag_record(text):
+    return [name for name, rx in RULES.items() if rx.search(text)]
+```
+
+### 8.2 输出到下一跳
+
+| 输出文件 | 用途 |
+|---|---|
+| `classified_records.csv` | 全量字段、行号、标签、置信度 |
+| `entity_index.sqlite` | 按订单/商品/用户/卡密查询 |
+| `callback_replay_seed.jsonl` | 给签名/回调文档复放 |
+| `card_inventory_candidates.csv` | 给数字商品/发卡平台核对 |
+| `noise_rules.json` | 记录被剔除的模板、占位符和冲突锚点 |
+
+成功样本：一个泄露值能从原始行号追到实体标签、订单或商品，再追到卡密/下载链接/回调样本。失败样本：只有格式相似但无锚点，或同一前缀被多个实体冲突占用。
 
 ## Evidence
 

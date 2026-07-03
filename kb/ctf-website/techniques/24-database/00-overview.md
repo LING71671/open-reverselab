@@ -31,7 +31,7 @@ keywords:
   - "connection string leak"
   - "MySQL PostgreSQL MongoDB"
   - "phpMyAdmin"
-difficulty: "intermediate"
+difficulty: "advanced"
 tags:
   - "database"
   - "sql-injection"
@@ -41,7 +41,7 @@ tags:
   - "overview"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/24-database/02-sqli-advanced", "ctf-website/24-database/03-nosql-injection", "ctf-website/24-database/04-config-exposure", "ctf-website/24-database/05-backup-log-leak", "ctf-website/24-database/06-card-platform", "ctf-website/24-database/07-data-cleaning", "ctf-website/12-payment/payment-logic"]
 ---
 # Database Attack Surface — 数据库攻击全景与决策树
 
@@ -93,6 +93,7 @@ related_articles: []
 | [04-config-exposure.md](04-config-exposure.md) | 数据库配置泄露与默认凭证 |
 | [05-backup-log-leak.md](05-backup-log-leak.md) | 备份/日志文件暴露 |
 | [06-card-platform.md](06-card-platform.md) | 发卡平台数据库攻击实战 |
+| [07-data-cleaning.md](07-data-cleaning.md) | dump/log/HTML/JSON 泄露数据整理与实体映射 |
 
 ## 速查决策树
 
@@ -106,7 +107,8 @@ related_articles: []
 ├─ 发现 NoSQL 端点 → [03] NoSQL 注入
 ├─ 发现 .env/config.php 可读 → [04] 配置泄露
 ├─ 发现 .sql/.dump 文件 → [05] 备份暴露
-└─ 发卡/电商平台 → [06] 平台专项攻击
+├─ 发卡/电商平台 → [06] 平台专项攻击
+└─ 混合 dump/日志/HTML 泄露 → [07] 数据整理与实体映射
 ```
 
 ## 技术升格路线
@@ -123,8 +125,62 @@ related_articles: []
 | Redis/ES/CouchDB 响应 | NoSQL 服务可达 | [03](03-nosql-injection.md) | key/index/db 枚举 |
 | `.env`/源码可读 | 连接字符串/凭据 | [04](04-config-exposure.md) | 登录 DB 或反推注入点 |
 | `.sql`/日志命中 | Schema/数据/SQL 模板 | [05](05-backup-log-leak.md) | dump 解析、日志反推 |
+| 发卡接口/卡密字段 | 订单/发货/支付链 | [06](06-card-platform.md) | query/order/callback |
+| 混合泄露数据 | 字段/实体/置信度 | [07](07-data-cleaning.md) | CSV/SQLite 索引 |
 
 每条路线都保留成功样本和失败样本：失败样本能告诉你卡在 HTTP parser、WAF、SQL parser、权限、文件系统还是业务逻辑。
+
+## 订单/支付闭环路线图
+
+数据库板块和支付板块的交叉点是账本：订单表、支付流水、发货记录、卡密表、余额变更、回调日志。任意入口命中后都要尽快路由到这些账本，而不是停在“拿到一段数据”。
+
+```mermaid
+flowchart TD
+  Signal["SQL/NoSQL/配置/备份/发卡信号"] --> Route["按证据类型路由"]
+  Route --> SQLi["SQLi oracle"]
+  Route --> Config["配置/连接串"]
+  Route --> Dump["dump/log/source"]
+  Route --> Card["发卡接口"]
+  SQLi --> Ledger["订单/支付/发货账本"]
+  Config --> Ledger
+  Dump --> Ledger
+  Card --> Ledger
+  Ledger --> Diff["状态差分: paid/delivered/balance/card"]
+  Diff --> Next["签名/回调/竞态/IDOR/数据整理"]
+```
+
+| 入口 | 最小可复查结果 | 继续转向 |
+|---|---|---|
+| SQLi | `orders/pay_log/cards` 关键行 | 支付状态机、回调重放 |
+| NoSQL | session/cart/order/queue key | 登录态、异步发货 |
+| 配置 | DB/Redis/Payment/Storage 路由 | 直连抽样、签名密钥、对象存储 |
+| 备份/日志 | 订单图谱、回调 raw、卡密候选 | 数据整理、签名实现 |
+| 发卡平台 | `id+skey`、卡密账本、回调差分 | 数字商品、IDOR、支付绕过 |
+| 混合 dump | CSV/SQLite 索引、实体置信度 | 回填订单/商品/卡密 |
+
+### 路由器伪代码
+
+```python
+# database_signal_router.py — 数据库板块入口路由
+ROUTES = [
+    ("01-sqli-fundamentals.md", ["SQL syntax", "SQLSTATE", "mysql_fetch", "pg_"]),
+    ("02-sqli-advanced.md", ["403", "WAF", "chunked", "second-order", "dnslog"]),
+    ("03-nosql-injection.md", ["$ne", "$regex", "redis", "_search", "_all_dbs"]),
+    ("04-config-exposure.md", [".env", "DATABASE_URL", "DB_HOST", "REDIS_URL"]),
+    ("05-backup-log-leak.md", [".sql", ".dump", "general.log", ".git/HEAD"]),
+    ("06-card-platform.md", ["ajax.php?act=query", "skey", "kminfo", "CDK"]),
+    ("07-data-cleaning.md", ["mixed dump", "HTML stack", "CSV", "prefix cluster"]),
+]
+
+def route_signal(text):
+    low = text.lower()
+    hits = []
+    for doc, keys in ROUTES:
+        score = sum(1 for k in keys if k.lower() in low)
+        if score:
+            hits.append({"doc": doc, "score": score})
+    return sorted(hits, key=lambda x: (-x["score"], x["doc"]))
+```
 
 ## 攻击链 / 工作流
 
@@ -135,7 +191,8 @@ related_articles: []
 4. 路径验证：确认可控表达式、布尔差异、文件可读性、未授权访问和下一跳
 5. 证据固化：保存请求、响应、时间差、错误栈、文件哈希和字段样例
 6. 横向关联：配置泄露 → 数据库登录；备份泄露 → 表结构；SQLi → 文件读写
-7. 收敛结论：写入 notes/reports，明确影响面、利用条件、下一跳入口和失败分支
+7. 账本闭环：把入口证据转成订单、支付流水、发货、卡密、余额或回调差分
+8. 收敛结论：写入 notes/reports，明确影响面、利用条件、下一跳入口和失败分支
 ```
 
 ## Evidence
@@ -147,6 +204,7 @@ related_articles: []
 | 文件泄露 | 文件路径、大小、哈希、字段样例 |
 | 权限边界 | 未授权/低权限/管理员权限的对比请求 |
 | 影响面 | 可读表、可枚举订单、可下载备份、可访问管理工具 |
+| 账本差分 | 订单状态、支付流水、发货记录、卡密、余额、回调日志变化 |
 
 ## MCP 工具映射
 
@@ -164,3 +222,4 @@ related_articles: []
 - [[01-idor-enumeration]] — IDOR 与数据库枚举
 - [[payment-php]] — PHP 支付与数据库交互
 - [[file-upload-xxe-lfi]] — 文件读写与数据库配置
+- [[07-data-cleaning]] — dump/log/HTML/JSON 数据整理
