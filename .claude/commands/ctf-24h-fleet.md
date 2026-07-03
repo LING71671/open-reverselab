@@ -59,7 +59,7 @@ allowed-tools: Bash, Read, Write, Edit, MultiEdit, Glob, Grep, LS, WebFetch, Web
 
 - `STATUS: CONTINUE`：至少一个 target 仍有下一轮焦点。
 - `STATUS: DONE`：所有目标都已完成。
-- `STATUS: EXHAUSTED`：所有目标路径/预算耗尽。
+- `STATUS: EXHAUSTED`：所有目标攻击路径耗尽或目标长期不可达。
 
 不要等待人工确认；无法执行的路径写入目标 manifest 的 `dead_ends` 或
 `next_round_focus`，下一轮自动切换路径。

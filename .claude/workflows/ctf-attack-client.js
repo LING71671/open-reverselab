@@ -14,6 +14,7 @@ const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
 const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
 if (!caseName || !manifest) throw new Error('ctf-attack-client requires args.caseName and args.manifest')
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 
 phase('KB 路由')
 const kb = await agent(
@@ -30,10 +31,12 @@ const result = await agent(
   `对 ${target} 做一轮 client worker。
 
 Manifest: ${manifest}
+Inner iterations: ${innerIterations || 'until convergence/status change'}
 KB:
 ${kb}
 
 任务：
+0. 内部循环协议：plan → execute client payload/probe → observe reflection/CORS/CSP/browser sink → mutate context/encoding/event/source → retry。不要只试一次；未设置 innerIterations 时迭代到证据确认、路径证伪或状态变化。
 1. Reflected/DOM/stored XSS：上下文识别、payload 编码、CSP 影响。
 2. CORS：Origin 反射、ACAC、null origin、子域伪造。
 3. CSP：nonce/hash、unsafe-inline、JSONP/script gadget、base-uri/form-action。

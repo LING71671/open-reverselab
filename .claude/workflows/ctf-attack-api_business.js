@@ -14,6 +14,7 @@ const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
 const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
 if (!caseName || !manifest) throw new Error('ctf-attack-api_business requires args.caseName and args.manifest')
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 
 phase('KB 路由')
 const kb = await agent(
@@ -30,10 +31,12 @@ const result = await agent(
   `对 ${target} 做一轮 API/business worker。
 
 Manifest: ${manifest}
+Inner iterations: ${innerIterations || 'until convergence/status change'}
 KB:
 ${kb}
 
 任务：
+0. 内部循环协议：plan → execute API/business mutation → observe object/state/price/signature difference → mutate parameter/order/replay/race key → retry。不要只试一次；未设置 innerIterations 时迭代到证据确认、路径证伪或状态变化。
 1. API discovery：swagger/openapi/graphql/actuator/.well-known/JS endpoints。
 2. IDOR/BAC：对象 ID、订单 ID、用户 ID、文件 ID、horizontal/vertical access。
 3. Mass assignment：role/isAdmin/price/quota/status/user_id/order_id 字段覆盖。

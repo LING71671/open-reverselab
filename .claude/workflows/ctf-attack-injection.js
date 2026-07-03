@@ -14,6 +14,7 @@ const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
 const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
 if (!caseName || !manifest) throw new Error('ctf-attack-injection requires args.caseName and args.manifest')
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 
 phase('KB 路由')
 const kb = await agent(
@@ -30,10 +31,12 @@ const result = await agent(
   `对 ${target} 做一轮注入 worker。
 
 Manifest: ${manifest}
+Inner iterations: ${innerIterations || 'until convergence/status change'}
 KB:
 ${kb}
 
 任务：
+0. 内部循环协议：plan → execute payload/request → observe response/evidence → mutate payload/encoding/context → retry。不要只试一次；未设置 innerIterations 时迭代到证据确认、路径证伪或状态变化。
 1. 参数/表单/API/GraphQL endpoint 枚举。
 2. SQLi/NoSQLi：error/boolean/time 差异；可疑 request 用 ctf_save_request 保存，SQLi 交给 run_sqlmap_request。
 3. SSTI：{{7*7}}, ${7*7}, <%= 7*7 %>，按模板引擎确认上下文。
