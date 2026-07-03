@@ -18,7 +18,7 @@ keywords: ["凭证喷洒", "credential spraying", "MFA绕过", "push bombing", "
 difficulty: "advanced"
 tags: ["brute-force", "authentication", "mfa", "credential-stuffing", "active-directory", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/16-rate-limit/01-rate-limit-bypass"]
 ---
 # 高级暴力破解 — 凭证喷洒、MFA 疲劳、Hash 策略
@@ -175,15 +175,15 @@ import asyncio, aiohttp, time, random
 class MFAPushBombing:
     """
     MFA 疲劳攻击 (Push Bombing / MFA Spam)
-    
+
     原理: 连续发送大量 MFA 推送通知, 用户因疲劳误点 "Approve"
-    
+
     真实案例:
     - Uber (2022): 攻击者先拿到员工凭据, 然后持续发 MFA push
       直到用户批准
     - LAPSUS$ 团伙: 标准手法: 购credentials + MFA fatigue → 入侵
     - MGM Resorts (2023): 10 分钟 MFA push 轰炸 → 批准 → Ransomware
-    
+
     关键成功因素:
     1. 已有有效的凭据 (password spray / credential stuffing 获取)
     2. MFA 没有失败次数的锁定 (或锁定周期很短)
@@ -357,7 +357,7 @@ class CredentialStuffing:
     """
     凭证复用攻击
     使用泄露数据库中的 (email:password) 对测试目标
-    
+
     数据来源:
     1. HaveIBeenPwned 的 SHA1 hash 范围（不泄露明文）
     2. RocketDB / COMB (Combination of Many Breaches)
@@ -430,7 +430,7 @@ class CredentialStuffing:
 class HashAttackChain:
     """
     Windows 凭证哈希攻击链
-    
+
     典型流程:
     Step 1: 获取一个初始立足点 (低权限)
     Step 2: 提取内存中的 hash (Mimikatz / LSASS dump)
@@ -549,9 +549,9 @@ AI Agent 可调用以下 MCP 工具自动执行上述攻击：
 - "Uber Breach 2022" — Analysis by LAPSUS$ TTPs
 - Hashcat Wiki: Example Hash Formats & Attack Modes
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- 保存 baseline、用户名枚举 oracle、响应状态、响应时间、关键响应头和正文摘要。
+- 对每个策略记录：账号集合、候选口令来源、间隔、锁定阈值、MFA 响应和失败样本。
+- 对 hash 场景记录：hash 类型、来源文件、hashcat mode、命中样本和验证端点。
+- 输出统一放入 `exports/ctf-website/<case>/`，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。

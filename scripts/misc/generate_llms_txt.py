@@ -155,7 +155,7 @@ def generate_llms_txt(articles: list[dict]) -> str:
     lines.append(f"---")
     lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}")
     lines.append(f"Total articles: {len(articles)}")
-    return "\n".join(lines)
+    return "\n".join(line.rstrip() for line in lines)
 
 
 def generate_llms_full(articles: list[dict]) -> str:
@@ -186,13 +186,14 @@ def generate_llms_full(articles: list[dict]) -> str:
             # 限制每篇文章 10000 字符（避免文件过大）
             if len(body) > 10000:
                 body = body[:10000] + "\n\n[... content truncated for size ...]"
+            body = "\n".join(line.rstrip() for line in body.splitlines())
             lines.append(body)
         except Exception:
             lines.append(f"[Error reading file: {a['path']}]")
         lines.append("")
         lines.append("")
 
-    return "\n".join(lines)
+    return "\n".join(line.rstrip() for line in lines)
 
 
 def main() -> int:

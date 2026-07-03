@@ -14,7 +14,7 @@ keywords: ["API发现", "端点枚举", "Swagger文档", "GraphQL内省", "Sourc
 difficulty: "intermediate"
 tags: ["api-security", "swagger", "graphql", "source-map", "mobile", "information-disclosure"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
@@ -37,6 +37,66 @@ related_articles: []
 - Postman/Insomnia 集合在公开仓库中泄露
 
 ## 核心方法论
+
+### 0. 端点分层与下一跳判断
+
+先把发现结果按“能不能形成下一跳”分层，而不是只堆 URL 数量。
+
+| 信号 | 常见来源 | 下一跳 | 成功标志 | 失败样本 |
+|---|---|---|---|---|
+| `GET /api/me`、`/profile`、`/account` | JS bundle、Network、OpenAPI | IDOR / mass assignment | 返回对象 ID、role、tenant、plan | 只返回匿名配置 |
+| `POST /admin/*`、`DELETE /api/*` | OpenAPI、Source Map | BAC / method override | 低权限出现 401/403/405 差异 | 所有角色完全同响应 |
+| `/internal`、`/debug`、`/actuator` | robots、Source Map、错误栈 | SSRF / config leak / actuator | 出现 build、env、heap、routes | 统一 404 且无框架头 |
+| `/v1` 与 `/v2` 同名资源 | 文档版本、移动端 | 版本漂移 | 老版本少鉴权字段或旧 schema | 两版本共享同网关拦截 |
+| GraphQL mutation | introspection、error suggestion | 参数污染 / 权限绕过 | mutation 可枚举参数和返回字段 | query-only schema |
+| Postman environment | 公开集合、源码 | API key / baseUrl / token flow | 有 `{{baseUrl}}`、`{{token}}`、pre-request script | 只有空模板 |
+
+端点记录建议统一成下面的 evidence 单元，后续 IDOR、SQLi、SSRF、JWT、GraphQL 都能直接复用：
+
+```json
+{
+  "source": "sourcemap|openapi|graphql|postman|apk|robots",
+  "endpoint": "POST /api/v2/orders/{id}/refund",
+  "auth_hint": "bearer|required|optional|none|unknown",
+  "param_sources": ["path:id", "json:amount", "header:X-Org-ID"],
+  "object_ids": ["order_id", "user_id", "tenant_id"],
+  "role_matrix": {"anon": 401, "user": 403, "admin": 200},
+  "next_tests": ["idor", "method_override", "mass_assignment"],
+  "confidence": "high"
+}
+```
+
+```python
+# endpoint_ranker.py — API 端点价值排序
+import re
+
+RISK_WORDS = {
+    "admin": 5, "internal": 5, "debug": 5, "actuator": 5,
+    "delete": 4, "refund": 4, "transfer": 4, "role": 4,
+    "user": 2, "account": 2, "order": 2, "invoice": 2,
+    "config": 3, "token": 3, "secret": 5, "flag": 5,
+}
+
+def rank_endpoint(method, path, params=None, auth_hint="unknown"):
+    params = params or []
+    text = f"{method} {path} {' '.join(params)}".lower()
+    score = 0
+    reasons = []
+    for word, value in RISK_WORDS.items():
+        if word in text:
+            score += value
+            reasons.append(word)
+    if method.upper() in {"POST", "PUT", "PATCH", "DELETE"}:
+        score += 3
+        reasons.append("write_method")
+    if re.search(r"\{?(user|account|order|tenant|org)_?id\}?", text):
+        score += 3
+        reasons.append("object_id")
+    if auth_hint in {"optional", "none"} and score >= 5:
+        score += 2
+        reasons.append("weak_auth_hint")
+    return {"score": score, "reasons": reasons}
+```
 
 ### 1. Swagger / OpenAPI 文档枚举
 
@@ -406,6 +466,41 @@ class SourceMapExtractor:
         return {k: sorted(v) for k, v in all_endpoints.items()}
 ```
 
+#### 3.1 Source Map → 路由与方法推断
+
+Source Map 里真正有价值的不只是 URL 字符串，还包括调用函数、HTTP 方法、header、错误处理分支。下面的轻量 parser 会把 `fetch` / `axios` / `apiClient` 形式统一抽成候选路由，便于后续 fuzz。
+
+```python
+# sourcemap_route_infer.py — 从源码片段推断 method/path/body/header
+import re
+
+CALL_PATTERNS = [
+    re.compile(r"fetch\(\s*[`'\"](?P<path>[^`'\"]+)[`'\"]\s*,\s*\{(?P<opts>.*?)\}\s*\)", re.S),
+    re.compile(r"axios\.(?P<method>get|post|put|patch|delete)\(\s*[`'\"](?P<path>[^`'\"]+)[`'\"](?P<tail>.*?)\)", re.S),
+    re.compile(r"apiClient\.(?P<method>get|post|put|patch|delete)\(\s*[`'\"](?P<path>[^`'\"]+)[`'\"](?P<tail>.*?)\)", re.S),
+]
+
+def infer_routes_from_source(source):
+    routes = []
+    for pattern in CALL_PATTERNS:
+        for m in pattern.finditer(source):
+            method = (m.groupdict().get("method") or "GET").upper()
+            opts = m.groupdict().get("opts") or m.groupdict().get("tail") or ""
+            method_match = re.search(r"method\s*:\s*[`'\"]([A-Z]+)[`'\"]", opts)
+            if method_match:
+                method = method_match.group(1)
+            headers = sorted(set(re.findall(r"[`'\"](Authorization|X-[A-Za-z0-9-]+|Content-Type)[`'\"]", opts)))
+            params = sorted(set(re.findall(r"\b(userId|accountId|tenantId|orderId|id|role|amount)\b", opts)))
+            routes.append({
+                "method": method,
+                "path": m.group("path"),
+                "headers": headers,
+                "params": params,
+                "rank": rank_endpoint(method, m.group("path"), params),
+            })
+    return sorted(routes, key=lambda x: x["rank"]["score"], reverse=True)
+```
+
 ### 4. APK → API 端点提取
 
 ```python
@@ -706,9 +801,12 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 - Clairvoyance: GraphQL Schema Brute-forcing Tool
 - Jason Haddix: "The Bug Hunter's Methodology" — API Discovery Section
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- `api_inventory.json`: 来源、端点、方法、参数、认证提示、rank、下一跳测试。
+- `openapi_diff.json`: 版本差异、删除但仍可访问的 path、旧 schema 字段。
+- `role_matrix.csv`: anon/user/admin 或多租户账号的状态码、长度、关键字段 diff。
+- `graphql_schema.json`: introspection/error suggestion 还原出的 Query/Mutation/Type。
+- `sourcemap_routes.json`: bundle URL、map URL、源码文件、推断 method/path/header。
+- 成功样本: 低权限账号能访问对象数据、旧版本缺少鉴权、mutation 返回状态变化、Flag 出现在响应体。
+- 失败样本: 统一网关 401/403、响应长度和字段完全一致、端点只返回静态 schema。

@@ -14,7 +14,7 @@ keywords: ["CSP绕过", "JSONP端点", "CDN白名单", "DOM Clobbering", "strict
 difficulty: "advanced"
 tags: ["csp", "xss", "jsonp", "cdn", "dom-clobbering", "strict-dynamic", "css-injection"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
@@ -35,6 +35,47 @@ Content-Security-Policy 响应头内容
 支持 style-src 或 style 标签注入
 CSP nonce / hash 可预测或复用
 存在 <!-- --> 注释内容可注入
+```
+
+## 0. CSP 指令判定矩阵
+
+先把 CSP 拆成指令级语义，再把注入点映射到可执行 gadget。
+
+| 指令 / token | 语义 | 可接的 gadget | 成功标志 | 失败样本 |
+|---|---|---|---|---|
+| `script-src 'unsafe-inline'` | 内联脚本可执行 | 直接 `<script>` / event handler | `securitypolicyviolation` 不出现 | 浏览器仍拦截 inline |
+| `script-src 'nonce-x'` | 带 nonce 的脚本可执行 | nonce 复用、受信任脚本注入 | 注入片段带同 nonce 执行 | nonce 每响应变化且不可读 |
+| `script-src 'strict-dynamic'` | 信任链动态加载 | import / appendChild / loader gadget | 受信任脚本加载外部模块 | 注入点不在受信任脚本上下文 |
+| CDN allowlist | 允许可信 CDN 脚本 | JSONP、Angular、jsonp callback、old library | CDN gadget 触发执行 | CDN 路径固定且无 gadget |
+| `style-src 'unsafe-inline'` | CSS 可注入 | CSS selector exfil、font-face、url() | 外带请求按字符出现 | `img-src/connect-src` 限制出站 |
+| `base-uri` 缺失 | 可注入 `<base>` | 相对脚本路径劫持 | 相对资源解析到可控域 | 脚本全是绝对路径 |
+| `object-src` 未禁用 | object/embed 可用 | plugin / MIME confusion | `object` 触发加载差异 | 浏览器禁用插件或 CSP 阻断 |
+
+```javascript
+// csp_decision.js — CSP 指令解析与 gadget 路由
+function parseCSP(header) {
+  const out = {};
+  for (const part of header.split(';')) {
+    const tokens = part.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length) out[tokens[0]] = tokens.slice(1);
+  }
+  return out;
+}
+
+function pickCspGadgets(header) {
+  const csp = parseCSP(header);
+  const script = csp['script-src'] || csp['default-src'] || [];
+  const style = csp['style-src'] || csp['default-src'] || [];
+  const gadgets = [];
+  if (script.includes("'unsafe-inline'")) gadgets.push('inline-script');
+  if (script.includes("'unsafe-eval'")) gadgets.push('eval-sink');
+  if (script.includes("'strict-dynamic'")) gadgets.push('trusted-loader-import');
+  if (script.some(x => /cdnjs|unpkg|jsdelivr|ajax\.googleapis/.test(x))) gadgets.push('cdn-gadget');
+  if (style.includes("'unsafe-inline'")) gadgets.push('css-selector-exfil');
+  if (!csp['base-uri']) gadgets.push('base-tag-relative-path');
+  if (!csp['object-src'] || !csp['object-src'].includes("'none'")) gadgets.push('object-embed');
+  return gadgets;
+}
 ```
 
 ## 1. JSONP Endpoint Abuse
@@ -547,9 +588,14 @@ CSP script-src 'none' + Dangling Markup → 表单注入 → 后续 HTML 窃取
 WebWorker + strict-dynamic → worker 中加载任意外部脚本
 ```
 
-## 证据
+## Evidence
 
-记录: 完整 CSP 头、注入点 (JSONP/CDN/DOM 注入/base)、使用的 gadget 名称/版本、绕过 payload、外带通道、获取到的敏感数据。附录 CSP evaluator 输出。
+- `csp_headers.txt`: 原始 CSP、Report-Only CSP、meta CSP，保留响应 URL 与状态码。
+- `directive_matrix.json`: 每个指令的 token、继承来源、选中的 gadget、阻断点。
+- `payload_attempts.json`: 注入上下文、payload、是否触发 `securitypolicyviolation`、浏览器控制台错误。
+- `gadget_evidence.md`: JSONP endpoint、CDN 库版本、DOM clobbering 目标变量、base 影响的相对路径。
+- 成功样本: payload 执行、外带请求到达、DOM 状态变化、CTF flag 被读出。
+- 失败样本: CSP violation 明确命中目标指令、nonce 不复用、CDN gadget 版本不匹配、出站被 `connect-src/img-src` 拦截。
 
 ## MCP 工具映射
 

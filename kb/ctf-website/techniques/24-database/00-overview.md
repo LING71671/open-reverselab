@@ -31,7 +31,7 @@ keywords:
   - "connection string leak"
   - "MySQL PostgreSQL MongoDB"
   - "phpMyAdmin"
-difficulty: "beginner"
+difficulty: "intermediate"
 tags:
   - "database"
   - "sql-injection"
@@ -40,7 +40,7 @@ tags:
   - "backup"
   - "overview"
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # Database Attack Surface — 数据库攻击全景与决策树
@@ -109,6 +109,23 @@ related_articles: []
 └─ 发卡/电商平台 → [06] 平台专项攻击
 ```
 
+## 技术升格路线
+
+数据库板块不要按“漏洞名”线性推进，而要按证据类型切换打法：
+
+| 已知证据 | 立即判断 | 进入文档 | 下一步 |
+|---|---|---|---|
+| SQL 报错栈 | DBMS/闭合方式/查询上下文 | [01](01-sqli-fundamentals.md) | UNION/Error/Boolean/Time |
+| 页面有 True/False 差异 | 可控表达式已执行 | [01](01-sqli-fundamentals.md) | 二分抽取、排序差异 |
+| WAF 拦关键词 | 过滤层在 SQL parser 前 | [02](02-sqli-advanced.md) | HTTP/编码/AST 分层变形 |
+| 写入后另一路触发 | 二阶注入 | [02](02-sqli-advanced.md) | 写入点/触发点状态机 |
+| JSON body 可传对象 | NoSQL operator 注入 | [03](03-nosql-injection.md) | `$ne`/`$regex`/`$where` |
+| Redis/ES/CouchDB 响应 | NoSQL 服务可达 | [03](03-nosql-injection.md) | key/index/db 枚举 |
+| `.env`/源码可读 | 连接字符串/凭据 | [04](04-config-exposure.md) | 登录 DB 或反推注入点 |
+| `.sql`/日志命中 | Schema/数据/SQL 模板 | [05](05-backup-log-leak.md) | dump 解析、日志反推 |
+
+每条路线都保留成功样本和失败样本：失败样本能告诉你卡在 HTTP parser、WAF、SQL parser、权限、文件系统还是业务逻辑。
+
 ## 攻击链 / 工作流
 
 ```
@@ -118,7 +135,7 @@ related_articles: []
 4. 路径验证：确认可控表达式、布尔差异、文件可读性、未授权访问和下一跳
 5. 证据固化：保存请求、响应、时间差、错误栈、文件哈希和字段样例
 6. 横向关联：配置泄露 → 数据库登录；备份泄露 → 表结构；SQLi → 文件读写
-7. 收敛结论：写入 notes/reports，明确影响面、利用条件和修复优先级
+7. 收敛结论：写入 notes/reports，明确影响面、利用条件、下一跳入口和失败分支
 ```
 
 ## Evidence

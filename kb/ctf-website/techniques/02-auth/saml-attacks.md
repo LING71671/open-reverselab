@@ -14,11 +14,49 @@ keywords: ["SAML攻击", "XML签名绕过", "XSW", "SAML注入", "SSO安全", "X
 difficulty: "advanced"
 tags: ["authentication", "saml", "xml", "sso", "web-security", "signature-bypass", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # SAML 2.0 攻击
+
+## 0. SAML Response 解码与定位
+
+SAML 常见两种绑定：HTTP-POST 是 Base64 XML；HTTP-Redirect 是 DEFLATE + Base64 + URL encode。先确认绑定方式，再看签名在 `Response` 级还是 `Assertion` 级。
+
+```python
+import base64
+import urllib.parse
+import zlib
+from lxml import etree
+
+def decode_saml(value, binding="post"):
+    raw = urllib.parse.unquote(value)
+    data = base64.b64decode(raw)
+    if binding == "redirect":
+        data = zlib.decompress(data, -15)
+    return data.decode(errors="replace")
+
+def summarize_saml(xml_text):
+    root = etree.fromstring(xml_text.encode())
+    ids = root.xpath("//*[@ID or @Id or @id]")
+    refs = root.xpath("//*[local-name()='Reference']/@URI")
+    nameids = root.xpath("//*[local-name()='NameID']/text()")
+    attrs = root.xpath("//*[local-name()='Attribute']/@Name")
+    print("IDs:", [i.get("ID") or i.get("Id") or i.get("id") for i in ids])
+    print("References:", refs)
+    print("NameID:", nameids)
+    print("Attributes:", attrs)
+```
+
+| 观察点 | 关键问题 | 下一步 |
+|---|---|---|
+| `Reference URI` | 签名到底保护哪个 ID | XSW 插入同名/旁路 Assertion |
+| Signature 位置 | Response 级还是 Assertion 级 | 改业务读取节点 |
+| 多个 Assertion | SP 取第一个、最后一个还是签名引用 | XSW pattern |
+| `NameID` / `Attribute` | SP 用哪个字段当账号/角色 | 属性注入 |
+| `NotOnOrAfter` | 时间窗口是否校验 | replay |
+| `AudienceRestriction` | 是否绑定 SP entityID | token 混用 |
 
 ## XML Signature Wrapping (XSW)
 
@@ -53,6 +91,19 @@ XSW_PAYLOADS = [
     # 但解析器取的是直接 child
 ]
 ```
+
+### XSW Pattern 选择表
+
+| Pattern | XML 形态 | 命中条件 |
+|---|---|---|
+| XSW1 | 恶意 Assertion 放 Response 顶部，合法 Assertion 保留签名 | 业务取第一个 Assertion |
+| XSW2 | Signature 放 Response，插入第二个 Assertion | 业务取未签名 Assertion |
+| XSW3 | 合法 Assertion 移入 Wrapper，恶意 Assertion 原位置 | 验签按 ID 找，业务按路径找 |
+| XSW4 | 复制 Assertion ID / 改 `Id` vs `ID` | parser ID 属性识别不一致 |
+| XSW5 | Object/Manifest 包裹签名目标 | 验签库追 Reference，业务不追 |
+| XSW8 | 嵌套 Assertion | DOM/XPath 查询深度不同 |
+
+最小实验：只改 `NameID` 不动签名，如果被接受，说明签名未验证或业务不使用签名节点；如果拒绝，再切 XSW。
 
 ### 利用脚本
 
@@ -138,6 +189,40 @@ ROUNDTRIP_MUTATIONS = [
 ]
 ```
 
+## SAML Replay / Attribute 注入
+
+```text
+Replay 变量:
+- 同一个 SAMLResponse 重放两次
+- 换浏览器 session 重放
+- 换 SP endpoint 重放
+- 修改 RelayState 重放
+- 过 NotOnOrAfter 后重放
+```
+
+| 字段 | 变形 | 命中信号 |
+|---|---|---|
+| `NameID` | `user` → `admin` | 登录身份变化 |
+| `Attribute role` | 加 `admin` / `groups` | 权限变化 |
+| `SessionIndex` | 删除/复用 | logout/session 逻辑错位 |
+| `Audience` | 改成另一个 SP | 跨应用 token 混用 |
+| `Recipient` | 改 ACS URL | callback 接受错位 |
+| `InResponseTo` | 删除/复用 | SP 不绑定 AuthnRequest |
+
+属性名常见别名：
+
+```text
+role
+roles
+groups
+memberOf
+isAdmin
+admin
+permissions
+http://schemas.xmlsoap.org/claims/Group
+http://schemas.microsoft.com/ws/2008/06/identity/claims/role
+```
+
 ## SAML 测试工具
 
 ```bash
@@ -167,7 +252,7 @@ SAML Response Replay → 过期/重用 → 重放攻击
 
 ## Evidence
 
-记录: 原始 SAML Response (Base64)、解码后的 XML、注入的恶意 Assertion、签名验证结果、最终 SP 接受的用户身份
+记录: 原始 SAMLResponse、绑定方式、解码 XML、`Reference URI`、签名位置、所有 Assertion/NameID/Attribute、注入的 Assertion、SP 最终接受的用户身份、成功样本和失败样本。
 
 ## MCP 工具映射
 

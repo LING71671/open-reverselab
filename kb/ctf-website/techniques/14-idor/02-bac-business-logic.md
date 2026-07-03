@@ -17,7 +17,7 @@ keywords: ["BAC", "访问控制", "垂直越权", "隐藏端点发现", "Spring 
 difficulty: "intermediate"
 tags: ["bac", "authorization", "privilege-escalation", "spring-boot", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/14-idor/01-idor-enumeration"]
 ---
 # 功能级访问控制缺失 (BAC) — 垂直越权与业务逻辑绕过
@@ -38,6 +38,32 @@ related_articles: ["ctf-website/14-idor/01-idor-enumeration"]
 - 响应头或错误信息中包含 `X-Admin-Panel: true`, `role: user` 等调试信息
 
 ## 核心方法论
+
+### 0. 功能权限状态机
+
+BAC 的突破点通常不是某个孤立端点，而是“角色、方法、流程状态、API 版本”四个维度交叉后出现裂缝。先建立状态机，再做单变量错配。
+
+| 维度 | 值 | 测试方式 | 命中信号 |
+|---|---|---|---|
+| 角色 | anonymous/user/staff/admin | 同端点换 token | 低角色返回高角色数据 |
+| 方法 | GET/POST/PUT/PATCH/DELETE/OPTIONS | 同路径换方法 | 非预期方法执行动作 |
+| 流程状态 | draft/pending/paid/shipped/closed | 直接跳状态 | 状态越级成功 |
+| API 版本 | v0/v1/v2/internal | 同资源换版本 | 老版本少鉴权 |
+| Content-Type | JSON/form/XML/multipart | 同字段换 parser | 某 parser 少鉴权 |
+| Header | `_method`, override, tenant | 覆写路由/身份 | 进入不同 handler |
+
+状态机记录模板：
+
+```json
+{
+  "resource": "order",
+  "allowed": ["cart -> address", "address -> payment", "payment -> confirm"],
+  "tested": ["cart -> confirm", "cart -> deliver", "payment -> refund"],
+  "oracle": ["status", "order_state", "side_effect", "response_marker"]
+}
+```
+
+成功样本：状态字段变化、动作副作用出现、后台列表出现新记录、响应从 `permission denied` 变成业务错误。失败样本：`405` 说明路由存在但方法不允许，`401/403` 是鉴权层，`409` 常代表业务状态机挡住了。
 
 ### 1. 隐藏端点发现矩阵
 
@@ -256,7 +282,7 @@ def test_api_version_bypass(base_url, endpoint, session):
 class StepSkipAttack:
     """
     业务流程步骤跳过检测
-    
+
     典型场景:
     - 购物车 → 填写地址 → 支付 → 确认 → 发货
     - 注册 → 邮箱验证 → 完善资料 → 激活
@@ -404,6 +430,30 @@ def role_matrix_scan(endpoints: list, tokens: dict):
     return matrix
 ```
 
+### 5.1 角色矩阵差异输出
+
+```python
+def diff_role_matrix(matrix, expected_order):
+    findings = []
+    for endpoint, row in matrix.items():
+        statuses = {role: str(value).split()[0] for role, value in row.items()}
+        first_200 = [r for r in expected_order if statuses.get(r) == "200"]
+        if not first_200:
+            continue
+        lowest = first_200[0]
+        if lowest in ("anonymous", "basic_user"):
+            findings.append({
+                "endpoint": endpoint,
+                "lowest_role_with_200": lowest,
+                "row": row,
+            })
+    return findings
+
+roles = ["anonymous", "basic_user", "premium_user", "moderator", "admin", "super_admin"]
+```
+
+矩阵不要只看状态码。还要比对响应体字段：普通用户拿到 `adminOnly`, `debug`, `internal`, `allUsers`, `exportUrl`, `flag` 等字段，即使状态码都是 200，也可能是功能级越权。
+
 ### 6. Spring Boot Actuator 端点利用
 
 Spring Boot Actuator 暴露了大量管理端点，常因疏忽未做鉴权：
@@ -499,6 +549,18 @@ Phase 4 — 权限提升
   └── 获取高权限后横向移动
 ```
 
+## 成功/失败样本
+
+| 样本 | 判断 |
+|---|---|
+| `403` → `200`，响应含管理字段 | 垂直越权 |
+| `401` → `302 /login` | 未认证，没进业务 |
+| `404` 但 `OPTIONS` 返回 `Allow: DELETE` | 隐藏端点存在 |
+| `405` | 路由存在，方法维度继续测 |
+| `409 invalid state` | 状态机生效，换步骤或并发 |
+| `200` 但响应只有空对象 | 可能做了字段级过滤 |
+| `202 accepted` | 异步任务已入队，去查任务/队列结果 |
+
 ## MCP 工具映射
 
 AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
@@ -519,9 +581,9 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 - OWASP: Testing for Bypassing Authorization Schema (WSTG-ATHZ-02)
 - PortSwigger: "How to Test API Versioning for Authorization Bugs"
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- 保存端点、角色、方法、API 版本、Content-Type、流程状态和完整请求/响应摘要。
+- 对角色矩阵记录最低可访问角色、预期角色、响应字段差异和业务副作用。
+- 对流程绕过记录状态机、跳过路径、资源状态变化、异步任务结果和失败样本。
+- 输出统一放入 `exports/ctf-website/<case>/`，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。

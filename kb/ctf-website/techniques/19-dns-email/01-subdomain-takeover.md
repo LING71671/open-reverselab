@@ -14,7 +14,7 @@ keywords: ["子域名接管", "DNS劫持", "CNAME接管", "dangling DNS", "S3 bu
 difficulty: "intermediate"
 tags: ["dns", "subdomain", "takeover", "cloud", "cname", "aws", "azure", "dangling-dns"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
@@ -38,6 +38,43 @@ SSL/TLS 证书颁发失败 (指向已删除的 CloudFront)
 ## 1. Cloud Service Fingerprints
 
 不同的云服务在被接管后有不同的指纹信号。快速识别服务类型是接管的关键。
+
+### DNS 状态机与置信度
+
+| DNS / HTTP 状态 | 解释 | 置信度 | 下一步 |
+|---|---|---|---|
+| `CNAME -> provider` 且 provider NXDOMAIN | dangling CNAME | 高 | 查 provider 是否允许同名 claim |
+| `CNAME -> provider` 且 HTTP provider 404 指纹 | 服务资源已释放 | 高 | 匹配指纹库，记录 claim 条件 |
+| `A -> 云 IP` 且 HTTP 特定 404 | 静态托管或 CDN 残留 | 中 | 查 IP 段和 Host header 行为 |
+| `NS -> 过期域名` | 子域委托失控 | 极高 | whois / resolver 双确认 |
+| `MX -> 第三方服务` 且域未配置 | 邮件接收链残留 | 高 | 查服务控制台 claim 条件 |
+| 只有 HTTP 404，无 DNS 第三方指向 | 普通不存在页面 | 低 | 降级为目录/虚拟主机枚举 |
+
+```python
+# takeover_confidence.py — DNS/HTTP 指纹置信度归一
+def takeover_confidence(record_type, target, http_text="", dns_error=None):
+    score = 0
+    reasons = []
+    if record_type in {"CNAME", "NS", "MX"}:
+        score += 2
+        reasons.append(record_type)
+    if dns_error in {"NXDOMAIN", "SERVFAIL", "NOERROR_NOANSWER"}:
+        score += 3
+        reasons.append(dns_error)
+    for service, sig in TAKEOVER_SIGNATURES.items():
+        if any(p.lower() in http_text.lower() for p in sig["detect"]):
+            score += 4
+            reasons.append(service)
+            break
+    if any(x in target for x in ["amazonaws.com", "azureedge.net", "github.io", "herokudns.com", "fastly.net"]):
+        score += 2
+        reasons.append("known_provider")
+    return {
+        "score": score,
+        "confidence": "high" if score >= 7 else "medium" if score >= 4 else "low",
+        "reasons": reasons,
+    }
+```
 
 ```python
 # takeover_fingerprints.py — 云服务指纹库
@@ -426,8 +463,8 @@ class SubdomainTakeoverScanner:
         return False, None
     
     def generate_takeover_proof(self, subdomain, service):
-        """生成接管 PoC (非破坏性)"""
-        # PoC 文件内容: 仅包含无害的接管证明
+        """生成接管 PoC"""
+        # PoC 文件内容: 唯一 proof 字符串，便于和其他缓存/镜像区分
         # 例如: 在注册的服务上创建 <h1>Subdomain Takeover PoC</h1>
         # 然后验证该内容出现在 subdomain 上
         
@@ -453,7 +490,7 @@ DNS Takeover PoC for {subdomain}:
 关键是: CNAME 的 target 可被注册
 
 # NS 记录 (权威域名服务器)
-最危险类型: 子域名委托给外部 NS → 该 NS 被删除
+高影响类型: 子域名委托给外部 NS → 该 NS 被删除
 攻击者注册该 NS → 完全控制子域名的所有 DNS 记录
 Real CVE: NS 子域名接管可控制包括 _acme-challenge 在内的所有记录
 
@@ -680,9 +717,14 @@ A 记录指向已释放 AWS/GCP 弹性 IP → 申请该 IP → 完全控制
 dangling TXT 记录 (SPF/DKIM) → 接管引用的服务 → 伪造邮件来源
 ```
 
-## 证据
+## Evidence
 
-记录: DNS 枚举结果 (所有子域名及对应服务类型)、HTTP 响应指纹、云服务 404 页截图、接管 PoC (只写入无害的接管证明文件，如 `<h1>Subdomain Takeover PoC - $(date)</h1>`)、DNS 传播确认。
+- `dns_records.json`: A/AAAA/CNAME/NS/MX/TXT、TTL、resolver、查询时间。
+- `http_fingerprints.json`: URL、状态码、server、body hash、provider 404/403 指纹。
+- `takeover_confidence.csv`: 子域名、record type、provider、置信度、claim 条件、阻断点。
+- `tls_probe.json`: SNI、证书 CN/SAN、证书错误、是否能签发/绑定自定义域。
+- 成功样本: dangling CNAME/NS/MX 与 provider 指纹同时命中，并可展示唯一 proof 字符串。
+- 失败样本: 只有普通 404、provider 明确 domain already owned、DNS 指向仍被原账号占用。
 
 ## MCP 工具映射
 

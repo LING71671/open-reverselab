@@ -14,7 +14,7 @@ keywords: ["XS-Leaks", "侧信道攻击", "跨域信息泄露", "Frame Counting"
 difficulty: "advanced"
 tags: ["xs-leaks", "browser", "side-channel", "cors", "timing-attack", "cache-probing", "corp"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
@@ -34,6 +34,52 @@ related_articles: []
 目标未设置 SameSite=Strict cookie
 目标存在搜索/API 端点，查询结果因关键词不同而响应不同
 页面内存在可缓存的资源，且 Cache-Control 允许共享缓存
+```
+
+## 0. Oracle 校准
+
+XS-Leaks 的核心不是“能测到时间”，而是构造稳定 oracle。先用已知状态做校准：登录/未登录、命中/未命中、存在/不存在各跑一组，再进入字符枚举。
+
+| oracle | 可读信号 | 适用目标 | 噪声来源 | 稳定条件 |
+|---|---|---|---|---|
+| frame count | `iframe.contentWindow.length` | 可嵌入页面 | 页面广告/AB 实验 | frame 数差值固定 |
+| load/error | `img/script/object` 事件 | MIME 或状态码差异 | 浏览器缓存、CORB | 命中与未命中事件不同 |
+| timing | median / trimmed mean | 搜索、重定向、压缩 | 网络抖动、CDN | 样本量 >= 30 且差值高于 stdev |
+| cache probing | 首次/二次加载时间 | 共享缓存资源 | cache partitioning | 同浏览器 profile 内稳定 |
+| performance | resource entries | redirect / resource size | TAO、浏览器版本 | entry 数或 duration 差异稳定 |
+| window state | `window.length` / opener | 登录页、弹窗 | COOP / XFO | 目标允许嵌入或打开 |
+
+```javascript
+// xs_oracle_calibrator.js — 对候选 oracle 做基线校准
+async function medianTiming(url, samples = 35) {
+  const times = [];
+  for (let i = 0; i < samples; i++) {
+    const t0 = performance.now();
+    try { await fetch(url + (url.includes('?') ? '&' : '?') + 'r=' + Math.random(), {mode: 'no-cors', credentials: 'include'}); }
+    catch (e) {}
+    times.push(performance.now() - t0);
+  }
+  times.sort((a, b) => a - b);
+  const trimmed = times.slice(Math.floor(samples * 0.2), Math.ceil(samples * 0.8));
+  return {
+    median: trimmed[Math.floor(trimmed.length / 2)],
+    min: trimmed[0],
+    max: trimmed[trimmed.length - 1],
+    raw: times
+  };
+}
+
+async function calibrateOracle(knownHit, knownMiss) {
+  const hit = await medianTiming(knownHit);
+  const miss = await medianTiming(knownMiss);
+  const delta = Math.abs(hit.median - miss.median);
+  return {
+    hit,
+    miss,
+    delta,
+    usable: delta > Math.max(5, (hit.max - hit.min + miss.max - miss.min) / 4)
+  };
+}
 ```
 
 ## 1. Frame Counting (window.length)
@@ -497,9 +543,14 @@ Web Locks API → 锁状态检测 → 用户活动状态 → 在线/离线检测
 Connection pool → 连接竞争 → 长连接检测 → WebSocket/SSE 活动推断
 ```
 
-## 证据
+## Evidence
 
-记录: 目标页面 URL、可嵌入状态 (X-Frame-Options/CORP/COOP/COEP)、检测到的差异维度 (timing/frame/API)、PoC 脚本输出、每位字符推断耗时表格、最终泄露数据的敏感级别。
+- `headers_matrix.txt`: XFO、CORP、COOP、COEP、Cache-Control、SameSite、TAO。
+- `oracle_calibration.json`: known-hit、known-miss、样本量、中位数、方差、delta、usable。
+- `xs_search_table.csv`: prefix、candidate、median、rank、second_best、confidence。
+- `browser_profile.md`: 浏览器版本、cache partitioning 状态、是否同 profile、是否登录。
+- 成功样本: 多轮采样后同一 candidate 稳定第一，最终能推出 flag / 状态 / 存在性。
+- 失败样本: hit/miss delta 小于噪声、COOP/XFO 阻断嵌入、TAO 缺失导致 performance entry 不可用。
 
 ## MCP 工具映射
 

