@@ -43,7 +43,7 @@ tags:
   - "card-platform"
   - "cdk"
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 # Card-Selling Platform Exploitation — 自动发卡平台攻击手册
@@ -121,11 +121,11 @@ Host: target.com
 2. 观察响应中是否包含多段错误页 + 数据页（堆叠输出特征）
 3. 检查 `orderid=0` 或缺失时是否返回超出预期的数据量
 
-### 修复
+### 下一跳
 
-- 所有校验分支加 `die()`/`exit()`/`return`
-- `orderid=0` 时拒绝请求
-- CDK 展示接口强制验证 skey 归属
+- 用响应长度、`<br/>` 数量、CDK 正则命中数判断是否全库渲染。
+- 记录 `orderid` 缺失、`orderid=0`、随机 `orderid` 三组响应 diff。
+- 若返回 HTML 中有分页/商品名/卡密字段，转入批量提取与去重。
 
 ## 2. P0: IDOR 无认证订单枚举
 
@@ -168,11 +168,11 @@ type=qq&qq=1&page=1
 
 `isnext=true` 时递增 `page` 参数即可翻页，遍历全站订单。也可通过 `type=1&qq=<数字>` 按订单 ID 精确搜索。
 
-### 修复
+### 下一跳
 
-- `act=query` 强制校验登录态
-- 只返回当前用户自己的订单
-- `result` 字段返回 CDK 字段样例
+- 固定匿名 session，按 `page` 递增直到 `isnext=false`。
+- 对 `type=qq/email/id` 分别测精确搜索，建立订单 ID 范围。
+- 将 `result/skey/id/input/money/status` 落成 CSV，供 `act=order` 二跳使用。
 
 ## 3. P0: IDOR 订单详情读取
 
@@ -205,10 +205,11 @@ id=176109&skey=aa39ed38cbfc86f8c8943f874665b118
 }
 ```
 
-### 修复
+### 下一跳
 
-- `act=order` 校验 skey 的同时校验登录态+订单归属
-- `islogin=null` 改为强制要求已登录
+- 用 `act=query` 泄露的 `id+skey` 进入详情接口。
+- 比较匿名、任意登录用户、订单所有者三种身份的字段差异。
+- 抽取 `kminfo/desc/alert/money/inputs/status`，给 XSS、支付、发货链路继续使用。
 
 ## 4. DOM-XSS: kminfo/desc 无转义
 
@@ -240,11 +241,11 @@ $('#alert_frame').html(descHtml);   // XSS sink
 2. 打开订单详情弹窗 → kminfo 直接拼入 HTML → XSS 执行
 3. 自定义元素绕过 WAF 写入 → 管理员查看时触发
 
-### 修复
+### 下一跳
 
-- `data.kminfo`、`data.result`、`data.desc` 渲染前统一使用 `$.text()` 或 DOMPurify
-- 商品描述渲染改用白名单 HTML 过滤
-- WAF 补充拦截自定义 HTML 元素及 `data:text/html` 格式
+- 定位 DOM sink：`innerHTML`、`.html()`、`unescape()`、字符串拼接。
+- 用无交互 payload 触发订单弹窗、商品详情、管理后台预览三个渲染点。
+- 若 CSP 限制脚本，转 CSS/DOM clobbering/HTML gadget，不停在 `alert(1)`。
 
 ## 5. 信息泄露: act=getcount
 
@@ -305,19 +306,16 @@ XSS 链路:
   └── act=gettool → desc escape/unescape → .html() → DOM-XSS
 ```
 
-## 8. 防御清单
+## 8. 实战判定矩阵
 
-| 优先级 | 措施 | 影响 |
-|--------|------|------|
-| P0 | 所有校验分支加 `die()`/`exit()` | 全量泄露 |
-| P0 | CDK 展示接口强制验证 skey 归属 | 全量泄露 |
-| P0 | `act=query` 强制登录 + 归属校验 | IDOR |
-| P0 | `act=order` skey + 登录态 + 归属三重校验 | IDOR |
-| P0 | kminfo/desc 渲染前消毒（DOMPurify） | XSS |
-| P1 | 支付回调强制签名校验 | 支付篡改 |
-| P1 | WAF 补充自定义元素 + data: URI 拦截 | XSS |
-| P2 | `act=getcount` 加登录态校验 | 信息泄露 |
-| P2 | 全局 CSRF Token（非仅 Referer 校验） | 全局 |
+| 信号 | Probe | 命中标志 | 下一跳 |
+|---|---|---|---|
+| `die/exit` 缺失 | 缺失 `orderid` / `orderid=0` | 错误页后继续出现 CDK/订单 HTML | 全量库存提取 |
+| `act=query` | 匿名 session + `page=1..N` | `isnext=true` 且 `result/skey` 出现 | 订单详情 IDOR |
+| `act=order` | `id+skey` | 匿名可读 `kminfo/money/inputs` | 数字商品发货链 |
+| `kminfo/desc` | 商品描述/卡密 HTML | 详情弹窗 DOM 执行 | 管理后台 XSS |
+| `getcount` | GET/POST + AJAX 头 | 订单数/金额/库存统计 | 估算枚举范围 |
+| 支付回调 | 空签名/错误签名/重放 | 订单状态或发货状态变化 | 支付绕过 |
 
 ## Evidence
 
@@ -328,7 +326,7 @@ XSS 链路:
 | 订单详情读取 | `act=order` 的 `id+skey` 请求、kminfo/money/inputs 字段 |
 | DOM-XSS | kminfo/desc 注入 payload、DOM sink、浏览器执行截图或控制台证据 |
 | 支付回调 | 未签名/错误签名回调请求、订单状态变化或明确错误差异 |
-| 约束效果 | 加认证/归属校验/输出编码后，同 payload 不再泄露或执行 |
+| 失败样本 | 只出现错误页、无 CDK 字段、`skey` 绑定订单所有者、回调明确签名失败且状态不变 |
 
 ## MCP 工具映射
 
@@ -344,5 +342,5 @@ XSS 链路:
 - [[sqli-nosqli]] — WAF 绕过与 SQL 注入
 - [[01-idor-enumeration]] — IDOR 枚举技术
 - [[payment-php]] — PHP 支付专项攻击
-- [[payment-digital-goods]] — 数字商品交付安全
+- [[payment-digital-goods]] — 数字商品交付
 - [[file-upload-xxe-lfi]] — XXE 与文件包含

@@ -10,13 +10,13 @@ summary_en: >
   systems, with differential experiment methodology, runnable probe scripts, and white-box audit guidance.
 board: "ctf-website"
 category: "12-payment"
-signals: ["lost update", "余额扣减", "竞态条件", "read-modify-write", "TOCTOU", "quota", "并发安全", "差分实验"]
+signals: ["lost update", "余额扣减", "竞态条件", "read-modify-write", "TOCTOU", "quota", "并发一致性", "差分实验"]
 mcp_tools: ["kb_router", "http_probe"]
-keywords: ["lost update", "余额丢失", "竞态条件", "race condition", "TOCTOU", "并发安全", "余额扣减绕过", "quota bypass"]
+keywords: ["lost update", "余额丢失", "竞态条件", "race condition", "TOCTOU", "并发一致性", "余额扣减绕过", "quota bypass"]
 difficulty: "advanced"
 tags: ["payment", "race-condition", "database", "concurrency", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/12-payment/payment-bypass"]
 ---
 # Payment Race / Lost Update — 余额扣减丢失更新
@@ -191,6 +191,32 @@ POST      /api/coupon/redeem
 - 等待结算窗口后差异仍存在；
 - 最好再有一项白盒证据：整行 `Save(user)`、无条件 UPDATE、乐观锁 0 行未处理、事务边界错误或 SQL 日志交错。
 
+### 7.1.1 三账本 Oracle
+
+余额竞态最终看三本账是否对得上：服务消耗、余额扣减、流水记录。
+
+| 账本 | 观测字段 | 命中信号 |
+|---|---|---|
+| 服务账本 | 成功请求数、token usage、发货数、quota usage | 工作量已经完成 |
+| 余额账本 | `balance/quota/credits` 前后差 | 扣减小于服务成本 |
+| 流水账本 | `ledger/bill/order_item` 行数与 cost | 流水缺失或重复 |
+
+```python
+# lost_update_ledger_oracle.py — 三账本一致性判定
+def classify_lost_update(before, after, usage_cost, ledger_rows):
+    balance_delta = before["balance"] - after["balance"]
+    ledger_cost = sum(row.get("cost", 0) for row in ledger_rows)
+    return {
+        "usage_cost": usage_cost,
+        "balance_delta": balance_delta,
+        "ledger_cost": ledger_cost,
+        "lost_balance": usage_cost > balance_delta,
+        "missing_ledger": usage_cost > ledger_cost,
+        "double_entitlement": after.get("entitlements", 0) > before.get("entitlements", 0)
+                              and balance_delta == 0,
+    }
+```
+
 ### 7.2 常见误报
 
 | 现象 | 更可能的解释 | 验证 |
@@ -235,7 +261,7 @@ WHERE id = :id AND quota >= :cost;
 
 随后严格检查影响行数。需要乐观锁时，冲突必须有限次重读重算；订单、账单和 quota 变更应放在同一事务，并通过唯一约束/幂等键阻止重复结算。
 
-## 9. 修复与回归测试
+## 9. 实现判定与回归不变量
 
 1. Profile API 使用字段白名单更新，禁止把 quota、balance、role、version 从客户端对象带入。
 2. 扣减使用原子 SQL，或 `SELECT ... FOR UPDATE` 后在同一事务计算和提交。
@@ -280,7 +306,7 @@ XFF 信任错误 → 绕过限流 → 扩大 race 窗口
 |---|---|---|
 | 信号路由 | `kb_router` | 检索 lost update、payment race、quota、TOCTOU |
 | 端点基线 | `http_probe` | 验证 self、计费、余额 oracle |
-| 浏览器会话/网络 | `jshook` | 从授权浏览器会话观察 API、Cookie、响应时序 |
+| 浏览器会话/网络 | `jshook` | 从当前浏览器会话观察 API、Cookie、响应时序 |
 | 精确并发 | Burp Turbo Intruder | gate/last-byte synchronization |
 | 差分复现 | `scripts/ctf-website/payment_lost_update_probe.py` | control/race、证据 JSON、flag regex |
 

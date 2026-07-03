@@ -12,11 +12,11 @@ board: "ctf-website"
 category: "12-payment"
 signals: ["IAP", "内购", "receipt验证", "purchaseToken", "卡密", "虚拟货币", "license key", "数字商品", "铸币攻击"]
 mcp_tools: ["http_probe", "kb_router"]
-keywords: ["IAP攻击", "receipt绕过", "卡密系统", "虚拟货币", "license key逆向", "内购安全", "digital goods", "Google Play"]
+keywords: ["IAP攻击", "receipt绕过", "卡密系统", "虚拟货币", "license key逆向", "内购绕过", "digital goods", "Google Play"]
 difficulty: "advanced"
-tags: ["payment", "iap", "digital-goods", "virtual-currency", "license-key", "mobile-security"]
+tags: ["payment", "iap", "digital-goods", "virtual-currency", "license-key", "mobile"]
 language: "zh-CN"
-last_updated: "2026-06-25"
+last_updated: "2026-07-04"
 related_articles: ["ctf-website/12-payment/payment-bypass", "ctf-website/12-payment/payment-subscription"]
 ---
 # Payment Digital Goods & IAP — 虚拟商品/内购攻击手册
@@ -541,6 +541,44 @@ PLATFORM_DIFF_MATRIX = {
 
 ### 8.1 发货幂等绕过
 
+### 8.0 发货账本 Oracle
+
+数字商品一旦被返回，很多场景不可回收；所以要同时看订单账本、发货账本和库存账本。
+
+| 账本 | 字段 | 命中信号 |
+|---|---|---|
+| 订单账本 | `order.status`, `paid_at`, `refund_status` | 未 paid / refunded 仍可发货 |
+| 发货账本 | `delivery_id`, `license_key`, `download_url`, `entitlement_id` | 同订单多条发货记录 |
+| 库存账本 | `cdkey.used`, `stock`, `reserved` | 库存未扣或重复扣错 |
+| 权益账本 | `vip_until`, `coins`, `points`, `quota` | 退款后权益保留 |
+
+```python
+# digital_goods_oracle.py — 数字商品三账本快照
+def digital_goods_snapshot(session, base, order_id):
+    paths = {
+        "order": f"/api/orders/{order_id}",
+        "delivery": f"/api/orders/{order_id}/delivery",
+        "entitlement": f"/api/orders/{order_id}/entitlements",
+        "refund": f"/api/refunds?order_id={order_id}",
+    }
+    out = {}
+    for name, path in paths.items():
+        r = session.get(base.rstrip("/") + path, timeout=10)
+        try:
+            body = r.json()
+        except Exception:
+            body = r.text[:500]
+        out[name] = {"status": r.status_code, "body": body}
+    return out
+
+def delivery_hit(before, after):
+    text_before = str(before).lower()
+    text_after = str(after).lower()
+    return any(x in text_after and x not in text_before for x in [
+        "license", "cdkey", "download", "entitlement", "vip", "flag{", "ctf{"
+    ])
+```
+
 ```python
 # 数字商品发货是不可逆的:
 # 一旦返回 license_key/cdkey/download_link → 用户永久持有
@@ -687,3 +725,12 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 |---------|---------|------|
 | 数字商品 API 探测 | `http_probe` | HTTP GET 探测数字商品/兑换端点 |
 | 知识检索 | `kb_router` | 按数字商品攻击信号搜索知识库 |
+
+## Evidence
+
+- `receipt_validation.json`: receipt/purchaseToken、product_id、账号、验证响应、发货状态。
+- `delivery_ledger.csv`: order_id、delivery_id、license/CDK hash、发货次数、库存变化。
+- `refund_entitlement.json`: 退款前后订单、权益、余额、库存、下载链接状态。
+- `cdkey_race.json`: 并发数、成功兑换数、最终 used 状态、到账权益数。
+- 成功样本: 未支付/低价/退款后仍拿到 license、CDK、下载链接、VIP、积分或 flag。
+- 失败样本: receipt 绑定账号和 bundle、发货幂等生效、退款回收权益、CDK used 原子更新。
