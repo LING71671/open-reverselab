@@ -11,13 +11,77 @@ category: "06-file-attacks"
 signals: ["file upload", "XXE", "LFI", "path traversal", "文件上传", "路径穿越", "PHP wrapper", "盲XXE"]
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["文件上传绕过", "XXE", "LFI", "路径穿越", "PHP wrapper", "文件包含", "Zip Slip", "Blind XXE", "Session Upload Progress", "PDF生成RCE"]
-difficulty: "intermediate"
-tags: ["file-upload", "xxe", "lfi", "path-traversal", "web-security", "ctf"]
+difficulty: "advanced"
+tags: ["file-upload", "xxe", "lfi", "path-traversal", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/04-ssrf/ssrf", "ctf-website/03-injection/ssti", "ctf-website/24-database/04-config-exposure", "ctf-website/24-database/05-backup-log-leak", "ctf-website/12-payment/platform-fingerprints", "ctf-website/12-payment/payment-callback-async"]
 ---
 # File Upload / XXE / LFI / Path Traversal
+
+## 0. 文件入口到运行时/配置/支付链
+
+文件攻击不要按“上传成功”结束，要判断文件最终进入了哪个运行时：Web server、图片处理器、XML parser、压缩解包器、PDF 渲染器、模板引擎、对象存储或后台导出。每个运行时对应不同下一跳。
+
+| 入口 | 关键证据 | 第一动作 | 下一跳 |
+|---|---|---|---|
+| 上传头像/附件 | 保存路径、访问 URL、Content-Type | filename/MIME/魔数差分 | Web server 解析、PHAR |
+| XML/SVG/Office | XML parser 报错、OOB 请求 | 外部实体、参数实体、DTD | SSRF、文件读 |
+| 下载/预览 | `file/path/url/key` 参数 | 路径穿越、wrapper、对象存储 key | LFI、配置泄露 |
+| Zip/导入包 | 文件列表和落地路径差异 | local header/central dir 错位 | Zip Slip、覆盖配置 |
+| PDF/截图 | headless/wkhtmltopdf 指纹 | `file://`, redirect, JS 读文件 | 本地文件、SSRF |
+| 支付附件/发票 | invoice/order/export 文件 | 跨订单下载、导出路径 | 支付 IDOR、账本泄露 |
+| 配置/日志 | `.env`, `database.php`, `runtime.log` | 抽 DB/Redis/queue/secret | 数据库、回调签名 |
+
+文件链路路由器：
+
+```python
+# file_attack_route_matrix.py
+import csv
+import hashlib
+import re
+from pathlib import Path
+
+ROUTES = {
+    "database_config": re.compile(r"(DB_HOST|DB_PASSWORD|DATABASE_URL|redis|mysql|postgres|mongodb)", re.I),
+    "payment_secret": re.compile(r"(pay_secret|webhook_secret|notify_url|out_trade_no|stripe|epay|alipay|wechat)", re.I),
+    "php_runtime": re.compile(r"(<\\?php|phar://|session.upload_progress|open_basedir)", re.I),
+    "cloud_secret": re.compile(r"(AWS_ACCESS_KEY|AKIA|GOOGLE_APPLICATION_CREDENTIALS|AZURE_CLIENT)", re.I),
+    "flag": re.compile(r"(flag\\{|CTF\\{|DASCTF\\{)", re.I),
+}
+
+def classify_text(name, data):
+    text = data.decode("utf-8", "ignore")
+    hits = [route for route, rx in ROUTES.items() if rx.search(text)]
+    return {
+        "file": name,
+        "size": len(data),
+        "sha1": hashlib.sha1(data[:4096]).hexdigest()[:12],
+        "routes": ",".join(hits),
+        "sample": text[:180].replace("\n", "\\n"),
+    }
+
+def classify_exports(root="exports/file_leaks", out="exports/file_attack_route_matrix.csv"):
+    rows = []
+    for path in Path(root).rglob("*"):
+        if path.is_file():
+            rows.append(classify_text(str(path), path.read_bytes()))
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        fieldnames = ["file", "size", "sha1", "routes", "sample"]
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+```
+
+执行节奏：
+
+1. 先确认入口运行时：上传保存、下载读取、XML 解析、PDF 渲染、压缩解包还是对象存储代理。
+2. 所有命中文件统一放进 `exports/file_leaks/`，跑 `file_attack_route_matrix.py` 分类。
+3. 命中数据库配置后立刻转数据库配置/备份文档，抽连接串和表前缀。
+4. 命中 `pay_secret/notify_url/out_trade_no` 后转支付回调文档，构造签名和状态差分。
+5. 命中 SSRF/OOB 时回到 SSRF 文档，按 metadata、数据库端口、内部 API 继续分流。
 
 ## 1. 文件上传绕过
 
@@ -528,7 +592,7 @@ await page.pdf({path: 'output.pdf'});
 
 ## Evidence
 
-记录: multipart 原始请求、filename/MIME/魔数、保存路径、访问路径、Web server 解析结果、XXE 实体 payload、LFI 命中文件前 200 字节、wrapper 类型、callback IP/时间、失败样本。
+记录: multipart 原始请求、filename/MIME/魔数、保存路径、访问路径、Web server 解析结果、XXE 实体 payload、LFI 命中文件前 200 字节、wrapper 类型、callback IP/时间、配置/支付字段分类、失败样本。
 
 ## MCP 工具映射
 
@@ -538,3 +602,5 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 |---------|---------|------|
 | 文件上传/XXE/LFI 端点探测 | `http_probe` | HTTP GET 探测文件操作入口点 |
 | 知识检索 | `kb_router` | 按文件攻击信号搜索知识库 |
+| 读取关联文档 | `kb_read_file` | 跳 SSRF、数据库配置、支付回调、SSTI |
+| 执行脚本 | `run_ctf_tool` | 跑 filename fuzz、XXE OOB、LFI wordlist 和泄露分类 |

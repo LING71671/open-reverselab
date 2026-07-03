@@ -11,11 +11,11 @@ category: "03-injection"
 signals: ["GraphQL", "introspection", "schema", "batch query", "alias", "fragment", "subscription", "field suggestion"]
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["GraphQL攻击", "introspection", "GraphQL注入", "batch query", "alias绕过", "DoS", "subscription", "clairvoyance"]
-difficulty: "intermediate"
-tags: ["injection", "graphql", "api", "web-security", "dos", "ctf"]
+difficulty: "advanced"
+tags: ["injection", "graphql", "api", "dos", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/17-api-attacks/01-api-discovery-leak", "ctf-website/14-idor/01-idor-enumeration", "ctf-website/14-idor/02-bac-business-logic", "ctf-website/15-mass-assignment/01-mass-assignment", "ctf-website/24-database/02-sqli-advanced", "ctf-website/12-payment/payment-logic"]
 ---
 
 # GraphQL 攻击实战
@@ -46,6 +46,62 @@ GraphQL 不只是一条 `POST /graphql`。同一个 resolver 可能被 JSON body
 | APQ | `extensions.persistedQuery` | hash lookup/注册 | `PersistedQueryNotFound` |
 
 先用 `{__typename}` 测入口，再切换 transport；如果 POST 被拦，GET、batch、APQ 经常还能触发同一 resolver。
+
+### 0.1 Schema 到对象/支付/SQL 路由
+
+GraphQL 的价值不只是拖 schema，而是把 type、field、resolver 参数映射成对象图谱。拿到 `Order`, `Payment`, `Invoice`, `User`, `File`, `Coupon` 这类类型后，马上按字段能力分流到 IDOR、BAC、Mass Assignment、SQL/NoSQL 和支付状态机。
+
+| Schema 信号 | 关键字段 | 第一动作 | 下一跳 |
+|---|---|---|---|
+| `User`, `Account`, `Organization` | `id`, `role`, `isAdmin`, `tenantId` | alias 批量查 ID 与 role | IDOR、BAC、字段级 resolver |
+| `Order`, `Cart`, `Checkout` | `orderNo`, `amount`, `status`, `items` | 跨账号/跨状态查询 | 支付逻辑、状态机 |
+| `Payment`, `Invoice`, `Refund` | `transactionId`, `paidAt`, `refundId`, `provider` | 查询支付流水与回调字段 | 回调重放、SQL 账本 |
+| `Coupon`, `GiftCard`, `License` | `code`, `balance`, `downloadUrl`, `secret` | 批量 alias/fragment 拉取 | 数字商品、卡密泄露 |
+| `MutationInput` | `role`, `status`, `amount`, `ownerId` | input 字段注入 | Mass Assignment |
+| `filter`, `where`, `orderBy` | JSON/字符串过滤 DSL | 特殊字符和对象变量 | SQLi/NoSQLi |
+| `Upload`, `File`, `Attachment` | `filename`, `url`, `path`, `contentType` | multipart resolver | 文件上传、LFI、XXE |
+
+Schema 路由器：
+
+```python
+# graphql_schema_router.py
+import json
+import re
+from pathlib import Path
+
+ROUTES = {
+    "payment": re.compile(r"(order|cart|checkout|payment|invoice|refund|transaction|coupon|gift|license)", re.I),
+    "identity": re.compile(r"(user|account|org|tenant|role|admin|permission)", re.I),
+    "database": re.compile(r"(filter|where|orderBy|sort|limit|offset|ids|query)", re.I),
+    "file": re.compile(r"(upload|file|attachment|path|filename|download)", re.I),
+    "secret": re.compile(r"(token|secret|key|signature|webhook|callback)", re.I),
+}
+
+def walk_type(t):
+    for field in t.get("fields") or []:
+        name = f"{t.get('name')}.{field.get('name')}"
+        args = ",".join(a.get("name", "") for a in field.get("args") or [])
+        text = f"{name} {args}"
+        hits = [route for route, rx in ROUTES.items() if rx.search(text)]
+        if hits:
+            yield {"type": t.get("name"), "field": field.get("name"), "args": args, "routes": hits}
+
+def route_schema(schema_json, out="exports/graphql_route_map.json"):
+    data = json.loads(Path(schema_json).read_text(encoding="utf-8"))
+    types = data.get("data", {}).get("__schema", {}).get("types", [])
+    rows = [row for t in types for row in walk_type(t)]
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    Path(out).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    return rows
+```
+
+执行节奏：
+
+1. 先抓 transport：POST/GET/batch/alias/multipart/WebSocket/APQ 哪些能进 resolver。
+2. 生成 `graphql_route_map.json`，把字段按 `payment/identity/database/file/secret` 分组。
+3. 对 `Order/Payment/Invoice` 类型先跑 alias IDOR，不要只查 `viewer`。
+4. 对 `MutationInput` 先跑字段注入，尤其是 `status/amount/role/ownerId/tenantId`。
+5. 对 `filter/where/orderBy` 用 SQL/NoSQL 语义 payload，观察 GraphQL 类型错误和 DB 错误的边界。
 
 ## 1. Introspection 拖 Schema
 
@@ -384,7 +440,7 @@ python3 graphw00f.py -t https://target.com/graphql
 # Clairvoyance — 绕过 introspection 禁用提取 schema
 python3 clairvoyance.py -o schema.json https://target.com/graphql
 
-# GraphQL Cop (Burp) — 安全扫描
+# GraphQL Cop (Burp) — Schema/批量检查
 # InQL (Burp) — IDE + 攻击
 # CrackQL — 批量爆破/注入
 python3 crackql.py -t https://target.com/graphql -q queries.graphql -w wordlist.txt
@@ -395,7 +451,7 @@ python3 crackql.py -t https://target.com/graphql -q queries.graphql -w wordlist.
 
 ## Evidence
 
-记录: introspection/schema JSON、field suggestion 泄露字段名、transport 类型、operationName、variables、batch/alias 数量、subscription 连接消息、APQ hash 与响应、成功字段路径和失败样本。
+记录: introspection/schema JSON、field suggestion 泄露字段名、transport 类型、operationName、variables、batch/alias 数量、subscription 连接消息、APQ hash 与响应、成功字段路径、底层 SQL/NoSQL 报错、订单/支付字段差分和失败样本。
 
 ## 13. 攻击链
 
@@ -418,4 +474,6 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 |---------|---------|------|
 | GraphQL 端点探测 | `http_probe` | GET /graphql?query={__schema{types{name}}} |
 | 按信号查技术 | `kb_router` | 搜索 graphql 相关技术文件 |
+| 读取关联文档 | `kb_read_file` | 跳转 IDOR、Mass Assignment、SQLi、支付逻辑 |
+| 执行批量脚本 | `run_ctf_tool` | 跑 alias/batch/schema route 脚本 |
 
