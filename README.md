@@ -60,13 +60,19 @@ cases/        → Lightweight index — no large file copies
 ## Installation
 
 On Windows, beginners can double-click `START_HERE.bat` or `START_HERE.cmd`
-from the repository root. It checks the workspace, verifies `reverse_lab_tools`
-MCP, creates core wrappers, and leaves the result window open.
+from the repository root. It checks Python, uv, Git, workspace layout, and
+`reverse_lab_tools` MCP; creates core wrappers; runs real MCP tool calls; gives
+install advice for missing items; and writes `reports/misc/first-run-report.json`
+plus `reports/misc/mcp-smoke-report.json`.
+
+To have an AI Agent perform setup for you, copy the [AI install prompt](templates/prompts/ai-install.en.md) into Codex or Claude Code.
+If you are not sure where to start, open [START.md](START.md).
 
 ```powershell
 git clone https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
 python scripts/misc/first_run_check.py       # Check workspace + reverse_lab_tools MCP
+uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report
 .\scripts\misc\bootstrap.ps1              # Core script wrappers (no downloads)
 .\scripts\misc\install_tools.ps1 -CTF       # Web tools
 .\scripts\misc\install_tools.ps1 -Android   # APK tools
@@ -80,7 +86,9 @@ python scripts/misc/first_run_check.py       # Check workspace + reverse_lab_too
 2. Windows: double-click `START_HERE.bat` or `START_HERE.cmd` for the first-run check.
 3. Claude Code: `cd <workspace>/open-reverselab` before starting the session.
 4. Codex APP: open the existing `open-reverselab` folder directly.
-5. After moving machines or changing MCP settings, run `python scripts/misc/first_run_check.py` and confirm `.mcp.json` contains `reverse_lab_tools`.
+5. AI-assisted setup: copy [templates/prompts/ai-install.en.md](templates/prompts/ai-install.en.md) into your AI Agent.
+6. Create a task: `python scripts/misc/new_task.py --board ctf-website --name <name>`.
+7. After moving machines or changing MCP settings, run `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report` and confirm MCP tool calls pass.
 
 Post-install verification:
 

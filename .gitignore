@@ -16,6 +16,9 @@ node_modules/
 
 # Logs
 logs/*.log
+logs/**
+!logs/
+!logs/.gitkeep
 
 # ── Tools: ignore binaries, keep README.md + .gitkeep ──
 tools/common/**
@@ -42,6 +45,19 @@ tools/ctf-website/burp/
 tools/ctf-website/browser/
 
 # ── Content dirs: ignore binaries, keep README.md + .gitkeep ──
+cases/**
+!cases/
+!cases/README.md
+!cases/AI-USAGE.md
+!cases/_archive/
+!cases/_archive/.gitkeep
+!cases/_templates/
+!cases/_templates/.gitkeep
+notes/**
+!notes/
+!notes/**/
+!notes/**/README.md
+!notes/**/.gitkeep
 projects/**
 !projects/**/
 !projects/**/README.md

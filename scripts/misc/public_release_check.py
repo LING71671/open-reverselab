@@ -31,6 +31,17 @@ CRITICAL_FILES = [
 ]
 STUB_MARKERS = ("not yet implemented", "backend not yet configured", "TODO: Plan CVE")
 KB_DERIVED_FILES = {"docs/llms-full.txt", "docs/llms.txt"}
+LOCAL_EVIDENCE_ROOTS = {"cases", "exports", "logs", "notes", "reports", "samples", "patches", "projects"}
+LOCAL_EVIDENCE_ALLOWED_NAMES = {"README.md", "AI-USAGE.md", ".gitkeep"}
+
+
+def is_allowed_public_skeleton(rel: Path) -> bool:
+    parts = rel.parts
+    if not parts or parts[0] not in LOCAL_EVIDENCE_ROOTS:
+        return True
+    if rel.name in LOCAL_EVIDENCE_ALLOWED_NAMES:
+        return True
+    return False
 
 
 def tracked_files(staged: bool = False) -> list[Path]:
@@ -71,6 +82,10 @@ def main() -> int:
         failures.append("release candidate is empty")
     private_roots = [x for x in os.environ.get("REVERSELAB_PRIVATE_ROOTS", "").split(os.pathsep) if x]
     for path in files:
+        rel = path.relative_to(ROOT)
+        if not is_allowed_public_skeleton(rel):
+            failures.append(f"local evidence or workspace artifact must not be public: {rel}")
+            continue
         if path.suffix.lower() not in TEXT_EXTS and path.name not in {"LICENSE", ".env.example"}:
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -84,7 +99,6 @@ def main() -> int:
         # KB pages intentionally contain synthetic attack snippets. Keep strong
         # token/key patterns enabled everywhere, but apply assignment heuristics
         # only to executable/config content to avoid treating examples as leaks.
-        rel = path.relative_to(ROOT)
         rel_parts = rel.parts
         if "kb" not in rel_parts and rel.as_posix() not in KB_DERIVED_FILES and re.search(
             r"(?im)^[^#\n]*(?:password|passwd|api[_-]?key|token|secret)[ \t]*=[ \t]*[^\s#]+",

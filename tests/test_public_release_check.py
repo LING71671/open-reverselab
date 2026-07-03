@@ -29,3 +29,25 @@ def test_kb_derived_dumps_are_exempt_from_credential_heuristic():
     # KB's synthetic credential snippets and must be exempt like kb/ itself.
     assert "docs/llms-full.txt" in public_release_check.KB_DERIVED_FILES
     assert "docs/llms.txt" in public_release_check.KB_DERIVED_FILES
+
+
+def test_local_evidence_roots_allow_only_public_skeletons():
+    allowed = [
+        "cases/README.md",
+        "cases/AI-USAGE.md",
+        "cases/_templates/.gitkeep",
+        "notes/windows/README.md",
+        "reports/misc/.gitkeep",
+    ]
+    blocked = [
+        "cases/demo/ai_manifest.json",
+        "notes/windows/demo.md",
+        "reports/windows/demo/final.md",
+        "exports/ctf-website/demo/request.txt",
+        "logs/mcp_server.log",
+    ]
+
+    for rel in allowed:
+        assert public_release_check.is_allowed_public_skeleton(public_release_check.Path(rel))
+    for rel in blocked:
+        assert not public_release_check.is_allowed_public_skeleton(public_release_check.Path(rel))

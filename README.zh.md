@@ -60,13 +60,19 @@ cases/        → 轻量索引，不复制大文件
 
 ## 安装
 
-Windows 新手优先双击根目录的 `START_HERE.bat` 或 `START_HERE.cmd`。它会自动检查工作区、确认
-`reverse_lab_tools` MCP、生成核心 wrappers，并在窗口里给出下一步提示。
+Windows 新手优先双击根目录的 `START_HERE.bat` 或 `START_HERE.cmd`。它会自动检查
+Python / uv / Git / `reverse_lab_tools` MCP、生成核心 wrappers，给出缺失项安装建议，
+真实调用 MCP 核心工具，并写入 `reports/misc/first-run-report.json` 与
+`reports/misc/mcp-smoke-report.json`。
+
+想让 AI 代装时，复制 [给 AI 的安装提示词](templates/prompts/ai-install.zh.md) 给 Codex 或 Claude Code。
+不知道从哪里开始时，先看 [START.md](START.md)。
 
 ```powershell
 git clone https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
 python scripts/misc/first_run_check.py       # 确认目录和 reverse_lab_tools MCP
+uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report
 .\scripts\misc\bootstrap.ps1                 # 生成核心脚本 wrappers
 .\scripts\misc\install_tools.ps1 -CTF       # Web 工具
 .\scripts\misc\install_tools.ps1 -Android   # APK 工具
@@ -80,7 +86,9 @@ python scripts/misc/first_run_check.py       # 确认目录和 reverse_lab_tools
 2. Windows：双击 `START_HERE.bat` 或 `START_HERE.cmd` 完成首次检查。
 3. Claude Code：先 `cd <workspace>/open-reverselab`，再启动会话。
 4. Codex APP：直接打开现有的 `open-reverselab` 文件夹。
-5. 每次换机器或重配 MCP 后，运行 `python scripts/misc/first_run_check.py`，确认 `.mcp.json` 中存在 `reverse_lab_tools`。
+5. AI 代装：复制 [templates/prompts/ai-install.zh.md](templates/prompts/ai-install.zh.md) 里的提示词。
+6. 创建任务：`python scripts/misc/new_task.py --board ctf-website --name <name>`。
+7. 每次换机器或重配 MCP 后，运行 `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report`，确认 MCP 真实可调用。
 
 ## 迭代模式
 
