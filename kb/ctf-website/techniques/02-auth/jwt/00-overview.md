@@ -10,7 +10,7 @@ board: "ctf-website"
 category: "02-auth"
 signals: ["JWT", "签名绕过", "算法混淆", "kid注入", "jku", "x5u", "弱密钥", "token窃取"]
 mcp_tools: ["run_ctf_tool", "http_probe", "kb_router"]
-keywords: ["JWT攻击", "JSON Web Token", "JWT安全", "签名绕过", "算法混淆", "jwt_tool", "jwt攻击面", "Bearer Token"]
+keywords: ["JWT攻击", "JSON Web Token", "JWT", "签名绕过", "算法混淆", "jwt_tool", "jwt攻击面", "Bearer Token"]
 difficulty: "intermediate"
 tags: ["authentication", "jwt", "token", "web-security", "signature-bypass", "ctf"]
 language: "zh-CN"
@@ -74,7 +74,7 @@ base64url(Header).base64url(Payload).base64url(Signature)
                          XSS / 日志
                          Referer 泄露
                          明文传输
-                         insecure 存储
+                         前端存储
 ```
 
 ## 攻击手法索引
@@ -89,7 +89,7 @@ base64url(Header).base64url(Payload).base64url(Signature)
 | 06 | `jwt-claim-missing.md` | Claim 缺失 + 混用 | exp/aud/iss 未验证，ID Token 当 Access Token |
 | 07 | `jwt-theft-replay.md` | 窃取与重放 | XSS/日志/Referer 泄露 + 无状态无法撤销 |
 | 08 | `jwt-cve-library.md` | CVE与依赖库 | 库实现缺陷导致验签绕过 |
-| 09 | `jwt-toolchain-defense.md` | 工具链+对抗 | 攻击套件、标准流程、对抗矩阵 |
+| 09 | `09-toolchain-operations.md` | 工具链+操作 | 攻击套件、路由流程、结果矩阵 |
 
 ## 快速决策树
 

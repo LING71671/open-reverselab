@@ -47,7 +47,7 @@
         "02-auth/jwt/06-claim-missing.md",
         "02-auth/jwt/07-theft-replay.md",
         "02-auth/jwt/08-cve-library.md",
-        "02-auth/jwt/09-toolchain-defense.md"
+        "02-auth/jwt/09-toolchain-operations.md"
       ],
       "priority": 10
     },

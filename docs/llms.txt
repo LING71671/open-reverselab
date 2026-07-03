@@ -43,9 +43,9 @@
   >
 - [JWT Theft, Replay, and Persistence](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/07-theft-replay/)
   >
-- [JWT Library Vulnerabilities (CVE)](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/08-cve-library/)
+- [JWT Library CVEs and Fingerprint Routing](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/08-cve-library/)
   >
-- [JWT Toolchain, Attack Workflow, and Defense Matrix](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-defense/)
+- [JWT Toolchain, Operations Workflow, and Result Matrix](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-operations/)
   >
 - [LDAP Injection](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/ldap-injection/)
   >
