@@ -1,0 +1,49 @@
+{
+  "name": "ReverseLab GUI",
+  "id": "reverselab-gui",
+  "version": "0.1.0",
+  "channel": "dev",
+  "entry": {
+    "windows": "ReverseLabGUI.exe",
+    "portableScript": "ReverseLabGUI.ps1",
+    "developerScript": "scripts/gui/reverselab_opencode_gui.ps1"
+  },
+  "desktopShell": {
+    "framework": ".NET WinForms",
+    "webview": "Microsoft Edge WebView2",
+    "mode": "embedded-local-gui"
+  },
+  "ports": {
+    "gui": 8765,
+    "opencode": 4096
+  },
+  "architecture": {
+    "product": "ReverseLab GUI",
+    "runtime": "OpenCode",
+    "runtimeMode": "bundled-or-discovered",
+    "designModel": "OpenDesign adapter"
+  },
+  "workspace": {
+    "mode": "bundled-or-selected",
+    "requiredFiles": [
+      "AI-USAGE.md",
+      "boards/ctf-website/AI-USAGE.md",
+      "kb/ctf-website/techniques/attack-network.md",
+      "scripts/ctf-website/kb_router.py",
+      "tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py"
+    ],
+    "dataDirs": [
+      "cases",
+      "exports",
+      "notes",
+      "reports",
+      "samples"
+    ]
+  },
+  "defaultRoute": "ctf-website",
+  "defaultScreen": "ctf-workbench",
+  "defaultAgent": "reverselab-ctf",
+  "executionMode": "local-unrestricted",
+  "reviewBoundary": "provider-side",
+  "networkExposure": "loopback-only"
+}

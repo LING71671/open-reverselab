@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ReverseLab GUI - CTF Workbench</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">RL</div>
+          <div>
+            <h1>ReverseLab GUI</h1>
+            <p>CTF Website Workbench</p>
+          </div>
+        </div>
+        <nav>
+          <button class="nav-item active">CTF Website</button>
+          <button class="nav-item" disabled>APK Reverse</button>
+          <button class="nav-item" disabled>PE Reverse</button>
+          <button class="nav-item" disabled>General</button>
+        </nav>
+        <section class="runtime-card">
+          <h2>Runtime</h2>
+          <dl id="runtime"></dl>
+        </section>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="kicker">Route invariant</p>
+            <h2>AI-USAGE -> attack-network -> kb_router -> technique -> tools -> evidence</h2>
+          </div>
+          <button id="refreshArtifacts" class="secondary">刷新证据</button>
+        </header>
+
+        <section class="case-band">
+          <label>
+            Case
+            <input id="caseName" value="ctf-workbench" autocomplete="off">
+          </label>
+          <label>
+            Target / Signal Source
+            <input id="target" placeholder="https://target.local 或当前观察到的入口">
+          </label>
+          <label>
+            Board
+            <input value="ctf-website" disabled>
+          </label>
+        </section>
+
+        <section class="grid">
+          <section class="panel router-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Signal Router</h3>
+                <p>调用现有 CTF KB 路由，不改知识库。</p>
+              </div>
+              <button id="routeBtn">路由信号</button>
+            </div>
+            <textarea id="signal" placeholder="输入信号：JWT、SQLi 报错、SSRF hint、产品版本、header、route、CVE 指纹...">jwt</textarea>
+            <div id="routeResults" class="result-list"></div>
+            <details>
+              <summary>kb_router.py raw output</summary>
+              <pre id="rawOutput"></pre>
+            </details>
+          </section>
+
+          <section class="panel technique-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Technique Reader</h3>
+                <p>读取 kb/ctf-website/techniques 下的原始 Markdown。</p>
+              </div>
+            </div>
+            <div id="techniqueTitle" class="file-title">尚未选择技术文件</div>
+            <pre id="techniqueContent" class="markdown-view"></pre>
+          </section>
+        </section>
+
+        <section class="grid lower">
+          <section class="panel tool-panel">
+            <div class="panel-head">
+              <div>
+                <h3>MCP Mapping / Tool Run</h3>
+                <p>从技术文件解析映射，执行仍走现有 CTF 工具。</p>
+              </div>
+              <button id="refreshTools" class="secondary">检查工具</button>
+            </div>
+            <div id="mcpMapping" class="mapping-list"></div>
+            <div class="tool-runner">
+              <label>
+                Tool
+                <select id="toolName">
+                  <option value="jwt_tool">jwt_tool</option>
+                  <option value="sqlmap">sqlmap</option>
+                  <option value="dirsearch">dirsearch</option>
+                  <option value="tplmap">tplmap</option>
+                </select>
+              </label>
+              <label>
+                Args
+                <input id="toolArgs" placeholder="-h 或按工具要求输入参数">
+              </label>
+              <button id="runTool">运行工具</button>
+            </div>
+            <pre id="toolOutput" class="markdown-view compact"></pre>
+          </section>
+
+          <section class="panel docs-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Attack Network</h3>
+                <p>先读攻击网，按多路径推进。</p>
+              </div>
+            </div>
+            <pre id="attackNetwork" class="markdown-view compact"></pre>
+          </section>
+        </section>
+
+        <section class="grid lower">
+          <section class="panel handoff-panel">
+            <div class="panel-head">
+              <div>
+                <h3>AI Handoff</h3>
+                <p>生成给 OpenCode runtime 的路线固定 prompt，并保存到 notes。</p>
+              </div>
+              <button id="buildHandoff">生成 handoff</button>
+            </div>
+            <pre id="handoffPrompt" class="markdown-view compact"></pre>
+          </section>
+
+          <section class="panel artifacts-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Evidence</h3>
+                <p>沿用 exports / notes / reports。</p>
+              </div>
+            </div>
+            <div id="artifacts" class="artifact-columns"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

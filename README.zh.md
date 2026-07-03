@@ -60,14 +60,27 @@ cases/        → 轻量索引，不复制大文件
 
 ## 安装
 
+Windows 新手优先双击根目录的 `START_HERE.bat` 或 `START_HERE.cmd`。它会自动检查工作区、确认
+`reverse_lab_tools` MCP、生成核心 wrappers，并在窗口里给出下一步提示。
+
 ```powershell
 git clone https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
+python scripts/misc/first_run_check.py       # 确认目录和 reverse_lab_tools MCP
+.\scripts\misc\bootstrap.ps1                 # 生成核心脚本 wrappers
 .\scripts\misc\install_tools.ps1 -CTF       # Web 工具
 .\scripts\misc\install_tools.ps1 -Android   # APK 工具
 .\scripts\misc\install_tools.ps1 -Windows   # PE 工具
 .\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
 ```
+
+## Agent 快速打开
+
+1. 克隆到一个固定本地目录，例如 `<workspace>/open-reverselab`。
+2. Windows：双击 `START_HERE.bat` 或 `START_HERE.cmd` 完成首次检查。
+3. Claude Code：先 `cd <workspace>/open-reverselab`，再启动会话。
+4. Codex APP：直接打开现有的 `open-reverselab` 文件夹。
+5. 每次换机器或重配 MCP 后，运行 `python scripts/misc/first_run_check.py`，确认 `.mcp.json` 中存在 `reverse_lab_tools`。
 
 ## 迭代模式
 

@@ -34,6 +34,6 @@ All notable changes to the open-reverseLab project will be documented in this fi
 - 5 板块路由架构: ctf-website / apk-reverse / pe-reverse / general / windows
 - Agent 原生上下文链: CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
 - 公开/私有边界约定: `PUBLICATION.md`
-- 代码共献指南: `CONTRIBUTING.md`
+- 代码共献指南: `.github/CONTRIBUTING.md`
 - 安全策略: `SECURITY.md`
 - GPL-3.0-only 许可证

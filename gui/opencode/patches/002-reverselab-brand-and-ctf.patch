@@ -1,0 +1,10 @@
+diff --git a/packages/cli/src/commands/commands.ts b/packages/cli/src/commands/commands.ts
+--- a/packages/cli/src/commands/commands.ts
++++ b/packages/cli/src/commands/commands.ts
+@@
+-export const Commands = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME : "opencode", {
+-  description: "OpenCode 2.0 preview command line interface",
++export const Commands = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME : "reverselab-opencode", {
++  description: "ReverseLab OpenCode command line interface",
+   commands: [
+

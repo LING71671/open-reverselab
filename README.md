@@ -59,15 +59,28 @@ cases/        → Lightweight index — no large file copies
 
 ## Installation
 
+On Windows, beginners can double-click `START_HERE.bat` or `START_HERE.cmd`
+from the repository root. It checks the workspace, verifies `reverse_lab_tools`
+MCP, creates core wrappers, and leaves the result window open.
+
 ```powershell
 git clone https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
+python scripts/misc/first_run_check.py       # Check workspace + reverse_lab_tools MCP
 .\scripts\misc\bootstrap.ps1              # Core script wrappers (no downloads)
 .\scripts\misc\install_tools.ps1 -CTF       # Web tools
 .\scripts\misc\install_tools.ps1 -Android   # APK tools
 .\scripts\misc\install_tools.ps1 -Windows   # PE tools
 .\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
 ```
+
+## Agent Quick Start
+
+1. Clone into a stable local directory, for example `<workspace>/open-reverselab`.
+2. Windows: double-click `START_HERE.bat` or `START_HERE.cmd` for the first-run check.
+3. Claude Code: `cd <workspace>/open-reverselab` before starting the session.
+4. Codex APP: open the existing `open-reverselab` folder directly.
+5. After moving machines or changing MCP settings, run `python scripts/misc/first_run_check.py` and confirm `.mcp.json` contains `reverse_lab_tools`.
 
 Post-install verification:
 

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "reverselab-ctf",
+  "server": {
+    "hostname": "127.0.0.1",
+    "port": ${env:REVERSELAB_OPENCODE_PORT},
+    "cors": ["http://localhost:${env:REVERSELAB_GUI_PORT}", "http://127.0.0.1:${env:REVERSELAB_GUI_PORT}", "http://localhost:5173", "http://127.0.0.1:5173"],
+  },
+  "permission": {
+    "*": "allow",
+    "read": "allow",
+    "edit": "allow",
+    "write": "allow",
+    "apply_patch": "allow",
+    "bash": "allow",
+    "task": "allow",
+    "skill": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "external_directory": {
+      "*": "allow",
+    },
+    "doom_loop": "allow",
+    "question": "allow",
+    "plan_enter": "allow",
+    "plan_exit": "allow",
+  },
+  "mcp": {
+    "reverse_lab_tools": {
+      "type": "local",
+      "command": ["uv", "run", "--project", "${env:REVERSELAB_ROOT}/tools/skills/mcp/ReverseLabToolsMCP", "python", "${env:REVERSELAB_ROOT}/tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py"],
+      "cwd": "${env:REVERSELAB_ROOT}",
+      "enabled": true,
+      "timeout": 30000,
+    },
+  },
+}
