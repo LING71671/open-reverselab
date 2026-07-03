@@ -1102,6 +1102,18 @@ def ctf_new_challenge(name: str, url: str = "") -> dict[str, Any]:
 
 
 @mcp.tool()
+def ctf_autopilot_round(
+    manifest_path: str,
+    max_actions: int = 4,
+    execute: bool = False,
+    allow_network_cve: bool = False,
+    timeout: int = 600,
+) -> dict[str, Any]:
+    """读取 Web CTF ai_manifest.json，执行一轮带 checkpoint 的 autopilot 计划/allowlist 动作。"""
+    return _safe_call(web_ctf.ctf_autopilot_round, manifest_path, max_actions, execute, allow_network_cve, timeout)
+
+
+@mcp.tool()
 def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict[str, Any]:
     """运行 CTF 工具。tool: sqlmap/dirsearch/jwt_tool/tplmap。args: 命令行参数。"""
     return _safe_call(web_ctf.run_ctf_tool, tool, args, timeout)

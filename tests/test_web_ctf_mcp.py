@@ -67,3 +67,39 @@ def test_run_sqlmap_request_builds_request_args(tmp_path, monkeypatch):
     assert called["tool"] == "sqlmap"
     assert called["args"].endswith('" --batch --dbs')
     assert called["timeout"] == 12
+
+
+def test_ctf_autopilot_round_invokes_controller(tmp_path, monkeypatch):
+    manifest = tmp_path / "ai_manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+    controller = tmp_path / "ctf_autopilot.py"
+    controller.write_text("# test controller\n", encoding="utf-8")
+    called = {}
+
+    class FakeCompleted:
+        returncode = 0
+        stdout = '{"ok": true}'
+        stderr = ""
+
+    def fake_run(cmd, cwd, capture_output, text, timeout):
+        called.update({"cmd": cmd, "cwd": cwd, "timeout": timeout})
+        return FakeCompleted()
+
+    monkeypatch.setattr(web_ctf, "CTF_AUTOPILOT", controller)
+    monkeypatch.setattr(web_ctf, "ensure_under", lambda path, roots, label: path)
+    monkeypatch.setattr(web_ctf.subprocess, "run", fake_run)
+
+    result = web_ctf.ctf_autopilot_round(
+        str(manifest),
+        max_actions=2,
+        execute=True,
+        allow_network_cve=True,
+        timeout=12,
+    )
+
+    assert result["ok"] is True
+    assert result["exit_code"] == 0
+    assert "--execute" in called["cmd"]
+    assert "--allow-network-cve" in called["cmd"]
+    assert called["cmd"][called["cmd"].index("--max-actions") + 1] == "2"
+    assert called["timeout"] == 60

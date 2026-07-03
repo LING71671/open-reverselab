@@ -27,6 +27,7 @@ KB_ROOTS = {
 KB_INDEX = REVERSE_ROOT / "kb" / "ctf-website" / "techniques" / "kb-index.json"
 TECHNIQUES_DIR = REVERSE_ROOT / "kb" / "ctf-website" / "techniques"
 KB_ROUTER = SCRIPTS_DIR / "ctf-website" / "kb_router.py"
+CTF_AUTOPILOT = SCRIPTS_DIR / "ctf-website" / "ctf_autopilot.py"
 CTF_TOOLS_DIR = REVERSE_ROOT / "tools" / "ctf-website"
 CTF_EXPORTS_DIR = REVERSE_ROOT / "exports" / "ctf-website"
 BIN_DIR = REVERSE_ROOT / "tools" / "bin"
@@ -279,6 +280,79 @@ def ctf_new_challenge(name: str, url: str = "") -> dict:
         "url": url,
         "links": str(links.relative_to(REVERSE_ROOT)),
     }
+
+
+def _resolve_manifest_file(manifest_path: str) -> Path:
+    if not manifest_path:
+        raise ValueError("manifest_path is required")
+    resolved = Path(manifest_path).expanduser()
+    if not resolved.is_absolute():
+        resolved = REVERSE_ROOT / resolved
+    resolved = resolved.resolve(strict=True)
+    ensure_under(resolved, [REVERSE_ROOT], "manifest path")
+    if not resolved.is_file():
+        raise ValueError(f"not a file: {resolved}")
+    if resolved.name != "ai_manifest.json":
+        raise ValueError(f"expected ai_manifest.json, got: {resolved}")
+    return resolved
+
+
+def ctf_autopilot_round(
+    manifest_path: str,
+    max_actions: int = 4,
+    execute: bool = False,
+    allow_network_cve: bool = False,
+    timeout: int = 600,
+) -> dict:
+    """Run one stateful Web CTF autopilot round against an ai_manifest.json."""
+    if not CTF_AUTOPILOT.exists():
+        return {"error": f"ctf_autopilot.py not found: {CTF_AUTOPILOT}"}
+    try:
+        resolved = _resolve_manifest_file(manifest_path)
+    except Exception as e:
+        return {"error": str(e)}
+
+    cmd = [
+        sys.executable,
+        str(CTF_AUTOPILOT),
+        str(resolved),
+        "--max-actions",
+        str(max_actions),
+        "--budget-seconds",
+        "1",
+        "--command-timeout",
+        str(timeout),
+    ]
+    if execute:
+        cmd.append("--execute")
+    if allow_network_cve:
+        cmd.append("--allow-network-cve")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(REVERSE_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=max(timeout + 30, 60),
+        )
+    except subprocess.TimeoutExpired:
+        return {"error": f"timeout after {timeout}s", "manifest": str(resolved)}
+
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        payload = {
+            "stdout": result.stdout[-8192:],
+            "stderr": result.stderr[-4096:],
+        }
+    payload.update(
+        {
+            "exit_code": result.returncode,
+            "stderr": result.stderr[-4096:],
+        }
+    )
+    return payload
 
 
 # ── CTF Tool Runner ──

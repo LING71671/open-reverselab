@@ -34,9 +34,10 @@ Web/CTF 目标分析时优先走 MCP：
 
 1. `kb_router(query, board="ctf-website")` 查技术文件。
 2. `ctf_tool_status()` 检查 sqlmap/Burp wrapper 与本地安装状态。
-3. Burp 或浏览器确认请求后，调用 `ctf_save_request(raw_request, case_name, filename)` 保存证据。
-4. SQLi 自动化调用 `run_sqlmap_request(request_path, "--batch ...")`；普通工具调用用 `run_ctf_tool("sqlmap", "...")`。
-5. `burp_status()` 只做无弹窗探测；需要打开 Burp GUI 时才显式调用 `burp_launch(launch=True)`。
+3. 已有 `cases/<case>/ai_manifest.json` 时，可调用 `ctf_autopilot_round(manifest_path, max_actions=4, execute=false)` 做单轮可恢复计划；确认目标授权后再设 `execute=true`。
+4. Burp 或浏览器确认请求后，调用 `ctf_save_request(raw_request, case_name, filename)` 保存证据。
+5. SQLi 自动化调用 `run_sqlmap_request(request_path, "--batch ...")`；普通工具调用用 `run_ctf_tool("sqlmap", "...")`。
+6. `burp_status()` 只做无弹窗探测；需要打开 Burp GUI 时才显式调用 `burp_launch(launch=True)`。
 
 ## 证据输出
 
