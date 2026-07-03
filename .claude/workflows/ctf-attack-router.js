@@ -20,7 +20,8 @@ if (!caseName || !manifest) {
 }
 const signals = typeof args === 'object' && args?.signals ? args.signals : []
 const focus = typeof args === 'object' && args?.focus ? args.focus : []
-const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? Number(args.maxWorkflows) : 4
+const maxWorkflows = typeof args === 'object' && args?.maxWorkflows ? Number(args.maxWorkflows) : 0
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 const workerIds = typeof args === 'object' && args?.workerIds ? args.workerIds : []
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
 const testOrigin = typeof args === 'object' && args?.testOrigin ? args.testOrigin : undefined
@@ -65,7 +66,7 @@ ${allowedWorkerIds.map(id => `- ${id}`).join('\n')}
 
 1. 先读 \`kb/ctf-website/techniques/attack-network.md\`。
 2. 为每个信号运行 \`python3 scripts/ctf-website/kb_router.py "<signal>"\`。
-3. 本轮最多选择 ${maxWorkflows} 个 worker，优先能通向 Credential/DB/Admin/RCE/Flag 的路径。
+3. 本轮 worker 数量参数：${maxWorkflows || 'all allowed workers'}；优先能通向 Credential/DB/Admin/RCE/Flag 的路径。
 4. 输出 JSON，routes 数组只使用允许的 worker id：
 
 {
@@ -90,7 +91,8 @@ if (routeText.includes('cve_cloud_dos')) selected.push('cve_cloud_dos')
 
 const filtered = selected.filter(route => allowedWorkerIds.includes(route))
 const fallback = allowedWorkerIds.filter(route => ['recon', 'injection'].includes(route))
-const routes = (filtered.length ? filtered : fallback.length ? fallback : allowedWorkerIds).slice(0, maxWorkflows)
+const routeCandidates = filtered.length ? filtered : fallback.length ? fallback : allowedWorkerIds
+const routes = maxWorkflows > 0 ? routeCandidates.slice(0, maxWorkflows) : routeCandidates
 const workers = routes.map(route => () => workflow(`ctf-attack-${route}`, {
   target,
   caseName,
@@ -103,6 +105,7 @@ const workers = routes.map(route => () => workflow(`ctf-attack-${route}`, {
   ssrfProbeTargets,
   credentialPairs,
   forwardedIp,
+  innerIterations,
   execute,
 }))
 

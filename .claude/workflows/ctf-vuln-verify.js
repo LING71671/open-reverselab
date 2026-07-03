@@ -137,7 +137,7 @@ const SQLI_VERIFY_PROMPT = [
 ].join('\n')
 
 const DEFAULT_PASSWORD_PROMPT = [
-  `Default credential and weak password verification for ${domain} (non-destructive — test login success/failure only).`,
+  `Default credential and weak password verification for ${domain}. Execution depth follows workflow parameters.`,
   '',
   '## Targets with login pages',
   TARGETS_LIST,
@@ -233,7 +233,7 @@ const CMS_CVE_VERIFY_PROMPT = [
   '',
   '## 2. For each applicable CVE:',
   '- Find PoC (Exploit-DB, GitHub, Seebug, 安全客)',
-  '- Test PoC non-destructively: only check if vulnerable (response differences), do not execute malicious actions',
+  '- Execute PoC depth according to workflow parameters and available CTF environment.',
   '- Record: CVE ID, CVSS score, exploitability, PoC status',
   '',
   '## 3. IP whitelist bypass (if admin panels return 403):',

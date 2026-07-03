@@ -98,12 +98,11 @@ python3 scripts/misc/setup_unattended_ctf_runner.py --overwrite
 
 - `CONTINUE`: 还有可执行路径，下一轮继续。
 - `DONE`: 已拿到 flag 或完成报告，停止 `/loop`。
-- `EXHAUSTED`: 24h 预算耗尽、全部路径耗尽、目标长期不可达或运行器缺少关键能力且无替代路径。
+- `EXHAUSTED`: 全部路径耗尽、目标长期不可达或运行器缺少关键能力且无替代路径。
 
 ## 停止条件
 
 - 已拿到 flag 并完成复现报告。
-- 24 小时预算耗尽。
 - 目标不可达且重试/备用路径均有证据。
 - 攻击网全部路径都有证据表明不可达/不可利用。
 

@@ -62,7 +62,7 @@ def plan(manifest: dict, manifest_path: Path | None = None) -> dict:
         actions.append({
             "priority": "P0",
             "action": "Inspect JavaScript runtime and API routes",
-            "command": "Use JSHook/browser hooks for fetch/XHR/WebSocket/crypto; grep saved bundles for endpoints and signatures.",
+            "command": f"python scripts/ctf-website/ctf_attack_executor.py {manifest_path or '<manifest>'} --probe javascript",
             "why": f"{len(scripts)} script asset(s) discovered.",
             "kb_files": ["07-client/js-runtime.md", "07-client/web-crypto-abuse.md"],
         })
@@ -72,7 +72,7 @@ def plan(manifest: dict, manifest_path: Path | None = None) -> dict:
         actions.append({
             "priority": "P1",
             "action": "Probe forms for auth/injection/state bugs",
-            "command": "Test content-types, method override, SQLi/NoSQLi/SSTI probes, CSRF/session behavior.",
+            "command": f"python scripts/ctf-website/ctf_attack_executor.py {manifest_path or '<manifest>'} --probe sqli --probe xss",
             "why": f"{len(forms)} form(s) discovered.",
             "kb_files": ["03-injection/sqli-nosqli.md", "03-injection/ssti.md", "03-injection/hpp-crlf.md"],
         })
@@ -82,8 +82,24 @@ def plan(manifest: dict, manifest_path: Path | None = None) -> dict:
         actions.append({
             "priority": "P1",
             "action": "Run targeted route discovery",
-            "command": "Use tools/ctf-website/wordlists/small-routes.txt with curl/ffuf/gobuster if available.",
+            "command": f"python scripts/ctf-website/ctf_attack_executor.py {manifest_path or '<manifest>'} --probe routes",
             "why": "Route map is sparse.",
+        })
+    if links or baseline:
+        actions.append({
+            "priority": "P1",
+            "action": "Run deterministic client and redirect probes",
+            "command": f"python scripts/ctf-website/ctf_attack_executor.py {manifest_path or '<manifest>'} --probe cors --probe open_redirect --probe xss",
+            "why": "Client-side and redirect probes are always useful once a reachable target exists.",
+            "kb_files": ["07-client/cors-csrf.md", "04-ssrf/open-redirect.md", "07-client/admin-bot-xss.md"],
+        })
+    if links:
+        actions.append({
+            "priority": "P1",
+            "action": "Run deterministic SSRF and file-read probes",
+            "command": f"python scripts/ctf-website/ctf_attack_executor.py {manifest_path or '<manifest>'} --probe ssrf --probe lfi",
+            "why": "Links with parameters can expose URL/file parameters.",
+            "kb_files": ["04-ssrf/ssrf.md", "06-file-attacks/file-upload-xxe-lfi.md"],
         })
 
     headers = baseline.get("headers") or {}

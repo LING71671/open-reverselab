@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -25,20 +24,18 @@ def test_loop_status_done_on_flag_evidence():
     assert status["status"] == "DONE"
 
 
-def test_loop_status_exhausted_on_budget():
-    started = datetime.now(timezone.utc) - timedelta(seconds=20)
+def test_loop_status_exhausted_when_paths_are_exhausted():
     status = ctf_loop_status.evaluate_manifest(
         {
-            "autopilot": {
-                "started_at": started.isoformat(),
-                "budget": {"budget_seconds": 10, "max_rounds": 10},
-                "rounds": [{}],
-            }
+            "hypotheses": [{"status": "dead"}, {"status": "confirmed-negative"}],
+            "next_actions": [],
+            "next_round_focus": [],
+            "attack_paths": [],
         }
     )
 
     assert status["status"] == "EXHAUSTED"
-    assert "budget_seconds" in status["reason"]
+    assert "attack paths" in status["reason"]
 
 
 def test_loop_status_continue_with_focus():

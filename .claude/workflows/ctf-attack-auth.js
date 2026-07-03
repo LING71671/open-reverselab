@@ -14,6 +14,7 @@ const caseName = typeof args === 'object' && args?.caseName ? args.caseName : ''
 const manifest = typeof args === 'object' && args?.manifest ? args.manifest : ''
 if (!caseName || !manifest) throw new Error('ctf-attack-auth requires args.caseName and args.manifest')
 const reportRoot = typeof args === 'object' && args?.reportRoot ? args.reportRoot : 'reports/ctf-website'
+const innerIterations = typeof args === 'object' && args?.innerIterations ? Number(args.innerIterations) : 0
 
 phase('KB 路由')
 const kb = await agent(
@@ -30,10 +31,12 @@ const result = await agent(
   `对 ${target} 做一轮认证攻击 worker。
 
 Manifest: ${manifest}
+Inner iterations: ${innerIterations || 'until convergence/status change'}
 KB:
 ${kb}
 
 任务：
+0. 内部循环协议：plan → execute auth/session variant → observe response/cookie/token → mutate claim/header/redirect/session → retry。不要只试一次；未设置 innerIterations 时迭代到证据确认、路径证伪或状态变化。
 1. 登录/SSO/OAuth/OIDC/SAML 端点枚举：/.well-known/openid-configuration、/oauth/authorize、/cas/login、/saml。
 2. JWT：alg none/confusion、kid/jku/x5u、弱密钥、claim 缺失、过长 exp、replay。
 3. OAuth/OIDC：redirect_uri、state/nonce、PKCE、client_secret 泄露、open redirect chain。

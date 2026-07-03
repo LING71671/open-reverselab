@@ -68,9 +68,8 @@ Case 目录的 AI 可读索引文件结构说明。Web CTF 当前使用
     "started_at": "",
     "updated_at": "",
     "status": "dry_run / running",
-    "budget": {
-      "budget_seconds": 86400,
-      "max_rounds": 96,
+    "loop": {
+      "max_rounds": 0,
       "execute": false
     },
     "last_round_id": "R-YYYYMMDD-HHMMSS",

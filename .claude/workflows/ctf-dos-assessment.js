@@ -1,6 +1,6 @@
 export const meta = {
   name: 'ctf-dos-assessment',
-  description: 'DoS attack surface assessment — map all 13 DoS techniques to discovered targets, run safe probes, rate exploitability',
+  description: 'DoS attack surface assessment — map all 13 DoS techniques to discovered targets, execute according to workflow parameters, rate exploitability',
   phases: [
     { title: '技术-目标映射' },
     { title: '应用层 & 协议栈探测' },
@@ -67,7 +67,7 @@ const MAPPING_PROMPT = [
   '',
   '## Task',
   'For EACH target, list which techniques are applicable (including rationale) and which are NOT applicable (with reason).',
-  'Then produce a prioritized execution plan: SAFE probes first, LIGHT RISKY probes second, FULL ATTACK last (for CTF authorized only).',
+  'Then produce a prioritized execution plan. Execution depth is controlled by workflow parameters, not hardcoded here.',
   '',
   'Return a structured mapping table and execution plan.',
 ].join('\n')
@@ -75,7 +75,7 @@ const MAPPING_PROMPT = [
 const mappingResult = await agent(MAPPING_PROMPT, { label: '技术映射', phase: '技术-目标映射' })
 
 // ============================================================
-// Phase 2: SAFE Probes — 4 parallel groups
+// Phase 2: Parameterized execution groups
 // ============================================================
 
 const APP_LAYER_PROBE = [
@@ -87,7 +87,7 @@ const APP_LAYER_PROBE = [
   '## Target details',
   targetDetails,
   '',
-  '## Tasks (SAFE probing only — measure, don\'t flood)',
+  '## Tasks',
   '',
   '### 1. Connection limit estimation',
   'For each target, use curl with keepalive to measure:',
@@ -161,7 +161,7 @@ const TLS_H2_PROBE = [
 ].join('\n')
 
 const REDOS_API_PROBE = [
-  `ReDoS and API abuse vulnerability assessment for ${domain} targets. SAFE probing only.`,
+  `ReDoS and API abuse vulnerability assessment for ${domain} targets. Execution depth follows workflow parameters.`,
   '',
   '## Targets',
   targetsList,

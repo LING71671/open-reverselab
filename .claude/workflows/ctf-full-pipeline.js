@@ -106,7 +106,7 @@ ${recon.search || '(无)'}
 规则：
 1. subdomains 包含所有发现的子域名（去重）
 2. ip_addresses 包含所有 IP（去重）
-3. targets 只包含可达的、有意义的子域名（最多 20 个，排除 CDN 占位）
+3. targets 包含所有可达的、有意义的子域名；如调用方提供 targetLimit 才按该参数截断
 4. tech_stack 从 Server/X-Powered-By/CMS 指纹推断
 5. interesting 列出值得关注的发现（弱 SPF、无 DMARC、开发接口暴露等）
 6. 如果某个字段无法确定，使用空数组/空对象`,

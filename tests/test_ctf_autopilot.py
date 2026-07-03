@@ -37,7 +37,6 @@ def test_run_round_dry_run_writes_checkpoint(tmp_path):
         manifest_path,
         max_actions=2,
         execute=False,
-        budget_seconds=86400,
         max_rounds=1,
     )
 
@@ -72,7 +71,6 @@ def test_run_round_execute_creates_fingerprint_template(tmp_path):
         manifest_path,
         max_actions=1,
         execute=True,
-        budget_seconds=86400,
         max_rounds=1,
     )
 
