@@ -19,7 +19,8 @@
 | 目标 | 入口 | 说明 |
 |---|---|---|
 | 域名/站点级一次性评估 | `.claude/workflows/ctf-full-pipeline.js` | 资产发现 → DoS 面 → 漏洞挖掘 → 验证 → 综合报告；适合 agent workflow 环境。 |
-| Claude Code 24h 可恢复推进 | `/loop /ctf-24h <target> [case]` | `/loop` 负责不中断调度，`ctf-24h-round` 每轮推进并写 checkpoint。 |
+| Claude Code 单目标 24h 可恢复推进 | `/loop /ctf-24h <target> [case]` | `/loop` 负责不中断调度，`ctf-24h-round` 每轮推进并写 checkpoint。 |
+| Claude Code 多目标 24h fleet | `/loop /ctf-24h-fleet <targets> [fleet]` | `ctf-24h-fleet` 按 batch 并行调度多个 `ctf-24h-round`，每个目标独立 manifest。 |
 | Codex / 无 workflow runner fallback | `scripts/ctf-website/ctf_intake.py` + `scripts/ctf-website/ctf_autopilot.py` | 先生成 `ai_manifest.json`，再循环单轮动作并由 Agent 继续攻击网判断。 |
 
 ### 24h CTF Autopilot
@@ -40,6 +41,12 @@ Claude Code 中推荐用 `/loop + workflow`：
 
 ```text
 /loop /ctf-24h https://target.example/ my-case
+```
+
+多个目标并行：
+
+```text
+/loop /ctf-24h-fleet https://a.example,https://b.example my-fleet
 ```
 
 无 Claude workflow runner 时可用 Python fallback 做 checkpoint 心跳：

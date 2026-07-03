@@ -13,18 +13,17 @@ export const meta = {
 }
 
 // args: { domain, targets: [...], fingerprints: {...}, caseDir?: string }
-const domain = typeof args === 'string' ? args : args?.domain || 'gnnu.edu.cn'
+const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
 const targets = (typeof args === 'object' && args?.targets) ? args.targets : [
-  { host: `www.${domain}`, ip: null, stack: 'VSB9 Java/JSP', cdn: false, waf: false, h2: true },
-  { host: `mail.${domain}`, ip: null, stack: 'QQ Enterprise Mail', cdn: false, waf: 'TGW', h2: false },
-  { host: `lib.${domain}`, ip: null, stack: 'Chaoxing Java', cdn: true, waf: false, h2: false, hsts: true },
-  { host: `jw.${domain}`, ip: '218.64.216.180', stack: 'VSB9 Java/JSP', cdn: false, waf: false, h2: true, note: '纪委非教务' },
-  { host: `yjs.${domain}`, ip: '218.64.216.180', stack: 'VSB9 Java/JSP', cdn: false, waf: false, h2: false },
-  { host: `zs.${domain}`, ip: '218.64.216.180', stack: 'VSB9 Java/JSP', cdn: false, waf: false, h2: false },
+  { host: domain, ip: null, stack: 'unknown', cdn: null, waf: null, h2: null },
+  { host: `www.${domain}`, ip: null, stack: 'unknown', cdn: null, waf: null, h2: null },
+  { host: `api.${domain}`, ip: null, stack: 'unknown', cdn: null, waf: null, h2: null },
+  { host: `admin.${domain}`, ip: null, stack: 'unknown', cdn: null, waf: null, h2: null },
+  { host: `auth.${domain}`, ip: null, stack: 'unknown', cdn: null, waf: null, h2: null },
 ]
-const DNS_NS = ['ns1.service.edu.cn', 'ns2.service.edu.cn']
-const geofenced = [`cas.${domain}`, `idp.${domain}`, `vpn.${domain}`, `webvpn.${domain}`, `oa.${domain}`]
-const unprobed = [`jwgl.${domain}`, `sqh.${domain}`, `noa.${domain}`, `jx.${domain}`, `jwc.${domain}`, `xxgk.${domain}`]
+const DNS_NS = (typeof args === 'object' && args?.dnsNs) ? args.dnsNs : []
+const geofenced = (typeof args === 'object' && args?.geofenced) ? args.geofenced : [`cas.${domain}`, `idp.${domain}`, `vpn.${domain}`, `webvpn.${domain}`]
+const unprobed = (typeof args === 'object' && args?.unprobed) ? args.unprobed : [`dev.${domain}`, `test.${domain}`, `staging.${domain}`, `internal.${domain}`]
 
 const targetsList = targets.map(t => `https://${t.host}`).join('\n')
 const targetDetails = JSON.stringify(targets, null, 2)
@@ -36,13 +35,13 @@ const dosCaseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : 
 phase('技术-目标映射')
 
 const MAPPING_PROMPT = [
-  `Map all 13 DoS technique categories below to the gnnu.edu.cn target list.`,
+  `Map all 13 DoS technique categories below to the ${domain} target list.`,
   'For each technique, determine applicability per target and output a priority-ordered execution plan.',
   '',
   '## Targets',
   targetDetails,
   '',
-  `Also: DNS infrastructure: ${DNS_NS.join(', ')}`,
+  `Also: DNS infrastructure: ${DNS_NS.length ? DNS_NS.join(', ') : 'unknown; enumerate from NS records first'}`,
   `Geofenced (China-IP only): ${geofenced.join(', ')}`,
   `Discovered but unprobed: ${unprobed.join(', ')}`,
   '',
@@ -76,7 +75,7 @@ const mappingResult = await agent(MAPPING_PROMPT, { label: '技术映射', phase
 // ============================================================
 
 const APP_LAYER_PROBE = [
-  `Application-layer DoS vulnerability assessment for gnnu.edu.cn targets. NON-DESTRUCTIVE probing only.`,
+  `Application-layer DoS vulnerability assessment for ${domain} targets. NON-DESTRUCTIVE probing only.`,
   '',
   '## Targets',
   targetsList,
@@ -115,7 +114,7 @@ const APP_LAYER_PROBE = [
 ].join('\n')
 
 const TLS_H2_PROBE = [
-  `TLS and HTTP/2 vulnerability assessment for gnnu.edu.cn targets. NON-DESTRUCTIVE.`,
+  `TLS and HTTP/2 vulnerability assessment for ${domain} targets. NON-DESTRUCTIVE.`,
   '',
   '## Targets',
   targetsList,
@@ -158,7 +157,7 @@ const TLS_H2_PROBE = [
 ].join('\n')
 
 const REDOS_API_PROBE = [
-  `ReDoS and API abuse vulnerability assessment for gnnu.edu.cn targets. SAFE probing only.`,
+  `ReDoS and API abuse vulnerability assessment for ${domain} targets. SAFE probing only.`,
   '',
   '## Targets',
   targetsList,
@@ -211,21 +210,16 @@ const REDOS_API_PROBE = [
 ].join('\n')
 
 const DNS_EMAIL_PROBE = [
-  `DNS and email infrastructure DoS assessment for gnnu.edu.cn.`,
+  `DNS and email infrastructure DoS assessment for ${domain}.`,
   '',
   '## Context',
-  `- Authoritative NS: ${DNS_NS.join(', ')}`,
-  '- MX: mxbiz1.qq.com (priority 5), mxbiz2.qq.com (priority 10)',
-  '- SPF: v=spf1 include:spf.mail.qq.com ~all',
-  '- DKIM: NOT FOUND',
-  '- DMARC: NOT FOUND',
-  '- DNSSEC: NOT ENABLED',
-  '- Mail provider: Tencent QQ Enterprise Mail',
+  `- Authoritative NS: ${DNS_NS.length ? DNS_NS.join(', ') : 'unknown; enumerate with dig +short NS first'}`,
+  '- MX/SPF/DKIM/DMARC/DNSSEC: enumerate live from DNS before assessing',
   '',
   '## Tasks',
   '',
   '### 1. DNS resilience probing',
-  '- Test authoritative NS response times (dig @ns1.service.edu.cn gnnu.edu.cn, measure RTT)',
+  `- Test authoritative NS response times (dig @<ns> ${domain}, measure RTT)`,
   '- Test NS for ANY query support (amplification vector)',
   '- Test recursive resolver behavior: query random non-existent subdomains, check if NS is hit each time (Water Torture susceptibility)',
   '- Check SOA negative TTL (how long NXDOMAIN cached)',
@@ -241,7 +235,7 @@ const DNS_EMAIL_PROBE = [
   '- spf.mail.qq.com include chain: 7 sub-includes — each requires DNS lookup',
   '',
   '### 3. DNS cache behavior',
-  '- Query www.gnnu.edu.cn with +norecurse to check TTL',
+  `- Query www.${domain} with +norecurse to check TTL`,
   '- Measure TTL values: are they short (cache miss DoS potential) or long (stable)?',
   '- Check if DNS uses anycast (multiple IPs for same NS hostname)',
   '',
@@ -268,7 +262,7 @@ const [appLayerResult, tlsH2Result, redosApiResult, dnsEmailResult] = await para
 phase('API & 端点枚举')
 
 const DEEP_PROBE_PROMPT = [
-  `Deep API and endpoint enumeration for gnnu.edu.cn targets, guided by initial probe results.`,
+  `Deep API and endpoint enumeration for ${domain} targets, guided by initial probe results.`,
   '',
   '## Targets',
   targetDetails,
@@ -280,37 +274,33 @@ const DEEP_PROBE_PROMPT = [
   '',
   '### Tasks',
   '',
-  '### 1. VSB9-specific endpoints (www, jw, yjs, zs)',
-  'VSB9 is Visual SiteBuilder 9 by 西安博达软件. Probe:',
-  '- /system/ (admin panel — known 404 but probe POST)',
-  '- /system/login.jsp',
-  '- /system/resource/ (directory listing?)',
-  '- /index.jsp (JSP page, may accept parameters)',
-  '- /content.jsp?urltype=...&wbtreeid=...&wbnewsid=... (news content, test for slow queries)',
-  '- /_jsq_/ (statistics counter endpoint)',
-  '- /_sitegray/ (site gray endpoint)',
-  '- /_upload/ (file upload directory)',
-  '- /search.jsp or search functionality',
-  '- CustomerNO parameter: `77656262657232307775475450505742000400014653`',
+  '### 1. CMS / framework specific endpoints',
+  'Based on fingerprintResult, adapt paths for Java/PHP/.NET/Node/Python stacks:',
+  '- /admin, /admin/login, /system, /manage, /console',
+  '- /api, /api/v1, /api/v2, /graphql, /graphiql',
+  '- /swagger-ui.html, /api-docs, /v2/api-docs, /v3/api-docs',
+  '- /actuator, /actuator/health, /actuator/env, /actuator/mappings',
+  '- /search, /search.jsp, /search.php, /query',
+  '- /upload, /uploads, /file/upload, /api/upload',
   '',
-  '### 2. Chaoxing library (lib)',
-  '- /api/ endpoints from JS bundle analysis',
-  '- Test pagination: pageId=312540, test extreme offset',
-  '- Check if proxy Via: 124.243.227.9 is exploitable',
+  '### 2. JS/API bundle analysis',
+  '- Extract JS bundles from reachable pages',
+  '- Grep for API base URLs, fetch/XHR/WebSocket endpoints, GraphQL queries',
+  '- Identify pagination/search/filter endpoints and test extreme but safe values',
   '',
-  '### 3. QQ Mail (mail)',
-  '- Only probe externally: login page behavior, rate limit on login attempts',
-  '- Check X-W-No header variation (internal topology leak)',
+  '### 3. Auth / SSO / mail portals',
+  '- Probe login page behavior and rate-limit headers',
+  '- Record cookie/security headers and topology-leaking custom headers',
   '',
-  '### 4. Internal API (sqh.gnnu.edu.cn from GitHub)',
-  '- Probe http://sqh.gnnu.edu.cn/api (may be reachable from different network)',
-  '- Try common API paths based on GitHub code',
+  '### 4. Search/code exposure driven endpoints',
+  '- Use earlier GitHub/search exposure evidence to probe discovered hosts and APIs',
+  '- Avoid hard-coded org-specific paths; only test paths supported by evidence',
   '',
   '### 5. SSRF endpoint discovery',
   '- On each target, search for redirect/fetch/proxy URL parameters',
   '- Test any found URL-accepting parameters with timing-based detection',
   '',
-  'Return: deep endpoint map, SSRF vectors, VSB9-specific attack surface.',
+  'Return: deep endpoint map, SSRF vectors, CMS/framework-specific attack surface.',
 ].join('\n')
 
 const deepProbeResult = await agent(DEEP_PROBE_PROMPT, { label: '深度端点', phase: 'API & 端点枚举' })
@@ -341,7 +331,7 @@ const synthesisInput = [
 ].join('\n')
 
 const SYNTHESIS_PROMPT = [
-  `You are the DoS attack surface synthesis analyst for ${domain} (赣南师范大学 CTF).`,
+  `You are the DoS attack surface synthesis analyst for ${domain}.`,
   'Synthesize all probe results into a comprehensive DoS vulnerability assessment.',
   '',
   '## Tasks',

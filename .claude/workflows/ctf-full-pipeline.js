@@ -22,7 +22,7 @@ const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn
 const caseDir =
   typeof args === 'object' && args?.caseDir
     ? args.caseDir
-    : `E:\\ReverseLab\\cases\\${domain.replace(/\./g, '-')}`
+    : `cases/${domain.replace(/\./g, '-')}`
 const skipDos = typeof args === 'object' && args?.skipDos === true
 const skipVerify = typeof args === 'object' && args?.skipVerify === true
 
@@ -74,13 +74,13 @@ ${recon.search || '(无)'}
   "subdomains": ["www", "mail", "cas", ...],
   "ip_addresses": ["1.2.3.4", ...],
   "targets": [
-    {"host": "www.xxx.edu.cn", "ip": "1.2.3.4", "stack": "VSB9 Java/JSP", "cdn": false, "waf": false, "h2": true}
+    {"host": "www.example.edu.cn", "ip": "1.2.3.4", "stack": "Java/Tomcat", "cdn": false, "waf": false, "h2": true}
   ],
   "tech_stack": {
     "web": ["Java/JSP", "nginx"],
-    "mail": ["QQ Enterprise Mail"],
+    "mail": ["enterprise mail"],
     "waf": ["Cloudflare"],
-    "cms": ["VSB9", "Chaoxing"],
+    "cms": ["WordPress", "Drupal", "custom CMS"],
     "backend": ["Java", "PHP"]
   },
   "interesting": [
@@ -184,7 +184,7 @@ ${verifyResult?.synthesis || verifyResult || '(已跳过)'}
 
 # 报告要求
 
-将完整报告写入文件：${caseDir}\\FINAL-REPORT.md
+将完整报告写入文件：${caseDir}/FINAL-REPORT.md
 
 ## 报告结构
 

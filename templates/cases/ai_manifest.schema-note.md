@@ -43,6 +43,24 @@ Case 目录的 AI 可读索引文件结构说明。Web CTF 当前使用
     }
   ],
   "next_actions": [],
+  "next_round_focus": [
+    {
+      "action": "Probe SQLi candidates",
+      "priority": "P0",
+      "reason": "Parameter evidence exists"
+    }
+  ],
+  "attack_paths": [
+    {
+      "id": "SQLI-DB-FLAG",
+      "status": "pending",
+      "nodes": ["SQLi", "Database Access", "Flag"]
+    }
+  ],
+  "loop_status": {
+    "status": "CONTINUE",
+    "reason": "pending focus/actions remain"
+  },
   "evidence": [],
   "dead_ends": [],
   "autopilot": {
@@ -78,8 +96,24 @@ Case 目录的 AI 可读索引文件结构说明。Web CTF 当前使用
    `agent_required`，然后写回：
    - `autopilot.rounds[]`：每轮计划/执行/checkpoint。
    - `next_actions[]`：下一轮优先动作摘要。
+   - `next_round_focus[]`：下一轮 Agent 自动深入的路径。
+   - `attack_paths[]`：攻击网路径状态。
    - `evidence[]`：HTTP baseline、fingerprint 模板、CVE pipeline 等证据。
-4. Agent 完成非 allowlist 动作后，应补充 `evidence[]` 或 `dead_ends[]`，再跑下一轮 autopilot。
+4. `ctf_loop_status.py` 根据 manifest 写回 `loop_status.status`：
+   - `CONTINUE`
+   - `DONE`
+   - `EXHAUSTED`
+5. Agent 完成非 allowlist 动作后，应补充 `evidence[]` 或 `dead_ends[]`，再跑下一轮 autopilot。
+
+## Fleet 约定
+
+多目标 24h workflow 不共用一个 manifest：
+
+```text
+cases/<fleet>-<target-a>/ai_manifest.json
+cases/<fleet>-<target-b>/ai_manifest.json
+reports/ctf-website/<fleet>/fleet-round-<timestamp>.md
+```
 
 AI 进入 case 目录后应首先读取 `ai_manifest.json` 获取全局视图和最近一轮
 `autopilot.last_round_id`。

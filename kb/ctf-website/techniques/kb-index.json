@@ -3,6 +3,27 @@
   "purpose": "Signal → technique file mapping for kb_router.py",
   "entries": [
     {
+      "id": "24h-loop-orchestration",
+      "signals": [
+        "24h",
+        "24小时",
+        "loop",
+        "workflow",
+        "fleet",
+        "多目标",
+        "多个网站",
+        "autopilot",
+        "checkpoint",
+        "无人值守",
+        "全流程"
+      ],
+      "files": [
+        "00-workflow/24h-loop-orchestration.md",
+        "attack-network.md"
+      ],
+      "priority": 10
+    },
+    {
       "id": "jwt",
       "signals": [
         "jwt",
@@ -1405,6 +1426,7 @@
         "24-database/04-config-exposure.md",
         "24-database/05-backup-log-leak.md",
         "24-database/06-card-platform.md",
+        "24-database/07-data-cleaning.md",
         "24-database/README.md"
       ],
       "priority": 10

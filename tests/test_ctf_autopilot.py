@@ -47,6 +47,8 @@ def test_run_round_dry_run_writes_checkpoint(tmp_path):
     assert updated["autopilot"]["status"] == "dry_run"
     assert updated["autopilot"]["rounds"][0]["actions"][0]["execution"]["status"] == "planned"
     assert updated["next_actions"]
+    assert updated["next_round_focus"]
+    assert updated["loop_status"]["status"] == "CONTINUE"
 
 
 def test_run_round_execute_creates_fingerprint_template(tmp_path):

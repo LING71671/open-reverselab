@@ -18,7 +18,7 @@ export const meta = {
 // args: domain string, or object { domain, subdomains?, caseDir? }
 const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
 const knownSubdomains = (typeof args === 'object' && args?.subdomains) ? args.subdomains : []
-const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `E:\\ReverseLab\\cases\\${domain.replace(/\./g, '-')}`
+const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `cases/${domain.replace(/\./g, '-')}`
 
 const COMMON_SUBDOMAINS = [
   'www', 'mail', 'webmail', 'cas', 'idp', 'sso', 'login', 'auth', 'authserver',

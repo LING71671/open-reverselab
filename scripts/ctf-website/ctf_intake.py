@@ -75,20 +75,31 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--url", default="")
     parser.add_argument("--root", default=".")
     parser.add_argument("--board", default="ctf-website")
+    parser.add_argument("--case-dir", default="", help="Optional case directory, relative to --root or absolute.")
+    parser.add_argument("--case-name", default="", help="Optional exact case name stored in ai_manifest.json.")
+    parser.add_argument("--no-date-prefix", action="store_true", help="Use the slug as the case name without YYYY-MM- prefix.")
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
-    slug = slugify(args.name)
-    case_name = time.strftime("%Y-%m-") + slug
+    slug = slugify(args.case_name or args.name)
+    if args.case_dir:
+        raw_case_dir = Path(args.case_dir).expanduser()
+        case_dir = raw_case_dir if raw_case_dir.is_absolute() else root / raw_case_dir
+        case_name = slugify(args.case_name or case_dir.name)
+        artifact_slug = case_name
+    else:
+        case_name = slug if args.no_date_prefix else time.strftime("%Y-%m-") + slug
+        case_dir = root / "cases" / case_name
+        artifact_slug = slug
     paths = {
-        "case": root / "cases" / case_name,
-        "samples": root / "samples" / args.board / slug,
-        "projects": root / "projects" / args.board / slug,
-        "exports": root / "exports" / args.board / slug,
-        "patches": root / "patches" / args.board / slug,
-        "notes": root / "notes" / args.board / slug,
-        "reports": root / "reports" / args.board / slug,
-        "scripts": root / "scripts" / args.board / slug,
+        "case": case_dir,
+        "samples": root / "samples" / args.board / artifact_slug,
+        "projects": root / "projects" / args.board / artifact_slug,
+        "exports": root / "exports" / args.board / artifact_slug,
+        "patches": root / "patches" / args.board / artifact_slug,
+        "notes": root / "notes" / args.board / artifact_slug,
+        "reports": root / "reports" / args.board / artifact_slug,
+        "scripts": root / "scripts" / args.board / artifact_slug,
     }
     for p in paths.values():
         p.mkdir(parents=True, exist_ok=True)
@@ -130,6 +141,9 @@ def main(argv: list[str]) -> int:
             "If JS-heavy, use JSHook to capture fetch/XHR/WebSocket/crypto.",
             "If product/version is fingerprinted, write cases/<case>/fingerprints.json and run fingerprint_cve_pipeline.py for CVE graph/chain candidates.",
         ],
+        "next_round_focus": [],
+        "attack_paths": [],
+        "loop_status": {"status": "CONTINUE", "reason": "initial intake"},
         "evidence": [],
         "dead_ends": [],
     }

@@ -40,18 +40,20 @@
 如果用户要求“24 小时自动完成全流程 CTF”或类似不中断打靶，不能只依赖提示词。
 按文件夹内置的 loop/checkpoint 协议执行：
 
-1. Claude Code 优先使用 `/loop /ctf-24h <target> [case]`。
-2. `/loop` 每轮调用 `.claude/workflows/ctf-24h-round.js`，不要让单个 workflow 阻塞 24 小时。
-3. 每轮只做有界动作，输出 `STATUS: CONTINUE|DONE|EXHAUSTED`。
-4. `cases/<case>/ai_manifest.json` 是恢复点；中断后先读 manifest 的
+1. 单目标使用 `/loop /ctf-24h <target> [case]`。
+2. 多目标使用 `/loop /ctf-24h-fleet <target1,target2,...> [fleet]`，由
+   `.claude/workflows/ctf-24h-fleet.js` 按 batch 并行调用多个 `ctf-24h-round`。
+3. `/loop` 每轮调用 workflow；不要让单个 workflow 阻塞 24 小时。
+4. 每轮只做有界动作，输出 `STATUS: CONTINUE|DONE|EXHAUSTED`。
+5. `cases/<case>/ai_manifest.json` 是恢复点；中断后先读 manifest 的
    `autopilot.last_round_id`、`next_actions`、`evidence`、`dead_ends`，再继续。
-5. Codex 没有 Claude workflow runner 时，使用同一 manifest 协议：循环执行
+6. Codex 没有 Claude workflow runner 时，使用同一 manifest 协议：循环执行
    `python3 scripts/ctf-website/ctf_autopilot.py <manifest> --max-actions 4 --execute`，
    再由 Agent 按攻击网完成本轮 AI 判断和证据写回。
-6. 无人值守审批/权限由运行器配置负责。需要时先执行
+7. 无人值守审批/权限由运行器配置负责。需要时先执行
    `python3 scripts/misc/setup_unattended_ctf_runner.py --overwrite`，生成本地
    `.codex/` 与 `.claude/settings.local.json`。
-7. 真实目标、flag、请求响应、截图、日志只保存在本地 case/export/report 目录，禁止提交。
+8. 真实目标、flag、请求响应、截图、日志只保存在本地 case/export/report 目录，禁止提交。
 
 ## APK/Android 知识库
 

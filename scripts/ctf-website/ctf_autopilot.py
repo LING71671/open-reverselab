@@ -5,7 +5,7 @@ Stateful Web CTF autopilot controller.
 The controller turns ctf_ai_next.py's advisory plan into repeatable rounds with
 budget, checkpoint, and manifest write-back.  It deliberately executes only a
 small allowlist of deterministic actions; everything else is recorded as a
-manual/agent task for the next round.
+next-round AI task.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from typing import Any
 
 import ctf_ai_next
 import ctf_intake
+import ctf_loop_status
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -84,6 +85,9 @@ def ensure_manifest_shape(manifest: dict[str, Any], manifest_path: Path) -> None
     manifest.setdefault("parsed", {"links": [], "scripts": [], "forms": []})
     manifest.setdefault("hypotheses", [])
     manifest.setdefault("next_actions", [])
+    manifest.setdefault("next_round_focus", [])
+    manifest.setdefault("attack_paths", [])
+    manifest.setdefault("loop_status", {"status": "CONTINUE", "reason": "manifest shape initialized"})
     manifest.setdefault("evidence", [])
     manifest.setdefault("dead_ends", [])
 
@@ -364,6 +368,16 @@ def update_autopilot_state(
         for item in round_record.get("actions", [])
         if item.get("action")
     ]
+    manifest["next_round_focus"] = [
+        {
+            "action": item.get("action", ""),
+            "priority": item.get("priority", ""),
+            "reason": item.get("why", ""),
+        }
+        for item in round_record.get("actions", [])
+        if (item.get("execution") or {}).get("status") in {"agent_required", "planned", "error"}
+    ]
+    manifest["loop_status"] = ctf_loop_status.evaluate_manifest(manifest)
 
 
 def run_round(

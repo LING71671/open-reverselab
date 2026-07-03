@@ -18,7 +18,7 @@ export const meta = {
 const domain = typeof args === 'string' ? args : args?.domain || 'example.edu.cn'
 const priorFindings = (typeof args === 'object' && args?.findings) ? args.findings : null
 const techStack = (typeof args === 'object' && args?.techStack) ? args.techStack : null
-const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `E:\\ReverseLab\\cases\\${domain.replace(/\./g, '-')}`
+const caseDir = (typeof args === 'object' && args?.caseDir) ? args.caseDir : `cases/${domain.replace(/\./g, '-')}`
 const targets = (typeof args === 'object' && args?.targets) ? args.targets : [
   domain, `www.${domain}`, `mail.${domain}`, `cas.${domain}`,
   `authserver.${domain}`, `vpn.${domain}`, `lib.${domain}`,

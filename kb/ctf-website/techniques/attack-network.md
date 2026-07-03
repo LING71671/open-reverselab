@@ -26,6 +26,12 @@ graph TD
     LAMBDA["Lambda<br/>10-cloud"]
     POD["K8s Pod<br/>10-cloud"]
     SAML["SAML<br/>02-auth"]
+    JWT["JWT<br/>02-auth/jwt"]
+    IDOR["IDOR/BAC<br/>14-idor"]
+    API["API Discovery<br/>17-api-attacks"]
+    MASSASSIGN["Mass Assignment<br/>15-mass-assignment"]
+    RATELIMIT["Rate Limit Bypass<br/>16-rate-limit"]
+    SUBTAKE["Subdomain Takeover<br/>19-dns-email"]
     REDOS["ReDoS<br/>03-injection"]
     PAYBY["Payment Bypass<br/>12-payment"]
     PRICE["Price Manip<br/>12-payment"]
@@ -84,6 +90,18 @@ graph TD
     POD -->|etcd| SRC
     SAML -->|NameID forge| CRED
     SAML -->|attribute inject| ADMIN
+    JWT -->|alg none/confusion| CRED
+    JWT -->|kid/jku key abuse| ADMIN
+    IDOR -->|object id enumerate| DB
+    IDOR -->|horizontal access| CRED
+    API -->|swagger/openapi leak| SRC
+    API -->|unauth endpoint| DB
+    MASSASSIGN -->|role/isAdmin overwrite| ADMIN
+    MASSASSIGN -->|price/quota overwrite| FLAG
+    RATELIMIT -->|bruteforce token/otp| CRED
+    RATELIMIT -->|coupon/order race| FLAG
+    SUBTAKE -->|dangling CNAME takeover| CRED
+    SUBTAKE -->|trusted origin control| XSS
     REDOS -->|auth bypass| ADMIN
     REDOS -->|WAF bypass| BE
     WEBSOCKET -->|CSWSH| CRED

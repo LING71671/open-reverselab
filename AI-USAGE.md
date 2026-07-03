@@ -30,17 +30,23 @@
 时，不要只靠提示词，也不要让单个 workflow 阻塞 24 小时；使用：
 
 ```
-/loop  →  .claude/workflows/ctf-24h-round.js  →  cases/<case>/ai_manifest.json
+/loop
+  ├─ 单目标: .claude/workflows/ctf-24h-round.js
+  └─ 多目标: .claude/workflows/ctf-24h-fleet.js → N × ctf-24h-round
+        ↓
+      cases/<case>/ai_manifest.json
 ```
 
 规则：
 
 1. `/loop` 是外层调度器，负责重复调用单轮任务。
-2. `ctf-24h-round` 每次只做一轮有界动作，必须输出 `STATUS: CONTINUE|DONE|EXHAUSTED`。
-3. `ai_manifest.json` 是唯一恢复点；每轮都要写 `autopilot.rounds[]`、`evidence[]`、
+2. 单目标用 `/loop /ctf-24h <target> [case]`；多目标用 `/loop /ctf-24h-fleet <targets> [fleet]`。
+3. `ctf-24h-round` 每次只做一轮有界动作；`ctf-24h-fleet` 按 batch 并行调度多个 round。
+4. 每个 workflow 必须输出 `STATUS: CONTINUE|DONE|EXHAUSTED`。
+5. 每个目标的 `ai_manifest.json` 是唯一恢复点；每轮都要写 `autopilot.rounds[]`、`evidence[]`、
    `dead_ends[]` 和 `next_actions[]`。
-4. 中断/重启后，Claude Code 或 Codex 先读同一个 manifest，再继续下一轮，不从头开始。
-5. 真实 target、请求响应、flag、截图和日志只留在本地 `cases/` / `exports/` / `reports/`，
+6. 中断/重启后，Claude Code 或 Codex 先读同一个 manifest，再继续下一轮，不从头开始。
+7. 真实 target、请求响应、flag、截图和日志只留在本地 `cases/` / `exports/` / `reports/`，
    不进入公开提交。
 
 无人值守 runner 配置：
