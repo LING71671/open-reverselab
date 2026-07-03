@@ -12,10 +12,10 @@ signals: ["OAuth", "OIDC", "redirect_uri", "state", "PKCE", "code reuse", "ID To
 mcp_tools: ["http_probe", "kb_router", "kb_read_file"]
 keywords: ["OAuth攻击", "OIDC", "SSO", "redirect_uri绕过", "PKCE", "code复用", "client secret", "CSRF", "token混淆"]
 difficulty: "advanced"
-tags: ["authentication", "oauth", "oidc", "sso", "web-security", "ctf"]
+tags: ["authentication", "oauth", "oidc", "sso", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/02-auth/host-header", "ctf-website/02-auth/jwt/00-overview", "ctf-website/13-signature/00-overview", "ctf-website/13-signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/14-idor/02-bac-business-logic"]
 ---
 
 # OAuth 2.0 / OIDC 攻击实战
@@ -31,6 +31,76 @@ OAuth 流程四阶段，每阶段都有攻击点:
               │ state/nonce   │ reuse     │  aud 缺失
               │ PKCE          │           │
 ```
+
+### 0.1 Flow 字段绑定到 Token/API Oracle
+
+OAuth/OIDC 的核心是字段绑定关系。每个 `code/state/nonce/redirect_uri/client_id/aud/iss/sub/scope` 都要落到一个可观察 oracle：能否换 token、token 能访问哪个 API、是否能触发支付/订单/后台动作。
+
+| 字段 | 绑定对象 | 错配实验 | 成功 oracle | 下一跳 |
+|---|---|---|---|---|
+| `redirect_uri` | client + code | 同 client 换 path/host/open redirect | code/token 到攻击者回调 | Host Header、Open Redirect |
+| `state` | browser session | 固定/空/跨 session | login CSRF、账号错绑 | Replay/nonce |
+| `nonce` | id_token + session | 重放旧 id_token | id_token 被接受 | JWT |
+| `code` | client + redirect + PKCE | 跨 client/跨 session 换 token | token endpoint 返回 access_token | 签名/重放 |
+| `aud`/`azp` | API/client | ID token 调 API、换 client | API 接受错 token | BAC/IDOR |
+| `scope` | client grant | refresh 扩权、device flow 扩权 | 新 token scope 增加 | 业务权限 |
+| `email`/`sub`/`iss` | 用户身份 | 同邮箱跨 IdP | 账号绑定到错误主体 | LDAP/SAML |
+
+Token oracle 记录器：
+
+```python
+# oauth_token_oracle_matrix.py
+import base64
+import csv
+import json
+from pathlib import Path
+import requests
+
+def decode_jwt(token):
+    parts = token.split(".")
+    if len(parts) < 2:
+        return {}
+    payload = parts[1] + "=" * (-len(parts[1]) % 4)
+    return json.loads(base64.urlsafe_b64decode(payload.encode()))
+
+def call_api(api_url, token):
+    r = requests.get(api_url, headers={"Authorization": f"Bearer {token}"}, timeout=10)
+    return {"status": r.status_code, "length": len(r.text), "sample": r.text[:180].replace("\n", "\\n")}
+
+def record_tokens(cases, api_url, out="exports/oauth_token_oracle_matrix.csv"):
+    rows = []
+    for name, token in cases.items():
+        claims = decode_jwt(token)
+        api = call_api(api_url, token)
+        rows.append({
+            "case": name,
+            "iss": claims.get("iss", ""),
+            "sub": claims.get("sub", ""),
+            "aud": claims.get("aud", ""),
+            "azp": claims.get("azp", ""),
+            "scope": claims.get("scope", ""),
+            "api_status": api["status"],
+            "api_length": api["length"],
+            "api_sample": api["sample"],
+        })
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        if not rows:
+            f.write("case,iss,sub,aud,azp,scope,api_status,api_length,api_sample\n")
+            return []
+        w = csv.DictWriter(f, fieldnames=rows[0].keys())
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+```
+
+执行节奏：
+
+1. 先抓完整 authorize/token/userinfo/API 四段请求，建立 baseline。
+2. 对 redirect_uri/state/nonce/PKCE/code/client_id 单变量错配，记录每次 token endpoint 结果。
+3. 每个 access_token/id_token 都跑 `oauth_token_oracle_matrix.csv`，看 API 是否接受错类型 token。
+4. 命中 `aud/azp/scope` 错配后，转 BAC/订单/支付 API，看权限是否扩大。
+5. 命中 `email/sub/iss` 错绑后，转 LDAP/SAML/JWT 文档补身份源链。
 
 ## 1. redirect_uri 攻击
 
@@ -340,7 +410,7 @@ curl https://target.com/.well-known/openid-configuration | jq .
 
 ## Evidence
 
-记录: 完整流程每个 HTTP 请求/响应、authorize 参数、redirect_uri payload、code 与 token 交换结果、PKCE verifier/challenge、id_token/access_token/refresh_token 的 claims、client_secret 来源、token 能访问的 API 和失败样本。
+记录: 完整流程每个 HTTP 请求/响应、authorize 参数、redirect_uri payload、code 与 token 交换结果、PKCE verifier/challenge、id_token/access_token/refresh_token 的 claims、client_secret 来源、`oauth_token_oracle_matrix.csv`、token 能访问的 API 和失败样本。
 
 ## MCP 工具映射
 
@@ -351,6 +421,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | OAuth endpoint 探测 | `http_probe` | HTTP GET 探测 OAuth/SSO 端点 |
 | 知识检索 | `kb_router` | 按攻击信号搜索知识库相关技术 |
 | 知识库文件读取 | `kb_read_file` | 读取知识库技术文件内容 |
+| 执行脚本 | `run_ctf_tool` | 跑 redirect_uri 矩阵、token oracle、scope/refresh 变体 |
 
 ## 工作流
 

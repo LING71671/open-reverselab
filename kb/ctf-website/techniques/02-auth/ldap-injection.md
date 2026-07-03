@@ -9,16 +9,75 @@ summary_en: >
 board: "ctf-website"
 category: "02-auth"
 signals: ["LDAP", "过滤器注入", "LDAP injection", "JNDI", "盲注", "anonymous bind", "OpenLDAP"]
-mcp_tools: ["http_probe"]
+mcp_tools: ["http_probe", "kb_router", "kb_read_file", "run_ctf_tool"]
 keywords: ["LDAP injection", "LDAP注入", "JNDI", "filter bypass", "盲注", "anonymous bind", "认证绕过"]
-difficulty: "intermediate"
-tags: ["authentication", "ldap", "injection", "web-security", "jndi", "ctf"]
+difficulty: "advanced"
+tags: ["authentication", "ldap", "injection", "jndi", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/02-auth/oauth-sso", "ctf-website/16-rate-limit/02-brute-force-tactics", "ctf-website/24-database/04-config-exposure", "ctf-website/13-signature/00-overview", "ctf-website/14-idor/02-bac-business-logic"]
 ---
 
 # LDAP Injection
+
+## 0. 目录字段到身份/权限路线图
+
+LDAP 注入的目标不是只让登录成功，而是把目录字段转成身份、组、凭据和后台权限。CTF 里最短路径通常是：判断 filter 形态 → 扩展 OR/通配 → 抽 `mail/memberOf/userPassword/description` → 回到 Web 登录、SSO、后台或 API token。
+
+| 目录信号 | 关键属性 | 第一动作 | 下一跳 |
+|---|---|---|---|
+| 登录 filter | `uid`, `mail`, `sAMAccountName` | 闭合值、扩展 OR 分支 | Auth bypass |
+| 组/角色 | `memberOf`, `gidNumber`, `role`, `description` | 枚举 admin/ops/dev 组 | BAC、后台入口 |
+| 凭据 | `userPassword`, `unicodePwd`, `pwdLastSet` | 前缀盲注或匿名 bind | 凭据复用、限速绕过 |
+| SSO 绑定 | `mail`, `eduPersonPrincipalName`, `sub` | 邮箱/NameID 错绑 | OAuth/SAML |
+| 配置/服务 | `labeledURI`, `host`, `sshPublicKey` | 找内部 URL 和 key | SSRF、配置泄露 |
+| Flag/业务字段 | `info`, `description`, 自定义属性 | 属性存在/前缀抽取 | CTF 目标字段 |
+
+目录字段路由器：
+
+```python
+# ldap_attribute_router.py
+import csv
+import re
+from pathlib import Path
+
+ROUTES = {
+    "identity": re.compile(r"uid|cn|mail|sAMAccountName|userPrincipalName|eduPerson", re.I),
+    "group": re.compile(r"memberOf|gidNumber|group|role|admin|ops|dev", re.I),
+    "credential": re.compile(r"userPassword|unicodePwd|pwdLastSet|shadow|sshPublicKey", re.I),
+    "service": re.compile(r"labeledURI|host|url|endpoint|database|ldap", re.I),
+    "flag": re.compile(r"flag\{|CTF\{|DASCTF\{|description|info", re.I),
+}
+
+def route_ldif(path, out="exports/ldap_attribute_routes.csv"):
+    rows = []
+    current_dn = ""
+    for line in open(path, encoding="utf-8", errors="ignore"):
+        line = line.rstrip("\n")
+        if line.startswith("dn: "):
+            current_dn = line[4:]
+        if ":" not in line:
+            continue
+        attr, value = line.split(":", 1)
+        text = f"{attr} {value}"
+        hits = [name for name, rx in ROUTES.items() if rx.search(text)]
+        if hits:
+            rows.append({"dn": current_dn, "attribute": attr, "routes": ",".join(hits), "sample": value.strip()[:160]})
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["dn", "attribute", "routes", "sample"])
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+```
+
+执行节奏：
+
+1. 先用错误和结果数判断 filter 形态，不要盲目套万能 payload。
+2. 登录口命中后，马上测搜索/通讯录/SSO 绑定口，找更稳定的结果 oracle。
+3. 抽到 `mail/memberOf` 后转 OAuth/SAML/后台角色链；抽到 `userPassword` 后转凭据喷射/限速文档。
+4. 抽到 `labeledURI/host` 后转 SSRF 或配置泄露；抽到 `description/info` 先查 flag/业务 secret。
+5. 所有盲注都保留前缀推进日志，避免把随机页面长度误判成目录命中。
 
 ## LDAP 过滤器注入
 
@@ -207,7 +266,7 @@ LDAP filter injection → (&(uid=*)(memberOf=cn=admin,ou=groups)) → 提权
 
 ## Evidence
 
-记录: 原始 filter 形态推断、payload、响应差异、搜索结果数量、盲注字符日志、提取出的属性值、LDAP banner/base DN、JNDI 外连日志、成功样本和失败样本。
+记录: 原始 filter 形态推断、payload、响应差异、搜索结果数量、盲注字符日志、提取出的属性值、LDAP banner/base DN、JNDI 外连日志、`ldap_attribute_routes.csv` 字段路由、成功样本和失败样本。
 
 ## MCP 工具映射
 
@@ -216,3 +275,6 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 | 攻击步骤 | MCP 工具 | 说明 |
 |---------|---------|------|
 | LDAP 注入端点探测 | `http_probe` | HTTP GET 探测 LDAP 查询端点 |
+| 按信号路由 | `kb_router` | 命中 OAuth、BAC、配置、限速信号后跳转文档 |
+| 读取技术文件 | `kb_read_file` | 读取 LDAP、SSO、限速、配置链路细节 |
+| 执行脚本 | `run_ctf_tool` | 跑 LDAP 前缀抽取、LDIF 字段路由、结果数 oracle |
