@@ -4,7 +4,7 @@ title: "PHP 发卡/电商平台指纹库"
 title_en: "PHP Card-Issuing / E-Commerce Platform Fingerprint Library"
 summary: >
   从实战案例中积累的 PHP 发卡及电商平台识别指纹库，覆盖 acg-faka、dujiaoka、Annie Mall、XYCMS、Emlog
-  等主流平台的特征路径、JS 标记、API 端点和已知漏洞模式，用于快速 CMS 识别与定向攻击。
+  等主流平台的特征路径、JS 标记、API 端点和已知漏洞模式，用于快速 CMS 识别、支付插件定位、订单/卡密/回调链路选择。
 summary_en: >
   Fingerprint library for PHP card-issuing and e-commerce platforms, covering acg-faka, dujiaoka,
   Annie Mall, XYCMS, and Emlog — with signature paths, JS markers, API endpoints, and known vulnerability
@@ -13,16 +13,82 @@ board: "ctf-website"
 category: "12-payment"
 signals: ["platform fingerprint", "平台指纹", "发卡系统", "acg-faka", "dujiaoka", "XYCMS", "CMS识别", "ready.js"]
 mcp_tools: ["http_probe", "kb_router"]
-keywords: ["发卡平台指纹", "acg-faka", "dujiaoka", "XYCMS", "Emlog", "CMS识别", "平台特征", "电商指纹"]
-difficulty: "beginner"
+keywords: ["发卡平台指纹", "acg-faka", "dujiaoka", "XYCMS", "Emlog", "CMS识别", "平台特征", "电商指纹", "订单查询", "卡密"]
+difficulty: "advanced"
 tags: ["fingerprint", "platform", "cms", "php", "e-commerce", "recon"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/12-payment/payment-logic", "ctf-website/24-database/01-sqli-fundamentals", "ctf-website/24-database/05-backup-log-leak"]
 ---
 # PHP 发卡/电商平台指纹库
 
 > 从实战案例中积累的平台识别指纹。用于快速判断目标CMS，定向查找已知漏洞。
+
+## 0. 指纹到支付链路路线图
+
+平台指纹不是终点。识别平台后，立刻判断订单查询、卡密发货、余额支付、支付插件、回调日志和安装残留这几条链。
+
+| 指纹信号 | 优先接口 | 关键参数 | 下一跳 |
+|---|---|---|---|
+| `ready.js`, `window._data_var` | 商品/估价/下单 API | `commodity_id`, `pay_id`, `contact` | 金额/订单逻辑 |
+| `/ajax.php?act=query` | 游客订单查询 | `qq`, `email`, `order_id` | IDOR/卡密 |
+| `plugin/epay` | Epay 回调/跳转 | `out_trade_no`, `money`, `sign` | 签名/回调 |
+| `/install/` | 安装残留 | lock file、数据库配置 | 配置/备份 |
+| Laravel/dujiaoka | `/api/*`, `.env`, queue | `order_sn`, `payway`, `coupon` | 队列/回调 |
+| 静态版本号 | `?v=...`, hash | 版本-漏洞映射 | 专项脚本 |
+
+```mermaid
+flowchart TD
+  FP["静态资源/路由/cookie 指纹"] --> Platform["平台/版本候选"]
+  Platform --> Order["订单查询/游客查询"]
+  Platform --> Pay["支付插件/回调路由"]
+  Platform --> Install["安装/备份/配置残留"]
+  Order --> Cards["卡密/数字商品"]
+  Pay --> Sign["签名/重放/金额字段"]
+  Install --> DB["数据库配置/SQLi"]
+  DB --> Cards
+  Sign --> State["订单状态差分"]
+  Cards --> Flag["flag / secret"]
+```
+
+### 0.1 指纹采集脚本
+
+```python
+# payment_platform_fingerprint.py — 平台指纹与下一跳建议
+import hashlib
+import json
+import re
+import requests
+
+PATHS = [
+    "/", "/assets/common/js/ready.js", "/assets/common/js/_.js",
+    "/user/api/index/query", "/ajax.php?act=query", "/install/",
+    "/plugin/epay/", "/admin/",
+]
+
+RULES = [
+    ("acg-faka", ["ready.js", "window._data_var", "/user/api/index/query"]),
+    ("annie-mall", ["v1030", "/ajax.php?act=query"]),
+    ("dujiaoka", ["laravel", "dujiaoka", "/api/orders"]),
+    ("xycms", ["Xiangyun", "SeaCMS"]),
+    ("emlog", ["emlog", "Layui"]),
+]
+
+def fp(base):
+    hits = []
+    for path in PATHS:
+        url = base.rstrip("/") + path
+        try:
+            r = requests.get(url, timeout=6)
+        except requests.RequestException as e:
+            hits.append({"path": path, "error": str(e)})
+            continue
+        text = r.text[:5000]
+        body_hash = hashlib.sha1(r.content[:4096]).hexdigest()
+        matched = [name for name, keys in RULES if any(k.lower() in text.lower() or k in path for k in keys)]
+        hits.append({"path": path, "status": r.status_code, "hash": body_hash, "matched": matched})
+    print(json.dumps(hits, ensure_ascii=False, indent=2))
+```
 
 ## 1. acg-faka (v3.4.x)
 

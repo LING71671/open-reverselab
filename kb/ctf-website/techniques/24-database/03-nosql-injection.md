@@ -33,7 +33,7 @@ keywords:
   - "主从复制 RCE"
   - "Groovy 脚本注入"
   - "$ne 绕过"
-difficulty: "intermediate"
+difficulty: "advanced"
 tags:
   - "database"
   - "nosql"
@@ -44,7 +44,7 @@ tags:
   - "injection"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/12-payment/payment-digital-goods", "ctf-website/12-payment/payment-callback-async"]
 ---
 # NoSQL Injection — NoSQL 注入攻击
 
@@ -374,6 +374,49 @@ captcha
 cache
 ```
 
+## 6. NoSQL 到订单/会话/队列 Pivot
+
+NoSQL 题的主线通常不是“拿库名”，而是从 key/collection/index 进入业务态：登录 session、购物车、订单缓存、队列任务、支付回调 raw body、卡密发货记录。
+
+| 服务 | 高价值对象 | 关键字段/Key | 下一跳 |
+|---|---|---|---|
+| MongoDB | `users`, `orders`, `payments`, `cards` | `role`, `status`, `amount`, `code` | 订单/卡密 |
+| Redis | `session:*`, `cart:*`, `order:*`, `queue:*` | serialized session、job payload、验证码 | 会话/队列 |
+| Elasticsearch | `orders-*`, `logs-*`, `payment-*` | `out_trade_no`, `raw`, `sign`, `uid` | 回调/签名 |
+| CouchDB | `_users`, `orders`, `config` | user doc、merchant config | 登录/配置 |
+| Memcached | framework session/cache | `laravel:*`, `flask_session:*`, `think:*` | session 伪造 |
+
+### 6.1 Redis 业务 key 路由器
+
+```python
+# redis_business_key_router.py — 从 key 名推下一跳
+ROUTES = [
+    ("session", ["session", "sess", "laravel", "flask_session"], "尝试还原登录态/用户 id/role"),
+    ("cart", ["cart", "basket"], "篡改数量、sku、price 后触发结算"),
+    ("order", ["order", "trade", "invoice"], "对照订单状态机和支付流水"),
+    ("queue", ["queue", "job", "celery", "horizon"], "查看异步发货/回调任务 payload"),
+    ("captcha", ["captcha", "verify", "code"], "复用验证码进入订单查询"),
+    ("token", ["jwt", "csrf", "token"], "转签名/JWT/session 文档"),
+]
+
+def route_key(name):
+    low = name.lower()
+    return [r for r in ROUTES if any(k in low for k in r[1])]
+
+for key in ["laravel:sessions:abc", "queue:default", "order:1001"]:
+    print(key, route_key(key))
+```
+
+### 6.2 Mongo / ES 订单字段优先级
+
+```text
+status > paid > amount > user_id > out_trade_no > transaction_id
+cards.code > cards.used > cards.order_id
+notify.raw > notify.sign > notify.created_at
+```
+
+如果只能读一小部分文档，先取最近订单和回调日志，再取卡密。成功样本：session 解出 `uid/role`、Redis 队列里有发货 payload、ES 日志里有回调原文和签名、Mongo 订单状态可被操作符注入影响。
+
 ## 攻击链 / 工作流
 
 ```
@@ -384,6 +427,7 @@ cache
 5. Elasticsearch/CouchDB：枚举索引/数据库/用户，定位可读字段和可写 API
 6. 需要 RCE 链时记录版本、插件/脚本引擎状态和写入路径
 7. 收敛证据：服务类型、版本、认证状态、可读键/集合/索引样例
+8. 对业务 key/collection/index 做路由，优先进入 session、订单、队列、回调和卡密链路
 ```
 
 ## Evidence
@@ -395,6 +439,7 @@ cache
 | Elasticsearch | `_cluster/health`、索引列表、查询注入响应 |
 | CouchDB | `/_all_dbs`、`/_users`、未授权状态码 |
 | Memcached | `stats`、`stats items`、key/value 样例 |
+| 业务 Pivot | session/order/cart/queue/payment key、字段样例、业务状态变化 |
 
 ## MCP 工具映射
 
@@ -405,7 +450,7 @@ cache
 | 工具执行 | `run_ctf_tool` | 调用 nc/redis-cli/curl/自定义探测脚本 |
 | 证据记录 | `workspace_write_text` | 保存服务指纹、未授权证据和字段样例 |
 
-## 6. 关联技术
+## 7. 关联技术
 
 - [[01-sqli-fundamentals]] — SQL 注入基础
 - [[04-config-exposure]] — 配置泄露

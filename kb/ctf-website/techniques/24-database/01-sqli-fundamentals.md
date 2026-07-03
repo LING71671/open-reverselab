@@ -33,7 +33,7 @@ keywords:
   - "LOAD_FILE"
   - "宽字节注入"
   - "extractvalue"
-difficulty: "intermediate"
+difficulty: "advanced"
 tags:
   - "database"
   - "sql-injection"
@@ -43,7 +43,7 @@ tags:
   - "blind-injection"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: []
+related_articles: ["ctf-website/24-database/02-sqli-advanced", "ctf-website/12-payment/payment-logic", "ctf-website/12-payment/platform-fingerprints"]
 ---
 # SQL Injection Core — SQL 注入基础与全类型覆盖
 
@@ -496,6 +496,61 @@ EXEC xp_cmdshell 'whoami';
 | HPP | `?id=1&id=2 UNION SELECT...` |
 | 编码绕过 | `CHAR(115,101,108,101,99,116)` |
 
+## 8. 订单/发卡数据库抽取优先级
+
+SQLi 在支付题里不要平均抽库。先定位能改变业务结果的表：订单、流水、卡密、库存、优惠券、用户余额、回调日志。抽取顺序错了，会浪费大量请求数。
+
+| 目标 | 常见表名 | 关键列 | 命中后的下一步 |
+|---|---|---|---|
+| 订单主表 | `orders`, `order`, `pay_order`, `trade` | `id`, `out_trade_no`, `status`, `amount`, `user_id` | 对照支付状态机 |
+| 支付流水 | `payments`, `pay_log`, `notify_log`, `transactions` | `trade_no`, `pay_type`, `money`, `raw`, `sign` | 转回调/签名文档 |
+| 卡密/数字商品 | `cards`, `kami`, `goods_code`, `licenses` | `code`, `secret`, `used`, `order_id` | 判断是否能直接取货 |
+| 余额/积分 | `users`, `wallet`, `balance_log` | `balance`, `credit`, `freeze`, `delta` | 找 lost update / negative amount |
+| 库存 | `goods`, `sku`, `stock`, `tickets` | `stock`, `sold`, `limit`, `sale_start` | 转抢购/库存竞态 |
+| 配置 | `config`, `settings`, `options` | `epay_key`, `notify_url`, `merchant_id` | 转签名密钥/配置泄露 |
+
+### 8.1 表名优先级生成器
+
+```python
+# sqli_payment_table_plan.py — 支付题抽表优先级
+PAYMENT_HINTS = [
+    ("orders", ["order", "trade", "pay_order", "invoice"]),
+    ("payment_logs", ["payment", "pay_log", "notify", "callback", "transaction"]),
+    ("digital_goods", ["card", "kami", "license", "secret", "coupon"]),
+    ("wallet", ["wallet", "balance", "credit", "coin", "points"]),
+    ("stock", ["goods", "product", "sku", "stock", "ticket"]),
+    ("config", ["config", "setting", "option", "merchant", "epay"]),
+]
+
+def rank_tables(table_names):
+    rows = []
+    for table in table_names:
+        low = table.lower()
+        hits = [name for name, keys in PAYMENT_HINTS if any(k in low for k in keys)]
+        if hits:
+            rows.append({"table": table, "priority": hits, "score": len(hits)})
+    return sorted(rows, key=lambda x: (-x["score"], x["table"]))
+
+if __name__ == "__main__":
+    sample = ["users", "orders", "pay_log", "goods_code", "system_config"]
+    for row in rank_tables(sample):
+        print(row)
+```
+
+### 8.2 低请求数盲注策略
+
+盲注抽支付数据时，先抽结构再抽值：表名 → 列名 → 单条订单/卡密 → 状态差分。常用策略：
+
+| 场景 | 抽取方式 | 目标 |
+|---|---|---|
+| 有排序差异 | `ORDER BY CASE WHEN (...) THEN id ELSE name END` | 枚举表/列存在性 |
+| 有响应长度差异 | `AND EXISTS(SELECT 1 FROM ...)` | 确认业务表 |
+| 只有时间通道 | 二分 `ascii(substr(...))` | 抽关键字段而不是整库 |
+| 只有报错通道 | `extractvalue/updatexml/cast` | 每次带 20-40 字符 |
+| 只有二阶触发 | 写 marker 后触发导出/搜索 | 定位后台 SQL 拼接 |
+
+Evidence 最少要保留三组：`schema_rank.json`、`critical_row_extract.jsonl`、`business_state_diff.json`。SQLi 成功不等于支付链成功，只有订单、余额、卡密、库存或 flag 发生可复查变化，才算链路打通。
+
 ## 攻击链 / 工作流
 
 ```
@@ -506,6 +561,7 @@ EXEC xp_cmdshell 'whoami';
 5. 无回显：走 Boolean/Time blind，优先提取 database/user/version 等稳定指纹
 6. 有文件权限：评估 LOAD_FILE / INTO OUTFILE / xp_cmdshell 等扩展能力
 7. 遇到 WAF：记录拦截规则后转入高级绕过文档，避免无序 payload 爆破
+8. 支付题优先抽订单/流水/卡密/余额/库存/配置，按状态差分证明结果
 ```
 
 ## Evidence
@@ -517,6 +573,7 @@ EXEC xp_cmdshell 'whoami';
 | 数据提取 | UNION 回显位、盲注脚本输出、字段样例 |
 | 文件读写 | 目标路径、返回内容片段、写入文件哈希 |
 | WAF 记录 | 被拦截 payload、状态码、绕过前后对比 |
+| 支付链路 | 关键表名、关键行、订单/余额/卡密/库存状态差分 |
 
 ## MCP 工具映射
 
@@ -527,7 +584,7 @@ EXEC xp_cmdshell 'whoami';
 | 自动化验证 | `run_ctf_tool` | 调用 sqlmap 或自定义脚本做可控验证 |
 | 证据落盘 | `workspace_write_text` | 保存请求响应、payload 与结论 |
 
-## 8. 关联技术
+## 9. 关联技术
 
 - [[sqli-nosqli]] — SQL/NoSQL 注入
 - [[02-sqli-advanced]] — 高级注入技术

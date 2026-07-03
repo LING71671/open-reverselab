@@ -16168,6 +16168,72 @@ Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/te
 
 > 从实战案例中积累的平台识别指纹。用于快速判断目标CMS，定向查找已知漏洞。
 
+## 0. 指纹到支付链路路线图
+
+平台指纹不是终点。识别平台后，立刻判断订单查询、卡密发货、余额支付、支付插件、回调日志和安装残留这几条链。
+
+| 指纹信号 | 优先接口 | 关键参数 | 下一跳 |
+|---|---|---|---|
+| `ready.js`, `window._data_var` | 商品/估价/下单 API | `commodity_id`, `pay_id`, `contact` | 金额/订单逻辑 |
+| `/ajax.php?act=query` | 游客订单查询 | `qq`, `email`, `order_id` | IDOR/卡密 |
+| `plugin/epay` | Epay 回调/跳转 | `out_trade_no`, `money`, `sign` | 签名/回调 |
+| `/install/` | 安装残留 | lock file、数据库配置 | 配置/备份 |
+| Laravel/dujiaoka | `/api/*`, `.env`, queue | `order_sn`, `payway`, `coupon` | 队列/回调 |
+| 静态版本号 | `?v=...`, hash | 版本-漏洞映射 | 专项脚本 |
+
+```mermaid
+flowchart TD
+  FP["静态资源/路由/cookie 指纹"] --> Platform["平台/版本候选"]
+  Platform --> Order["订单查询/游客查询"]
+  Platform --> Pay["支付插件/回调路由"]
+  Platform --> Install["安装/备份/配置残留"]
+  Order --> Cards["卡密/数字商品"]
+  Pay --> Sign["签名/重放/金额字段"]
+  Install --> DB["数据库配置/SQLi"]
+  DB --> Cards
+  Sign --> State["订单状态差分"]
+  Cards --> Flag["flag / secret"]
+```
+
+### 0.1 指纹采集脚本
+
+```python
+# payment_platform_fingerprint.py — 平台指纹与下一跳建议
+import hashlib
+import json
+import re
+import requests
+
+PATHS = [
+    "/", "/assets/common/js/ready.js", "/assets/common/js/_.js",
+    "/user/api/index/query", "/ajax.php?act=query", "/install/",
+    "/plugin/epay/", "/admin/",
+]
+
+RULES = [
+    ("acg-faka", ["ready.js", "window._data_var", "/user/api/index/query"]),
+    ("annie-mall", ["v1030", "/ajax.php?act=query"]),
+    ("dujiaoka", ["laravel", "dujiaoka", "/api/orders"]),
+    ("xycms", ["Xiangyun", "SeaCMS"]),
+    ("emlog", ["emlog", "Layui"]),
+]
+
+def fp(base):
+    hits = []
+    for path in PATHS:
+        url = base.rstrip("/") + path
+        try:
+            r = requests.get(url, timeout=6)
+        except requests.RequestException as e:
+            hits.append({"path": path, "error": str(e)})
+            continue
+        text = r.text[:5000]
+        body_hash = hashlib.sha1(r.content[:4096]).hexdigest()
+        matched = [name for name, keys in RULES if any(k.lower() in text.lower() or k in path for k in keys)]
+        hits.append({"path": path, "status": r.status_code, "hash": body_hash, "matched": matched})
+    print(json.dumps(hits, ensure_ascii=False, indent=2))
+```
+
 ## 1. acg-faka (v3.4.x)
 
 **案例**: beigpt, dimosky, tg5288
@@ -31811,39 +31877,35 @@ UPDATE users SET password='new' WHERE username='admin' AND SLEEP(3)--
 
 `ORDER BY` 没有回显时可以用排序差异做布尔通道：True 时按 `id` 升序，False 时按 `name` 或常量排序；页面第一条记录变化就是 bit。
 
-## 攻击链 / 工作流
+## 10. SQLi 到支付状态机 Pivot
 
-```
-1. 复用基础 SQLi 证据，确认注入点、闭合方式、DBMS 和过滤规则
-2. 分层测试绕过：HTTP 参数污染/分块 → 编码 → 注释 → 函数等价 → 语法变形
-3. 无直接回显时切换到二阶注入、OOB DNS/HTTP/SMB 或时间盲注
-4. 将 INSERT/UPDATE/ORDER BY/LIMIT 等非 SELECT 场景分别建模，避免套用单一 payload
-5. 对每种绕过只保留最小可验证 payload，并记录触发条件
-6. 如果 payload 需要外带通道，保存 DNS/HTTP listener 原始日志作为证据
-7. 输出 WAF 规则假设、可绕过语法族、最小通过 payload 和失败样本
-```
+高级 SQLi 在支付题里的价值不是“抽到 users 表”，而是进入订单状态机的内部视角：确认金额来源、状态迁移、幂等键、库存扣减和发货条件。
 
-## Evidence
+| SQLi 能力 | 支付落点 | 打法 |
+|---|---|---|
+| 表名/列名枚举 | 找 `orders/pay_log/cards/wallet` | 建状态机图 |
+| 布尔盲注 | 判断订单是否存在、状态是否变化 | 与前台请求并排跑 |
+| 时间盲注 | 判断回调是否入库、队列是否消费 | 观察异步窗口 |
+| 二阶注入 | 昵称/地址/备注进入后台订单 SQL | 触发后台导出/搜索 |
+| UPDATE 注入 | 影响 `status/paid_at/delivered` | 找整行保存/字段覆盖 |
+| OOB | 外带 `notify_log.raw/sign/config` | 转签名/回调链 |
 
-| 场景 | 证据 |
-|------|------|
-| WAF 绕过 | 拦截前 payload、绕过后 payload、状态码/响应差异 |
-| 二阶注入 | 写入点请求、触发点请求、延迟或报错输出 |
-| OOB 注入 | DNS/HTTP/SMB listener 日志、唯一 token |
-| 非 SELECT 注入 | INSERT/UPDATE/ORDER BY/LIMIT 的最小触发语句 |
+### 10.1 订单状态机抽样脚本
 
-## MCP 工具映射
+```python
+# sqli_order_state_sampler.py — 用 SQLi oracle 跟踪订单状态
+import json
+import time
 
-| 攻击步骤 | MCP 工具 | 说明 |
-|---------|---------|------|
-| 知识检索 | `kb_router` | 按 WAF bypass、second-order、OOB SQLi 搜索 |
-| HTTP 探测 | `http_probe` | 验证 payload 差异、延迟和状态码 |
-| 工具执行 | `run_ctf_tool` | 调用 sqlmap tamper、dnslog/自定义脚本 |
-| 证据记录 | `workspace_write_text` | 保存绕过矩阵和外带日志 |
+def sample_order(oracle, order_id):
+    fields = ["status", "amount", "paid_at", "delivered_at", "transaction_id"]
+    row = {}
+    for field in fields:
+        expr = f"(SELECT COALESCE(CAST({field} AS CHAR),'') FROM orders WHERE id={order_id} LIMIT 1)"
+        row[field] = oracle(expr)
+    return row
 
-## 9. 关联技术
-
-- [[01-sql
+def diff_rounds(oracle, order_id,
 
 [... content truncated for size ...]
 
@@ -32184,6 +32246,49 @@ captcha
 cache
 ```
 
+## 6. NoSQL 到订单/会话/队列 Pivot
+
+NoSQL 题的主线通常不是“拿库名”，而是从 key/collection/index 进入业务态：登录 session、购物车、订单缓存、队列任务、支付回调 raw body、卡密发货记录。
+
+| 服务 | 高价值对象 | 关键字段/Key | 下一跳 |
+|---|---|---|---|
+| MongoDB | `users`, `orders`, `payments`, `cards` | `role`, `status`, `amount`, `code` | 订单/卡密 |
+| Redis | `session:*`, `cart:*`, `order:*`, `queue:*` | serialized session、job payload、验证码 | 会话/队列 |
+| Elasticsearch | `orders-*`, `logs-*`, `payment-*` | `out_trade_no`, `raw`, `sign`, `uid` | 回调/签名 |
+| CouchDB | `_users`, `orders`, `config` | user doc、merchant config | 登录/配置 |
+| Memcached | framework session/cache | `laravel:*`, `flask_session:*`, `think:*` | session 伪造 |
+
+### 6.1 Redis 业务 key 路由器
+
+```python
+# redis_business_key_router.py — 从 key 名推下一跳
+ROUTES = [
+    ("session", ["session", "sess", "laravel", "flask_session"], "尝试还原登录态/用户 id/role"),
+    ("cart", ["cart", "basket"], "篡改数量、sku、price 后触发结算"),
+    ("order", ["order", "trade", "invoice"], "对照订单状态机和支付流水"),
+    ("queue", ["queue", "job", "celery", "horizon"], "查看异步发货/回调任务 payload"),
+    ("captcha", ["captcha", "verify", "code"], "复用验证码进入订单查询"),
+    ("token", ["jwt", "csrf", "token"], "转签名/JWT/session 文档"),
+]
+
+def route_key(name):
+    low = name.lower()
+    return [r for r in ROUTES if any(k in low for k in r[1])]
+
+for key in ["laravel:sessions:abc", "queue:default", "order:1001"]:
+    print(key, route_key(key))
+```
+
+### 6.2 Mongo / ES 订单字段优先级
+
+```text
+status > paid > amount > user_id > out_trade_no > transaction_id
+cards.code > cards.used > cards.order_id
+notify.raw > notify.sign > notify.created_at
+```
+
+如果只能读一小部分文档，先取最近订单和回调日志，再取卡密。成功样本：session 解出 `uid/role`、Redis 队列里有发货 payload、ES 日志里有回调原文和签名、Mongo 订单状态可被操作符注入影响。
+
 ## 攻击链 / 工作流
 
 ```
@@ -32194,6 +32299,7 @@ cache
 5. Elasticsearch/CouchDB：枚举索引/数据库/用户，定位可读字段和可写 API
 6. 需要 RCE 链时记录版本、插件/脚本引擎状态和写入路径
 7. 收敛证据：服务类型、版本、认证状态、可读键/集合/索引样例
+8. 对业务 key/collection/index 做路由，优先进入 session、订单、队列、回调和卡密链路
 ```
 
 ## Evidence
@@ -32205,6 +32311,7 @@ cache
 | Elasticsearch | `_cluster/health`、索引列表、查询注入响应 |
 | CouchDB | `/_all_dbs`、`/_users`、未授权状态码 |
 | Memcached | `stats`、`stats items`、key/value 样例 |
+| 业务 Pivot | session/order/cart/queue/payment key、字段样例、业务状态变化 |
 
 ## MCP 工具映射
 
@@ -32215,12 +32322,11 @@ cache
 | 工具执行 | `run_ctf_tool` | 调用 nc/redis-cli/curl/自定义探测脚本 |
 | 证据记录 | `workspace_write_text` | 保存服务指纹、未授权证据和字段样例 |
 
-## 6. 关联技术
+## 7. 关联技术
 
-- [[01-sqli-fundamentals]] — SQL 注入基础
-- [[04-config-exposure]] — 配置泄露
-- [[05-backup-log-leak]] — 备份暴露
-- [[sqli-nosqli]] — SQL/NoSQL 注入
+
+
+[... content truncated for size ...]
 
 
 ---
