@@ -383,3 +383,35 @@ Python 脚本应具备：
 
 ## 13. Final Conclusion
 ```
+
+## Cursor Cloud specific instructions
+
+本仓库是「agent-native 逆向工程知识库 + 一个本地 MCP 工具服务器」。没有 Web 前端或
+后台常驻服务；可运行的「应用」是 `tools/skills/mcp/ReverseLabToolsMCP` 下的
+ReverseLabToolsMCP（stdio MCP server），其余是 Python 脚本与 KB/模板文档。
+
+- **依赖**：由启动更新脚本自动安装（`mcp`、`pycryptodome` 为 server 依赖，`pytest` 跑测试，
+  `uv` 供 `.mcp.json` / CI 风格 smoke）。当前基础镜像 Python 非 externally-managed。
+- **PATH**：pip 装的 CLI（`uv`、`pytest`）在 `~/.local/bin`，不在 PATH。用 `python3 -m pytest`、
+  `~/.local/bin/uv`，或先 `export PATH="$HOME/.local/bin:$PATH"`。
+- **测试**：仓库根运行 `python3 -m pytest`（读取 `pytest.ini`，testpaths=tests）。
+- **运行 MCP server（应用）**：
+  - 直接：`python3 tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py`
+  - 或 CI 方式：`uv sync --project tools/skills/mcp/ReverseLabToolsMCP` 后
+    `uv run --project tools/skills/mcp/ReverseLabToolsMCP python tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py`
+  - 这是 stdio server，直接启动会阻塞等待 MCP 客户端。冒烟用 `--help` 或内置 `--*-test`
+    子命令（见 `--help`），或用 `mcp` Python SDK 的 stdio_client 连接后调用工具。
+- **Lint / 质量门（对应 CI `release-check.yml` 的跨平台部分）**：
+  `python3 scripts/misc/lab_healthcheck.py`（目录/核心文件/py 语法/JSON）、
+  `public_release_check.py`、`kb_doc_audit.py`、`add_frontmatter.py --verify`、
+  `seo_audit.py`、`ai_toolcheck.py --board misc`。
+- **已知非环境问题（不要当成 setup 失败去"修")**：
+  - `public_release_check.py` 会因 “latest commit author email is not a noreply address”
+    失败，这是 git 提交作者邮箱策略检查，与依赖/代码无关。
+  - `kb_doc_audit.py` / `add_frontmatter.py --verify` / `seo_audit.py` 目前会因单个既有 KB 文档
+    `kb/ctf-website/techniques/00-workflow/24h-loop-orchestration.md` 缺 frontmatter 而报 1 项。
+  - `*.ps1`（`bootstrap.ps1`、`install_tools.ps1`、`smoke_cve_pipeline.ps1` 等）需要 PowerShell，
+    Linux 云环境默认无 `pwsh`，跳过即可。
+- **外部逆向工具**：MCP 注册约 100+ 工具，其中很多包装外部二进制（rizin、DiE、Ghidra、adb、
+  frida、x64dbg）。这些默认未安装，被调用时返回 `{"error": ...}` 而不是崩溃，属预期；
+  `ai_toolcheck` 全量检查会因此大量标红，只有对应板块需要时再按 README 安装。
