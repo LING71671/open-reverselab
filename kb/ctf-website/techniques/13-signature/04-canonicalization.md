@@ -15,10 +15,10 @@ signals: ["canonicalization", "规范化绕过", "参数排序", "JSON规范化"
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["canonicalization攻击", "规范化绕过", "参数排序差异", "JSON签名", "HTTP参数污染", "XML签名绕过", "URL编码绕过"]
 difficulty: "advanced"
-tags: ["signature", "canonicalization", "encoding", "parsing", "web-security", "ctf"]
+tags: ["signature", "canonicalization", "encoding", "parsing", "payment", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/01-algorithm"]
+related_articles: ["ctf-website/13-signature/00-overview", "ctf-website/13-signature/01-algorithm", "ctf-website/13-signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/12-payment/payment-logic"]
 ---
 # Canonicalization Attacks — 签名规范化绕过
 
@@ -1906,6 +1906,79 @@ def payment_json_variants(order_id="ORD001"):
 ```
 
 Evidence 里要同时保存：签名原串、验签原串、业务读取字段、最终订单状态。只保存 `sign valid` 不够，因为签名通过但业务字段没变，说明卡在业务读取层。
+
+### 支付签名串差分器
+
+实战里最值钱的结果是“验签 canonical 和业务 canonical 分叉”。下面的脚本把同一份回调 payload 变成多种解析视角，方便把签名覆盖字段和业务读取字段并排看。
+
+| 视角 | 关注点 | 分叉样本 |
+|---|---|---|
+| raw bytes | 原始 body、CRLF、重复字段顺序 | `amount=100&amount=0.01` |
+| form first/last | 重复 key 取第一个还是最后一个 | PHP/Node/Python 框架差异 |
+| sorted canonical | 签名串排序、过滤空值、是否包含 sign | `sign` 参与/不参与排序 |
+| business view | controller 最终读到的字段 | `total_amount` vs `paid_amount` |
+| ledger view | 订单/流水/权益变化 | paid、delivered、wallet delta |
+
+```python
+# payment_canonical_diff.py
+import csv
+import hashlib
+import urllib.parse
+
+def parse_pairs(raw):
+    return urllib.parse.parse_qsl(raw, keep_blank_values=True)
+
+def first_wins(pairs):
+    out = {}
+    for k, v in pairs:
+        out.setdefault(k, v)
+    return out
+
+def last_wins(pairs):
+    out = {}
+    for k, v in pairs:
+        out[k] = v
+    return out
+
+def canonical(params, include_sign=False, drop_empty=True):
+    items = []
+    for k, v in params.items():
+        if k == "sign" and not include_sign:
+            continue
+        if drop_empty and v == "":
+            continue
+        items.append((k, v))
+    return "&".join(f"{k}={v}" for k, v in sorted(items))
+
+def diff_payload(raw, out_csv="exports/payment_canonical_diff.csv"):
+    pairs = parse_pairs(raw)
+    views = {
+        "first": first_wins(pairs),
+        "last": last_wins(pairs),
+    }
+    rows = []
+    for name, params in views.items():
+        for include_sign in [False, True]:
+            for drop_empty in [False, True]:
+                s = canonical(params, include_sign=include_sign, drop_empty=drop_empty)
+                rows.append({
+                    "view": name,
+                    "include_sign": include_sign,
+                    "drop_empty": drop_empty,
+                    "canonical": s,
+                    "sha256_12": hashlib.sha256(s.encode()).hexdigest()[:12],
+                    "amount": params.get("amount") or params.get("total_amount"),
+                    "status": params.get("status") or params.get("trade_status"),
+                })
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+
+diff_payload("out_trade_no=ORD1&amount=100&amount=0.01&trade_status=&trade_status=TRADE_SUCCESS&sign=abc")
+```
+
+命中后继续跑支付状态 diff：同一签名变体前后读取 `/api/orders/<id>`、`/api/payment/<id>`、`/api/wallet`、`/api/me`。如果 `first` 视角验签用 `amount=100`，业务 `last` 视角用 `amount=0.01`，就转 `payment-logic.md` 的账本 manifest。
 
 ## 参考
 

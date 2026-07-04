@@ -14,11 +14,11 @@ category: "13-signature"
 signals: ["signature forgery", "签名伪造", "算法降级", "alg none", "magic hash", "签名绕过", "sign_type", "HMAC", "JWT"]
 mcp_tools: ["http_probe", "kb_router"]
 keywords: ["签名伪造", "signature bypass", "算法降级", "magic hash", "JWT绕过", "签名验证", "HMAC攻击", "支付签名"]
-difficulty: "intermediate"
-tags: ["signature", "authentication", "web-security", "ctf", "crypto", "jwt"]
+difficulty: "advanced"
+tags: ["signature", "authentication", "ctf", "crypto", "jwt", "payment"]
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: ["ctf-website/13-signature/01-algorithm", "ctf-website/13-signature/02-implementation", "ctf-website/13-signature/03-key-attacks"]
+last_updated: "2026-07-04"
+related_articles: ["ctf-website/13-signature/01-algorithm", "ctf-website/13-signature/02-implementation", "ctf-website/13-signature/03-key-attacks", "ctf-website/13-signature/04-canonicalization", "ctf-website/13-signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/12-payment/payment-logic"]
 ---
 # Signature Forgery — 签名伪造与验证绕过全景手册
 
@@ -50,6 +50,42 @@ flowchart TD
 ```
 
 ---
+
+## 00.1 签名到支付账本路由
+
+签名题不要停在“验签通过”。支付、订阅、积分、下载链接这类场景必须继续读订单、流水、权益和钱包状态，证明签名绕过造成了持久化副作用。
+
+| 签名信号 | 优先路由 | 业务字段 | 命中标志 | 下一篇 |
+|---|---|---|---|---|
+| `sign_type`, `alg`, `algorithm` 可控 | 算法降级 / none / RS-HS confusion | `trade_status`, `amount`, `role` | 同 payload 换算法后状态推进 | `01-algorithm.md` |
+| `==`, `strcmp`, 空签名、异常吞掉 | 实现缺陷 | `status`, `paid`, `is_admin` | invalid sign 变 success | `02-implementation.md` |
+| `.env`, sourcemap, `pay_secret` | 密钥攻击 | `out_trade_no`, `transaction_id` | 可生成 provider 风格签名 | `03-key-attacks.md` |
+| 重复参数、JSON 重复 key、URL 编码差异 | 规范化绕过 | `amount`, `total_fee`, `order_id` | 签名覆盖值与业务读取值不同 | `04-canonicalization.md` |
+| `md5(secret + data)` / `sha1(secret + data)` | 长度扩展 | 追加 `&status=paid` / `&admin=1` | 原签名扩展后仍接受 | `05-length-extension.md` |
+| `nonce`, `timestamp`, `notify_id` | 重放与幂等绕过 | `transaction_id`, `delivery_id` | 多次发货/余额/权益变化 | `06-replay-nonce.md` |
+
+```python
+# signature_payment_router.py
+import re
+
+ROUTES = [
+    (re.compile(r"sign_type|algorithm|alg\b|none|RS256|HS256", re.I), "01-algorithm"),
+    (re.compile(r"strcmp|==|compare|empty sign|null|exception", re.I), "02-implementation"),
+    (re.compile(r"secret|pay_key|merchant_key|webhook_secret|\\.env|sourcemap", re.I), "03-key-attacks"),
+    (re.compile(r"canonical|sort|duplicate|hpp|urlencode|json key|amount=.*amount=", re.I), "04-canonicalization"),
+    (re.compile(r"md5\\(|sha1\\(|sha256\\(|secret \\+ data|data \\+ secret", re.I), "05-length-extension"),
+    (re.compile(r"nonce|timestamp|notify_id|transaction_id|idempotency", re.I), "06-replay-nonce"),
+]
+
+def route_signature_signal(signal):
+    hits = [target for rx, target in ROUTES if rx.search(signal)]
+    return hits or ["00-overview: collect more signed samples"]
+
+for signal in ["sign_type=MD5&amount=0.01", "same transaction_id new notify_id"]:
+    print(signal, "=>", route_signature_signal(signal))
+```
+
+Evidence 最小闭环：`signed_request.http`、`canonical_string.txt`、`signature_variant_matrix.csv`、`payment_ledger_before_after.json`。如果只有 `200 OK`，但订单、流水、权益、钱包没有变化，这轮不能算命中。
 
 ## 0. 签名机制分类学
 

