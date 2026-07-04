@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ling71671-open-reverselab-badge.png)](https://mseep.ai/app/ling71671-open-reverselab)
+
 # ReverseLab
 
 Open-source reverse engineering lab — 178-article knowledge base, 100+ MCP automation tools, covering CTF pentesting / APK reverse engineering / PE binary analysis / cryptography & protocol cracking / game cheating analysis. Agent-native, directory-as-convention.
