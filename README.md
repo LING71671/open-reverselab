@@ -90,6 +90,19 @@ uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smo
 6. Create a task: `python scripts/misc/new_task.py --board ctf-website --name <name>`.
 7. After moving machines or changing MCP settings, run `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report` and confirm MCP tool calls pass.
 
+## Optional Codex Launcher
+
+If you use Codex and want a dedicated entrypoint, use `CODEX.bat`. It installs
+or repairs the global `open_reverselab_codex` MCP adapter for Codex and lets
+you bind other projects to project-scoped open-reverselab mode.
+
+`LAUNCHER.bat` is an optional umbrella menu. Its `Codex` entry opens the same
+Codex adapter workflow. Its `Claude` and `Other CLI` entries currently
+delegate back to the upstream `START_HERE` flow rather than installing a new
+multi-CLI adapter.
+
+For details, see [docs/codex/CODEX_ONLY.md](docs/codex/CODEX_ONLY.md).
+
 Post-install verification:
 
 ```powershell

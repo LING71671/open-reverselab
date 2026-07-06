@@ -90,6 +90,18 @@ uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smo
 6. 创建任务：`python scripts/misc/new_task.py --board ctf-website --name <name>`。
 7. 每次换机器或重配 MCP 后，运行 `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report`，确认 MCP 真实可调用。
 
+## 可选 Codex 入口
+
+如果你主要使用 Codex，并且想要单独的 Codex 入口，优先使用 `CODEX.bat`。
+它会为 Codex 安装或修复全局 `open_reverselab_codex` MCP 适配层，并允许你把
+其他项目绑定到项目级 open-reverselab 模式。
+
+`LAUNCHER.bat` 是可选总入口。它的 `Codex` 菜单会进入同一套 Codex 适配流
+程；`Claude` 和 `其他 CLI` 菜单目前只是回到原版 `START_HERE` 流程，并不
+代表本仓库已经额外实现了一套新的多 CLI 适配层。
+
+详细说明见 [docs/codex/CODEX_USAGE.zh-CN.md](docs/codex/CODEX_USAGE.zh-CN.md)。
+
 ## 迭代模式
 
 ```
