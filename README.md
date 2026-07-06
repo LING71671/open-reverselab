@@ -114,7 +114,7 @@ Pair with [codex-session-patcher](https://github.com/ryfineZ/codex-session-patch
 
 **By accessing or using this project, you agree to be bound by the full disclaimer.**
 
-The disclaimer covers: all versions and branches (retroactive and prospective), all users (direct and indirect), all derivatives (forks, copies, redistributions), legal compliance across all jurisdictions (including export controls and data protection laws), authorized purposes only, prohibited uses, no warranty, limitation of liability, indemnification, mandatory disclaimer retention in derivatives, anti-removal provisions, and educational communication protections.
+The disclaimer covers: all versions and branches (retroactive and prospective), all users (direct and indirect), all derivatives (forks, copies, redistributions), legal compliance across all jurisdictions (including export controls and data protection laws), authorized purposes only, prohibited uses, no warranty, limitation of liability, indemnification, mandatory disclaimer retention in derivatives, anti-removal provisions, and educational communication protections, and third-party transaction protections.
 
 > 📄 Read the full legal disclaimer: [DISCLAIMER.md](DISCLAIMER.md) | [中文版](DISCLAIMER.zh.md)
 
