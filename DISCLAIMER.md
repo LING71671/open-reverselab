@@ -118,10 +118,24 @@ The Project maintainers reserve the right to amend this disclaimer at any time. 
 
 This disclaimer is published in English and Chinese. In the event of any conflict or ambiguity between the two language versions, the English version shall prevail.
 
-### 15. Entire Agreement
+### 15. Educational Communication & Technical Assistance
+
+15.1 **Nature of information.** All technical information, guidance, code examples, explanations, suggestions, opinions, or any other form of response (collectively, "Responses") provided by the Project authors, contributors, or maintainers — whether published in the Project, posted in public forums, delivered in private correspondence (including but not limited to instant messaging, email, voice, video, social media, and any other communication channel), or conveyed in any other medium, whether free of charge or compensated — constitute general-purpose educational and technical reference material only. No Response is directed at, tailored for, or intended to facilitate action against any specific system, target, person, or entity.
+
+15.2 **No vetting obligation.** The Project authors, contributors, and maintainers have no obligation, duty, or practical ability to verify the identity, credentials, authorization status, or true intent of any person who asks a question, requests assistance, or seeks technical guidance. A Response is provided as-is, at face value, to the question as posed, without any investigation into the questioner's circumstances or purposes.
+
+15.3 **Response does not constitute authorization or endorsement.** The provision of a Response does not constitute, and shall not be construed as: (a) authorization, encouragement, or endorsement of any specific act by the recipient; (b) a representation that the recipient's intended use is lawful; (c) a representation that the recipient has obtained necessary legal authorization; (d) the formation of any partnership, agency, joint venture, or conspiratorial relationship; or (e) acquiescence in, ratification of, or complicity in any unlawful act.
+
+15.4 **Recipient bears sole responsibility.** Any person who receives a Response is solely and exclusively responsible for: (a) determining whether their intended use complies with all applicable laws; (b) obtaining all necessary authorizations, licenses, and consents before acting; and (c) any consequences, legal or otherwise, arising from their use of the information. No recipient may assert, as a defense or in mitigation, that a Response from the Project authors, contributors, or maintainers led them to believe their conduct was authorized, lawful, or condoned.
+
+15.5 **Silence does not signify consent.** The Project authors', contributors', or maintainers' failure to respond to any communication — or their decision not to express approval or disapproval of any described or proposed use of the Project — does not constitute consent, acquiescence, ratification, waiver, or approval of any kind.
+
+15.6 **No confidential or privileged relationship.** No communication with the Project authors, contributors, or maintainers creates any attorney-client, fiduciary, confidential, or other special relationship. All communications are non-confidential unless a separate written agreement expressly provides otherwise.
+
+### 16. Entire Agreement
 
 This disclaimer constitutes the entire understanding between the User and the Project authors regarding the subject matter hereof, and supersedes all prior or contemporaneous communications, agreements, and understandings, whether oral or written.
 
-### 16. Survival
+### 17. Survival
 
-All provisions of this disclaimer that by their nature should survive termination or cessation of use — including but not limited to provisions regarding liability, indemnification, warranty disclaimer, integrity of the disclaimer, and governing law — shall survive indefinitely.
+All provisions of this disclaimer that by their nature should survive termination or cessation of use — including but not limited to provisions regarding liability, indemnification, warranty disclaimer, integrity of the disclaimer, educational communication, and governing law — shall survive indefinitely.
