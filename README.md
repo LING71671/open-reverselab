@@ -65,6 +65,13 @@ from the repository root. It checks Python, uv, Git, workspace layout, and
 install advice for missing items; and writes `reports/misc/first-run-report.json`
 plus `reports/misc/mcp-smoke-report.json`.
 
+On macOS/Linux, run `./START_HERE.sh` from the repository root. It performs the
+same first-run checks and uses POSIX shell wrappers under `tools/bin/`; optional
+Windows GUI/PE tools are skipped or reported as Windows-only. Platform-specific
+release artifacts can stay separate: Windows full-toolchain releases ship
+`.bat`/PowerShell and GUI tools, while macOS/Linux releases ship the Python,
+MCP, shell-wrapper, and native CLI paths.
+
 To have an AI Agent perform setup for you, copy the [AI install prompt](templates/prompts/ai-install.en.md) into Codex or Claude Code.
 If you are not sure where to start, open [START.md](START.md).
 
@@ -80,10 +87,19 @@ uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smo
 .\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
 ```
 
+macOS/Linux quick start:
+
+```sh
+./START_HERE.sh
+./scripts/misc/bootstrap.sh
+export PATH="$PWD/tools/bin:$PWD/tools/ctf-website/bin:$PATH"
+python scripts/misc/ai_toolcheck.py --board misc
+```
+
 ## Agent Quick Start
 
 1. Clone into a stable local directory, for example `<workspace>/open-reverselab`.
-2. Windows: double-click `START_HERE.bat` or `START_HERE.cmd` for the first-run check.
+2. Windows: double-click `START_HERE.bat` or `START_HERE.cmd` for the first-run check. macOS/Linux: run `./START_HERE.sh`.
 3. Claude Code: `cd <workspace>/open-reverselab` before starting the session.
 4. Codex APP: open the existing `open-reverselab` folder directly.
 5. AI-assisted setup: copy [templates/prompts/ai-install.en.md](templates/prompts/ai-install.en.md) into your AI Agent.
