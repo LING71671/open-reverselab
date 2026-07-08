@@ -70,6 +70,9 @@ def _posix_wrapper_candidates(command_path: Path) -> list[Path]:
 def _argv_for_executable(command_path: Path, extra_args: list[str]) -> list[str]:
     command = str(command_path)
     suffix = command_path.suffix.lower()
+    if not command_path.is_absolute() and command_path.parts in {("python",), ("python3",)}:
+        resolved_python = shutil.which(command) or sys.executable
+        return [resolved_python, *extra_args]
     if suffix in {".bat", ".cmd"}:
         if os.name == "nt":
             return [os.environ.get("COMSPEC", "cmd.exe"), "/c", command, *extra_args]

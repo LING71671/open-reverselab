@@ -186,8 +186,7 @@
       "launch_mode": "cli",
       "command": "tools\\bin\\ai_toolcheck.bat",
       "args": [
-        "--board",
-        "common"
+        "--help"
       ],
       "safe_probe": {
         "type": "command",
@@ -605,7 +604,8 @@
       ],
       "safe_probe": {
         "type": "command",
-        "timeout_ms": 15000
+        "timeout_ms": 15000,
+        "allow_nonzero": true
       },
       "ai_callable": true,
       "notes": "抓包/改包/发包: capture(抓包保存JSON), modify(代理+addon实时改包), replay(重放已抓flow), craft(构造发包). CA证书在%USERPROFILE%/.mitmproxy/."

@@ -75,6 +75,8 @@ def _posix_wrapper_candidates(command_path: Path) -> list[Path]:
 def command_argv(command: str, args: list[str]) -> list[str]:
     command_path = repo_path(command)
     suffix = command_path.suffix.lower()
+    if not command_path.is_absolute() and command_path.parts in {("python",), ("python3",)}:
+        return [shutil.which(str(command_path)) or sys.executable, *args]
     if suffix in {".bat", ".cmd"}:
         if os.name == "nt":
             return [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(command_path), *args]
