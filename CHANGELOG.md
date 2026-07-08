@@ -2,6 +2,28 @@
 
 All notable changes to the open-reverseLab project will be documented in this file.
 
+## [1.1.0] - 2026-07-08
+
+### Added — macOS/Linux core release
+
+**POSIX 入口与 wrapper**
+- `START_HERE.sh` — macOS/Linux 首次运行检查入口
+- `scripts/misc/bootstrap.sh` — 生成 `tools/bin/ai_*` shell wrapper
+- `tools/bin/ai_context` / `ai_tool` / `ai_finding` / `ai_toolcheck` — 无扩展名 POSIX wrapper
+
+**跨平台工具路由**
+- `ai_tool.py` / `ai_toolcheck.py` — 注册表反斜杠路径归一化、`.bat/.cmd` POSIX fallback、`python` → 当前解释器 fallback
+- `tools/ai-tool-registry.json` — `path_bootstrap_unix`、Windows GUI 工具 `platforms: ["windows"]`
+- MCP：`config.py` / `toolbox.py` / `web_ctf.py` / `android_mumu.py` — Ghidra/Rizin/adb/CTF 工具平台感知；Windows-only 工具链明确降级
+
+**文档**
+- README / README.zh / tools/bin / scripts/misc — macOS/Linux quick start 与分平台 release 说明
+
+### Release notes
+
+- **macOS/Linux**：clone 后运行 `./START_HERE.sh`，再执行 `./scripts/misc/bootstrap.sh` 并 `export PATH="$PWD/tools/bin:$PWD/tools/ctf-website/bin:$PATH"`。本 release 聚焦 Python/MCP core、shell wrapper 与 PATH 中已安装的 native CLI 工具。
+- **Windows**：继续使用 `START_HERE.bat` 与 `install_tools.ps1` 安装完整 GUI/PE 工具链；完整 Windows toolchain 将随后续 Windows release 分发。
+
 ## [1.0.0] - 2026-06-25
 
 ### Added — 首次公开发布
