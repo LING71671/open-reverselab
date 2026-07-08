@@ -22,6 +22,36 @@ REQUIRED_DIRS = ["boards", "kb", "scripts", "tools", "templates", "cases", "expo
 DEFAULT_REPORT = ROOT / "reports" / "misc" / "first-run-report.json"
 
 
+def _is_windows() -> bool:
+    return sys.platform.startswith("win")
+
+
+def _python_install_hint() -> str:
+    if _is_windows():
+        return "Install Python 3.10+ from https://www.python.org/downloads/windows/ if this check cannot run."
+    if sys.platform == "darwin":
+        return "Install Python 3.10+ from https://www.python.org/downloads/macos/ or Homebrew if this check cannot run."
+    return "Install Python 3.10+ with your distribution package manager or from https://www.python.org/downloads/ if this check cannot run."
+
+
+def _git_install_hint() -> str:
+    if _is_windows():
+        return "Install Git for Windows from https://git-scm.com/download/win and reopen this window."
+    if sys.platform == "darwin":
+        return "Install Git with Xcode Command Line Tools or Homebrew, then reopen this shell."
+    return "Install Git with your distribution package manager, then reopen this shell."
+
+
+def _tool_install_hint() -> str:
+    if _is_windows():
+        return "If you need Web/APK/Windows tools, run the matching `scripts/misc/install_tools.ps1` option after this wizard passes."
+    return "If you need optional CLI tools, add native macOS/Linux packages to PATH; Windows GUI tools are shipped in the Windows release."
+
+
+def _restart_command() -> str:
+    return "START_HERE.bat" if _is_windows() else "./START_HERE.sh"
+
+
 @dataclass(frozen=True)
 class Check:
     level: str
@@ -57,7 +87,7 @@ def collect_checks(cwd: Path = Path.cwd()) -> list[Check]:
             "PASS",
             "Python",
             f"{sys.version.split()[0]} at {sys.executable}",
-            "Install Python 3.10+ from https://www.python.org/downloads/windows/ if this check cannot run.",
+            _python_install_hint(),
         )
     )
 
@@ -67,7 +97,7 @@ def collect_checks(cwd: Path = Path.cwd()) -> list[Check]:
             "PASS" if git_path else "FAIL",
             "Git",
             git_path or "not found in PATH",
-            "Install Git for Windows from https://git-scm.com/download/win and reopen this window.",
+            _git_install_hint(),
         )
     )
 
@@ -207,7 +237,7 @@ def build_payload(checks: list[Check], report_path: Path = DEFAULT_REPORT) -> di
         "next_steps": [
             f"Codex APP: open this folder directly: {ROOT}",
             f"Claude Code: run `cd {ROOT}` before starting the session.",
-            "If you need Web/APK/Windows tools, run the matching `scripts/misc/install_tools.ps1` option after this wizard passes.",
+            _tool_install_hint(),
         ],
     }
 
@@ -241,7 +271,7 @@ def print_human(checks: list[Check]) -> None:
     print("")
     if failures:
         print("Result: FAIL")
-        print("Fix the FAIL items above first, then run START_HERE.bat again.")
+        print(f"Fix the FAIL items above first, then run {_restart_command()} again.")
     elif warnings:
         print("Result: PASS with warnings")
         print("The repository layout is usable; resolve WARN items before relying on MCP tool execution.")

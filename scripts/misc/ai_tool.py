@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -46,15 +47,49 @@ def one_line(text: str, limit: int = 500) -> str:
     return text[: limit - 3] + "..." if len(text) > limit else text
 
 
+def _normalize_registry_path(value: str) -> str:
+    """Registry JSON is shared with Windows, so normalize separators at runtime."""
+    return value.replace("\\", "/")
+
+
+def _repo_path(value: str) -> Path:
+    normalized = _normalize_registry_path(value)
+    path = Path(normalized)
+    if not path.is_absolute() and "/" in normalized:
+        return (ROOT / path).resolve()
+    return path
+
+
+def _posix_wrapper_candidates(command_path: Path) -> list[Path]:
+    if command_path.suffix.lower() not in {".bat", ".cmd"}:
+        return [command_path]
+    stem = command_path.with_suffix("")
+    return [stem, command_path.with_suffix(".sh")]
+
+
+def _argv_for_executable(command_path: Path, extra_args: list[str]) -> list[str]:
+    command = str(command_path)
+    suffix = command_path.suffix.lower()
+    if suffix in {".bat", ".cmd"}:
+        if os.name == "nt":
+            return [os.environ.get("COMSPEC", "cmd.exe"), "/c", command, *extra_args]
+        for candidate in _posix_wrapper_candidates(command_path):
+            if candidate.exists():
+                if os.access(candidate, os.X_OK):
+                    return [str(candidate), *extra_args]
+                return [os.environ.get("SHELL", "sh"), str(candidate), *extra_args]
+        path_tool = shutil.which(command_path.stem)
+        if path_tool:
+            return [path_tool, *extra_args]
+        # Let subprocess surface a clear FileNotFoundError for the original tool.
+        return [str(command_path), *extra_args]
+    return [command, *extra_args]
+
+
 def cmd_for(tool: dict[str, Any], extra_args: list[str]) -> list[str]:
     command = str(tool["command"])
-    command_path = Path(command)
-    if not command_path.is_absolute() and ("/" in command or "\\" in command):
-        command = str((ROOT / command_path).resolve())
-    argv = [command, *extra_args]
-    if Path(command).suffix.lower() in {".bat", ".cmd"}:
-        argv = [os.environ.get("COMSPEC", "cmd.exe"), "/c", command, *extra_args]
-    return argv
+    command_path = _repo_path(command)
+    return _argv_for_executable(command_path, extra_args)
 
 
 def list_tools(args: argparse.Namespace) -> int:

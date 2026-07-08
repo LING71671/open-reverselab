@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import csv
+import os
+import shutil
 import shlex
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,12 +14,16 @@ from typing import Any
 
 from ..config import (
     CUTTER_ROOT,
+    DIEC_EXE,
     DIE_ROOT,
     GHIDRA_HEADLESS_BAT,
     GHIDRA_ROOT,
+    IS_WINDOWS,
     PE_BEAR_EXE,
     PROCMON_EXPORTS_DIR,
     PROCMON_ROOT,
+    RIZIN_EXE,
+    RZ_ASM_EXE,
     RZ_BIN_EXE,
     RZ_HASH_EXE,
     X64DBG_ROOT,
@@ -36,33 +43,66 @@ class ToolSpec:
     supports_target: bool = False
     version_args: tuple[str, ...] = ()
     notes: str = ""
+    platforms: tuple[str, ...] = ("all",)
+
+
+def _platform_name() -> str:
+    if IS_WINDOWS:
+        return "windows"
+    if sys.platform == "darwin":
+        return "macos"
+    if sys.platform.startswith("linux"):
+        return "linux"
+    return sys.platform
+
+
+def _tool_path(name: str) -> Path:
+    exe_name = f"{name}.exe" if IS_WINDOWS else name
+    return Path(shutil.which(name) or CUTTER_ROOT / exe_name)
+
+
+def _ghidra_gui_path() -> Path:
+    return GHIDRA_ROOT / ("ghidraRun.bat" if IS_WINDOWS else "ghidraRun")
+
+
+def _supported_on_current_platform(spec: ToolSpec) -> bool:
+    platforms = {item.lower() for item in spec.platforms}
+    return "all" in platforms or _platform_name() in platforms
+
+
+def _check_supported(spec: ToolSpec) -> None:
+    if not _supported_on_current_platform(spec):
+        raise ToolError(
+            f"{spec.tool_id} is supported on {', '.join(spec.platforms)}, "
+            f"not on {_platform_name()}. Use the Windows release for this toolchain."
+        )
 
 
 TOOLBOX: dict[str, ToolSpec] = {
-    "cutter": ToolSpec("cutter", CUTTER_ROOT / "cutter.exe", "disassembler", "gui", True, True, notes="Cutter GUI，可直接打开样本。"),
-    "rizin": ToolSpec("rizin", CUTTER_ROOT / "rizin.exe", "disassembler", "cli", False, True, ("-v",), "Rizin interactive CLI；当前只做版本探测。"),
-    "rz_asm": ToolSpec("rz_asm", CUTTER_ROOT / "rz-asm.exe", "rizin", "cli", False, False, ("-v",), "Assembler/disassembler helper。"),
-    "rz_ax": ToolSpec("rz_ax", CUTTER_ROOT / "rz-ax.exe", "rizin", "cli", False, False, ("-v",), "数字、base、地址换算 helper。"),
+    "cutter": ToolSpec("cutter", _tool_path("cutter"), "disassembler", "gui", True, True, notes="Cutter GUI，可直接打开样本。"),
+    "rizin": ToolSpec("rizin", RIZIN_EXE, "disassembler", "cli", False, True, ("-v",), "Rizin interactive CLI；当前只做版本探测。"),
+    "rz_asm": ToolSpec("rz_asm", RZ_ASM_EXE, "rizin", "cli", False, False, ("-v",), "Assembler/disassembler helper。"),
+    "rz_ax": ToolSpec("rz_ax", _tool_path("rz-ax"), "rizin", "cli", False, False, ("-v",), "数字、base、地址换算 helper。"),
     "rz_bin": ToolSpec("rz_bin", RZ_BIN_EXE, "rizin", "cli", False, True, ("-v",), "PE/ELF/Mach-O 结构解析；已有专用 triage wrapper。"),
-    "rz_diff": ToolSpec("rz_diff", CUTTER_ROOT / "rz-diff.exe", "rizin", "cli", False, True, ("-v",), "二进制 diff helper，后续可封装 patch diff。"),
-    "rz_find": ToolSpec("rz_find", CUTTER_ROOT / "rz-find.exe", "rizin", "cli", False, True, ("-v",), "二进制搜索 helper。"),
+    "rz_diff": ToolSpec("rz_diff", _tool_path("rz-diff"), "rizin", "cli", False, True, ("-v",), "二进制 diff helper，后续可封装 patch diff。"),
+    "rz_find": ToolSpec("rz_find", _tool_path("rz-find"), "rizin", "cli", False, True, ("-v",), "二进制搜索 helper。"),
     "rz_hash": ToolSpec("rz_hash", RZ_HASH_EXE, "rizin", "cli", False, True, ("-v",), "Rizin hash helper。"),
-    "rz_run": ToolSpec("rz_run", CUTTER_ROOT / "rz-run.exe", "rizin", "cli", False, False, ("-v",), "运行配置 helper；默认不用于启动样本。"),
-    "rz_sign": ToolSpec("rz_sign", CUTTER_ROOT / "rz-sign.exe", "rizin", "cli", False, False, ("-v",), "signature helper。"),
-    "die_gui": ToolSpec("die_gui", DIE_ROOT / "die.exe", "triage", "gui", True, True, notes="Detect It Easy GUI。"),
-    "die_cli": ToolSpec("die_cli", DIE_ROOT / "diec.exe", "triage", "cli", False, True, ("-v",), "Detect It Easy CLI；已有 die_scan wrapper。"),
-    "diel": ToolSpec("diel", DIE_ROOT / "diel.exe", "triage", "gui", True, True, notes="DiE Lite GUI。"),
-    "ghidra_gui": ToolSpec("ghidra_gui", GHIDRA_ROOT / "ghidraRun.bat", "decompiler", "gui", True, False, notes="Ghidra GUI。"),
+    "rz_run": ToolSpec("rz_run", _tool_path("rz-run"), "rizin", "cli", False, False, ("-v",), "运行配置 helper；默认不用于启动样本。"),
+    "rz_sign": ToolSpec("rz_sign", _tool_path("rz-sign"), "rizin", "cli", False, False, ("-v",), "signature helper。"),
+    "die_gui": ToolSpec("die_gui", DIE_ROOT / ("die.exe" if IS_WINDOWS else "die"), "triage", "gui", True, True, notes="Detect It Easy GUI。"),
+    "die_cli": ToolSpec("die_cli", DIEC_EXE, "triage", "cli", False, True, ("-v",), "Detect It Easy CLI；已有 die_scan wrapper。"),
+    "diel": ToolSpec("diel", DIE_ROOT / ("diel.exe" if IS_WINDOWS else "diel"), "triage", "gui", True, True, notes="DiE Lite GUI。"),
+    "ghidra_gui": ToolSpec("ghidra_gui", _ghidra_gui_path(), "decompiler", "gui", True, False, notes="Ghidra GUI。"),
     "ghidra_headless": ToolSpec("ghidra_headless", GHIDRA_HEADLESS_BAT, "decompiler", "cli", False, True, notes="已有 ghidra_headless_analyze wrapper。"),
-    "pe_bear": ToolSpec("pe_bear", PE_BEAR_EXE, "pe", "gui", True, True, notes="PE-bear GUI。"),
-    "procmon": ToolSpec("procmon", PROCMON_ROOT / "Procmon.exe", "dynamic", "gui", True, False, notes="Process Monitor GUI。"),
-    "procmon64": ToolSpec("procmon64", PROCMON_ROOT / "Procmon64.exe", "dynamic", "gui", True, False, notes="Process Monitor x64；支持 capture start/stop。"),
-    "procmon64a": ToolSpec("procmon64a", PROCMON_ROOT / "Procmon64a.exe", "dynamic", "gui", True, False, notes="Process Monitor ARM64。"),
-    "x32dbg": ToolSpec("x32dbg", X64DBG_ROOT / "x32" / "x32dbg.exe", "debugger", "gui", True, True, notes="x32dbg GUI。"),
-    "x64dbg": ToolSpec("x64dbg", X64DBG_ROOT / "x64" / "x64dbg.exe", "debugger", "gui", True, True, notes="x64dbg GUI。"),
-    "x96dbg": ToolSpec("x96dbg", X64DBG_ROOT / "x96dbg.exe", "debugger", "gui", True, True, notes="x96dbg launcher。"),
-    "x32dbg_unsigned": ToolSpec("x32dbg_unsigned", X64DBG_ROOT / "x32" / "x32dbg-unsigned.exe", "debugger", "gui", True, True, notes="x32dbg unsigned build。"),
-    "x64dbg_unsigned": ToolSpec("x64dbg_unsigned", X64DBG_ROOT / "x64" / "x64dbg-unsigned.exe", "debugger", "gui", True, True, notes="x64dbg unsigned build。"),
+    "pe_bear": ToolSpec("pe_bear", PE_BEAR_EXE, "pe", "gui", True, True, notes="PE-bear GUI。", platforms=("windows",)),
+    "procmon": ToolSpec("procmon", PROCMON_ROOT / "Procmon.exe", "dynamic", "gui", True, False, notes="Process Monitor GUI。", platforms=("windows",)),
+    "procmon64": ToolSpec("procmon64", PROCMON_ROOT / "Procmon64.exe", "dynamic", "gui", True, False, notes="Process Monitor x64；支持 capture start/stop。", platforms=("windows",)),
+    "procmon64a": ToolSpec("procmon64a", PROCMON_ROOT / "Procmon64a.exe", "dynamic", "gui", True, False, notes="Process Monitor ARM64。", platforms=("windows",)),
+    "x32dbg": ToolSpec("x32dbg", X64DBG_ROOT / "x32" / "x32dbg.exe", "debugger", "gui", True, True, notes="x32dbg GUI。", platforms=("windows",)),
+    "x64dbg": ToolSpec("x64dbg", X64DBG_ROOT / "x64" / "x64dbg.exe", "debugger", "gui", True, True, notes="x64dbg GUI。", platforms=("windows",)),
+    "x96dbg": ToolSpec("x96dbg", X64DBG_ROOT / "x96dbg.exe", "debugger", "gui", True, True, notes="x96dbg launcher。", platforms=("windows",)),
+    "x32dbg_unsigned": ToolSpec("x32dbg_unsigned", X64DBG_ROOT / "x32" / "x32dbg-unsigned.exe", "debugger", "gui", True, True, notes="x32dbg unsigned build。", platforms=("windows",)),
+    "x64dbg_unsigned": ToolSpec("x64dbg_unsigned", X64DBG_ROOT / "x64" / "x64dbg-unsigned.exe", "debugger", "gui", True, True, notes="x64dbg unsigned build。", platforms=("windows",)),
 }
 
 
@@ -88,6 +128,8 @@ def toolbox_list() -> dict[str, Any]:
                 "tool_id": spec.tool_id,
                 "path": str(spec.path),
                 "exists": spec.path.exists(),
+                "supported": _supported_on_current_platform(spec),
+                "platforms": list(spec.platforms),
                 "category": spec.category,
                 "kind": spec.kind,
                 "launchable": spec.launchable,
@@ -105,6 +147,7 @@ def toolbox_list() -> dict[str, Any]:
 
 def toolbox_version(tool_id: str, timeout: int = 30) -> dict[str, Any]:
     spec = _spec(tool_id)
+    _check_supported(spec)
     check_tool(spec.path, spec.tool_id)
     if not spec.version_args:
         raise ToolError(f"tool has no safe version probe: {spec.tool_id}")
@@ -121,6 +164,7 @@ def toolbox_version(tool_id: str, timeout: int = 30) -> dict[str, Any]:
 
 def toolbox_launch(tool_id: str, target_path: str = "", extra_args: str = "", visible: bool = True) -> dict[str, Any]:
     spec = _spec(tool_id)
+    _check_supported(spec)
     check_tool(spec.path, spec.tool_id)
     if not spec.launchable:
         raise ToolError(f"tool is not configured for interactive launch: {spec.tool_id}")
@@ -196,6 +240,8 @@ def _resolve_procmon_csv_output(output_path: str, source_log: Path) -> Path:
 
 
 def _procmon_processes() -> list[dict[str, str]]:
+    if not IS_WINDOWS:
+        return []
     code, stdout, _stderr = run(["tasklist", "/FO", "CSV", "/NH", "/FI", "IMAGENAME eq Procmon64.exe"], timeout=15)
     if code != 0 or not stdout.strip():
         return []
@@ -217,6 +263,7 @@ def _procmon_processes() -> list[dict[str, str]]:
 
 def procmon_start_capture(pml_path: str = "", quiet: bool = True) -> dict[str, Any]:
     spec = _spec("procmon64")
+    _check_supported(spec)
     check_tool(spec.path, spec.tool_id)
     output = _procmon_output_path(pml_path)
     args = [str(spec.path), "/AcceptEula", "/BackingFile", str(output)]
@@ -236,6 +283,7 @@ def procmon_start_capture(pml_path: str = "", quiet: bool = True) -> dict[str, A
 
 def procmon_stop_capture(timeout: int = 30) -> dict[str, Any]:
     spec = _spec("procmon64")
+    _check_supported(spec)
     check_tool(spec.path, spec.tool_id)
     args = [str(spec.path), "/Terminate"]
     timed_out = False
@@ -266,6 +314,7 @@ def procmon_export_csv(
     wait_timeout: int = 60,
 ) -> dict[str, Any]:
     spec = _spec("procmon64")
+    _check_supported(spec)
     check_tool(spec.path, spec.tool_id)
 
     source_log = _resolve_procmon_log(pml_path)

@@ -5,7 +5,8 @@
   "policy": {
     "default_no_popup": true,
     "ai_default_rule": "AI may run entries with launch_mode=cli or launch_mode=file_probe. Entries with launch_mode=gui must not be launched during automatic checks; verify them only by file existence/hash unless the user explicitly asks to open the GUI.",
-    "path_bootstrap_powershell": "$env:Path = \"$(Resolve-Path tools/bin);$(Resolve-Path tools/ctf-website/bin);$env:Path\""
+    "path_bootstrap_powershell": "$env:Path = \"$(Resolve-Path tools/bin);$(Resolve-Path tools/ctf-website/bin);$env:Path\"",
+    "path_bootstrap_unix": "export PATH=\"$(pwd)/tools/bin:$(pwd)/tools/ctf-website/bin:$PATH\""
   },
   "tools": [
     {
@@ -470,6 +471,9 @@
       "id": "windows.pe_bear",
       "board": "windows",
       "name": "PE-bear",
+      "platforms": [
+        "windows"
+      ],
       "launch_mode": "gui",
       "command": "tools\\bin\\pe-bear.bat",
       "args": [],
@@ -484,6 +488,9 @@
       "id": "windows.procmon",
       "board": "windows",
       "name": "Procmon",
+      "platforms": [
+        "windows"
+      ],
       "launch_mode": "gui",
       "command": "tools\\bin\\procmon.bat",
       "args": [],
@@ -498,6 +505,9 @@
       "id": "windows.hxd",
       "board": "windows",
       "name": "HxD installer",
+      "platforms": [
+        "windows"
+      ],
       "launch_mode": "gui",
       "command": "tools\\bin\\hxd.bat",
       "args": [],
@@ -512,6 +522,9 @@
       "id": "windows.cutter",
       "board": "windows",
       "name": "Cutter",
+      "platforms": [
+        "windows"
+      ],
       "launch_mode": "gui",
       "command": "tools\\windows\\Cutter-v2.4.1-Windows-x86_64\\Cutter-v2.4.1-Windows-x86_64\\cutter.exe",
       "args": [],

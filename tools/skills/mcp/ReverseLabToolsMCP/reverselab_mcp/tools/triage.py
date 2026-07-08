@@ -32,7 +32,7 @@ def hashes(path: Path) -> dict[str, Any]:
 
 
 def rz_bin_json(path: Path, option: str, timeout: int = 60) -> dict[str, Any]:
-    check_tool(RZ_BIN_EXE, "rz-bin.exe")
+    check_tool(RZ_BIN_EXE, RZ_BIN_EXE.name)
     code, stdout, stderr = run([str(RZ_BIN_EXE), "-j", option, str(path)], timeout=timeout)
     return {
         "tool": "rz-bin",
@@ -44,7 +44,7 @@ def rz_bin_json(path: Path, option: str, timeout: int = 60) -> dict[str, Any]:
 
 
 def die_json(path: Path, args: list[str], timeout: int = 60) -> dict[str, Any]:
-    check_tool(DIEC_EXE, "diec.exe")
+    check_tool(DIEC_EXE, DIEC_EXE.name)
     code, stdout, stderr = run([str(DIEC_EXE), *args, str(path)], timeout=timeout)
     return {
         "tool": "diec",
@@ -56,7 +56,7 @@ def die_json(path: Path, args: list[str], timeout: int = 60) -> dict[str, Any]:
 
 
 def rz_strings_text(path: Path, limit: int, timeout: int = 60) -> dict[str, Any]:
-    check_tool(RZ_BIN_EXE, "rz-bin.exe")
+    check_tool(RZ_BIN_EXE, RZ_BIN_EXE.name)
     code, stdout, stderr = run([str(RZ_BIN_EXE), "-zz", str(path)], timeout=timeout)
     lines = [sanitize_line(line) for line in stdout.splitlines() if line.strip()]
     return {
