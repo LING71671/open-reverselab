@@ -14,6 +14,10 @@
 - `ai_tool.py` — AI 工具路由器
 - `ai_context.py` — 任务上下文生成
 - `ai_finding.py` — 发现记录管理
+- `configure_codex_model_instructions.py` — 将项目 `.codex/*.toml` 的 `model_instructions_file` 指向仓库根 `CODEX.md`
+- `setup_unattended_ctf_runner.py` — 无人值守 runner（调用上一脚本 + approval/sandbox/MCP + Claude local settings）
+- `verify_codex_ctf_profile.ps1` — 校验 Codex 已指向 `../CODEX.md` 且 `CODEX.md` 含关键契约条款
+- `remove_disclaimer.py` — 确认后删除中英 `DISCLAIMER*`，并剥离 README 免责声明节（减少 AI 过度解读）
 
 ## macOS/Linux quick start
 

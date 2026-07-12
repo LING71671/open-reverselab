@@ -126,7 +126,13 @@ python scripts/misc/ai_toolcheck.py --board misc
 启动时 Agent 沿此链路加载上下文：
 
 ```
-CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
+CLAUDE.md → CODEX.md（Codex model_instructions）→ AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
+```
+
+将 Codex 指向仓库内已提交的指令文件：
+
+```bash
+python scripts/misc/configure_codex_model_instructions.py
 ```
 
 搭配 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 一键配置项目级 `.codex/` 环境与 MCP 服务器。

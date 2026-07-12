@@ -6,4 +6,5 @@
 
 - 目录结构约定：[README.md](README.md)
 - AI 操作入口：[AI-USAGE.md](AI-USAGE.md)
+- Codex model instructions：[CODEX.md](CODEX.md)
 - 板块路由：[boards/README.md](boards/README.md)

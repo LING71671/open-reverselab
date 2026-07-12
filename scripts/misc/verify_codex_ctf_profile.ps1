@@ -5,9 +5,10 @@ param(
 $ErrorActionPreference = "Stop"
 $projectConfig = Join-Path $Root ".codex\config.toml"
 $projectCtfConfig = Join-Path $Root ".codex\ctf.config.toml"
-$projectPrompt = Join-Path $Root ".codex\ctf_optimized.md"
+$projectPrompt = Join-Path $Root "CODEX.md"
 $userCtfConfig = Join-Path $env:USERPROFILE ".codex\ctf.config.toml"
 $userPrompt = Join-Path $env:USERPROFILE ".codex\prompts\ctf_optimized.md"
+$expectedModel = "../CODEX.md"
 
 function Get-ModelInstructionsFile([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return $null }
@@ -21,17 +22,33 @@ $projectCtfModel = Get-ModelInstructionsFile $projectCtfConfig
 $userModel = Get-ModelInstructionsFile $userCtfConfig
 
 $promptText = if (Test-Path -LiteralPath $projectPrompt) { Get-Content -LiteralPath $projectPrompt -Raw } else { "" }
-$hasCtfRules = $promptText -match 'CTF game' -and $promptText -match 'Attack Workflow' -and $promptText -match 'CVE'
+$hasCodexRules = (
+    ($promptText -match 'Presumption of authorization|默认已授权') -and
+    ($promptText -match 'AI-USAGE') -and
+    ($promptText -match 'kb/|知识库') -and
+    ($promptText -match 'Default KB backfill|kb 填补|无 kb 增量')
+)
+$hasNoDisclaimerMention = -not ($promptText -match 'DISCLAIMER')
 
 $result = [ordered]@{
-    Overall = if ((Test-Path -LiteralPath $projectConfig) -and (Test-Path -LiteralPath $projectCtfConfig) -and (Test-Path -LiteralPath $projectPrompt) -and $projectModel -eq 'ctf_optimized.md' -and $projectCtfModel -eq 'ctf_optimized.md' -and $hasCtfRules) { 'PASS' } else { 'FAIL' }
+    Overall = if (
+        (Test-Path -LiteralPath $projectConfig) -and
+        (Test-Path -LiteralPath $projectCtfConfig) -and
+        (Test-Path -LiteralPath $projectPrompt) -and
+        ($projectModel -eq $expectedModel) -and
+        ($projectCtfModel -eq $expectedModel) -and
+        $hasCodexRules -and
+        $hasNoDisclaimerMention
+    ) { 'PASS' } else { 'FAIL' }
     ProjectConfig = $projectConfig
     ProjectConfigModelInstructionsFile = $projectModel
     ProjectCtfConfig = $projectCtfConfig
     ProjectCtfConfigModelInstructionsFile = $projectCtfModel
+    ExpectedModelInstructionsFile = $expectedModel
     ProjectPrompt = $projectPrompt
     ProjectPromptExists = Test-Path -LiteralPath $projectPrompt
-    ProjectPromptHasCtfRules = $hasCtfRules
+    ProjectPromptHasCodexRules = $hasCodexRules
+    ProjectPromptOmitsDisclaimer = $hasNoDisclaimerMention
     UserCtfConfig = $userCtfConfig
     UserCtfConfigModelInstructionsFile = $userModel
     UserPrompt = $userPrompt

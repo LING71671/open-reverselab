@@ -4,43 +4,25 @@ Generate local Claude Code / Codex profiles for unattended Web CTF loops.
 
 The generated files are machine-local runner configuration.  They are meant to
 live in this workspace folder and are ignored by git when possible.
+
+Codex model_instructions_file points at the committed repo-root CODEX.md via
+configure_codex_model_instructions.py (no local ctf_optimized.md prompt).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+CONFIGURE_SCRIPT = Path(__file__).resolve().parent / "configure_codex_model_instructions.py"
 
-
-CODEX_PROMPT = """# CTF Optimized Agent Prompt
-
-你正在 open-reverselab 文件夹内运行。默认目标是授权 CTF/lab 自动化。
-
-## Unattended loop protocol
-
-- 不等待人工审批；运行器层面的 approval/sandbox 配置已允许自动执行。
-- 24h Web CTF 使用 `/loop + ctf-24h-round + ai_manifest.json` 模式。
-- 单轮任务必须有界执行，输出 `STATUS: CONTINUE|DONE|EXHAUSTED`。
-- `cases/<case>/ai_manifest.json` 是恢复点；中断后读取它继续，不从头开始。
-- 每发现信号先读 `kb/ctf-website/techniques/attack-network.md`，再用
-  `scripts/ctf-website/kb_router.py "<signal>"` 路由技术文档。
-- 非 Python allowlist 动作标记为 `agent_required`，由下一轮 Agent 自动处理，不交给人。
-
-## Evidence
-
-- 原始请求/响应、截图、flag 和日志只写入本地 `cases/`、`exports/`、`reports/`。
-- 不把真实目标、凭据、Cookie、token、flag 或个人路径提交到公开仓库。
-"""
-
-
-CODEX_CONFIG = """model_instructions_file = "ctf_optimized.md"
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-
+MCP_BLOCK = """
 [mcp_servers.reverse_lab_tools]
 command = "uv"
 args = [
@@ -50,8 +32,7 @@ args = [
   "python",
   "tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py",
 ]
-"""
-
+""".lstrip()
 
 CLAUDE_SETTINGS = {
     "permissions": {
@@ -103,20 +84,94 @@ def ensure_gitignore_entries(overwrite: bool) -> str:
     return "ok" if not changed else "needs-update"
 
 
+def ensure_key(text: str, key: str, value_line: str) -> str:
+    pattern = re.compile(rf"(?m)^\s*{re.escape(key)}\s*=")
+    if pattern.search(text):
+        return text
+    lines = text.splitlines(keepends=True)
+    out: list[str] = []
+    inserted = False
+    for ln in lines:
+        out.append(ln)
+        if (not inserted) and ln.strip().startswith("model_instructions_file"):
+            out.append(value_line if value_line.endswith("\n") else value_line + "\n")
+            inserted = True
+    if not inserted:
+        out.insert(0, value_line if value_line.endswith("\n") else value_line + "\n")
+    return "".join(out)
+
+
+def merge_runner_extras(path: Path, overwrite: bool) -> str:
+    """Add approval/sandbox/MCP while preserving model_instructions_file and other keys."""
+    if path.exists() and not overwrite:
+        # Still ensure critical runner keys if missing, without full rewrite intent.
+        pass
+
+    if not path.exists():
+        # configure script should have created it; create minimal if needed
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('model_instructions_file = "../CODEX.md"\n', encoding="utf-8")
+
+    before = path.read_text(encoding="utf-8")
+    text = before
+    text = ensure_key(text, "approval_policy", 'approval_policy = "never"')
+    text = ensure_key(text, "sandbox_mode", 'sandbox_mode = "danger-full-access"')
+    if "[mcp_servers.reverse_lab_tools]" not in text:
+        if text and not text.endswith("\n"):
+            text += "\n"
+        text += "\n" + MCP_BLOCK
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n\n")
+
+    if text == before and path.exists() and not overwrite:
+        return "unchanged"
+    path.write_text(text, encoding="utf-8")
+    return "updated" if before else "written"
+
+
+def configure_model_instructions() -> dict:
+    proc = subprocess.run(
+        [sys.executable, str(CONFIGURE_SCRIPT)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(
+            f"configure_codex_model_instructions.py failed ({proc.returncode}):\n"
+            f"{proc.stdout}\n{proc.stderr}"
+        )
+    return json.loads(proc.stdout)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create unattended CTF runner profiles for Claude Code and Codex.")
-    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing local runner files.")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite / refresh local runner extras.")
     parser.add_argument("--skip-gitignore", action="store_true", help="Do not update .gitignore for local runner files.")
     args = parser.parse_args()
 
+    if not (ROOT / "CODEX.md").is_file():
+        print("ERROR: CODEX.md missing at repository root", file=sys.stderr)
+        return 1
+
+    configure_result = configure_model_instructions()
+
     outputs = {
-        "codex_config": write_text(ROOT / ".codex" / "config.toml", CODEX_CONFIG, args.overwrite),
-        "codex_ctf_config": write_text(ROOT / ".codex" / "ctf.config.toml", CODEX_CONFIG, args.overwrite),
-        "codex_prompt": write_text(ROOT / ".codex" / "ctf_optimized.md", CODEX_PROMPT, args.overwrite),
+        "codex_model_instructions": configure_result,
+        "codex_config_runner": merge_runner_extras(ROOT / ".codex" / "config.toml", args.overwrite),
+        "codex_ctf_config_runner": merge_runner_extras(ROOT / ".codex" / "ctf.config.toml", args.overwrite),
         "claude_settings": write_json(ROOT / ".claude" / "settings.local.json", CLAUDE_SETTINGS, args.overwrite),
     }
     if not args.skip_gitignore:
         outputs["gitignore"] = ensure_gitignore_entries(overwrite=True)
+
+    obsolete = ROOT / ".codex" / "ctf_optimized.md"
+    if obsolete.exists() and args.overwrite:
+        obsolete.unlink()
+        outputs["removed_obsolete_ctf_optimized"] = "deleted"
+    elif obsolete.exists():
+        outputs["removed_obsolete_ctf_optimized"] = "present-not-deleted-without-overwrite"
 
     print(json.dumps({"root": str(ROOT), "outputs": outputs}, ensure_ascii=False, indent=2))
     return 0

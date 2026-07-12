@@ -121,7 +121,13 @@ python scripts/misc/public_release_check.py
 On startup the Agent loads context along this chain:
 
 ```
-CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
+CLAUDE.md → CODEX.md (Codex model_instructions) → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
+```
+
+Point Codex at the committed instructions file:
+
+```bash
+python scripts/misc/configure_codex_model_instructions.py
 ```
 
 Pair with [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) for one-click project-level `.codex/` environment and MCP server configuration.

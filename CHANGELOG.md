@@ -59,7 +59,7 @@ All notable changes to the open-reverseLab project will be documented in this fi
 **框架与约定**
 - 目录即约定的项目结构（samples/exports/patches/notes/reports/scripts/projects/templates/kb/tools/cases）
 - 5 板块路由架构: ctf-website / apk-reverse / pe-reverse / general / windows
-- Agent 原生上下文链: CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
+- Agent 原生上下文链: CLAUDE.md → CODEX.md (Codex) → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
 - 公开/私有边界约定: `PUBLICATION.md`
 - 代码共献指南: `.github/CONTRIBUTING.md`
 - 安全策略: `SECURITY.md`

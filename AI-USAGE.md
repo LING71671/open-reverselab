@@ -52,14 +52,18 @@
 无人值守 runner 配置：
 
 ```bash
+python3 scripts/misc/configure_codex_model_instructions.py
 python3 scripts/misc/setup_unattended_ctf_runner.py --overwrite
 ```
 
-该脚本在本文件夹内生成本地 `.codex/` 配置和 `.claude/settings.local.json`：
+`configure_codex_model_instructions.py` 将本地 `.codex/*.toml` 的
+`model_instructions_file` 指向仓库根已提交的 `CODEX.md`。
+`setup_unattended_ctf_runner.py` 在此基础上补齐 approval/sandbox/MCP 与
+`.claude/settings.local.json`：
 
-- Codex: `approval_policy = "never"`，`sandbox_mode = "danger-full-access"`。
+- Codex: `approval_policy = "never"`，`sandbox_mode = "danger-full-access"`，指令文件为 `../CODEX.md`。
 - Claude Code: 本地 settings 允许 Bash、文件读写、搜索和 Web 工具。
-- 这些文件是本地运行配置，不作为公开制品提交。
+- 这些 runner 文件是本地运行配置，不作为公开制品提交。
 
 ## 2.2 公共仓库边界
 
