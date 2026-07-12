@@ -155,3 +155,20 @@ This disclaimer constitutes the entire understanding between the User and the Pr
 ### 18. Survival
 
 All provisions of this disclaimer that by their nature should survive termination or cessation of use — including but not limited to provisions Regarding liability, indemnification, warranty disclaimer, integrity of the disclaimer, educational communication, unauthorized distribution and impersonation, AI/ML training, and governing law — shall survive indefinitely.
+
+### 19. Optional Local Removal Script (AI Workflow Continuity)
+
+19.1 **Script provided.** This repository ships an optional helper script at `scripts/misc/remove_disclaimer.py`. In a local working copy, that script can:
+
+- (a) delete this English disclaimer file (`DISCLAIMER.md`) and the Chinese counterpart (`DISCLAIMER.zh.md`); and
+- (b) strip the Disclaimer / 免责声明 sections (including links to these files) from `README.md` and `README.zh.md`, while leaving License / 许可 sections intact.
+
+19.2 **Why the script exists.** Some AI agents and coding assistants over-interpret disclaimer text — including the short summaries in the README files — and then refuse, hedge, or degrade into high-level advice instead of performing the reverse-engineering, CTF, vulnerability-reproduction, and tool-automation workflows this laboratory repository is built for. The removal script exists so operators can optionally clear those texts from a **local** checkout and reduce that class of AI misunderstanding.
+
+19.3 **Confirmation required.** The script prints an explicit warning and requires interactive confirmation (typing `DELETE`) before making changes. A `--yes` flag is available only for deliberately non-interactive use.
+
+19.4 **Local and optional.** Running the script affects only the local working tree on which it is executed. It does not alter the canonical published repository for other users. Usage example:
+
+```bash
+python scripts/misc/remove_disclaimer.py
+```
