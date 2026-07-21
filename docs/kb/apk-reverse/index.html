@@ -11,6 +11,34 @@
   <meta property="og:description" content="8 分类 17 篇 Android 逆向技术文章。DEX/Native/IL2CPP/UE4/Frida/加密/脱壳全覆盖。">
   <meta property="og:url" content="https://ling71671.github.io/open-reverselab/kb/apk-reverse/">
   <link rel="canonical" href="https://ling71671.github.io/open-reverselab/kb/apk-reverse/">
+  <script>
+    (function () {
+      try {
+        var key = 'reverselab-theme';
+        var theme = localStorage.getItem(key) || '';
+        var aliases = {
+          light: 'mint-apple', ash: 'dark', midnight: 'midnight-blurple', chroma: 'chroma-glow',
+          grape: 'retro', mocha: 'sepia', onyx: 'under-the-sea', aurora: 'forest'
+        };
+        if (aliases[theme]) theme = aliases[theme];
+        var valid = {
+          cinder:1,'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1,sunset:1,'chroma-glow':1,forest:1,crimson:1,
+          'midnight-blurple':1,mars:1,dusk:1,'under-the-sea':1,retro:1,'neon-nights':1,sepia:1,
+          blurple:1,dark:1
+        };
+        if (!valid[theme]) {
+          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'mint-apple';
+        }
+        var light = {
+          'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1
+        };
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = light[theme] ? 'light' : 'dark';
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="../../assets/css/style.css">
   <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg">
 
