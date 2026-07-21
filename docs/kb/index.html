@@ -3,47 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>知识库 | ReverseLab — 145 篇逆向工程技术文章</title>
-  <meta name="description" content="ReverseLab 知识库：145 篇深度逆向工程技术文章，覆盖 CTF Web 渗透、APK 逆向、PE 二进制分析、密码学/协议/内核/游戏作弊。每篇包含可运行代码、攻击链图谱、MCP 工具映射。">
+  <title>知识库 | ReverseLab — 178 篇逆向工程技术文章</title>
+  <meta name="description" content="ReverseLab 知识库：178 篇深度逆向工程技术文章，覆盖 CTF Web 渗透、APK 逆向、PE 二进制分析、密码学/协议/内核/游戏作弊。每篇包含可运行代码、攻击链图谱、MCP 工具映射。">
   <meta name="keywords" content="reverse engineering knowledge base, CTF techniques, APK reverse engineering, PE analysis, cryptography, exploit, 逆向工程知识库, 安全技术文章">
   <meta name="robots" content="index, follow">
-  <meta property="og:title" content="知识库 | ReverseLab — 145 篇逆向工程技术文章">
+  <meta property="og:title" content="知识库 | ReverseLab — 178 篇逆向工程技术文章">
   <meta property="og:description" content="覆盖 CTF Web / APK / PE / 密码学 / 协议 / 内核 / 游戏作弊的全领域逆向工程知识体系。">
   <meta property="og:url" content="https://ling71671.github.io/open-reverselab/kb/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReverseLab">
   <link rel="canonical" href="https://ling71671.github.io/open-reverselab/kb/">
-  <script>
-    (function () {
-      try {
-        var key = 'reverselab-theme';
-        var theme = localStorage.getItem(key) || '';
-        var aliases = {
-          light: 'mint-apple', ash: 'dark', midnight: 'midnight-blurple', chroma: 'chroma-glow',
-          grape: 'retro', mocha: 'sepia', onyx: 'under-the-sea', aurora: 'forest'
-        };
-        if (aliases[theme]) theme = aliases[theme];
-        var valid = {
-          cinder:1,'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
-          'cotton-candy':1,lofi:1,'desert-khaki':1,sunset:1,'chroma-glow':1,forest:1,crimson:1,
-          'midnight-blurple':1,mars:1,dusk:1,'under-the-sea':1,retro:1,'neon-nights':1,sepia:1,
-          blurple:1,dark:1
-        };
-        if (!valid[theme]) {
-          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'mint-apple';
-        }
-        var light = {
-          'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
-          'cotton-candy':1,lofi:1,'desert-khaki':1
-        };
-        document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.style.colorScheme = light[theme] ? 'light' : 'dark';
-      } catch (e) {}
-    })();
-  </script>
   <link rel="stylesheet" href="../assets/css/style.css">
   <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
-  <script src="../assets/js/theme.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -68,7 +39,7 @@
     <section class="hero">
       <h2>📚 逆向工程知识库</h2>
       <p class="hero-desc">
-        145 篇深度技术文章，每篇包含：场景→输入信号→方法→攻击链→MCP 工具映射。
+        178 篇深度技术文章，每篇包含：场景→输入信号→方法→攻击链→MCP 工具映射。
         文章内容可直接复制运行，所有技术均配有可执行的 Python/JS/C++/Frida 代码。
       </p>
     </section>
@@ -80,25 +51,25 @@
           <span class="board-icon">🌐</span>
           <h3>CTF Website</h3>
           <p>Web 攻击全表面 — JWT / SQLi / SSRF / XSS / CSRF / CORS / OAuth / CVE / DoS / Payment / 签名攻击 / Paywall 绕过 / API 攻击 / 供应链 / 云原生</p>
-          <span class="board-stat">23 分类 · 97 篇</span>
+          <span class="board-stat">26 分类 · 118 篇</span>
         </a>
         <a href="apk-reverse/index.html" class="board-card">
           <span class="board-icon">📱</span>
           <h3>APK Reverse</h3>
           <p>Android 逆向 — DEX/Java / Native(IL2CPP, UE4) / 加密破解 / 网络协议 Hook / 动态插桩 / 脱壳 / 重打包</p>
-          <span class="board-stat">8 分类 · 17 篇</span>
+          <span class="board-stat">8 分类 · 20 篇</span>
         </a>
         <a href="pe-reverse/index.html" class="board-card">
           <span class="board-icon">🖥️</span>
           <h3>PE Reverse</h3>
           <p>Windows 二进制分析 — Triage / PE 结构 / Ghidra 静态分析 / x64dbg 动态分析 / 加密脱壳 / IOC 提取 / YARA / Sigma / Patch / 免杀</p>
-          <span class="board-stat">8 分类 · 18 篇</span>
+          <span class="board-stat">9 分类 · 22 篇</span>
         </a>
         <a href="general/index.html" class="board-card">
           <span class="board-icon">🔬</span>
           <h3>General</h3>
           <p>跨领域 — Linux 内核利用 / 加密算法识别与破解 / PRNG 攻击 / 游戏作弊与反作弊 / 协议逆向(Protobuf) / 方法论</p>
-          <span class="board-stat">8 分类 · 12 篇</span>
+          <span class="board-stat">5 分类 · 17 篇</span>
         </a>
         <a href="windows/index.html" class="board-card">
           <span class="board-icon">🪟</span>

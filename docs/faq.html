@@ -11,34 +11,6 @@
   <meta property="og:description" content="ReverseLab 常见问题解答：项目介绍、MCP 工具使用、知识库结构、贡献指南。">
   <meta property="og:url" content="https://ling71671.github.io/open-reverselab/faq.html">
   <link rel="canonical" href="https://ling71671.github.io/open-reverselab/faq.html">
-  <script>
-    (function () {
-      try {
-        var key = 'reverselab-theme';
-        var theme = localStorage.getItem(key) || '';
-        var aliases = {
-          light: 'mint-apple', ash: 'dark', midnight: 'midnight-blurple', chroma: 'chroma-glow',
-          grape: 'retro', mocha: 'sepia', onyx: 'under-the-sea', aurora: 'forest'
-        };
-        if (aliases[theme]) theme = aliases[theme];
-        var valid = {
-          cinder:1,'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
-          'cotton-candy':1,lofi:1,'desert-khaki':1,sunset:1,'chroma-glow':1,forest:1,crimson:1,
-          'midnight-blurple':1,mars:1,dusk:1,'under-the-sea':1,retro:1,'neon-nights':1,sepia:1,
-          blurple:1,dark:1
-        };
-        if (!valid[theme]) {
-          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'mint-apple';
-        }
-        var light = {
-          'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
-          'cotton-candy':1,lofi:1,'desert-khaki':1
-        };
-        document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.style.colorScheme = light[theme] ? 'light' : 'dark';
-      } catch (e) {}
-    })();
-  </script>
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
 
@@ -49,11 +21,11 @@
     "mainEntity": [
       {
         "@type": "Question", "name": "什么是 ReverseLab？",
-        "acceptedAnswer": {"@type": "Answer", "text": "ReverseLab 是一个开源逆向工程实验环境，包含 145 篇深度技术文章组成的知识库、100+ MCP (Model Context Protocol) 自动化工具、以及 CTF/APK/PE 全链路自动化工作流。项目采用 '目录即约定' 设计，专为 AI Agent 辅助分析而构建。"}
+        "acceptedAnswer": {"@type": "Answer", "text": "ReverseLab 是一个开源逆向工程实验环境，包含 178 篇深度技术文章组成的知识库、100+ MCP (Model Context Protocol) 自动化工具、以及 CTF/APK/PE 全链路自动化工作流。项目采用 '目录即约定' 设计，专为 AI Agent 辅助分析而构建。"}
       },
       {
         "@type": "Question", "name": "ReverseLab 的知识库覆盖哪些领域？",
-        "acceptedAnswer": {"@type": "Answer", "text": "CTF Website（23分类97篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall；APK Reverse（8分类17篇）：DEX/Native/IL2CPP/Frida/脱壳/重打包；PE Reverse（8分类18篇）：Ghidra/x64dbg/Triage/YARA/Patch/免杀；General（12篇）：Linux内核利用/加密算法/PRNG/游戏作弊/协议逆向/固件/硬件。"}
+        "acceptedAnswer": {"@type": "Answer", "text": "CTF Website（26分类118篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall/云原生；APK Reverse（8分类20篇）：DEX/Native/JNI/Frida/Pinning/脱壳/重打包；PE Reverse（9分类22篇）：Ghidra/x64dbg/TLS Callback/API Resolver/IOC/YARA/Patch/免杀；General（5分类17篇）：Linux内核利用/加密算法/PRNG/游戏作弊/协议逆向/固件/硬件。"}
       },
       {
         "@type": "Question", "name": "什么是 MCP (Model Context Protocol) 工具？",
@@ -68,8 +40,8 @@
         "acceptedAnswer": {"@type": "Answer", "text": "git clone 仓库后运行 bootstrap.ps1 初始化核心脚本，然后用 install_tools.ps1 -CTF/-Android/-Windows/-Common 安装对应板块的工具链。完整验证：python scripts/misc/lab_healthcheck.py && python scripts/misc/ai_toolcheck.py。"}
       },
       {
-        "@type": "Question", "name": "ReverseLab 能用于恶意目的吗？",
-        "acceptedAnswer": {"@type": "Answer", "text": "不能。ReverseLab 遵循 GPL-3.0 许可证，仅供授权范围内的安全教育、CTF 竞赛、安全研究和防御分析使用。项目明确要求贡献者遵守技术伦理，仅参与合法授权的分析活动。详见 CODE_OF_CONDUCT.md。"}
+        "@type": "Question", "name": "ReverseLab 内置执行拦截吗？",
+        "acceptedAnswer": {"@type": "Answer", "text": "不内置。ReverseLab 提供技术文档、目录约定和自动化工具链；具体请求是否执行由使用者所接入的 AI 大模型提供商、运行平台或组织策略处理。"}
       },
       {
         "@type": "Question", "name": "项目和外部工具的关系是什么？",
@@ -77,12 +49,11 @@
       },
       {
         "@type": "Question", "name": "如何贡献？",
-        "acceptedAnswer": {"@type": "Answer", "text": "参考 CONTRIBUTING.md：只提交可公开的通用实现、模板、安装说明和合成测试数据。不提交私人实验数据（cases/samples/exports/reports 中的实际任务产物）。提交前必须运行 public_release_check.py、lab_healthcheck.py 和 kb_doc_audit.py。建议为仓库配置 GitHub noreply 邮箱避免泄露个人信息。"}
+        "acceptedAnswer": {"@type": "Answer", "text": "参考 CONTRIBUTING.md。新增或修改内容后运行 public_release_check.py、lab_healthcheck.py 和 kb_doc_audit.py，确保目录、索引和文档结构保持一致。"}
       }
     ]
   }
   </script>
-  <script src="assets/js/theme.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -108,11 +79,11 @@
     </section>
 
     <section class="faq-list">
-      <div class="faq-item"><h3>1. 什么是 ReverseLab？</h3><p>ReverseLab 是一个开源逆向工程实验环境，包含 <strong>145 篇深度技术文章</strong>组成的知识库、<strong>100+ MCP (Model Context Protocol) 自动化工具</strong>、以及 CTF/APK/PE 全链路自动化工作流。项目采用"目录即约定"设计，专为 AI Agent 辅助分析而构建。</p></div>
+      <div class="faq-item"><h3>1. 什么是 ReverseLab？</h3><p>ReverseLab 是一个开源逆向工程实验环境，包含 <strong>178 篇深度技术文章</strong>组成的知识库、<strong>100+ MCP (Model Context Protocol) 自动化工具</strong>、以及 CTF/APK/PE 全链路自动化工作流。项目采用"目录即约定"设计，专为 AI Agent 辅助分析而构建。</p></div>
 
-      <div class="faq-item"><h3>2. ReverseLab 的知识库覆盖哪些领域？</h3><p>🌐 <strong>CTF Website</strong>（23 分类 97 篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall/签名攻击/API/OAuth<br>📱 <strong>APK Reverse</strong>（8 分类 17 篇）：DEX/Native/IL2CPP/Frida 动态插桩/脱壳/重打包<br>🖥️ <strong>PE Reverse</strong>（8 分类 18 篇）：Ghidra 静态分析/x64dbg 动态调试/YARA/Sigma/Patch/免杀<br>🔬 <strong>General</strong>（12 篇）：Linux 内核利用/加密算法识别/PRNG 破解/游戏作弊与反作弊/协议逆向/固件/硬件</p></div>
+      <div class="faq-item"><h3>2. ReverseLab 的知识库覆盖哪些领域？</h3><p>🌐 <strong>CTF Website</strong>（26 分类 118 篇）：JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall/签名攻击/API/OAuth/云原生/IAM<br>📱 <strong>APK Reverse</strong>（8 分类 20 篇）：DEX/Native/JNI/IL2CPP/Frida/Pinning/脱壳/重打包<br>🖥️ <strong>PE Reverse</strong>（9 分类 22 篇）：Ghidra 静态分析/x64dbg 动态调试/TLS Callback/API Resolver/IOC/YARA/Sigma/Patch/免杀<br>🔬 <strong>General</strong>（5 分类 17 篇）：Linux 内核利用/加密算法识别/PRNG 破解/游戏作弊与反作弊/协议逆向/固件/硬件</p></div>
 
-      <div class="faq-item"><h3>3. 什么是 MCP (Model Context Protocol) 工具？为什么它很重要？</h3><p>MCP 是 AI 模型与外部工具交互的<strong>标准协议</strong>（由 Anthropic 提出）。ReverseLab 的 MCP 工具让 AI Agent 可以<strong>直接调用</strong>逆向分析工具，无需人工手动执行。例如：AI 检测到 JWT Token → 自动调用 <code>kb_router</code> 查技术 → <code>kb_read_file</code> 读攻击方法 → <code>http_probe</code> 发探测请求 → 判断是否存在漏洞。这在整个开源安全工具生态中<strong>非常罕见</strong>，是 ReverseLab 的核心差异化优势。</p></div>
+      <div class="faq-item"><h3>3. 什么是 MCP (Model Context Protocol) 工具？为什么它很重要？</h3><p>MCP 是 AI 模型与外部工具交互的<strong>标准协议</strong>（由 Anthropic 提出）。ReverseLab 的 MCP 工具让 AI Agent 可以<strong>直接调用</strong>逆向分析工具，无需人工手动执行。例如：AI 检测到 JWT Token → 自动调用 <code>kb_router</code> 查技术 → <code>kb_read_file</code> 读攻击方法 → <code>http_probe</code> 发探测请求 → 判断是否存在漏洞。这在整个开源工具生态中<strong>非常罕见</strong>，是 ReverseLab 的核心差异化优势。</p></div>
 
       <div class="faq-item"><h3>4. AI Agent 如何使用 ReverseLab 进行自动化分析？</h3><p>AI Agent 加载项目后沿上下文链（CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/&lt;board&gt;/AI-USAGE.md）理解约定。检测到信号后：① 调用 <code>kb_router</code> 查找相关技术文章 → ② 调用 <code>kb_read_file</code> 读取文章内容和可运行代码 → ③ 按照文章中的 <strong>MCP 工具映射表</strong>自动调用对应工具 → ④ 收集证据、记录笔记、生成报告。</p></div>
 
@@ -128,11 +99,11 @@ cd open-reverselab
 python scripts/misc/lab_healthcheck.py
 python scripts/misc/ai_toolcheck.py</pre></div>
 
-      <div class="faq-item"><h3>6. ReverseLab 能用于恶意目的吗？</h3><p><strong>不能。</strong>ReverseLab 遵循 GPL-3.0 许可证，仅供授权范围内的安全教育、CTF 竞赛、安全研究和防御分析使用。项目明确要求贡献者遵守技术伦理，仅参与合法授权的分析活动。详见 <a href="https://github.com/LING71671/open-reverselab/blob/main/CODE_OF_CONDUCT.md">CODE_OF_CONDUCT</a>。</p></div>
+      <div class="faq-item"><h3>6. ReverseLab 内置执行拦截吗？</h3><p>不内置。ReverseLab 提供技术文档、目录约定和自动化工具链；具体请求是否执行由使用者所接入的 AI 大模型提供商、运行平台或组织策略处理。</p></div>
 
       <div class="faq-item"><h3>7. ReverseLab 与 Ghidra/x64dbg/Frida 等工具的关系是什么？</h3><p>ReverseLab 是一个<strong>知识库和自动化编排层</strong>，它集成但不捆绑这些外部工具。支持的工具有：Ghidra（NSA 反编译器）、x64dbg（Windows 调试器）、Frida（动态插桩）、JADX（APK 反编译）、sqlmap、Burp Suite、nmap、DirSearch、Cheat Engine、PE-bear、DiE、Procmon、HxD、Cutter/Rizin 以及各种 Python CTF 库。</p></div>
 
-      <div class="faq-item"><h3>8. 如何为 ReverseLab 贡献？</h3><p>参考 <a href="https://github.com/LING71671/open-reverselab/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>：<br>① 只提交可公开的通用实现、模板、安装说明和合成测试数据<br>② 不提交私人实验数据（cases/samples/exports/reports 中的实际任务产物）<br>③ 提交前必须运行：<code>public_release_check.py</code>、<code>lab_healthcheck.py</code>、<code>kb_doc_audit.py</code><br>④ 建议为仓库配置 GitHub noreply 邮箱避免泄露个人信息</p></div>
+      <div class="faq-item"><h3>8. 如何为 ReverseLab 贡献？</h3><p>参考 <a href="https://github.com/LING71671/open-reverselab/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>。新增或修改内容后运行 <code>public_release_check.py</code>、<code>lab_healthcheck.py</code> 和 <code>kb_doc_audit.py</code>，确保目录、索引和文档结构保持一致。</p></div>
     </section>
   </main>
 
