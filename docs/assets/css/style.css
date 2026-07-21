@@ -17,7 +17,7 @@
   --header-tint: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
   --radius: 8px;
   --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  --font-sans: -apple-system, blinkmacsystemfont, 'Segoe UI', 'Noto Sans SC', sans-serif;
 }
 
 html {
@@ -458,6 +458,7 @@ code, pre { font-family: var(--font-mono); }
   margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
