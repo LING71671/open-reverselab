@@ -3,15 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CTF Website 知识库 | ReverseLab — Web 攻击全表面 118 篇</title>
-  <meta name="description" content="CTF Website 渗透测试知识库：26 分类 118 篇技术文章，覆盖 JWT/SQLi/SSRF/XSS/CORS/OAuth/CVE/DoS/Payment/Paywall/签名攻击/API 攻击/供应链安全/云原生/IAM。每篇含可运行代码和 MCP 工具映射。">
+  <title>CTF Website 知识库 | ReverseLab — Web 攻击全表面 97 篇</title>
+  <meta name="description" content="CTF Website 渗透测试知识库：23 分类 97 篇技术文章，覆盖 JWT/SQLi/SSRF/XSS/CORS/OAuth/CVE/DoS/Payment/Paywall/签名攻击/API 攻击/供应链安全。每篇含可运行代码和 MCP 工具映射。">
   <meta name="keywords" content="CTF, web security, JWT, SQL injection, SSRF, XSS, CSRF, CORS, OAuth, CVE, DoS, payment bypass, paywall, API security, web penetration testing, 渗透测试, Web安全">
   <meta name="robots" content="index, follow">
   <meta property="og:title" content="CTF Website 知识库 | ReverseLab">
-  <meta property="og:description" content="26 分类 118 篇 Web 安全技术文章。JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall/云原生全覆盖。">
+  <meta property="og:description" content="23 分类 97 篇 Web 安全技术文章。JWT/SQLi/SSRF/XSS/CVE/DoS/Payment/Paywall 全覆盖。">
   <meta property="og:url" content="https://ling71671.github.io/open-reverselab/kb/ctf-website/">
   <meta property="og:type" content="website">
   <link rel="canonical" href="https://ling71671.github.io/open-reverselab/kb/ctf-website/">
+  <script>
+    (function () {
+      try {
+        var key = 'reverselab-theme';
+        var theme = localStorage.getItem(key) || '';
+        var aliases = {
+          light: 'mint-apple', ash: 'dark', midnight: 'midnight-blurple', chroma: 'chroma-glow',
+          grape: 'retro', mocha: 'sepia', onyx: 'under-the-sea', aurora: 'forest'
+        };
+        if (aliases[theme]) theme = aliases[theme];
+        var valid = {
+          cinder:1,'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1,sunset:1,'chroma-glow':1,forest:1,crimson:1,
+          'midnight-blurple':1,mars:1,dusk:1,'under-the-sea':1,retro:1,'neon-nights':1,sepia:1,
+          blurple:1,dark:1
+        };
+        if (!valid[theme]) {
+          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'mint-apple';
+        }
+        var light = {
+          'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1
+        };
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = light[theme] ? 'light' : 'dark';
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="../../assets/css/style.css">
   <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg">
 
@@ -20,12 +48,13 @@
     "@context": "https://schema.org",
     "@type": "TechArticleSeries",
     "name": "ReverseLab CTF Website Knowledge Base",
-    "description": "26 categories, 118 articles covering the full web attack surface: JWT, SQLi, SSRF, XSS, CORS, OAuth, CVE, DoS, Payment, Paywall, API attacks, supply chain, cloud native, IAM, and more.",
-    "numberOfItems": 118,
+    "description": "23 categories, 97 articles covering the full web attack surface: JWT, SQLi, SSRF, XSS, CORS, OAuth, CVE, DoS, Payment, Paywall, API attacks, supply chain, and more.",
+    "numberOfItems": 97,
     "inLanguage": "zh-CN",
     "isPartOf": {"@type": "SoftwareSourceCode", "name": "ReverseLab", "url": "https://github.com/LING71671/open-reverselab"}
   }
   </script>
+  <script src="../../assets/js/theme.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -47,7 +76,7 @@
 
     <section class="hero">
       <h2>🌐 CTF Website — Web 攻击全表面</h2>
-      <p class="hero-desc">26 分类 · 118 篇技术文章。覆盖从信息收集到漏洞利用、从认证绕过到 DoS 与云原生/IAM 的完整 Web 攻击面。</p>
+      <p class="hero-desc">23 分类 · 97 篇技术文章。覆盖从信息收集到漏洞利用、从认证绕过到 DoS 的完整 Web 攻击面。</p>
       <div class="hero-actions">
         <a href="https://github.com/LING71671/open-reverselab/tree/main/kb/ctf-website/techniques" class="btn-primary">GitHub 上浏览全部文章</a>
         <a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/attack-network.md" class="btn-secondary">查看攻击网图谱</a>
@@ -59,7 +88,7 @@
 
       <div class="kb-category"><h3>01-recon — 信息收集（5 篇）</h3><p>FOFA 资产测绘、Cloudflare 绕过、验证码绕过、版本指纹、路由绕过</p><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/captcha-bypass.md">验证码绕过技术与自动化</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/cloudflare-bypass.md">Cloudflare 绕过：寻找真实源服务器 IP</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/fofa-hunting.md">FOFA 资产测绘与漏洞狩猎</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/recon-routing.md">Recon & 路由绕过</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/version-fingerprinting.md">版本指纹识别</a></li></ul></div>
 
-      <div class="kb-category"><h3>02-auth — 认证与会话（14 篇）</h3><p>JWT 攻击全景（10 篇子系列）、Host Header、LDAP、OAuth 2.0/OIDC、SAML</p><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/00-overview.md">JWT 攻击全景</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/01-alg-none.md">JWT alg:none 签名绕过</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/02-algorithm-confusion.md">JWT 算法混淆</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/03-weak-key-bruteforce.md">JWT 弱密钥爆破</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/04-kid-injection.md">JWT kid 参数注入</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-operations.md">JWT 工具链与结果矩阵</a></li><li style="text-align:center; color: var(--text-muted);">... 共 14 篇（JWT 10 篇 + OAuth/LDAP/SAML/Host Header）</li></ul></div>
+      <div class="kb-category"><h3>02-auth — 认证与会话（14 篇）</h3><p>JWT 攻击全景（10 篇子系列）、Host Header、LDAP、OAuth 2.0/OIDC、SAML</p><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/00-overview.md">JWT 攻击全景</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/01-alg-none.md">JWT alg:none 签名绕过</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/02-algorithm-confusion.md">JWT 算法混淆</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/03-weak-key-bruteforce.md">JWT 弱密钥爆破</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/04-kid-injection.md">JWT kid 参数注入</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-defense.md">JWT 工具链与防御矩阵</a></li><li style="text-align:center; color: var(--text-muted);">... 共 14 篇（JWT 10 篇 + OAuth/LDAP/SAML/Host Header）</li></ul></div>
 
       <div class="kb-category"><h3>03-injection — 注入（7 篇）</h3><p>SQLi/NoSQLi、SSTI、GraphQL、gRPC/Protobuf、HPP/CRLF、Prototype Pollution、ReDoS</p><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/sqli-nosqli.md">SQLi & NoSQLi（数据库注入高阶实战）</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/ssti.md">SSTI（服务端模板注入）</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/graphql.md">GraphQL 攻击实战</a></li><li style="text-align:center; color: var(--text-muted);">... 共 7 篇</li></ul></div>
 
@@ -67,7 +96,7 @@
 
       <div class="kb-category"><h3>07-client — 客户端安全（6 篇）</h3><p>Admin Bot/XSS、CORS/CSRF、JS Runtime/Browser Reversing、PostMessage、Web Crypto API、WebSocket</p></div>
 
-      <div class="kb-category"><h3>08-infra | 10-cloud | 11-supply-chain（12 篇）</h3><p>HTTP/2、Race Condition/Cache Poisoning/Request Smuggling、CI/CD、GitHub Actions、AWS IAM、Kubernetes RBAC、容器运行时、Terraform State、Kubernetes 容器逃逸、Serverless/Lambda、Dependency Confusion</p></div>
+      <div class="kb-category"><h3>08-infra | 10-cloud | 11-supply-chain（7 篇）</h3><p>HTTP/2、Race Condition/Cache Poisoning/Request Smuggling、CI/CD、Kubernetes 容器逃逸、Serverless/Lambda、Dependency Confusion</p></div>
 
       <div class="kb-category"><h3>09-cve — CVE 工作流（9 篇）</h3><p>CVE 关联网、CVE 工作流、多 CVE 链式利用 + 6 篇实战：Blink UAF、Redis RCE、cPanel 路径穿越、Nezha JWT 伪造、LiteLLM 提权、NGINX 堆溢出</p></div>
 

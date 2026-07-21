@@ -3,14 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>APK Reverse 知识库 | ReverseLab — Android 逆向 20 篇</title>
-  <meta name="description" content="APK 逆向技术知识库：8 分类 20 篇文章，覆盖 DEX/Java 修改、Native/SO/JNI 逆向、加密破解、网络协议 Hook、TLS Pinning、Frida 动态插桩、脱壳、重打包。每篇含可运行 Frida/C++ 代码。">
+  <title>APK Reverse 知识库 | ReverseLab — Android 逆向 17 篇</title>
+  <meta name="description" content="APK 逆向技术知识库：8 分类 17 篇文章，覆盖 DEX/Java 修改、Native/SO 逆向（IL2CPP/UE4）、加密破解、网络协议 Hook、Frida 动态插桩、脱壳、重打包。每篇含可运行 Frida/C++ 代码。">
   <meta name="keywords" content="APK reverse engineering, Android reverse, Frida, IL2CPP, UE4, smali, DEX, SO injection, game hacking, APK 逆向, 安卓逆向, 游戏破解">
   <meta name="robots" content="index, follow">
   <meta property="og:title" content="APK Reverse 知识库 | ReverseLab">
-  <meta property="og:description" content="8 分类 20 篇 Android 逆向技术文章。DEX/Native/JNI/IL2CPP/UE4/Frida/Pinning/脱壳全覆盖。">
+  <meta property="og:description" content="8 分类 17 篇 Android 逆向技术文章。DEX/Native/IL2CPP/UE4/Frida/加密/脱壳全覆盖。">
   <meta property="og:url" content="https://ling71671.github.io/open-reverselab/kb/apk-reverse/">
   <link rel="canonical" href="https://ling71671.github.io/open-reverselab/kb/apk-reverse/">
+  <script>
+    (function () {
+      try {
+        var key = 'reverselab-theme';
+        var theme = localStorage.getItem(key) || '';
+        var aliases = {
+          light: 'mint-apple', ash: 'dark', midnight: 'midnight-blurple', chroma: 'chroma-glow',
+          grape: 'retro', mocha: 'sepia', onyx: 'under-the-sea', aurora: 'forest'
+        };
+        if (aliases[theme]) theme = aliases[theme];
+        var valid = {
+          cinder:1,'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1,sunset:1,'chroma-glow':1,forest:1,crimson:1,
+          'midnight-blurple':1,mars:1,dusk:1,'under-the-sea':1,retro:1,'neon-nights':1,sepia:1,
+          blurple:1,dark:1
+        };
+        if (!valid[theme]) {
+          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'mint-apple';
+        }
+        var light = {
+          'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1
+        };
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = light[theme] ? 'light' : 'dark';
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="../../assets/css/style.css">
   <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg">
 
@@ -19,12 +47,13 @@
     "@context": "https://schema.org",
     "@type": "TechArticleSeries",
     "name": "ReverseLab APK Reverse Engineering Knowledge Base",
-    "description": "8 categories, 20 articles: DEX/Java, Native/SO/JNI, crypto cracking, network protocol hooking, TLS pinning, Frida dynamic instrumentation, unpacking, repackaging.",
-    "numberOfItems": 20,
+    "description": "8 categories, 17 articles: DEX/Java, Native/SO (IL2CPP/UE4), crypto cracking, network protocol hooking, Frida dynamic instrumentation, unpacking, repackaging.",
+    "numberOfItems": 17,
     "inLanguage": "zh-CN",
     "isPartOf": {"@type": "SoftwareSourceCode", "name": "ReverseLab", "url": "https://github.com/LING71671/open-reverselab"}
   }
   </script>
+  <script src="../../assets/js/theme.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -46,7 +75,7 @@
 
     <section class="hero">
       <h2>📱 APK Reverse — Android 逆向工程</h2>
-      <p class="hero-desc">8 分类 · 20 篇技术文章。覆盖静态分析、Frida 动态验证、TLS Pinning、脱壳、Patch 与重打包。</p>
+      <p class="hero-desc">8 分类 · 17 篇技术文章。覆盖静态分析、Frida 动态验证、脱壳、Patch 与重打包。</p>
       <div class="hero-actions">
         <a href="https://github.com/LING71671/open-reverselab/tree/main/kb/apk-reverse/techniques" class="btn-primary">GitHub 上浏览全部文章</a>
         <a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/attack-network.md" class="btn-secondary">查看攻击网图谱</a>
@@ -58,19 +87,19 @@
 
       <div class="kb-category"><h3>01-dex-java — DEX/Java（1 篇）</h3><p>Smali 代码注入与 DEX 修改</p><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/01-dex-java/01-smali-injection.md">Smali 代码注入与 DEX 修改</a></li></ul></div>
 
-      <div class="kb-category"><h3>02-native — Native/SO（6 篇）</h3><p>Unity IL2CPP、指针链遍历、UE4 引擎游戏偏移发现、Kernel Driver proc 节点注入、虚拟地址→物理地址转换、JNI RegisterNatives</p><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/01-il2cpp-offset-discovery.md">Unity IL2CPP 静态逆向与偏移发现</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/02-pointer-chain-patterns.md">指针链遍历模式</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/03-ue4-offset-hunting.md">UE4 引擎游戏偏移发现</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/04-kernel-procfs-driver.md">Kernel Driver 注入：proc 节点读写</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/05-virt-phys-memory.md">虚拟地址 → 物理地址转换</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/06-jni-register-natives-tracing.md">JNI RegisterNatives 追踪与 Native 入口还原</a></li></ul></div>
+      <div class="kb-category"><h3>02-native — Native/SO（5 篇）</h3><p>Unity IL2CPP、指针链遍历、UE4 引擎游戏偏移发现、Kernel Driver proc 节点注入、虚拟地址→物理地址转换</p><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/01-il2cpp-offset-discovery.md">Unity IL2CPP 静态逆向与偏移发现</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/02-pointer-chain-patterns.md">指针链遍历模式</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/03-ue4-offset-hunting.md">UE4 引擎游戏偏移发现</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/04-kernel-procfs-driver.md">Kernel Driver 注入：proc 节点读写</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/05-virt-phys-memory.md">虚拟地址 → 物理地址转换</a></li></ul></div>
 
       <div class="kb-category"><h3>03-manifest — Manifest/入口（1 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/03-manifest/01-entry-point-tracing.md">入口点追踪与组件分析</a></li></ul></div>
 
       <div class="kb-category"><h3>04-crypto — 加密（2 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/04-crypto/01-game-encryption-patterns.md">游戏数据加解密识别与绕过</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/04-crypto/02-rc4-custom-crypto.md">自定义对称加密：RC4 与组合模式</a></li></ul></div>
 
-      <div class="kb-category"><h3>05-network — 网络协议（3 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/01-game-protocol-hook.md">游戏协议 Hook 与封包分析</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/02-license-verification-bypass.md">在线验证系统分析与绕过</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/03-tls-pinning-unpinning.md">TLS Pinning 定位与 Unpinning</a></li></ul></div>
+      <div class="kb-category"><h3>05-network — 网络协议（2 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/01-game-protocol-hook.md">游戏协议 Hook 与封包分析</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/02-license-verification-bypass.md">在线验证系统分析与绕过</a></li></ul></div>
 
       <div class="kb-category"><h3>06-dynamic — 动态插桩（3 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/01-memory-rw-hook.md">进程内存读写检测与 Hook</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/02-overlay-rendering-hook.md">Overlay 渲染与 ImGui 检测</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/03-touch-input-hook.md">触摸输入 Hook 与注入分析</a></li></ul></div>
 
       <div class="kb-category"><h3>07-packer — 壳与混淆（2 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/07-packer/01-obfuscation-detection.md">编译期混淆检测与识别</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/07-packer/02-self-extracting-payload.md">自解压 Payload 与脚本嵌入</a></li></ul></div>
 
-      <div class="kb-category"><h3>08-patch-repack — Patch/重打包（2 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/01-so-injection-repack.md">Native SO 注入与 APK 重打包</a></li><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/02-signature-integrity-bypass.md">签名与完整性检查绕过</a></li></ul></div>
+      <div class="kb-category"><h3>08-patch-repack — Patch/重打包（1 篇）</h3><ul><li><a href="https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/01-so-injection-repack.md">Native SO 注入与 APK 重打包</a></li></ul></div>
     </section>
   </main>
 

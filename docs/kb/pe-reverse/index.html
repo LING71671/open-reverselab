@@ -3,14 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PE Reverse 知识库 | ReverseLab — Windows 二进制分析 22 篇</title>
-  <meta name="description" content="PE 逆向技术知识库：9 分类 22 篇文章，覆盖 PE Triage、PE 结构、TLS Callback、Ghidra 静态分析、动态 API 解析、x64dbg 动态分析、加密脱壳、IOC 提取、YARA/Sigma 规则、Patch、免杀。每篇含可运行代码。">
+  <title>PE Reverse 知识库 | ReverseLab — Windows 二进制分析 18 篇</title>
+  <meta name="description" content="PE 逆向技术知识库：8 分类 18 篇文章，覆盖 PE Triage、PE 结构、Ghidra 静态分析、x64dbg 动态分析、加密脱壳、IOC 提取、YARA/Sigma 规则、Patch、免杀。每篇含可运行代码。">
   <meta name="keywords" content="PE analysis, binary reverse engineering, Ghidra, x64dbg, malware analysis, YARA, Sigma, IOC, patch, AV evasion, PE 分析, 逆向, 恶意代码, 脱壳, 免杀">
   <meta name="robots" content="index, follow">
   <meta property="og:title" content="PE Reverse 知识库 | ReverseLab">
-  <meta property="og:description" content="9 分类 22 篇 Windows PE 逆向技术文章。Ghidra/x64dbg/TLS Callback/API Resolver/YARA/Sigma/Patch/免杀全覆盖。">
+  <meta property="og:description" content="8 分类 18 篇 Windows PE 逆向技术文章。Ghidra/x64dbg/Triage/YARA/Sigma/Patch/免杀全覆盖。">
   <meta property="og:url" content="https://ling71671.github.io/open-reverselab/kb/pe-reverse/">
   <link rel="canonical" href="https://ling71671.github.io/open-reverselab/kb/pe-reverse/">
+  <script>
+    (function () {
+      try {
+        var key = 'reverselab-theme';
+        var theme = localStorage.getItem(key) || '';
+        var aliases = {
+          light: 'mint-apple', ash: 'dark', midnight: 'midnight-blurple', chroma: 'chroma-glow',
+          grape: 'retro', mocha: 'sepia', onyx: 'under-the-sea', aurora: 'forest'
+        };
+        if (aliases[theme]) theme = aliases[theme];
+        var valid = {
+          cinder:1,'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1,sunset:1,'chroma-glow':1,forest:1,crimson:1,
+          'midnight-blurple':1,mars:1,dusk:1,'under-the-sea':1,retro:1,'neon-nights':1,sepia:1,
+          blurple:1,dark:1
+        };
+        if (!valid[theme]) {
+          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'mint-apple';
+        }
+        var light = {
+          'mint-apple':1,'citrus-sherbert':1,'retro-raincloud':1,hanami:1,sunrise:1,
+          'cotton-candy':1,lofi:1,'desert-khaki':1
+        };
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = light[theme] ? 'light' : 'dark';
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="../../assets/css/style.css">
   <link rel="icon" type="image/svg+xml" href="../../assets/img/favicon.svg">
   <script type="application/ld+json">
@@ -18,12 +46,13 @@
     "@context": "https://schema.org",
     "@type": "TechArticleSeries",
     "name": "ReverseLab PE Reverse Engineering Knowledge Base",
-    "description": "9 categories, 22 articles: PE triage, PE structure, TLS callbacks, Ghidra static analysis, dynamic API resolution, x64dbg dynamic analysis, crypto unpacking, IOC extraction, YARA/Sigma, patching, AV evasion.",
-    "numberOfItems": 22,
+    "description": "8 categories, 18 articles: PE triage, PE structure, Ghidra static analysis, x64dbg dynamic analysis, crypto unpacking, IOC extraction, YARA/Sigma, patching, AV evasion.",
+    "numberOfItems": 18,
     "inLanguage": "zh-CN",
     "isPartOf": {"@type": "SoftwareSourceCode", "name": "ReverseLab", "url": "https://github.com/LING71671/open-reverselab"}
   }
   </script>
+  <script src="../../assets/js/theme.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -45,7 +74,7 @@
 
     <section class="hero">
       <h2>🖥️ PE Reverse — Windows 二进制分析</h2>
-      <p class="hero-desc">9 分类 · 22 篇技术文章。覆盖从初始 Triage 到最终免杀的完整分析流水线。</p>
+      <p class="hero-desc">8 分类 · 18 篇技术文章。覆盖从初始 Triage 到最终免杀的完整分析流水线。</p>
       <div class="hero-actions">
         <a href="https://github.com/LING71671/open-reverselab/tree/main/kb/pe-reverse/techniques" class="btn-primary">GitHub 上浏览全部文章</a>
         <a href="https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/attack-network.md" class="btn-secondary">查看攻击网图谱</a>
@@ -55,11 +84,11 @@
     <section class="kb-list">
       <h2>技术分类</h2>
       <div class="kb-category"><h3>01-triage — 初筛（1 篇）</h3><p>AOB 签名扫描与模式匹配</p></div>
-      <div class="kb-category"><h3>02-pe-structure — PE 结构（2 篇）</h3><p>PE 头/节表/导入表/导出表/重定位/TLS Callback 等结构分析</p></div>
-      <div class="kb-category"><h3>03-static-analysis — 静态分析（5 篇）</h3><p>Ghidra 反编译分析：函数重命名、类型恢复、交叉引用、调用图、字符串追踪、结构体恢复、动态 API 解析</p></div>
+      <div class="kb-category"><h3>02-pe-structure — PE 结构（1 篇）</h3><p>PE 头/节表/导入表/导出表/重定位等结构分析</p></div>
+      <div class="kb-category"><h3>03-static-analysis — 静态分析（4 篇）</h3><p>Ghidra 反编译分析：函数重命名、类型恢复、交叉引用、调用图、字符串追踪、结构体恢复</p></div>
       <div class="kb-category"><h3>04-dynamic-analysis — 动态分析（8 篇）</h3><p>x64dbg/x32dbg 调试：API 断点、内存断点、条件断点、Patch 验证。Procmon 行为观察、Frida 动态插桩</p></div>
       <div class="kb-category"><h3>05-crypto-unpack — 加密/脱壳（1 篇）</h3><p>加密算法识别、脱壳策略、PE crypto unpack plan</p></div>
-      <div class="kb-category"><h3>06-ioc-extraction — IOC 提取（2 篇）</h3><p>IOC（Indicators of Compromise）提取与整理：文件哈希、C2 域名/IP、注册表键值、互斥体名、持久化启动链</p></div>
+      <div class="kb-category"><h3>06-ioc-extraction — IOC 提取（1 篇）</h3><p>IOC（Indicators of Compromise）提取与整理：文件哈希、C2 域名/IP、注册表键值、互斥体名</p></div>
       <div class="kb-category"><h3>07-yara-sigma — 检测规则（1 篇）</h3><p>YARA 规则编写与 Sigma 规则转换，用于检测和 SIEM 集成</p></div>
       <div class="kb-category"><h3>08-patch — 补丁（1 篇）</h3><p>PE 二进制 Patch 技术：字节修改、模式替换、PE 头修正</p></div>
       <div class="kb-category"><h3>09-av-evasion — 免杀（1 篇）</h3><p>免杀技术：Shellcode 加密/混淆、Loader 合并、静态签名绕过</p></div>
