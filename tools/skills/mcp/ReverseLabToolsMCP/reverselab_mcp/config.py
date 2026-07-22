@@ -11,7 +11,7 @@ IS_WINDOWS = os.name == "nt"
 
 # ── Project root discovery ──
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-REVERSE_ROOT = next(
+DISCOVERED_ROOT = next(
     (
         parent
         for parent in [PACKAGE_ROOT, *PACKAGE_ROOT.parents]
@@ -19,6 +19,15 @@ REVERSE_ROOT = next(
     ),
     PACKAGE_ROOT.parents[4],
 )
+REVERSE_ROOT = Path(os.environ.get("REVERSELAB_LAB_ROOT", str(DISCOVERED_ROOT))).expanduser().resolve()
+DATA_ROOT = Path(os.environ.get("REVERSELAB_DATA_ROOT", str(REVERSE_ROOT))).expanduser().resolve()
+OUTPUT_NAMESPACE = os.environ.get("REVERSELAB_OUTPUT_NAMESPACE", "").strip()
+
+
+def _data_dir(name: str) -> Path:
+    if OUTPUT_NAMESPACE:
+        return DATA_ROOT / name / OUTPUT_NAMESPACE
+    return DATA_ROOT / name
 
 # ── Directory shortcuts ──
 TOOLS_DIR = REVERSE_ROOT / "tools"
@@ -26,27 +35,28 @@ TOOLS_COMMON_DIR = TOOLS_DIR / "common"
 TOOLS_WINDOWS_DIR = TOOLS_DIR / "windows"
 TOOLS_ANDROID_DIR = TOOLS_DIR / "android"
 
-EXPORTS_DIR = REVERSE_ROOT / "exports" / "windows" / "triage"
-EXPORTS_ROOT = REVERSE_ROOT / "exports"
-AUDIT_DIR = REVERSE_ROOT / "exports" / "misc" / "audit"
+EXPORTS_ROOT = _data_dir("exports")
+EXPORTS_DIR = EXPORTS_ROOT / "windows" / "triage"
+AUDIT_DIR = EXPORTS_ROOT / "misc" / "audit"
 AUDIT_LOG = AUDIT_DIR / "reverse_lab_tools_audit.jsonl"
-GHIDRA_EXPORTS_DIR = REVERSE_ROOT / "exports" / "windows" / "ghidra"
-GHIDRA_PROJECTS_DIR = REVERSE_ROOT / "projects" / "windows" / "ghidra-headless"
+GHIDRA_EXPORTS_DIR = EXPORTS_ROOT / "windows" / "ghidra"
+PROJECTS_DIR = _data_dir("projects")
+GHIDRA_PROJECTS_DIR = PROJECTS_DIR / "windows" / "ghidra-headless"
 GHIDRA_SCRIPT_DIR = REVERSE_ROOT / "scripts" / "_shared" / "ghidra"
-PATCHES_DIR = REVERSE_ROOT / "patches"
-PROJECTS_DIR = REVERSE_ROOT / "projects"
-REPORTS_DIR = REVERSE_ROOT / "reports"
-SAMPLES_DIR = REVERSE_ROOT / "samples"
+PATCHES_DIR = _data_dir("patches")
+REPORTS_DIR = _data_dir("reports")
+SAMPLES_DIR = _data_dir("samples")
 SAMPLE_QUARANTINE_DIR = SAMPLES_DIR / "_quarantine"
-PROCMON_EXPORTS_DIR = REVERSE_ROOT / "exports" / "windows" / "procmon"
-IOC_EXPORTS_DIR = REVERSE_ROOT / "exports" / "windows" / "iocs"
-YARA_EXPORTS_DIR = REVERSE_ROOT / "exports" / "windows" / "yara"
-SIGMA_EXPORTS_DIR = REVERSE_ROOT / "exports" / "windows" / "sigma"
-ANDROID_EXPORTS_DIR = REVERSE_ROOT / "exports" / "android"
+PROCMON_EXPORTS_DIR = EXPORTS_ROOT / "windows" / "procmon"
+IOC_EXPORTS_DIR = EXPORTS_ROOT / "windows" / "iocs"
+YARA_EXPORTS_DIR = EXPORTS_ROOT / "windows" / "yara"
+SIGMA_EXPORTS_DIR = EXPORTS_ROOT / "windows" / "sigma"
+ANDROID_EXPORTS_DIR = EXPORTS_ROOT / "android"
 DEBUG_SCRIPTS_DIR = REVERSE_ROOT / "scripts" / "windows" / "debug"
 PROCMON_FILTERS_DIR = REVERSE_ROOT / "scripts" / "windows" / "procmon"
 SCRIPTS_DIR = REVERSE_ROOT / "scripts"
-NOTES_DIR = REVERSE_ROOT / "notes"
+NOTES_DIR = _data_dir("notes")
+CASES_DIR = _data_dir("cases")
 
 
 # ── Tool autodiscovery ──
@@ -173,10 +183,11 @@ HOST_PYTHON_EXE = next(
 # ── Security: allow-listed roots ──
 ALLOWED_ROOTS = [
     REVERSE_ROOT,
+    DATA_ROOT,
 ]
 
 GENERATED_ROOTS = [
-    REVERSE_ROOT / "exports",
+    EXPORTS_ROOT,
     PATCHES_DIR,
     PROJECTS_DIR,
     REPORTS_DIR,

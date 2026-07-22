@@ -91,6 +91,8 @@ tools/ctf-website/_downloads/
 
 # Local agent / IDE config (not part of public release)
 .codex/
+.codex_local/
+.open-reverselab-local/
 .claude/settings.local.json
 .serena/
 

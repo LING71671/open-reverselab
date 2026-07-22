@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ..config import REVERSE_ROOT, SCRIPTS_DIR, TOOLS_DIR
+from ..config import CASES_DIR, DATA_ROOT, EXPORTS_ROOT, REVERSE_ROOT, SCRIPTS_DIR, TOOLS_DIR
 from ..paths import ensure_under
 
 # ── KB roots for all boards ──
@@ -29,7 +29,7 @@ TECHNIQUES_DIR = REVERSE_ROOT / "kb" / "ctf-website" / "techniques"
 KB_ROUTER = SCRIPTS_DIR / "ctf-website" / "kb_router.py"
 CTF_AUTOPILOT = SCRIPTS_DIR / "ctf-website" / "ctf_autopilot.py"
 CTF_TOOLS_DIR = REVERSE_ROOT / "tools" / "ctf-website"
-CTF_EXPORTS_DIR = REVERSE_ROOT / "exports" / "ctf-website"
+CTF_EXPORTS_DIR = EXPORTS_ROOT / "ctf-website"
 BIN_DIR = REVERSE_ROOT / "tools" / "bin"
 BURP_DIR = CTF_TOOLS_DIR / "burp"
 
@@ -246,7 +246,7 @@ def kb_catalog(board: str = "") -> dict:
 
 def ctf_new_challenge(name: str, url: str = "") -> dict:
     """Create a new CTF challenge case directory."""
-    case_dir = REVERSE_ROOT / "cases" / name
+    case_dir = CASES_DIR / name
     template_dir = REVERSE_ROOT / "templates" / "cases"
 
     if case_dir.exists():
@@ -276,9 +276,9 @@ def ctf_new_challenge(name: str, url: str = "") -> dict:
     )
 
     return {
-        "case": str(case_dir.relative_to(REVERSE_ROOT)),
+        "case": str(case_dir),
         "url": url,
-        "links": str(links.relative_to(REVERSE_ROOT)),
+        "links": str(links),
     }
 
 
@@ -287,9 +287,9 @@ def _resolve_manifest_file(manifest_path: str) -> Path:
         raise ValueError("manifest_path is required")
     resolved = Path(manifest_path).expanduser()
     if not resolved.is_absolute():
-        resolved = REVERSE_ROOT / resolved
+        resolved = DATA_ROOT / resolved
     resolved = resolved.resolve(strict=True)
-    ensure_under(resolved, [REVERSE_ROOT], "manifest path")
+    ensure_under(resolved, [DATA_ROOT], "manifest path")
     if not resolved.is_file():
         raise ValueError(f"not a file: {resolved}")
     if resolved.name != "ai_manifest.json":
@@ -516,9 +516,9 @@ def run_sqlmap_request(request_path: str, extra_args: str = "--batch", timeout: 
     try:
         resolved = Path(request_path).expanduser()
         if not resolved.is_absolute():
-            resolved = REVERSE_ROOT / resolved
+            resolved = DATA_ROOT / resolved
         resolved = resolved.resolve(strict=True)
-        ensure_under(resolved, [REVERSE_ROOT], "request path")
+        ensure_under(resolved, [DATA_ROOT], "request path")
     except Exception as e:
         return {"error": str(e)}
     args = f'-r "{resolved}" {extra_args}'.strip()
