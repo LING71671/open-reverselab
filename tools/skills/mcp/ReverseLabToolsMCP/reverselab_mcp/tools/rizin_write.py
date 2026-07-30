@@ -5,16 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from ..audit import append_audit, audit_log_path
-from ..config import CUTTER_ROOT, PATCHES_DIR
+from ..config import PATCHES_DIR, RIZIN_EXE, RZ_ASM_EXE
 from ..errors import ToolError
 from ..paths import check_tool, resolve_file, resolve_patch_output
 from ..runner import run
 from ..utils import slug
 from .triage import hashes
-
-
-RIZIN_EXE = CUTTER_ROOT / "rizin.exe"
-RZ_ASM_EXE = CUTTER_ROOT / "rz-asm.exe"
 
 
 def _case_output(source: Path, case_name: str, suffix: str = "") -> Path:

@@ -16,6 +16,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -29,6 +30,66 @@ REGISTRY = ROOT / "tools" / "ai-tool-registry.json"
 REPORT_DIR = ROOT / "reports" / "misc" / "toolcheck"
 USER_PATH_RE = re.compile(r"\b[A-Za-z]:\\Users\\[^\\\s\"']+", re.I)
 UNIX_USER_PATH_RE = re.compile(r"/(?:home|Users)/[^/\s\"']+")
+
+
+def current_platform() -> str:
+    if os.name == "nt":
+        return "windows"
+    if sys.platform == "darwin":
+        return "macos"
+    if sys.platform.startswith("linux"):
+        return "linux"
+    return sys.platform
+
+
+def _platform_allowed(tool: dict[str, Any]) -> bool:
+    platforms = tool.get("platforms") or tool.get("platform")
+    if not platforms:
+        return True
+    if isinstance(platforms, str):
+        platforms = [platforms]
+    normalized = {str(item).lower() for item in platforms}
+    platform = current_platform()
+    return "all" in normalized or platform in normalized or (platform == "macos" and "darwin" in normalized)
+
+
+def normalize_registry_path(value: str) -> str:
+    """Registry JSON may use Windows separators; normalize before Path handling."""
+    return value.replace("\\", "/")
+
+
+def repo_path(value: str) -> Path:
+    normalized = normalize_registry_path(value)
+    path = Path(normalized)
+    if not path.is_absolute() and "/" in normalized:
+        return (ROOT / path).resolve()
+    return path
+
+
+def _posix_wrapper_candidates(command_path: Path) -> list[Path]:
+    if command_path.suffix.lower() not in {".bat", ".cmd"}:
+        return [command_path]
+    return [command_path.with_suffix(""), command_path.with_suffix(".sh")]
+
+
+def command_argv(command: str, args: list[str]) -> list[str]:
+    command_path = repo_path(command)
+    suffix = command_path.suffix.lower()
+    if not command_path.is_absolute() and command_path.parts in {("python",), ("python3",)}:
+        return [shutil.which(str(command_path)) or sys.executable, *args]
+    if suffix in {".bat", ".cmd"}:
+        if os.name == "nt":
+            return [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(command_path), *args]
+        for candidate in _posix_wrapper_candidates(command_path):
+            if candidate.exists():
+                if os.access(candidate, os.X_OK):
+                    return [str(candidate), *args]
+                return [os.environ.get("SHELL", "sh"), str(candidate), *args]
+        path_tool = shutil.which(command_path.stem)
+        if path_tool:
+            return [path_tool, *args]
+        return [str(command_path), *args]
+    return [str(command_path), *args]
 
 
 def sha256_file(path: Path) -> str:
@@ -88,9 +149,7 @@ def sanitize_payload(payload: dict[str, Any], root: Path = ROOT) -> dict[str, An
 
 
 def check_file(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]:
-    path = Path(probe.get("path") or tool.get("command") or "")
-    if not path.is_absolute():
-        path = ROOT / path
+    path = repo_path(str(probe.get("path") or tool.get("command") or ""))
     if not path.exists():
         return {"status": "MISSING", "detail": "file missing", "path": str(path)}
     expected = (probe.get("sha256") or "").upper()
@@ -111,20 +170,15 @@ def check_file(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]:
 
 
 def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]:
-    command = tool["command"]
-    command_path = Path(command)
-    if not command_path.is_absolute() and ("/" in command or "\\" in command):
-        command = str((ROOT / command_path).resolve())
+    command = str(tool["command"])
+    command_path = repo_path(command)
     args = list(tool.get("args") or [])
     timeout = int(probe.get("timeout_ms") or 10000) / 1000.0
     allow_nonzero = bool(probe.get("allow_nonzero"))
     env = os.environ.copy()
     env["PATH"] = str(ROOT / "tools" / "bin") + os.pathsep + str(ROOT / "tools" / "ctf-website" / "bin") + os.pathsep + env.get("PATH", "")
     try:
-        cmd_path = Path(command)
-        argv = [command, *args]
-        if cmd_path.suffix.lower() in {".bat", ".cmd"}:
-            argv = [os.environ.get("COMSPEC", "cmd.exe"), "/c", command, *args]
+        argv = command_argv(command, args)
         proc = subprocess.run(
             argv,
             cwd=str(ROOT),
@@ -136,24 +190,37 @@ def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]
             shell=False,
         )
     except FileNotFoundError as exc:
-        return {"status": "MISSING", "detail": str(exc), "path": command}
+        return {"status": "MISSING", "detail": str(exc), "path": str(command_path)}
+    except PermissionError as exc:
+        return {"status": "FAIL", "detail": str(exc), "path": str(command_path)}
     except subprocess.TimeoutExpired:
-        return {"status": "TIMEOUT", "detail": f"probe timed out after {timeout:.1f}s", "path": command}
+        return {"status": "TIMEOUT", "detail": f"probe timed out after {timeout:.1f}s", "path": str(command_path)}
     output = one_line((proc.stdout or "") + " " + (proc.stderr or ""))
     if proc.returncode != 0 and not allow_nonzero:
-        return {"status": "FAIL", "detail": f"exit={proc.returncode} {output}", "path": command}
+        return {"status": "FAIL", "detail": f"exit={proc.returncode} {output}", "path": str(command_path)}
     if proc.returncode != 0 and allow_nonzero:
         return {
             "status": "FOUND_WITH_WARN",
             "detail": f"exit={proc.returncode} (nonzero allowed) {output}",
-            "path": command,
+            "path": str(command_path),
         }
-    return {"status": "FOUND", "detail": f"exit={proc.returncode} {output}", "path": command}
+    return {"status": "FOUND", "detail": f"exit={proc.returncode} {output}", "path": str(command_path)}
 
 
 def check_tool(tool: dict[str, Any]) -> dict[str, Any]:
     probe = tool.get("safe_probe") or {}
     ptype = probe.get("type")
+    if not _platform_allowed(tool):
+        return {
+            "id": tool.get("id"),
+            "board": tool.get("board"),
+            "name": tool.get("name"),
+            "launch_mode": tool.get("launch_mode"),
+            "ai_callable": bool(tool.get("ai_callable")),
+            "status": "SKIPPED",
+            "detail": f"not supported on {current_platform()}; supported platforms: {tool.get('platforms') or tool.get('platform')}",
+            "path": tool.get("command", ""),
+        }
     if tool.get("launch_mode") == "gui" and ptype != "file":
         return {
             "status": "SKIPPED",

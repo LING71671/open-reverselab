@@ -391,19 +391,37 @@ def _display_path(path: Path) -> str:
         return str(path)
 
 
+def _install_cmd() -> str:
+    if os.name == "nt":
+        return ".\\scripts\\misc\\install_tools.ps1 -CTF"
+    return "Install the native CLI tool on PATH, or run scripts/misc/bootstrap.sh for core wrappers."
+
+
+def _wrapper_candidates(wrapper_path: Path) -> list[Path]:
+    if os.name == "nt" or wrapper_path.suffix.lower() not in {".bat", ".cmd"}:
+        return [wrapper_path]
+    return [wrapper_path.with_suffix(""), wrapper_path.with_suffix(".sh")]
+
+
 def _tool_command(tool: str) -> tuple[list[str] | None, dict]:
     entry = _CTF_TOOL_MAP[tool]
     script_path = entry["script"]
     wrapper_path = entry["wrapper"]
     if script_path.exists():
         return [sys.executable, str(script_path)], {}
-    if wrapper_path.exists():
-        return [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(wrapper_path)], {
-            "warning": f"{tool} source script is missing; using wrapper fallback"
-        }
+    for candidate in _wrapper_candidates(wrapper_path):
+        if candidate.exists():
+            if candidate.suffix.lower() in {".bat", ".cmd"}:
+                return [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(candidate)], {
+                    "warning": f"{tool} source script is missing; using wrapper fallback"
+                }
+            argv = [str(candidate)] if os.access(candidate, os.X_OK) else [os.environ.get("SHELL", "sh"), str(candidate)]
+            return argv, {
+                "warning": f"{tool} source script is missing; using POSIX wrapper fallback"
+            }
     return None, {
         "error": f"{tool} not installed at {script_path}. "
-        f"Run: .\\scripts\\misc\\install_tools.ps1 -CTF"
+        f"Run: {_install_cmd()}"
     }
 
 
@@ -455,11 +473,15 @@ def ctf_tool_status() -> dict:
         status[name] = {
             "script": str(entry["script"].relative_to(REVERSE_ROOT)),
             "wrapper": str(entry["wrapper"].relative_to(REVERSE_ROOT)),
+            "wrapper_candidates": [
+                str(candidate.relative_to(REVERSE_ROOT))
+                for candidate in _wrapper_candidates(entry["wrapper"])
+            ],
             "installed": entry["script"].exists(),
-            "wrapper_installed": entry["wrapper"].exists(),
+            "wrapper_installed": any(candidate.exists() for candidate in _wrapper_candidates(entry["wrapper"])),
         }
     status["burp"] = burp_status()
-    return {"tools": status, "install_cmd": ".\\scripts\\misc\\install_tools.ps1 -CTF"}
+    return {"tools": status, "install_cmd": _install_cmd()}
 
 
 def _safe_case_name(case_name: str) -> str:

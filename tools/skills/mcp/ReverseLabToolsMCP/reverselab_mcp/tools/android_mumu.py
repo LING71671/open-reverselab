@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import base64
 import json
+import lzma
 import re
 import socket
 import time
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from ..audit import append_audit, audit_log_path
-from ..config import ADB_EXE, ANDROID_EXPORTS_DIR, HOST_PYTHON_EXE, MUMU_CLI_EXE, MUMU_DEFAULT_SERIAL, REVERSE_ROOT
+from ..config import ADB_EXE, ANDROID_EXPORTS_DIR, HOST_PYTHON_EXE, IS_WINDOWS, MUMU_CLI_EXE, MUMU_DEFAULT_SERIAL, REVERSE_ROOT
 from ..errors import ToolError
 from ..paths import check_tool, ensure_under, resolve_file
 from ..runner import run
@@ -82,6 +84,8 @@ def _mumu_vmindex() -> str:
 
 
 def _mumu_cli(args: list[str], timeout: int = 60, check: bool = True) -> tuple[int, str, str]:
+    if not IS_WINDOWS:
+        raise ToolError("mumu-cli is Windows-only; use adb with an explicit serial on macOS/Linux.")
     check_tool(MUMU_CLI_EXE, "mumu-cli")
     cmd = [str(MUMU_CLI_EXE), *args]
     code, stdout, stderr = run(cmd, timeout=max(5, timeout))
@@ -115,7 +119,7 @@ def _shell(command: str, serial: str = "", as_root: bool = False, timeout: int =
             args.append(command)
         code, stdout, stderr = _adb(args, serial=serial, timeout=timeout, check=True)
     except Exception:
-        if not _is_default_mumu_serial(serial):
+        if not IS_WINDOWS or not _is_default_mumu_serial(serial):
             raise
         wrapped = command if as_root else f"su -c \"{command.replace('\"', '\\\"')}\""
         code, stdout, stderr = _mumu_cli(["sh", "--vmindex", _mumu_vmindex(), "--cmd", wrapped], timeout=timeout, check=True)
@@ -1012,29 +1016,82 @@ def android_package_info(package_name: str, serial: str = "", output_path: str =
     }
 
 
+def _frida_binary(version: str, arch: str) -> Path:
+    cache_dir = REVERSE_ROOT / "tools" / "android" / "mobile" / "frida"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    archive = cache_dir / f"frida-server-{version}-{arch}.xz"
+    binary = cache_dir / f"frida-server-{version}-{arch}"
+    if binary.exists():
+        return binary
+    if not archive.exists():
+        url = f"https://github.com/frida/frida/releases/download/{version}/{archive.name}"
+        urllib.request.urlretrieve(url, archive)
+    binary.write_bytes(lzma.decompress(archive.read_bytes()))
+    binary.chmod(0o755)
+    return binary
+
+
+def _android_frida_ensure_server_adb(serial: str, version: str, arch: str, remote_path: str) -> dict[str, str | int]:
+    binary = _frida_binary(version, arch)
+    check_tool(ADB_EXE, "adb")
+    if ":" in serial:
+        run([str(ADB_EXE), "connect", serial], timeout=30)
+    _adb(["shell", "su -c 'pkill frida-server >/dev/null 2>&1 || true'"], serial=serial, timeout=30, check=False)
+    push_code, push_stdout, push_stderr = _adb(["push", str(binary), remote_path], serial=serial, timeout=180, check=True)
+    chmod_code, chmod_stdout, chmod_stderr = _adb(["shell", f"su -c 'chmod 755 {remote_path}'"], serial=serial, timeout=30, check=True)
+    start_code, start_stdout, start_stderr = _adb(
+        ["shell", f"su -c '{remote_path} >/dev/null 2>&1 &'"],
+        serial=serial,
+        timeout=30,
+        check=False,
+    )
+    time.sleep(2)
+    ps_code, ps_stdout, ps_stderr = _adb(
+        ["shell", "su -c 'ps -A | grep frida-server'"],
+        serial=serial,
+        timeout=30,
+        check=False,
+    )
+    return {
+        "binary_path": str(binary),
+        "remote_path": remote_path,
+        "push_returncode": push_code,
+        "chmod_returncode": chmod_code,
+        "start_returncode": start_code,
+        "ps_returncode": ps_code,
+        "stdout": "\n".join([push_stdout, chmod_stdout, start_stdout, ps_stdout]).strip(),
+        "stderr": "\n".join([push_stderr, chmod_stderr, start_stderr, ps_stderr]).strip(),
+    }
+
+
 def android_frida_ensure_server(serial: str = "", version: str = "17.9.8", arch: str = "android-x86_64") -> dict[str, Any]:
-    script = (REVERSE_ROOT / "scripts" / "android" / "install_frida_server.ps1").resolve()
-    if not script.exists():
-        raise ToolError(f"frida install script not found: {script}")
     target = _serial(serial)
-    args = [
-        "powershell",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        str(script),
-        "-AdbPath",
-        str(ADB_EXE),
-        "-Serial",
-        target,
-        "-Version",
-        version,
-        "-Arch",
-        arch,
-    ]
-    code, stdout, stderr = run(args, timeout=900)
-    if code != 0:
-        raise ToolError(f"frida-server install failed: returncode={code}; stderr={stderr or stdout}")
+    remote_path = "/data/local/tmp/frida-server"
+    script = (REVERSE_ROOT / "scripts" / "android" / "install_frida_server.ps1").resolve()
+    if IS_WINDOWS and script.exists():
+        args = [
+            "powershell",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script),
+            "-AdbPath",
+            str(ADB_EXE),
+            "-Serial",
+            target,
+            "-Version",
+            version,
+            "-Arch",
+            arch,
+            "-RemotePath",
+            remote_path,
+        ]
+        code, stdout, stderr = run(args, timeout=900)
+        install_meta: dict[str, Any] = {"method": "powershell", "returncode": code, "stdout": stdout, "stderr": stderr}
+        if code != 0:
+            raise ToolError(f"frida-server install failed: returncode={code}; stderr={stderr or stdout}")
+    else:
+        install_meta = {"method": "python-adb", **_android_frida_ensure_server_adb(target, version, arch, remote_path)}
     audit_record = append_audit(
         {
             "action": "android_frida_ensure_server",
@@ -1042,6 +1099,7 @@ def android_frida_ensure_server(serial: str = "", version: str = "17.9.8", arch:
             "serial": target,
             "version": version,
             "arch": arch,
+            "method": install_meta["method"],
         }
     )
     return {
@@ -1049,8 +1107,7 @@ def android_frida_ensure_server(serial: str = "", version: str = "17.9.8", arch:
         "serial": target,
         "version": version,
         "arch": arch,
-        "stdout": stdout,
-        "stderr": stderr,
+        **install_meta,
         "audit_log": str(audit_log_path()),
     }
 

@@ -20,7 +20,7 @@ def ghidra_headless_analyze(
     import_limit: int = 300,
 ) -> dict[str, Any]:
     target = resolve_file(path)
-    check_tool(GHIDRA_HEADLESS_BAT, "analyzeHeadless.bat")
+    check_tool(GHIDRA_HEADLESS_BAT, GHIDRA_HEADLESS_BAT.name)
 
     script_path = GHIDRA_SCRIPT_DIR / "ReverseLabExportSummary.java"
     check_tool(script_path, "ReverseLabExportSummary.java")

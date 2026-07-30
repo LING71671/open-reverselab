@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+set -eu
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN=${PYTHON:-python3}
+else
+  PYTHON_BIN=${PYTHON:-python}
+fi
+exec "$PYTHON_BIN" "$ROOT/scripts/misc/ai_toolcheck.py" "$@"

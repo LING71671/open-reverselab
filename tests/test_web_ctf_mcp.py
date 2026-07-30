@@ -49,6 +49,27 @@ def test_burp_status_is_file_probe_only(tmp_path, monkeypatch):
     assert status["proxy"] == "http://127.0.0.1:8080"
 
 
+def test_tool_command_uses_posix_wrapper_without_cmd_on_unix(tmp_path, monkeypatch):
+    script = tmp_path / "missing" / "sqlmap.py"
+    wrapper = tmp_path / "bin" / "sqlmap.bat"
+    posix_wrapper = tmp_path / "bin" / "sqlmap"
+    posix_wrapper.parent.mkdir(parents=True)
+    if sys.platform.startswith("win"):
+        wrapper.write_text("@echo off\necho sqlmap\n", encoding="utf-8")
+    posix_wrapper.write_text("#!/usr/bin/env sh\necho sqlmap\n", encoding="utf-8")
+    monkeypatch.setitem(web_ctf._CTF_TOOL_MAP, "test_sqlmap", {"script": script, "wrapper": wrapper})
+
+    cmd, meta = web_ctf._tool_command("test_sqlmap")
+
+    assert cmd is not None
+    if sys.platform.startswith("win"):
+        assert "cmd.exe" in cmd[0].lower() or cmd[:2] == [web_ctf.os.environ.get("COMSPEC", "cmd.exe"), "/c"]
+    else:
+        assert "cmd.exe" not in " ".join(cmd).lower()
+        assert str(posix_wrapper) in cmd
+        assert "POSIX wrapper" in meta["warning"]
+
+
 def test_run_sqlmap_request_builds_request_args(tmp_path, monkeypatch):
     req = tmp_path / "request.txt"
     req.write_text("GET / HTTP/1.1\r\nHost: example.test\r\n\r\n", encoding="utf-8")

@@ -95,6 +95,7 @@ def build_context(task: str, board: str = "", limit: int = 6) -> dict[str, Any]:
         "board_filter": board,
         "no_popup_policy": registry.get("policy", {}).get("ai_default_rule"),
         "path_bootstrap_powershell": registry.get("policy", {}).get("path_bootstrap_powershell"),
+        "path_bootstrap_unix": registry.get("policy", {}).get("path_bootstrap_unix"),
         "matched_rules": [
             {
                 "score": score,
@@ -140,7 +141,7 @@ def build_context(task: str, board: str = "", limit: int = 6) -> dict[str, Any]:
             for t in board_tools
         ],
         "finding_record_template": (
-            'python scripts\\misc\\ai_finding.py add --board <board> --kind <tactic|pitfall|tool-rule|dead-end|cve-chain|reversing-flow> '
+            'python scripts/misc/ai_finding.py add --board <board> --kind <tactic|pitfall|tool-rule|dead-end|cve-chain|reversing-flow> '
             '--title "..." --trigger "..." --finding "..." --evidence "..." --reuse "..." --keyword ...'
         ),
     }
@@ -157,7 +158,8 @@ def render_md(ctx: dict[str, Any]) -> str:
         "## No-popup policy",
         "",
         f"- {ctx.get('no_popup_policy')}",
-        f"- PATH bootstrap: `{ctx.get('path_bootstrap_powershell')}`",
+        f"- PATH bootstrap (PowerShell): `{ctx.get('path_bootstrap_powershell')}`",
+        f"- PATH bootstrap (macOS/Linux): `{ctx.get('path_bootstrap_unix')}`",
         "",
         "## Matched playbook rules",
         "",

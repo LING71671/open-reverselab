@@ -7,6 +7,7 @@ from conftest import load_script_module
 
 
 ai_toolcheck = load_script_module("scripts/misc/ai_toolcheck.py", "ai_toolcheck_test")
+ai_tool = load_script_module("scripts/misc/ai_tool.py", "ai_tool_test")
 
 
 def test_sanitize_payload_removes_machine_paths(monkeypatch, tmp_path):
@@ -70,3 +71,66 @@ def test_render_md_includes_board_summary():
     assert "## Board Summary" in markdown
     assert "FOUND_WITH_WARN" in markdown
     assert "| misc | 1 | 1 |" in markdown
+
+
+def test_backslash_file_probe_is_normalized(monkeypatch, tmp_path):
+    monkeypatch.setattr(ai_toolcheck, "ROOT", tmp_path)
+    target = tmp_path / "tools" / "bin" / "ai_tool.bat"
+    target.parent.mkdir(parents=True)
+    target.write_text("@echo off\n", encoding="utf-8")
+
+    result = ai_toolcheck.check_file({}, {"path": "tools\\bin\\ai_tool.bat"})
+
+    assert result["status"] == "FOUND"
+    assert Path(result["path"]) == target
+
+
+def test_windows_wrapper_command_uses_posix_sibling_on_unix(monkeypatch, tmp_path):
+    monkeypatch.setattr(ai_toolcheck, "ROOT", tmp_path)
+    wrapper = tmp_path / "tools" / "bin" / "sample_tool"
+    wrapper.parent.mkdir(parents=True)
+    wrapper.write_text("#!/usr/bin/env sh\necho wrapper\n", encoding="utf-8")
+
+    argv = ai_toolcheck.command_argv("tools\\bin\\sample_tool.bat", ["--version"])
+
+    if sys.platform.startswith("win"):
+        assert argv[:2] == [ai_toolcheck.os.environ.get("COMSPEC", "cmd.exe"), "/c"]
+    else:
+        assert argv[-2:] == [str(wrapper), "--version"] or argv[-3:] == [
+            ai_toolcheck.os.environ.get("SHELL", "sh"),
+            str(wrapper),
+            "--version",
+        ]
+
+
+def test_platform_limited_tool_is_skipped_on_other_platform(monkeypatch):
+    monkeypatch.setattr(ai_toolcheck, "current_platform", lambda: "linux")
+
+    result = ai_toolcheck.check_tool(
+        {
+            "id": "windows.procmon",
+            "board": "windows",
+            "name": "Procmon",
+            "platforms": ["windows"],
+            "launch_mode": "gui",
+            "command": "tools\\windows\\ProcessMonitor\\Procmon64.exe",
+            "safe_probe": {"type": "file", "path": "tools\\windows\\ProcessMonitor\\Procmon64.exe"},
+        }
+    )
+
+    assert result["status"] == "SKIPPED"
+    assert "not supported on linux" in result["detail"]
+
+
+def test_ai_tool_cmd_for_uses_posix_sibling_on_unix(monkeypatch, tmp_path):
+    monkeypatch.setattr(ai_tool, "ROOT", tmp_path)
+    wrapper = tmp_path / "tools" / "bin" / "ai_tool"
+    wrapper.parent.mkdir(parents=True)
+    wrapper.write_text("#!/usr/bin/env sh\necho ok\n", encoding="utf-8")
+
+    argv = ai_tool.cmd_for({"command": "tools\\bin\\ai_tool.bat"}, ["list"])
+
+    if sys.platform.startswith("win"):
+        assert argv[:2] == [ai_tool.os.environ.get("COMSPEC", "cmd.exe"), "/c"]
+    else:
+        assert str(wrapper) in argv

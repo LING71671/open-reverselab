@@ -1,5 +1,7 @@
 # ReverseLab
 
+> 🎯 Discord：[**discord.gg/But5j58J2f**](https://discord.gg/But5j58J2f)
+
 开源逆向工程实验环境 —— 178 篇知识库文章，100+ MCP 自动化工具，覆盖 CTF 渗透测试 / APK 逆向 / PE 二进制分析 / 加密协议破解 / 游戏作弊分析。Agent 原生设计，目录即约定。
 <img width="1194" height="430" alt="image" src="https://github.com/user-attachments/assets/65085420-66bd-4c9a-b02d-8b4a55005d03" />
 
@@ -65,6 +67,12 @@ Python / uv / Git / `reverse_lab_tools` MCP、生成核心 wrappers，给出缺�
 真实调用 MCP 核心工具，并写入 `reports/misc/first-run-report.json` 与
 `reports/misc/mcp-smoke-report.json`。
 
+macOS/Linux 从根目录运行 `./START_HERE.sh`。它执行同样的首次检查，并使用
+`tools/bin/` 下的 POSIX shell wrapper；Windows GUI/PE 工具会被跳过或明确标记为
+Windows-only。最终 release 可以按平台拆分：Windows full-toolchain release 携带
+`.bat`/PowerShell 与 GUI 工具，macOS/Linux release 携带 Python、MCP、shell wrapper
+和 native CLI 探测路径。
+
 想让 AI 代装时，复制 [给 AI 的安装提示词](templates/prompts/ai-install.zh.md) 给 Codex 或 Claude Code。
 不知道从哪里开始时，先看 [START.md](START.md)。
 
@@ -80,10 +88,19 @@ uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smo
 .\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
 ```
 
+macOS/Linux quick start：
+
+```sh
+./START_HERE.sh
+./scripts/misc/bootstrap.sh
+export PATH="$PWD/tools/bin:$PWD/tools/ctf-website/bin:$PATH"
+python scripts/misc/ai_toolcheck.py --board misc
+```
+
 ## Agent 快速打开
 
 1. 克隆到一个固定本地目录，例如 `<workspace>/open-reverselab`。
-2. Windows：双击 `START_HERE.bat` 或 `START_HERE.cmd` 完成首次检查。
+2. Windows：双击 `START_HERE.bat` 或 `START_HERE.cmd` 完成首次检查；macOS/Linux：运行 `./START_HERE.sh`。
 3. Claude Code：先 `cd <workspace>/open-reverselab`，再启动会话。
 4. Codex APP：直接打开现有的 `open-reverselab` 文件夹。
 5. AI 代装：复制 [templates/prompts/ai-install.zh.md](templates/prompts/ai-install.zh.md) 里的提示词。
@@ -132,7 +149,7 @@ CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
 
 **访问或使用本项目即表示同意受完整免责声明的约束。**
 
-声明涵盖：所有版本与分支（追溯及前瞻）、所有使用者（直接与间接）、所有衍生作品（fork、复制、再分发）、全部司法管辖区的法律合规（含出口管制与数据保护法）、仅限授权用途、禁止用途、无担保、责任限制与赔偿、衍生作品强制保留声明、禁止移除条款、教育性沟通保护。
+声明涵盖：所有版本与分支（追溯及前瞻）、所有使用者（直接与间接）、所有衍生作品（fork、复制、再分发）、全部司法管辖区的法律合规（含出口管制与数据保护法）、仅限授权用途、禁止用途、无担保、责任限制与赔偿、衍生作品强制保留声明、禁止移除条款、教育性沟通保护、第三方交易保护、未经授权的分发与冒名保护、AI/ML 训练保护。
 
 > 📄 阅读完整免责声明：[DISCLAIMER.zh.md](DISCLAIMER.zh.md) | [English](DISCLAIMER.md)
 
