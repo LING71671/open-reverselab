@@ -15,7 +15,7 @@ Android APK 分析有一整套 MCP 自动化工具链，涵盖 ADB 连接、包�
 
 ## 知识库
 
-APK 逆向知识库 `kb/apk-reverse/`：17 篇 Frida 可运行技术文件，8 个分类覆盖 DEX/Java、Native、Manifest、Crypto、Network、Dynamic、Packer、Patch/Repack。
+APK 逆向知识库 `kb/apk-reverse/`：20 篇可运行技术文件，8 个分类覆盖 DEX/Java、Native、Manifest、Crypto、Network、Dynamic、Packer、Patch/Repack。
 
 ## 分析流程
 

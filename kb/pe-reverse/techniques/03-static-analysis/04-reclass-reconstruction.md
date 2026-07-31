@@ -40,8 +40,9 @@ tags:
   - "memory-analysis"
   - "game-hacking"
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: []
+last_updated: "2026-07-31"
+related_articles:
+  - "pe-reverse/03-static-analysis/01-struct-reconstruction"
 ---
 # ReClass 结构体实时重建
 
@@ -142,6 +143,18 @@ ReClass hex dump:
         → 如果是矩阵: 4x4 float matrix (16 * 4 = 64 bytes)
         → 类型: float[16]
 ```
+
+## 运行时验证前的证据账本
+
+在 ReClass 中创建字段前，先使用[内存结构体逆向重建](01-struct-reconstruction.md)的字段证据账本。每条候选字段至少保留：偏移、宽度、读/写方向、候选类型/语义、Ghidra 函数/RVA、静态证据、动态观察和置信度。
+
+```text
+Observed  — Ghidra/xref/断点/内存快照直接显示的事实
+Inferred  — 由访问模式或值域推导的字段含义
+Confirmed — 独立静态证据与受控运行时变化一致
+```
+
+ReClass 负责可视化和动态佐证，不会自动证明字段语义。把单次值匹配保留为 Inferred；只有在可重复的状态变化、访问代码和对象边界共同吻合时才升为 Confirmed。
 
 ## 导出为 C++
 

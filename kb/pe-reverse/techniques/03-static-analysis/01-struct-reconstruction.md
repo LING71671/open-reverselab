@@ -40,8 +40,9 @@ tags:
   - "game-hacking"
   - "static-analysis"
 language: "zh-CN"
-last_updated: "2026-06-25"
-related_articles: []
+last_updated: "2026-07-31"
+related_articles:
+  - "pe-reverse/03-static-analysis/04-reclass-reconstruction"
 ---
 # 内存结构体逆向重建
 
@@ -199,6 +200,24 @@ while (item) {
     item = item->pNext;  // 跟随链表
 }
 ```
+
+## 证据账本与置信度
+
+在写出 `struct` 前，为每个字段维护一条证据账本。Ghidra 的反编译与 xref 是静态证据；受控运行时的 Frida/x64dbg/ReClass 观察才是动态佐证。不要因单次内存快照就把语义命名为 confirmed。
+
+| Offset | Width / Read-Write | Candidate type / meaning | Function / Address | Static evidence | Dynamic evidence | Confidence |
+|---:|---|---|---|---|---|---|
+| `+0x190` | `8 / read` | `USceneComponent* RootComponent` | `FUN_... @ RVA ...` | `mov rax, [rcx+190h]`; 后续解引用 | 指针落在已知 heap object | Confirmed |
+| `+0x268` | `4 / write` | `int health` | `FUN_... @ RVA ...` | `mov [rcx+268h], eax`; 调用点与伤害流程相连 | 受控测试时值递减 | Confirmed |
+| `+0x378` | `4 / read` | `float moveSpeed` | `FUN_... @ RVA ...` | `movss`; 与移动分支关联 | 尚未观察 | Inferred |
+
+证据级别：
+
+- **Observed**：原始反汇编、Ghidra 伪代码、xref 或运行时日志直接显示的事实。
+- **Inferred**：由偏移、访问宽度、调用上下文或值域推导出的类型/语义；必须保留推导依据。
+- **Confirmed**：至少有相互独立的静态证据，并在安全、授权的测试中获得动态一致性验证。
+
+记录时始终同时保留样本 SHA256、模块 image base、RVA/VA/文件偏移换算、函数地址和工具版本，避免把 ASLR 下的运行时地址误写成静态偏移。
 
 ## Frida 辅助验证
 
