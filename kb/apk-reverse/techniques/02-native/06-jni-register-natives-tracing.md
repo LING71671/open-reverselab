@@ -79,7 +79,7 @@ android_frida_render_template(template_id="native_register_natives")
 
 `native_module_load_hook` 先检查目标 SO 是否已加载；未加载时仅观察 `android_dlopen_ext` / `dlopen`，在加载返回后记录路径、模块基址和大小。它不会 hook `.init_array`、构造函数或修改目标行为。
 
-`native_register_natives` 对每次注册最多解析 64 项，输出 Java 方法名、JNI 签名、native 运行时地址、模块路径、模块基址和 RVA；每一项的字符串/指针读取失败会单独标为 unresolved，不会中止整次观察。
+`native_register_natives` 对每次注册最多解析 64 项，输出 declaring Java class、方法名、JNI 签名、native 运行时地址、模块路径、模块基址、架构和 RVA；每一项的字符串/指针读取失败会单独标为 unresolved，字符串读取上限为 256 bytes，不会中止整次观察。
 
 ```text
 # 对已运行的受控 app：将两个已渲染模板合并后交给 android_frida_run_script，
@@ -91,10 +91,10 @@ android_frida_render_template(template_id="native_register_natives")
 # native_memory_map 与 native_register_natives，适合先取得基础证据。
 ```
 
-成功标志不是单一 `dlopen` 句柄，而是可审计的映射：
+成功标志不是单一 `dlopen` 句柄，而是可审计的映射（Java class 必须包含在身份中，避免不同 class 的同名方法混淆）：
 
 ```text
-Java method + JNI signature
+Java class + method name + JNI signature
   -> module path + runtime base
   -> native runtime VA + derived RVA
 ```
@@ -111,12 +111,15 @@ Java method + JNI signature
 5. ghidra_summary_call_focus：以 JNI/native/crypto 等关键词排序后续函数。
 ```
 
-运行时地址受 PIE/ASLR 影响，不能直接当作 Ghidra 静态地址：
+运行时地址受 PIE/ASLR 影响，不能直接当作 Ghidra 静态地址。关联前先确认 runtime VA 位于记录模块的映射范围：
 
 ```text
+module base <= runtime native VA < module base + module size
 RVA = runtime native VA - runtime module base
 Ghidra candidate = Ghidra image base + RVA
 ```
+
+RVA 只可用于同一二进制：记录并核对 SO 的完整路径、架构、SHA256 或 build ID，再把该文件导入 Ghidra。模块路径相同不代表内容相同；hash/build ID、架构或地址范围不一致时，保留 unresolved，不要进行地址关联。
 
 Ghidra 中按这个顺序建立候选命名：
 
@@ -130,9 +133,9 @@ JNI_OnLoad
 对每个 native 函数记录：
 
 ```text
-Java method / JNI signature:
-SO path / runtime module base:
-Runtime VA / derived RVA:
+Java class / method name / JNI signature:
+SO path / SHA256 or build ID / architecture:
+Runtime module base / module size / runtime VA / derived RVA:
 Ghidra function entry / current name / signature:
 Callers, callees, imports, strings, decompile evidence:
 Confidence / unresolved assumptions:
@@ -184,7 +187,7 @@ Java.perform(function () {
 | 项 | 记录内容 |
 |---|---|
 | Java 入口 | 类名、方法名、JNI 签名 |
-| Native 映射 | SO、VA/RVA、RegisterNatives 输出 |
+| Native 映射 | Java class、方法名、JNI 签名、SO path、架构、SHA256/build ID、module base/size、VA/RVA、RegisterNatives 输出 |
 | 参数 | Java 入参长度、hex 摘要、返回值类型 |
 | Ghidra | 函数名、调用者、被调用者、关键字符串 |
 | 下一跳 | crypto、network、license、patch 或 packer |

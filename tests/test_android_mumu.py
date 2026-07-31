@@ -23,7 +23,8 @@ def test_loader_aware_template_is_declared_and_renderable():
 
     script = rendered["script_source"]
     assert "native_module.loaded" in script
-    assert "native_module.unresolved" in script
+    assert "native_module.load_failed" in script
+    assert "retval.isNull()" in script
     assert "android_dlopen_ext" in script
     assert "libguard.so" in script
 
@@ -45,8 +46,11 @@ def test_register_natives_template_emits_bounded_mapping_evidence():
     assert "RegisterNatives.truncated" in script
     assert "Math.min(this.count, 64)" in script
     assert "jni_signature" in script
+    assert "declaring_class" in script
+    assert "strings_truncated" in script
+    assert "Memory.readUtf8String(address, 256)" in script
+    assert "function_in_module_range" in script
     assert "native_address" in script
-    assert "function_rva" in script
 
 
 

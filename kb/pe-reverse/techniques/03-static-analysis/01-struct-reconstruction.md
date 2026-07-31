@@ -207,7 +207,7 @@ while (item) {
 
 | Offset | Width / Read-Write | Candidate type / meaning | Function / Address | Static evidence | Dynamic evidence | Confidence |
 |---:|---|---|---|---|---|---|
-| `+0x190` | `8 / read` | `USceneComponent* RootComponent` | `FUN_... @ RVA ...` | `mov rax, [rcx+190h]`; 后续解引用 | 指针落在已知 heap object | Confirmed |
+| `+0x190` | `8 / read` | `USceneComponent* RootComponent` | `FUN_... @ RVA ...` | `mov rax, [rcx+190h]`; 后续解引用 | 指针落在已知 heap object | Inferred |
 | `+0x268` | `4 / write` | `int health` | `FUN_... @ RVA ...` | `mov [rcx+268h], eax`; 调用点与伤害流程相连 | 受控测试时值递减 | Confirmed |
 | `+0x378` | `4 / read` | `float moveSpeed` | `FUN_... @ RVA ...` | `movss`; 与移动分支关联 | 尚未观察 | Inferred |
 

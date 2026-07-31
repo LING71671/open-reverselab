@@ -1905,6 +1905,10 @@ Process.enumerateModules().forEach(function (module) {
     onLeave: function (retval) {
       if (!this.requestedPath || (!targetLibrary && !this.requestedPath)) return;
       if (targetLibrary && this.requestedPath.indexOf(targetLibrary) < 0 && basename(this.requestedPath) !== basename(targetLibrary)) return;
+      if (retval.isNull()) {
+        send({event: 'native_module.load_failed', source: loaderName, requested_path: this.requestedPath});
+        return;
+      }
       var module = findLoaded(this.requestedPath);
       if (module) emitModule(loaderName, this.requestedPath, module);
       else send({event: 'native_module.unresolved', source: loaderName, requested_path: this.requestedPath, loader_handle: String(retval)});
@@ -1972,8 +1976,20 @@ if (addr) {
   return candidates.length ? candidates[0] : null;
 }
 function safeCString(address) {
-  try { return address.isNull() ? '' : Memory.readUtf8String(address); }
-  catch (e) { return ''; }
+  try {
+    if (address.isNull()) return {value: '', truncated: false};
+    var value = Memory.readUtf8String(address, 256);
+    return {value: value, truncated: value.length >= 256};
+  } catch (e) { return {value: '', truncated: false, error: String(e)}; }
+}
+function declaringClass(clazz) {
+  try {
+    if (typeof Java !== 'undefined' && Java.available) {
+      var env = Java.vm.tryGetEnv();
+      if (env) return String(env.getClassName(clazz));
+    }
+  } catch (e) {}
+  return '<unresolved>';
 }
 function moduleEvidence(address) {
   try {
@@ -1982,7 +1998,9 @@ function moduleEvidence(address) {
     return {
       module_resolved: true, module_name: module.name,
       module_path: String(module.path || ''), module_base: String(module.base),
-      module_size: module.size, function_rva: String(address.sub(module.base))
+      module_size: module.size, module_arch: Process.arch,
+      function_rva: String(address.sub(module.base)),
+      function_in_module_range: address.compare(module.base) >= 0 && address.compare(module.base.add(module.size)) < 0
     };
   } catch (e) { return {module_resolved: false, module_error: String(e)}; }
 }
@@ -1998,12 +2016,14 @@ if (rn) {
       for (var i = 0; i < cappedCount; i++) {
         try {
           var item = this.methods.add(i * Process.pointerSize * 3);
-          var name = safeCString(item.readPointer());
-          var signature = safeCString(item.add(Process.pointerSize).readPointer());
+          var nameInfo = safeCString(item.readPointer());
+          var signatureInfo = safeCString(item.add(Process.pointerSize).readPointer());
           var nativeAddress = item.add(Process.pointerSize * 2).readPointer();
           var evidence = moduleEvidence(nativeAddress);
           send({event: 'RegisterNatives.method', method_index: i, declared_count: this.count,
-            method_name: name || '<unresolved>', jni_signature: signature || '<unresolved>',
+            declaring_class: declaringClass(args[1]),
+            method_name: nameInfo.value || '<unresolved>', jni_signature: signatureInfo.value || '<unresolved>',
+            strings_truncated: Boolean(nameInfo.truncated || signatureInfo.truncated),
             native_address: String(nativeAddress), evidence: evidence});
         } catch (e) {
           send({event: 'RegisterNatives.method_error', method_index: i, declared_count: this.count, error: String(e)});

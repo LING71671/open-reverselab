@@ -246,8 +246,8 @@ def triage_to_notes(
             "",
             "### Function Map",
             "",
-            "| Address | Current Name | Proposed Name | Purpose / Evidence | Confidence |",
-            "|---|---|---|---|---|",
+            "| Address | Current Name | Proposed Name | Purpose / Evidence | Confidence | Review Status |",
+            "|---|---|---|---|---|---|",
         ]
     )
     for function in functions[: max(0, max_functions)]:
@@ -255,7 +255,7 @@ def triage_to_notes(
             continue
         lines.append(
             f"| `{_fmt_hex(function.get('entry', ''))}` | `{function.get('name', '')}` | `{_proposed_function_name(function)}` | "
-            f"`{_function_evidence_cue(function)}` | `Review needed` |"
+            f"`{_function_evidence_cue(function)}` | `Low` | `Needs review` |"
         )
 
     lines.extend(

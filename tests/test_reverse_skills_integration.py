@@ -41,6 +41,15 @@ def test_kb_read_file_rejects_traversal():
         raise AssertionError("path traversal must fail")
 
 
+def test_function_map_schema_separates_confidence_and_review_status():
+    header = "| Address | Current Name | Proposed Name | Purpose / Evidence | Confidence | Review Status |"
+    row = "| `0x401000` | `FUN_00401000` | `candidate_fun_00401000` | `signature` | `Low` | `Needs review` |"
+
+    assert header.count("|") == row.count("|")
+    assert "`Low`" in row
+    assert "`Needs review`" in row
+
+
 def test_symbol_evidence_cue_and_candidate_name_are_conservative():
     function = {
         "name": "FUN_00401000",
