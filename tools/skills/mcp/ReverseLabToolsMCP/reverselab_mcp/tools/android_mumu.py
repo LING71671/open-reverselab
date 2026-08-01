@@ -121,7 +121,8 @@ def _shell(command: str, serial: str = "", as_root: bool = False, timeout: int =
     except Exception:
         if not IS_WINDOWS or not _is_default_mumu_serial(serial):
             raise
-        wrapped = command if as_root else f"su -c \"{command.replace('\"', '\\\"')}\""
+        escaped = command.replace('"', '\\"')
+        wrapped = command if as_root else f'su -c "{escaped}"'
         code, stdout, stderr = _mumu_cli(["sh", "--vmindex", _mumu_vmindex(), "--cmd", wrapped], timeout=timeout, check=True)
     return {
         "command": command,
@@ -1848,6 +1849,74 @@ FRIDA_TEMPLATE_LIBRARY: dict[str, dict[str, Any]] = {
   });
 }); }""",
     },
+    "native_module_load_hook": {
+        "title": "Observe native module loads",
+        "description": "先检查已加载模块，再观察 android_dlopen_ext/dlopen；只记录模块身份与运行时基址。",
+        "placeholders": ["library_name"],
+        "script": """var targetLibrary = "{library_name}";
+var seenModuleBases = {};
+
+function basename(value) {
+  var text = String(value || '');
+  var parts = text.split('/');
+  return parts.length ? parts[parts.length - 1] : text;
+}
+function matchesTarget(module) {
+  if (!targetLibrary) return false;
+  var wanted = basename(targetLibrary);
+  return module.name === targetLibrary || module.name === wanted ||
+    String(module.path || '').indexOf(targetLibrary) >= 0;
+}
+function emitModule(source, requestedPath, module) {
+  if (!module) return;
+  var base = String(module.base);
+  if (seenModuleBases[base]) return;
+  seenModuleBases[base] = true;
+  send({
+    event: 'native_module.loaded', source: source,
+    requested_path: requestedPath || '', module_name: module.name,
+    module_path: String(module.path || ''), module_base: base,
+    module_size: module.size
+  });
+}
+function findLoaded(requestedPath) {
+  var wanted = basename(requestedPath || targetLibrary);
+  var modules = Process.enumerateModules();
+  for (var i = 0; i < modules.length; i++) {
+    var module = modules[i];
+    if (module.name === wanted || String(module.path || '').indexOf(requestedPath || targetLibrary) >= 0) return module;
+  }
+  return null;
+}
+Process.enumerateModules().forEach(function (module) {
+  if (matchesTarget(module)) emitModule('already_loaded', targetLibrary, module);
+});
+['android_dlopen_ext', 'dlopen'].forEach(function (loaderName) {
+  var address = Module.findExportByName(null, loaderName);
+  if (!address) {
+    send({event: 'native_module.loader_unavailable', loader: loaderName});
+    return;
+  }
+  Interceptor.attach(address, {
+    onEnter: function (args) {
+      this.requestedPath = '';
+      try { this.requestedPath = args[0].isNull() ? '' : Memory.readUtf8String(args[0]); } catch (e) {}
+    },
+    onLeave: function (retval) {
+      if (!this.requestedPath || (!targetLibrary && !this.requestedPath)) return;
+      if (targetLibrary && this.requestedPath.indexOf(targetLibrary) < 0 && basename(this.requestedPath) !== basename(targetLibrary)) return;
+      if (retval.isNull()) {
+        send({event: 'native_module.load_failed', source: loaderName, requested_path: this.requestedPath});
+        return;
+      }
+      var module = findLoaded(this.requestedPath);
+      if (module) emitModule(loaderName, this.requestedPath, module);
+      else send({event: 'native_module.unresolved', source: loaderName, requested_path: this.requestedPath, loader_handle: String(retval)});
+    }
+  });
+  send({event: 'native_module.loader_hooked', loader: loaderName, address: String(address)});
+});""",
+    },
     "native_dlopen": {
         "title": "Hook android_dlopen_ext",
         "description": "记录 so 加载行为。",
@@ -1906,11 +1975,60 @@ if (addr) {
   });
   return candidates.length ? candidates[0] : null;
 }
+function safeCString(address) {
+  try {
+    if (address.isNull()) return {value: '', truncated: false};
+    var value = Memory.readUtf8String(address, 256);
+    return {value: value, truncated: value.length >= 256};
+  } catch (e) { return {value: '', truncated: false, error: String(e)}; }
+}
+function declaringClass(clazz) {
+  try {
+    if (typeof Java !== 'undefined' && Java.available) {
+      var env = Java.vm.tryGetEnv();
+      if (env) return String(env.getClassName(clazz));
+    }
+  } catch (e) {}
+  return '<unresolved>';
+}
+function moduleEvidence(address) {
+  try {
+    var module = Process.findModuleByAddress(address);
+    if (!module) return {module_resolved: false};
+    return {
+      module_resolved: true, module_name: module.name,
+      module_path: String(module.path || ''), module_base: String(module.base),
+      module_size: module.size, module_arch: Process.arch,
+      function_rva: String(address.sub(module.base)),
+      function_in_module_range: address.compare(module.base) >= 0 && address.compare(module.base.add(module.size)) < 0
+    };
+  } catch (e) { return {module_resolved: false, module_error: String(e)}; }
+}
 var rn = findRegisterNatives();
 if (rn) {
   Interceptor.attach(rn, {
     onEnter: function (args) {
-      send({event: 'RegisterNatives.enter', env: String(args[0]), clazz: String(args[1]), methods: String(args[2]), count: args[3].toInt32()});
+      this.methods = args[2];
+      this.count = Math.max(0, args[3].toInt32());
+      send({event: 'RegisterNatives.enter', env: String(args[0]), clazz: String(args[1]), methods: String(this.methods), count: this.count});
+      var cappedCount = Math.min(this.count, 64);
+      if (this.count > cappedCount) send({event: 'RegisterNatives.truncated', declared_count: this.count, decoded_count: cappedCount});
+      for (var i = 0; i < cappedCount; i++) {
+        try {
+          var item = this.methods.add(i * Process.pointerSize * 3);
+          var nameInfo = safeCString(item.readPointer());
+          var signatureInfo = safeCString(item.add(Process.pointerSize).readPointer());
+          var nativeAddress = item.add(Process.pointerSize * 2).readPointer();
+          var evidence = moduleEvidence(nativeAddress);
+          send({event: 'RegisterNatives.method', method_index: i, declared_count: this.count,
+            declaring_class: declaringClass(args[1]),
+            method_name: nameInfo.value || '<unresolved>', jni_signature: signatureInfo.value || '<unresolved>',
+            strings_truncated: Boolean(nameInfo.truncated || signatureInfo.truncated),
+            native_address: String(nativeAddress), evidence: evidence});
+        } catch (e) {
+          send({event: 'RegisterNatives.method_error', method_index: i, declared_count: this.count, error: String(e)});
+        }
+      }
     },
     onLeave: function (retval) {
       send({event: 'RegisterNatives.leave', retval: String(retval)});

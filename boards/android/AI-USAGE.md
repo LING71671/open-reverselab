@@ -8,15 +8,18 @@
 - jadx: `tools/android/jadx/`
 - uber-apk-signer: `tools/android/uber-apk-signer/uber-apk-signer.jar`
 - frida-server: 通过 MCP `android_frida_ensure_server` 部署
-- frida-tools: 桌面端通过 `pip install frida-tools` 安装
+- frida-tools: 桌面端通过 `pip install frida-tools` 安装，版本须与目标端 frida-server 兼容
+- Ghidra + 兼容 Java: Native SO 静态分析首选，需可运行 `analyzeHeadless`
+- IDA Pro / Hex-Rays: 可选的人工复核工具；不属于本项目 MCP 或 CI 依赖
 
 ## 分析流程
 
 1. 先用 apktool 解包 APK
 2. 用 jadx 打开 DEX 反编译
 3. 关注 AndroidManifest.xml、入口 Activity、native 库
-4. Frida 动态 hook 时脚本保存到 `scripts/android/`
-5. 重打包产物放入 `patches/android/apk-builds/`
+4. Native SO 优先用 Ghidra headless 分析，再用 Frida 运行时证据验证；IDA Pro 仅作为可选人工复核
+5. Frida 动态 hook 时脚本保存到 `scripts/android/`
+6. 重打包产物放入 `patches/android/apk-builds/`
 
 ## MCP 工具链（AI 可自动调用）
 
@@ -100,4 +103,4 @@
 
 ### 知识库
 
-APK 逆向知识库位于 `kb/apk-reverse/`，8 个分类 17 篇技术文件（每篇含可运行 Frida 代码）。详见 `kb/apk-reverse/README.md`。
+APK 逆向知识库位于 `kb/apk-reverse/`，8 个分类 20 篇技术文件。先调用 `kb_router(board="apk-reverse")` 按信号定位文章，再使用对应 MCP 工具，并将运行时证据保存到 `exports/android/`、分析笔记保存到 `notes/android/`。详见 `kb/apk-reverse/README.md`。

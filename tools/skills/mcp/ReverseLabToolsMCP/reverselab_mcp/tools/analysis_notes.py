@@ -100,8 +100,26 @@ def _proposed_function_name(function: dict[str, Any]) -> str:
     if name.startswith("__") or name.startswith("thunk_"):
         return name
     if name.startswith("FUN_"):
-        return f"rename_{name.lower()}"
+        return f"candidate_{name.lower()}"
     return name or "review_me"
+
+
+def _function_evidence_cue(function: dict[str, Any]) -> str:
+    cues: list[str] = []
+    if str(function.get("signature", "")).strip():
+        cues.append("signature")
+    if isinstance(function.get("import_refs"), list) and function["import_refs"]:
+        cues.append(f"imports:{len(function['import_refs'])}")
+    if isinstance(function.get("string_refs"), list) and function["string_refs"]:
+        cues.append(f"strings:{len(function['string_refs'])}")
+    if isinstance(function.get("callers"), list) and function["callers"]:
+        cues.append(f"callers:{len(function['callers'])}")
+    if isinstance(function.get("callees"), list) and function["callees"]:
+        cues.append(f"callees:{len(function['callees'])}")
+    decompile = function.get("decompile")
+    if isinstance(decompile, dict) and str(decompile.get("status", "")).lower() == "ok":
+        cues.append("decompile")
+    return ", ".join(cues) if cues else "review xrefs/decompile"
 
 
 def triage_to_notes(
@@ -228,8 +246,8 @@ def triage_to_notes(
             "",
             "### Function Map",
             "",
-            "| Address | Current Name | Proposed Name | Purpose | Confidence |",
-            "|---|---|---|---|---|",
+            "| Address | Current Name | Proposed Name | Purpose / Evidence | Confidence | Review Status |",
+            "|---|---|---|---|---|---|",
         ]
     )
     for function in functions[: max(0, max_functions)]:
@@ -237,11 +255,22 @@ def triage_to_notes(
             continue
         lines.append(
             f"| `{_fmt_hex(function.get('entry', ''))}` | `{function.get('name', '')}` | `{_proposed_function_name(function)}` | "
-            f"`review signature/xrefs` | `Low-Medium` |"
+            f"`{_function_evidence_cue(function)}` | `Low` | `Needs review` |"
         )
 
     lines.extend(
         [
+            "",
+            "### Symbol / Struct Evidence Ledger",
+            "",
+            "Use this ledger to keep observed evidence separate from hypotheses. A proposed name or field type is not confirmed until its listed static and dynamic evidence agree.",
+            "",
+            "| Kind | Function / Address | Offset | Width / Access | Candidate Name or Meaning | Static Evidence | Dynamic Evidence | Confidence |",
+            "|---|---|---:|---|---|---|---|---|",
+            "| symbol |  |  |  |  | signature / strings / imports / callers / callees |  | Low / Medium / High |",
+            "| field |  |  |  |  | decompile / xref / instruction | runtime observation (if authorized) | Low / Medium / High |",
+            "",
+            "Evidence level: **Observed** records tool output; **Inferred** records a reasoned hypothesis; **Confirmed** requires corroborating static and, where safe, dynamic evidence.",
             "",
             "### Key Functions",
             "",

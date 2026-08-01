@@ -12,13 +12,14 @@
     },
     {
       "id": "native",
-      "signals": [".so", "native", "jni", "ndk", "elf", "arm", "aarch64", "lib", "loadlibrary", "system.load", "il2cpp", "libil2cpp", "ue4", "libue4", "offset", "pointer chain", "getZZ", "pagemap", "virtual address", "physical address", "proc node", "procfs", "kernel driver"],
+      "signals": [".so", "native", "jni", "JNI_OnLoad", "RegisterNatives", "native method", "Java_com_", "ndk", "elf", "arm", "aarch64", "lib", "loadlibrary", "system.load", "il2cpp", "libil2cpp", "ue4", "libue4", "offset", "pointer chain", "getZZ", "pagemap", "virtual address", "physical address", "proc node", "procfs", "kernel driver"],
       "files": [
         "02-native/01-il2cpp-offset-discovery.md",
         "02-native/02-pointer-chain-patterns.md",
         "02-native/03-ue4-offset-hunting.md",
         "02-native/04-kernel-procfs-driver.md",
-        "02-native/05-virt-phys-memory.md"
+        "02-native/05-virt-phys-memory.md",
+        "02-native/06-jni-register-natives-tracing.md"
       ],
       "priority": 10
     },
