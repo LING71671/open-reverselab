@@ -1164,7 +1164,9 @@ def project_skills_status() -> dict[str, Any]:
         "jshook": {
             "path": str((skills_dir / "JSHookLocal" / "dist" / "index.js").relative_to(REVERSE_ROOT)),
             "installed": (skills_dir / "JSHookLocal" / "dist" / "index.js").exists(),
-            "install": "git clone https://github.com/wuji1/jshook-reverse-tool.git tools/skills/mcp/JSHookLocal && cd tools/skills/mcp/JSHookLocal && npm install && npm run build",
+            # 2026-07: 上游 GitHub 仓库 wuji1/jshook-reverse-tool 已删除 (404)，
+            # 项目迁移至 npm：npm pack @ai-jshook/mcp + tar 解压即可恢复本目录结构。
+            "install": "cd tools/skills/mcp/JSHookLocal && $t = npm pack @ai-jshook/mcp 2>$null | Select-Object -Last 1 && tar -xzf $t --strip-components=1 && Remove-Item $t",
         },
         "reverse_lab_tools": {
             "path": str((skills_dir / "ReverseLabToolsMCP" / "reverse_lab_tools_mcp.py").relative_to(REVERSE_ROOT)),

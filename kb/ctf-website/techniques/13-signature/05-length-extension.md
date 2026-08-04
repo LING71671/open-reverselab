@@ -1090,7 +1090,7 @@ def run_batch(order_id, candidates, out_csv="exports/hle_payment_ledger_batch.cs
 
 ## 12. 参考
 
-- [hashpumpy GitHub](https://github.com/bwall/hashpumpy)
+- [hashpumpy PyPI](https://pypi.org/project/hashpumpy/)
 - [hlextend PyPI](https://pypi.org/project/hlextend/)
 - Flask session HMAC 模式不走 HLE
 - SHA-3 规范: FIPS 202 (海绵结构)

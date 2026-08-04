@@ -1568,7 +1568,7 @@ def route_replay_result(case):
 
 ## 10. 参考
 
-- [OWASP: Replay Attack](https://owasp.org/www-community/attacks/Replay_attack)
+- [OWASP: Transaction Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html)
 - JWT nonce 标准 (RFC 7519): `jti` claim
 - Stripe Idempotency: `Idempotency-Key` header
 - AWS Signature V4: 每个请求唯一 signature (nonce + timestamp + scope)

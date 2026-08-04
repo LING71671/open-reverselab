@@ -1982,13 +1982,13 @@ diff_payload("out_trade_no=ORD1&amount=100&amount=0.01&trade_status=&trade_statu
 
 ## 参考
 
-- [RFC 8785 — JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785)
-- [RFC 3986 — URI 编码规范](https://www.rfc-editor.org/rfc/rfc3986)
+- [RFC 8785 — JSON Canonicalization Scheme (JCS)](https://datatracker.ietf.org/doc/html/rfc8785)
+- [RFC 3986 — URI 编码规范](https://datatracker.ietf.org/doc/html/rfc3986)
 - [XML C14N (Canonical XML)](https://www.w3.org/TR/xml-c14n11/)
 - [Exclusive XML Canonicalization](https://www.w3.org/TR/xml-exc-c14n/)
 - [XML Signature Wrapping — OWASP](https://owasp.org/www-pdf-archive/XML_Signature_Wrapping.pdf)
 - [PHP ksort vs JavaScript Object.keys](https://www.php.net/manual/en/function.ksort.php)
-- [HTTP Parameter Pollution — OWASP](https://owasp.org/www-community/attacks/HTTP_Parameter_Pollution)
+- [HTTP Parameter Pollution — OWASP WSTG v42](https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/07-Input_Validation_Testing/04-Testing_for_HTTP_Parameter_Pollution)
 
 ## MCP 工具映射
 
