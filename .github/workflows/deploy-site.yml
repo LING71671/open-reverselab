@@ -41,9 +41,6 @@ jobs:
         working-directory: site
         run: npm ci
 
-      - name: Generate social preview
-        run: python -m pip install pillow && python scripts/misc/gen_social_preview.py
-
       - name: Build site
         working-directory: site
         run: npm run build

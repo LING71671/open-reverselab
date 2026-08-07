@@ -30,13 +30,33 @@ BOARD_BARS = [  # hue-coded board colors (light variants)
     (96, 90, 128),    # Windows purple-gray
 ]
 
-FONT_DIR = Path("C:/Windows/Fonts")
-FONT_BOLD = FONT_DIR / "msyhbd.ttc"   # Microsoft YaHei Bold (zh + latin)
-FONT_REG = FONT_DIR / "msyh.ttc"
+FONT_CANDIDATES = [
+    # Windows
+    Path("C:/Windows/Fonts/msyhbd.ttc"),   # Microsoft YaHei Bold
+    Path("C:/Windows/Fonts/msyh.ttc"),     # Microsoft YaHei
+    # Linux / macOS (Noto CJK)
+    Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"),
+    Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+    Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc"),
+    Path("/System/Library/Fonts/PingFang.ttc"),
+    # generic fallback (latin only; CJK glyphs will be missing)
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+]
+
+
+def find_font(bold: bool) -> Path | None:
+    for candidate in FONT_CANDIDATES:
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def font(size: int, bold: bool = True) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(FONT_BOLD if bold else FONT_REG), size)
+    found = find_font(bold)
+    if found is None:
+        raise SystemExit("no usable TTF/TTC font found on this system")
+    return ImageFont.truetype(str(found), size)
 
 
 def main() -> None:
