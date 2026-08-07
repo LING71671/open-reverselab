@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
 
+env:
+  # Windows runners default Python stdout to a legacy codepage (cp1252),
+  # which crashes any script printing CJK/checkmark output. Force UTF-8.
+  PYTHONIOENCODING: utf-8
+
 jobs:
   windows-smoke:
     runs-on: windows-latest
