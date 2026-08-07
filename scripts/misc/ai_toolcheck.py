@@ -105,6 +105,7 @@ def build_suggestions(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "board": result.get("board"),
                 "name": result.get("name"),
                 "status": status,
+                "detail": str(result.get("detail") or ""),
                 "suggestion": hint,
             }
         )
@@ -449,7 +450,12 @@ def main(argv: list[str]) -> int:
     suggestions = payload.get("suggestions") or []
     if suggestions:
         summary["NextSteps"] = [
-            {"Tool": s.get("name") or s.get("id"), "Status": s.get("status"), "Suggestion": s.get("suggestion")}
+            {
+                "Tool": s.get("name") or s.get("id"),
+                "Status": s.get("status"),
+                "Detail": s.get("detail"),
+                "Suggestion": s.get("suggestion"),
+            }
             for s in suggestions
         ]
     print(json.dumps(summary, ensure_ascii=False, indent=2))
