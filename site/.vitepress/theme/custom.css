@@ -1,0 +1,219 @@
+/* ReverseLab theme — DESIGN.md palette (OKLCH) + typography */
+:root {
+  /* surfaces */
+  --rl-bg: oklch(1.000 0.000 0);
+  --rl-surface: oklch(0.965 0.003 280);
+  --rl-surface-2: oklch(0.945 0.005 280);
+  /* ink */
+  --rl-ink: oklch(0.160 0.020 280);
+  --rl-ink-soft: oklch(0.300 0.020 280);
+  --rl-muted: oklch(0.500 0.015 280);
+  --rl-line: oklch(0.900 0.004 280);
+  /* brand */
+  --rl-primary: oklch(0.420 0.140 278);
+  --rl-primary-2: oklch(0.340 0.130 280);
+  --rl-primary-soft: oklch(0.955 0.020 280);
+  --rl-accent: oklch(0.580 0.150 65);
+  --rl-accent-soft: oklch(0.960 0.030 65);
+  /* semantic */
+  --rl-ok: oklch(0.520 0.140 150);
+  --rl-warn: oklch(0.620 0.150 75);
+  --rl-danger: oklch(0.520 0.190 25);
+  --rl-code-bg: oklch(0.160 0.020 280);
+  /* fonts */
+  --rl-font-display: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --rl-font-body: system-ui, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --rl-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
+/* map onto VitePress tokens */
+:root {
+  --vp-c-bg: var(--rl-bg);
+  --vp-c-bg-alt: var(--rl-surface);
+  --vp-c-bg-elv: var(--rl-bg);
+  --vp-c-bg-soft: var(--rl-surface);
+  --vp-c-text-1: var(--rl-ink);
+  --vp-c-text-2: var(--rl-ink-soft);
+  --vp-c-text-3: var(--rl-muted);
+  --vp-c-divider: var(--rl-line);
+  --vp-c-border: var(--rl-line);
+  --vp-c-border-hard: var(--rl-line);
+  --vp-c-gutter: var(--rl-line);
+  --vp-c-brand-1: var(--rl-primary);
+  --vp-c-brand-2: var(--rl-primary-2);
+  --vp-c-brand-3: var(--rl-primary);
+  --vp-c-brand-soft: var(--rl-primary-soft);
+  --vp-c-green: var(--rl-ok);
+  --vp-c-green-soft: oklch(0.955 0.030 150);
+  --vp-c-yellow: var(--rl-warn);
+  --vp-c-yellow-soft: oklch(0.965 0.040 75);
+  --vp-c-red: var(--rl-danger);
+  --vp-c-red-soft: oklch(0.955 0.030 25);
+  --vp-font-family-base: var(--rl-font-body);
+  --vp-font-family-mono: var(--rl-font-mono);
+  --vp-code-block-bg: var(--rl-code-bg);
+  --vp-code-bg: var(--rl-surface-2);
+  --vp-code-line-height: 1.7;
+  --vp-nav-height: 60px;
+  --vp-sidebar-width: 300px;
+  --vp-layout-max-width: 1440px;
+}
+
+/* typography: display heads in IBM Plex Sans */
+h1, h2, h3, .vp-doc h1, .vp-doc h2, .vp-doc h3,
+.VPHero .name, .VPHero .text, .VPHero .tagline {
+  font-family: var(--rl-font-display);
+  letter-spacing: -0.02em;
+}
+
+.vp-doc h1, .vp-doc h2, .vp-doc h3 {
+  text-wrap: balance;
+}
+
+.vp-doc p, .vp-doc li {
+  text-wrap: pretty;
+  line-height: 1.7;
+}
+
+/* keep code fonts tabular */
+.vp-doc code, .vp-doc pre, .VPDoc .container code {
+  font-variant-numeric: tabular-nums;
+}
+
+/* links: underlined brand color */
+.vp-doc a {
+  color: var(--rl-primary);
+  text-decoration: underline;
+  text-decoration-color: oklch(0.420 0.140 278 / 0.35);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms ease-out;
+}
+.vp-doc a:hover {
+  text-decoration-color: var(--rl-primary);
+}
+
+/* sidebar active item */
+.VPSidebarItem.is-active > .item .text {
+  font-weight: 600;
+}
+
+/* code block header chips */
+.vp-code-group .tabs {
+  border-bottom: 1px solid var(--rl-line);
+}
+
+/* custom block: keep restrained, no side stripes */
+.custom-block {
+  border: 1px solid var(--rl-line);
+  border-radius: 10px;
+}
+.custom-block.tip { background: var(--rl-primary-soft); border-color: transparent; }
+.custom-block.warning { background: var(--rl-accent-soft); border-color: transparent; }
+.custom-block.danger { background: oklch(0.955 0.030 25 / 0.6); border-color: transparent; }
+
+/* table styling */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+.vp-doc th, .vp-doc td {
+  border-color: var(--rl-line);
+}
+
+/* focus ring */
+:focus-visible {
+  outline: 2px solid var(--rl-primary);
+  outline-offset: 2px;
+}
+
+/* motion: restrained, reduced-motion aware */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* home page layout */
+.home {
+  --vp-layout-max-width: 1280px;
+}
+
+/* board cards */
+.rl-board-card {
+  display: block;
+  border: 1px solid var(--rl-line);
+  border-radius: 12px;
+  padding: 20px 22px;
+  background: var(--rl-bg);
+  transition: border-color 180ms ease-out, transform 180ms ease-out;
+}
+.rl-board-card:hover {
+  border-color: var(--rl-primary);
+  transform: translateY(-2px);
+}
+.rl-board-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+.rl-board-card .blurb {
+  color: var(--rl-ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+.rl-board-card .meta {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--rl-muted);
+  font-variant-numeric: tabular-nums;
+}
+.rl-board-card .enter {
+  color: var(--rl-primary);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* board badge */
+.rl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--rl-font-display);
+  white-space: nowrap;
+}
+.rl-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* mcp tool chips */
+.rl-tool {
+  display: inline-block;
+  padding: 3px 10px;
+  margin: 0 6px 6px 0;
+  border: 1px solid var(--rl-line);
+  border-radius: 8px;
+  font-family: var(--rl-font-mono);
+  font-size: 12.5px;
+  color: var(--rl-ink-soft);
+  background: var(--rl-bg);
+  transition: border-color 150ms ease-out, color 150ms ease-out;
+}
+.rl-tool:hover {
+  border-color: var(--rl-primary);
+  color: var(--rl-primary);
+}

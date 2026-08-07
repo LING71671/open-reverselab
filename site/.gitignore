@@ -1,0 +1,7 @@
+node_modules/
+.vitepress/dist/
+.vitepress/cache/
+.vitepress/sidebar.ts
+.vitepress/boards.json
+.vitepress/mcp-tools.json
+kb

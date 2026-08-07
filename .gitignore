@@ -99,3 +99,6 @@ reports/**
 !reports/**/
 !reports/**/README.md
 !reports/**/.gitkeep
+
+# Wrangler local cache
+.wrangler/
