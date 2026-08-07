@@ -107,7 +107,7 @@ def _search_kb(query: str, board: str) -> list[dict]:
                 "score": score,
                 "signals": entry.get("signals", [])[:8],
                 "files": [
-                    str(techniques_dir / f) for f in entry.get("files", [])
+                    (techniques_dir / f).as_posix() for f in entry.get("files", [])
                 ],
             })
 
