@@ -217,6 +217,12 @@ def render_md(ctx: dict[str, Any]) -> str:
 
 
 def main() -> int:
+    # Windows CI runners may use a legacy codepage; context JSON contains CJK.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
     ap = argparse.ArgumentParser()
     ap.add_argument("task", nargs="+")
     ap.add_argument("--board", default="")
