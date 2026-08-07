@@ -66,7 +66,7 @@ $include = @(
   "PUBLICATION.md",
   "gui/PRODUCT.md",
   "README.md",
-  "README.zh.md",
+  "README.en.md",
   "boards",
   "kb",
   "scripts",

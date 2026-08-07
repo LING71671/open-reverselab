@@ -1,95 +1,95 @@
 # ReverseLab
 
+> **说明：** 本项目为个人非商业开源项目。作者与**任何个人或组织均无任何商业合作、赞助或关联关系**，也未以任何形式**从本项目获取收益或经济利益**。
+
 > 🎯 Discord：[**discord.gg/But5j58J2f**](https://discord.gg/But5j58J2f)
 
-Open-source reverse engineering lab — 178-article knowledge base, 100+ MCP automation tools, covering CTF pentesting / APK reverse engineering / PE binary analysis / cryptography & protocol cracking / game cheating analysis. Agent-native, directory-as-convention.
+开源逆向工程实验环境 —— 178 篇知识库文章，100+ MCP 自动化工具，覆盖 CTF 渗透测试 / APK 逆向 / PE 二进制分析 / 加密协议破解 / 游戏作弊分析。Agent 原生设计，目录即约定。
 
-> [中文版](README.zh.md)
+> [English version](README.en.md)
 
-## Routing
+## 路由
 
 ```
-Signal → kb_router(board=) → kb_read_file → Attack chain → MCP tool mapping → Execution
+信号 → kb_router(board=) → kb_read_file → 攻击链 → MCP 工具映射 → 执行
 ```
 
-| Signal Type | Board | KB Categories / Files | MCP Tool Family |
-|---|---|---|---|
+| 信号类型 | Board | KB 分类数/文件数 | MCP 工具族 |
+|---------|-------|-----------------|-----------|
 | HTTP/Web/API/CVE/Cloud/CAPTCHA | `ctf-website` | 26/118 | `http_probe` `run_ctf_tool` `kb_router` |
 | APK/DEX/SO/Frida/Java | `apk-reverse` | 8/20 | `android_app_baseline` `android_crypto_unpack_recipe` `android_frida_*` |
 | PE/x64/x86/malware/driver | `pe-reverse` | 9/22 | `triage_pe` `ghidra_headless_analyze` `make_x64dbg_breakpoint_script` `sample_full_workup` |
 | Crypto/Protocol/Cheat/IoT/Radio | `general` | 5/17 | `die_scan` `ghidra_*` `rizin_*` `python_re_tool_*` |
 
-## Knowledge Base
+## 知识库
 
 ```
 kb/
-├── ctf-website/techniques/   26 categories, 118 articles — Full web attack surface
-├── apk-reverse/techniques/    8 categories, 20 articles — APK/DEX reverse engineering
-├── pe-reverse/techniques/     9 categories, 22 articles — PE binary analysis
-└── general/techniques/        5 categories, 17 articles — Cryptography / Protocols / Kernel / Cheating / Methodology
+├── ctf-website/techniques/   26 类 118 篇 — Web 攻击全表面
+├── apk-reverse/techniques/    8 类 20 篇 — APK/DEX 逆向
+├── pe-reverse/techniques/     9 类 22 篇 — PE 二进制分析
+└── general/techniques/        5 类 17 篇 — 密码学/协议/内核/作弊/方法论
 ```
 
-Each technique file follows this structure: `Scenario → Input signal → Method → Attack chain → MCP tool mapping`
+每篇技术文件结构：`场景 → 输入信号 → 方法 → 攻击链 → MCP 工具映射`
 
-Agent workflow: detect signal → `kb_router` lookup → `kb_read_file` → execute via MCP tool mapping.
+Agent 工作流：检测到信号 → `kb_router` 查技术 → `kb_read_file` 读 → 按 MCP 工具映射执行。
 
-## Boards
+## 板块
 
-| Board | Trigger Signals |
-|---|---|
+| 板块 | 触发信号 |
+|------|---------|
 | `boards/ctf-website` | URL, HTTP, JWT, SQLi, SSRF, CVE, API, CSP, OAuth, CAPTCHA, Cloudflare, ReDoS, Slowloris, DoS, Paywall |
 | `boards/android` | APK, DEX, adb, Frida, jadx, smali, SO, native |
 | `boards/windows` | PE, EXE, DLL, x64dbg, Ghidra, Procmon, packer, malware |
 | `boards/general` | AES/DES/RSA, protobuf, game cheat, EAC/BE/Vanguard, firmware, JTAG, SDR |
-| `boards/misc` | MCP config, skill installation, environment health check |
+| `boards/misc` | MCP 配置, skill 安装, 环境自检 |
 
-## Directory Convention
+## 目录约定
 
 ```
-samples/      → Original samples + _quarantine/ + unpacked/
-exports/      → Tool outputs (triage / IOC / YARA / Sigma / Procmon / Ghidra summaries)
-patches/      → Patch artifacts (original samples are never modified)
-notes/        → Analysis notes
-reports/      → Final reports
-scripts/      → Automation scripts
-projects/     → Ghidra project files
-templates/    → Note / report / rule templates
-kb/           → Reusable attack knowledge base
-tools/        → Toolchain
-cases/        → Lightweight index — no large file copies
+samples/      → 原始样本 + _quarantine/ + unpacked/
+exports/      → 工具输出（triage/IOC/YARA/Sigma/Procmon/Ghidra summary）
+patches/      → patch 产物（不修改原始样本）
+notes/        → 分析笔记
+reports/      → 最终报告
+scripts/      → 自动化脚本
+projects/     → Ghidra 项目文件
+templates/    → 笔记/报告/规则模板
+kb/           → 可复用攻击知识库
+tools/        → 工具链
+cases/        → 轻量索引，不复制大文件
 ```
 
-## Installation
+## 安装
 
-On Windows, beginners can double-click `START_HERE.bat` or `START_HERE.cmd`
-from the repository root. It checks Python, uv, Git, workspace layout, and
-`reverse_lab_tools` MCP; creates core wrappers; runs real MCP tool calls; gives
-install advice for missing items; and writes `reports/misc/first-run-report.json`
-plus `reports/misc/mcp-smoke-report.json`.
+Windows 新手优先双击根目录的 `START_HERE.bat` 或 `START_HERE.cmd`。它会自动检查
+Python / uv / Git / `reverse_lab_tools` MCP、生成核心 wrappers，给出缺失项安装建议，
+真实调用 MCP 核心工具，并写入 `reports/misc/first-run-report.json` 与
+`reports/misc/mcp-smoke-report.json`。
 
-On macOS/Linux, run `./START_HERE.sh` from the repository root. It performs the
-same first-run checks and uses POSIX shell wrappers under `tools/bin/`; optional
-Windows GUI/PE tools are skipped or reported as Windows-only. Platform-specific
-release artifacts can stay separate: Windows full-toolchain releases ship
-`.bat`/PowerShell and GUI tools, while macOS/Linux releases ship the Python,
-MCP, shell-wrapper, and native CLI paths.
+macOS/Linux 从根目录运行 `./START_HERE.sh`。它执行同样的首次检查，并使用
+`tools/bin/` 下的 POSIX shell wrapper；Windows GUI/PE 工具会被跳过或明确标记为
+Windows-only。最终 release 可以按平台拆分：Windows full-toolchain release 携带
+`.bat`/PowerShell 与 GUI 工具，macOS/Linux release 携带 Python、MCP、shell wrapper
+和 native CLI 探测路径。
 
-To have an AI Agent perform setup for you, copy the [AI install prompt](templates/prompts/ai-install.en.md) into Codex or Claude Code.
-If you are not sure where to start, open [START.md](START.md).
+想让 AI 代装时，复制 [给 AI 的安装提示词](templates/prompts/ai-install.zh.md) 给 Codex 或 Claude Code。
+不知道从哪里开始时，先看 [START.md](START.md)。
 
 ```powershell
 git clone https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
-python scripts/misc/first_run_check.py       # Check workspace + reverse_lab_tools MCP
+python scripts/misc/first_run_check.py       # 确认目录和 reverse_lab_tools MCP
 uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report
-.\scripts\misc\bootstrap.ps1              # Core script wrappers (no downloads)
-.\scripts\misc\install_tools.ps1 -CTF       # Web tools
-.\scripts\misc\install_tools.ps1 -Android   # APK tools
-.\scripts\misc\install_tools.ps1 -Windows   # PE tools
+.\scripts\misc\bootstrap.ps1                 # 生成核心脚本 wrappers
+.\scripts\misc\install_tools.ps1 -CTF       # Web 工具
+.\scripts\misc\install_tools.ps1 -Android   # APK 工具
+.\scripts\misc\install_tools.ps1 -Windows   # PE 工具
 .\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
 ```
 
-macOS/Linux quick start:
+macOS/Linux quick start：
 
 ```sh
 ./START_HERE.sh
@@ -98,44 +98,50 @@ export PATH="$PWD/tools/bin:$PWD/tools/ctf-website/bin:$PATH"
 python scripts/misc/ai_toolcheck.py --board misc
 ```
 
-## Agent Quick Start
+## Agent 快速打开
 
-1. Clone into a stable local directory, for example `<workspace>/open-reverselab`.
-2. Windows: double-click `START_HERE.bat` or `START_HERE.cmd` for the first-run check. macOS/Linux: run `./START_HERE.sh`.
-3. Claude Code: `cd <workspace>/open-reverselab` before starting the session.
-4. Codex APP: open the existing `open-reverselab` folder directly.
-5. AI-assisted setup: copy [templates/prompts/ai-install.en.md](templates/prompts/ai-install.en.md) into your AI Agent.
-6. Create a task: `python scripts/misc/new_task.py --board ctf-website --name <name>`.
-7. After moving machines or changing MCP settings, run `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report` and confirm MCP tool calls pass.
+1. 克隆到一个固定本地目录，例如 `<workspace>/open-reverselab`。
+2. Windows：双击 `START_HERE.bat` 或 `START_HERE.cmd` 完成首次检查；macOS/Linux：运行 `./START_HERE.sh`。
+3. Claude Code：先 `cd <workspace>/open-reverselab`，再启动会话。
+4. Codex APP：直接打开现有的 `open-reverselab` 文件夹。
+5. AI 代装：复制 [templates/prompts/ai-install.zh.md](templates/prompts/ai-install.zh.md) 里的提示词。
+6. 创建任务：`python scripts/misc/new_task.py --board ctf-website --name <name>`。
+7. 每次换机器或重配 MCP 后，运行 `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report`，确认 MCP 真实可调用。
 
-Post-install verification:
+## 迭代模式
 
-```powershell
-python scripts/misc/lab_healthcheck.py
-python scripts/misc/ai_toolcheck.py --board misc
-python scripts/misc/public_release_check.py
+```
+打靶 (Playwright/浏览器自动化)    提取增量                写/改 制品             同步 open-reverseLab
+─────────────────────────  →  ──────────────  →  ──────────────────────  →  ───────────────────
+攻破 Lab / CTF               判断是否新增技巧        kb/   技术文档           git commit (案例不推)
+截图验收                     仅增强有差异的点        scripts/ 自动化脚本      技术制品开源
+                             无则不硬改             templates/ 模板
+                                                   tools/   工具
 ```
 
-`--board misc` verifies the fresh-clone core Agent scripts and lightweight tools. Run the full `python scripts/misc/ai_toolcheck.py` only after installing the Android, Windows, and CTF board toolchains you need.
+**规则**：
+1. 每个 Lab 攻破后判断是否有**新技巧**，有则落成制品，无则不硬写
+2. 制品优先追加/插入，保持原文风格不变
+3. 案例细节留私库，通用化技术写入制品后同步开源
 
-## Context Chain
+## 链路
 
-On startup the Agent loads context along this chain:
+启动时 Agent 沿此链路加载上下文：
 
 ```
 CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
 ```
 
-Pair with [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) for one-click project-level `.codex/` environment and MCP server configuration.
+搭配 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 一键配置项目级 `.codex/` 环境与 MCP 服务器。
 
-## Disclaimer
+## 免责声明
 
-**By accessing or using this project, you agree to be bound by the full disclaimer.**
+**访问或使用本项目即表示同意受完整免责声明的约束。**
 
-The disclaimer covers: all versions and branches (retroactive and prospective), all users (direct and indirect), all derivatives (forks, copies, redistributions), legal compliance across all jurisdictions (including export controls and data protection laws), authorized purposes only, prohibited uses, no warranty, limitation of liability, indemnification, mandatory disclaimer retention in derivatives, anti-removal provisions, and educational communication protections, third-party transaction protections, and unauthorized distribution & impersonation protections, and AI/ML training protections.
+声明涵盖：所有版本与分支（追溯及前瞻）、所有使用者（直接与间接）、所有衍生作品（fork、复制、再分发）、全部司法管辖区的法律合规（含出口管制与数据保护法）、仅限授权用途、禁止用途、无担保、责任限制与赔偿、衍生作品强制保留声明、禁止移除条款、教育性沟通保护、第三方交易保护、未经授权的分发与冒名保护、AI/ML 训练保护。
 
-> 📄 Read the full legal disclaimer: [DISCLAIMER.md](DISCLAIMER.md) | [中文版](DISCLAIMER.zh.md)
+> 📄 阅读完整免责声明：[DISCLAIMER.zh.md](DISCLAIMER.zh.md) | [English](DISCLAIMER.md)
 
-## License
+## 许可
 
-GPL-3.0-only. See [LICENSE](LICENSE) for details.
+GPL-3.0-only. 详见 [LICENSE](LICENSE)。
