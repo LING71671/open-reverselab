@@ -89,6 +89,18 @@ uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smo
 .\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
 ```
 
+> **Windows Defender / 安全软件提示**：安装 CTF / ExploitDB 相关工具后，Windows 安全中心
+> 可能对漏洞样本、payload 文档报毒，例如 `tools/ctf-website/exploitdb`、
+> `kb/ctf-website/techniques/24-database/03-nosql-injection.md`、`docs/llms-full.txt`。
+> 这些文件包含安全测试 payload、webshell、shellcode 或 ExploitDB 样本，属正常内容。
+> 建议**最小范围排除**而不是排除整个仓库，例如：
+>
+> ```powershell
+> Add-MpPreference -ExclusionPath "D:\open-reverselab\tools\ctf-website\exploitdb"
+> ```
+>
+> 如果个别文档也被拦截，再只针对具体文件处理（`Add-MpPreference -ExclusionPath <文件路径>`）。
+
 macOS/Linux quick start：
 
 ```sh
@@ -106,7 +118,7 @@ python scripts/misc/ai_toolcheck.py --board misc
 4. Codex APP：直接打开现有的 `open-reverselab` 文件夹。
 5. AI 代装：复制 [templates/prompts/ai-install.zh.md](templates/prompts/ai-install.zh.md) 里的提示词。
 6. 创建任务：`python scripts/misc/new_task.py --board ctf-website --name <name>`。
-7. 每次换机器或重配 MCP 后，运行 `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report`，确认 MCP 真实可调用。
+7. 每次换机器或重配 MCP 后，确认 MCP 真实可调用。Windows 可运行短入口 `.\scripts\misc\check_mcp.ps1`；等价完整命令（macOS/Linux 也适用）为 `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report`。
 
 ## 迭代模式
 

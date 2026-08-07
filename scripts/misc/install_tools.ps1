@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     ReverseLab 工具一键安装脚本
 .DESCRIPTION

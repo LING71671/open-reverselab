@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Double-click first-run helper for Windows users.
 

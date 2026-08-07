@@ -31,6 +31,85 @@ REPORT_DIR = ROOT / "reports" / "misc" / "toolcheck"
 USER_PATH_RE = re.compile(r"\b[A-Za-z]:\\Users\\[^\\\s\"']+", re.I)
 UNIX_USER_PATH_RE = re.compile(r"/(?:home|Users)/[^/\s\"']+")
 
+# Tool id -> concrete fix hint shown to newcomers (issue #13).
+INSTALL_HINTS: dict[str, str] = {
+    # Android
+    "android.apktool": r".\scripts\misc\install_tools.ps1 -Android",
+    "android.jadx": r".\scripts\misc\install_tools.ps1 -Android",
+    "android.uber_apk_signer": r".\scripts\misc\install_tools.ps1 -Android",
+    "android.frida_server_x86_64": r".\scripts\android\install_frida_server.ps1",
+    # Windows
+    "windows.pe_bear": r".\scripts\misc\install_tools.ps1 -Windows",
+    "windows.procmon": r".\scripts\misc\install_tools.ps1 -Windows",
+    "windows.cutter": r".\scripts\misc\install_tools.ps1 -Windows",
+    "windows.hxd": "手动安装 HxD（https://mh-nexus.de/en/downloads.php?product=HxD20），装到 tools/windows/HxD/",
+    # CTF (git/pip)
+    "ctf.sqlmap": r".\scripts\misc\install_tools.ps1 -CTF",
+    "ctf.dirsearch": r".\scripts\misc\install_tools.ps1 -CTF（依赖安装失败可重试 pip install -r tools/ctf-website/dirsearch/requirements.txt）",
+    "ctf.jwt_tool": r".\scripts\misc\install_tools.ps1 -CTF（依赖缺失时 pip install pycryptodomex termcolor）",
+    "ctf.tplmap": r".\scripts\misc\install_tools.ps1 -CTF",
+    "ctf.searchsploit": r".\scripts\misc\install_tools.ps1 -CTF",
+    "ctf.nmap": "手动安装 nmap（https://nmap.org/download.html），安装后确保 nmap 在 PATH 中",
+    "ctf.feroxbuster": "手动安装 feroxbuster（https://github.com/epi052/feroxbuster/releases），二进制放到 tools/ctf-website/bin/",
+    "ctf.burp.jar": "手动下载 Burp Suite（https://portswigger.net/burp/releases），jar 放到 tools/ctf-website/burp/",
+    "ctf.burp.wrapper": "先安装 ctf.burp.jar，再运行 .\\scripts\\misc\\install_tools.ps1 -CTF",
+    # Go tools
+    "ctf.ffuf": r".\scripts\misc\install_tools.ps1 -GoTools",
+    "ctf.gobuster": r".\scripts\misc\install_tools.ps1 -GoTools",
+    "ctf.httpx": r".\scripts\misc\install_tools.ps1 -GoTools",
+    "ctf.nuclei": r".\scripts\misc\install_tools.ps1 -GoTools",
+    "ctf.katana": r".\scripts\misc\install_tools.ps1 -GoTools",
+    # misc wrappers / python tools
+    "misc.ai_context": r".\scripts\misc\bootstrap.ps1 -Force",
+    "misc.ai_tool": r".\scripts\misc\bootstrap.ps1 -Force",
+    "misc.ai_finding": r".\scripts\misc\bootstrap.ps1 -Force",
+    "misc.ai_toolcheck": r".\scripts\misc\bootstrap.ps1 -Force",
+    "misc.mitmproxy_capture": "依赖 mitmproxy：pip install mitmproxy 后重试",
+    "misc.proxy_pool": "检查 Python 与网络后重试（tools/proxy_pool/proxy_pool.py）",
+    "misc.proxy_pipeline": "检查 Python 与网络后重试（tools/proxy-pipeline/pipeline.py）",
+    "misc.proxy_test": "检查 Python 与网络后重试（tools/proxy_pool/test_proxy.py）",
+    # System prerequisites
+    "system.python": "安装 Python 3.10+（勾选 Add python.exe to PATH）：https://www.python.org/downloads/windows/",
+    "system.node": "安装 Node.js LTS：https://nodejs.org/",
+    "system.java": "安装 JDK 17+：https://adoptium.net/",
+    "system.rg": "安装 ripgrep：winget install BurntSushi.ripgrep.MSVC",
+    "system.curl": "Windows 10+ 自带 curl；缺失时 winget install curl.curl",
+    "system.git": "安装 Git：https://git-scm.com/download/win",
+    "system.go": "安装 Go：https://go.dev/dl/",
+    "system.docker": "安装 Docker Desktop：https://www.docker.com/products/docker-desktop/",
+}
+
+BOARD_FALLBACK_HINTS: dict[str, str] = {
+    "android": r".\scripts\misc\install_tools.ps1 -Android",
+    "windows": r".\scripts\misc\install_tools.ps1 -Windows",
+    "ctf-website": r".\scripts\misc\install_tools.ps1 -CTF",
+    "common": r".\scripts\misc\install_tools.ps1 -Common",
+    "misc": r".\scripts\misc\bootstrap.ps1 -Force",
+}
+
+
+def build_suggestions(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One actionable fix hint per broken (bad/warn) tool, for newcomers."""
+    suggestions: list[dict[str, Any]] = []
+    for result in results:
+        status = str(result.get("status") or "")
+        if status in {"FOUND", "SKIPPED"}:
+            continue
+        tool_id = str(result.get("id") or "")
+        hint = INSTALL_HINTS.get(tool_id) or BOARD_FALLBACK_HINTS.get(str(result.get("board") or ""))
+        if not hint:
+            hint = f"检查 tools/ai-tool-registry.json 中 {tool_id} 的配置，或重新运行安装脚本"
+        suggestions.append(
+            {
+                "id": tool_id,
+                "board": result.get("board"),
+                "name": result.get("name"),
+                "status": status,
+                "suggestion": hint,
+            }
+        )
+    return suggestions
+
 
 def current_platform() -> str:
     if os.name == "nt":
@@ -280,6 +359,24 @@ def render_md(payload: dict[str, Any]) -> str:
         )
     lines += [
         "",
+        "## Next Steps",
+        "",
+    ]
+    suggestions = payload.get("suggestions") or []
+    if suggestions:
+        lines += [
+            "缺失或异常的工具按下面建议处理（Windows PowerShell）：",
+            "",
+            "| Tool | Status | Suggestion |",
+            "|---|---:|---|",
+        ]
+        for s in suggestions:
+            suggestion = str(s.get("suggestion", "")).replace("|", "\\|")
+            lines.append(f"| {s.get('name') or s.get('id')} | {s.get('status')} | {suggestion} |")
+    else:
+        lines += ["所有工具状态正常，无需处理。"]
+    lines += [
+        "",
         "## No-popup rule",
         "",
         "Entries with `launch_mode=gui` are verified by file existence/hash only and are never launched by this check.",
@@ -322,6 +419,7 @@ def main(argv: list[str]) -> int:
         "bad": bad,
         "boards": {board: dict(counts) for board, counts in board_counts.items()},
         "results": results,
+        "suggestions": build_suggestions(results),
     }
     payload = sanitize_payload(payload, ROOT)
 
@@ -341,6 +439,12 @@ def main(argv: list[str]) -> int:
         "Json": sanitize_text(str(json_path), ROOT),
         "Markdown": sanitize_text(str(md_path), ROOT),
     }
+    suggestions = payload.get("suggestions") or []
+    if suggestions:
+        summary["NextSteps"] = [
+            {"Tool": s.get("name") or s.get("id"), "Status": s.get("status"), "Suggestion": s.get("suggestion")}
+            for s in suggestions
+        ]
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0 if overall == "PASS" else 1
 

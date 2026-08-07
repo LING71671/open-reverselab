@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Web CTF 工具可用性检查
 .DESCRIPTION

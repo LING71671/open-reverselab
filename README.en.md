@@ -91,6 +91,21 @@ uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smo
 .\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
 ```
 
+> **Windows Defender / antivirus note**: after installing the CTF / ExploitDB toolchains,
+> Windows Security may flag vulnerability samples and payload documents, e.g.
+> `tools/ctf-website/exploitdb`,
+> `kb/ctf-website/techniques/24-database/03-nosql-injection.md`, `docs/llms-full.txt`.
+> These files contain security-test payloads, webshells, shellcode, or ExploitDB samples
+> and are expected content. Prefer a **minimal exclusion** over excluding the whole
+> repository, e.g.:
+>
+> ```powershell
+> Add-MpPreference -ExclusionPath "D:\open-reverselab\tools\ctf-website\exploitdb"
+> ```
+>
+> If a specific document is also blocked, exclude just that file
+> (`Add-MpPreference -ExclusionPath <file-path>`).
+
 macOS/Linux quick start:
 
 ```sh
@@ -108,7 +123,7 @@ python scripts/misc/ai_toolcheck.py --board misc
 4. Codex APP: open the existing `open-reverselab` folder directly.
 5. AI-assisted setup: copy [templates/prompts/ai-install.en.md](templates/prompts/ai-install.en.md) into your AI Agent.
 6. Create a task: `python scripts/misc/new_task.py --board ctf-website --name <name>`.
-7. After moving machines or changing MCP settings, run `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report` and confirm MCP tool calls pass.
+7. After moving machines or changing MCP settings, confirm MCP tool calls pass. On Windows you can run the short entry `.\scripts\misc\check_mcp.ps1`; the equivalent full command (also for macOS/Linux) is `uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report`.
 
 Post-install verification:
 
