@@ -105,6 +105,7 @@ def build_suggestions(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "board": result.get("board"),
                 "name": result.get("name"),
                 "status": status,
+                # full detail, no truncation: CI logs need the real traceback
                 "detail": str(result.get("detail") or ""),
                 "suggestion": hint,
             }
@@ -275,7 +276,7 @@ def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]
         return {"status": "FAIL", "detail": str(exc), "path": str(command_path)}
     except subprocess.TimeoutExpired:
         return {"status": "TIMEOUT", "detail": f"probe timed out after {timeout:.1f}s", "path": str(command_path)}
-    output = one_line((proc.stdout or "") + " " + (proc.stderr or ""))
+    output = one_line((proc.stdout or "") + " " + (proc.stderr or ""), limit=1500)
     if proc.returncode != 0 and not allow_nonzero:
         return {"status": "FAIL", "detail": f"exit={proc.returncode} {output}", "path": str(command_path)}
     if proc.returncode != 0 and allow_nonzero:
