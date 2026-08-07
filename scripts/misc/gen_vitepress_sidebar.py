@@ -4,7 +4,7 @@ Generate VitePress sidebar + board data for the ReverseLab site.
 
 Scans kb/<board>/techniques/<category>/*.md and emits:
   site/.vitepress/sidebar.ts      - sidebar tree per board (grouped by category)
-  site/.vitepress/boards.json     - board metadata (name, counts, blurb, emoji, hue)
+  site/.vitepress/boards.json     - board metadata (name, counts, blurb, hue)
 
 Run from the repository root:  python scripts/misc/gen_vitepress_sidebar.py
 The site/ build expects these files to exist; re-run after kb/ changes.
@@ -25,35 +25,30 @@ BOARDS: dict[str, dict] = {
     "ctf-website": {
         "name": "CTF Website",
         "zh": "Web 攻击全表面",
-        "emoji": "🌐",
         "hue": "278",
         "blurb": "JWT / SQLi / SSRF / XSS / CORS / OAuth / CVE / 支付攻击，信号到闭环的攻击网。",
     },
     "apk-reverse": {
         "name": "APK Reverse",
         "zh": "Android 逆向",
-        "emoji": "📱",
         "hue": "190",
         "blurb": "DEX / Native / IL2CPP / Frida Hook / 脱壳 / 加密破解，从 APK 到内存。",
     },
     "pe-reverse": {
         "name": "PE Reverse",
         "zh": "Windows 二进制分析",
-        "emoji": "🖥️",
         "hue": "65",
         "blurb": "Ghidra / x64dbg / Triage / IOC / YARA / Patch / 免杀，二进制全流程。",
     },
     "general": {
         "name": "General",
         "zh": "跨领域",
-        "emoji": "🔬",
         "hue": "150",
         "blurb": "密码学 / 协议逆向 / 内核利用 / 游戏作弊 / 固件 / SDR / AI 安全。",
     },
     "windows": {
         "name": "Windows",
         "zh": "Windows 专项",
-        "emoji": "🪟",
         "hue": "280",
         "blurb": "配置注入 / 权限提升 / 进程注入等 Windows 平台专项。",
     },

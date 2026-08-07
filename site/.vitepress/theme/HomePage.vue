@@ -5,7 +5,6 @@ import mcpTools from '../mcp-tools.json'
 interface Board {
   name: string
   zh: string
-  emoji: string
   hue: string
   blurb: string
   articles: number
@@ -74,7 +73,7 @@ cd open-reverselab
           :style="{ '--bd-hue': boardList[b].hue }"
         >
           <span class="rl-badge" :style="{ color: `hsl(var(--bd-hue) 40% 30%)`, background: `hsl(var(--bd-hue) 55% 96%)` }">
-            {{ boardList[b].emoji }} {{ boardList[b].name }}
+            {{ boardList[b].name }}
           </span>
           <h3>{{ boardList[b].name }}<span class="rl-board-zh">{{ boardList[b].zh }}</span></h3>
           <p class="blurb">{{ boardList[b].blurb }}</p>
