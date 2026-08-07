@@ -153,14 +153,22 @@ def board_counts() -> dict:
 
 
 def build_mcp_tools() -> list[dict]:
-    """Group ai-tool-registry.json tools by board for the homepage section."""
+    """Group ai-tool-registry.json tools by board with full metadata for the tools page."""
     registry = json.loads((ROOT / "tools" / "ai-tool-registry.json").read_text(encoding="utf-8"))
-    grouped: dict[str, list[str]] = {}
+    grouped: dict[str, list[dict]] = {}
     for tool in registry.get("tools") or []:
         board = str(tool.get("board") or "misc")
-        grouped.setdefault(board, []).append(str(tool.get("id") or tool.get("name") or ""))
+        grouped.setdefault(board, []).append(
+            {
+                "id": str(tool.get("id") or ""),
+                "name": str(tool.get("name") or ""),
+                "launch_mode": str(tool.get("launch_mode") or "cli"),
+                "ai_callable": bool(tool.get("ai_callable")),
+                "notes": str(tool.get("notes") or ""),
+            }
+        )
     return [
-        {"board": board, "tools": sorted(ids)}
+        {"board": board, "tools": sorted(ids, key=lambda t: t["id"])}
         for board, ids in grouped.items()
         if ids
     ]

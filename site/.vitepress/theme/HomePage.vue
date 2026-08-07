@@ -95,7 +95,7 @@ cd open-reverselab
       <div class="rl-mcp-group" v-for="g in mcpGroups" :key="g.board">
         <h3 class="rl-mcp-group-title">{{ mcpBoardNames[g.board] || g.board }}</h3>
         <div class="rl-mcp-tools">
-          <code v-for="t in g.tools" :key="t" class="rl-tool">{{ t }}</code>
+          <code v-for="t in g.tools" :key="t.id" class="rl-tool">{{ t.id }}</code>
         </div>
       </div>
       <p class="rl-mcp-note">完整工具清单与配置见仓库 <code>tools/ai-tool-registry.json</code> 与 <code>.mcp.json</code>。</p>
