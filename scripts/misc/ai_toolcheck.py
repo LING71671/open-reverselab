@@ -385,6 +385,13 @@ def render_md(payload: dict[str, Any]) -> str:
 
 
 def main(argv: list[str]) -> int:
+    # Windows consoles/CI runners may use a legacy codepage (cp1252/cp936);
+    # our suggestions contain CJK text, so force UTF-8 stdout/stderr.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--registry", default=str(REGISTRY))
     ap.add_argument("--out-dir", default=str(REPORT_DIR))
