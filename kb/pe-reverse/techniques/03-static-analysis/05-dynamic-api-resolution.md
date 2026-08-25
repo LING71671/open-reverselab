@@ -152,6 +152,22 @@ resolved function pointer:
 | `RegSetValueEx/CreateService` | persistence / IOC |
 | `BCrypt/CryptDecrypt` | crypto replay |
 
+### 5.1 校验函数联动（keygen 场景）
+
+许可证校验函数常动态解析比较/哈希 API（`02-validation-function-location` 的导入表
+信号往往被解析链隐藏）。处置：
+
+1. 先解析出实际调用的 API 名（本节动态断点法）
+2. 在解析结果上追加两条分叉：
+
+| 解析结果 | 下一跳 |
+|---|---|
+| `lstrcmpW/CompareStringW/memcmp` 对比点 | 常量表对比 → `10-license-keygen/03` 算法还原 |
+| `BCryptVerifySignature` 或自实现模幂 | 签名链 → `10-license-keygen/04` 公钥替换 |
+
+校验函数本身可用 `10-license-keygen/02` 的三步定位法（字符串 xrefs 反查）直接命中，
+无需等待解析链——两条路径互为备份。
+
 ## 6. 攻击链 / 工作流
 
 ```text

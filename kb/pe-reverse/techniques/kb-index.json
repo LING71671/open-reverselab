@@ -4,19 +4,62 @@
   "entries": [
     {
       "id": "triage",
-      "signals": ["aob", "signature", "pattern scan", "findpattern", "byte pattern", "特征码", "GetModuleHandle", "mask", "wildcard"],
-      "files": ["01-triage/01-aob-signature-scan.md"],
+      "signals": [
+        "aob",
+        "signature",
+        "pattern scan",
+        "findpattern",
+        "byte pattern",
+        "特征码",
+        "GetModuleHandle",
+        "mask",
+        "wildcard"
+      ],
+      "files": [
+        "01-triage/01-aob-signature-scan.md"
+      ],
       "priority": 10
     },
     {
       "id": "pe-structure",
-      "signals": ["dos header", "nt header", "section", "节区", "import", "export", "iat", "eat", "image_dos_header", "image_nt_headers", "e_lfanew"],
-      "files": ["02-pe-structure/01-pe-header-parsing.md"],
+      "signals": [
+        "dos header",
+        "nt header",
+        "section",
+        "节区",
+        "import",
+        "export",
+        "iat",
+        "eat",
+        "image_dos_header",
+        "image_nt_headers",
+        "e_lfanew"
+      ],
+      "files": [
+        "02-pe-structure/01-pe-header-parsing.md"
+      ],
       "priority": 9
     },
     {
       "id": "static-analysis",
-      "signals": ["struct", "reconstruct", "offset", "disassemble", "zydis", "xbyak", "jit", "assemble", "machine code", "反汇编", "汇编", "x64dbg", "breakpoint", "conditional bp", "reclass", "structure rebuild"],
+      "signals": [
+        "struct",
+        "reconstruct",
+        "offset",
+        "disassemble",
+        "zydis",
+        "xbyak",
+        "jit",
+        "assemble",
+        "machine code",
+        "反汇编",
+        "汇编",
+        "x64dbg",
+        "breakpoint",
+        "conditional bp",
+        "reclass",
+        "structure rebuild"
+      ],
       "files": [
         "03-static-analysis/01-struct-reconstruction.md",
         "03-static-analysis/02-disasm-jit-asm.md",
@@ -27,7 +70,32 @@
     },
     {
       "id": "dynamic-analysis",
-      "signals": ["dll inject", "createremotethread", "loadlibrary", "trampoline", "detour", "hook", "jmp hook", "external memory", "readprocessmemory", "writeprocessmemory", "finddmaaddy", "pointer chain", "naked", "inline asm", "pushad", "anti debug", "isdebuggerpresent", "peb", "manual map", "reflective", "syscall", "direct syscall", "procmon", "process monitor"],
+      "signals": [
+        "dll inject",
+        "createremotethread",
+        "loadlibrary",
+        "trampoline",
+        "detour",
+        "hook",
+        "jmp hook",
+        "external memory",
+        "readprocessmemory",
+        "writeprocessmemory",
+        "finddmaaddy",
+        "pointer chain",
+        "naked",
+        "inline asm",
+        "pushad",
+        "anti debug",
+        "isdebuggerpresent",
+        "peb",
+        "manual map",
+        "reflective",
+        "syscall",
+        "direct syscall",
+        "procmon",
+        "process monitor"
+      ],
       "files": [
         "04-dynamic-analysis/01-dll-injection.md",
         "04-dynamic-analysis/02-trampoline-detour.md",
@@ -42,7 +110,31 @@
     },
     {
       "id": "crypto-unpack",
-      "signals": ["pack", "packer", "unpack", "脱壳", "upx", "aspack", "vmprotect", "vmp", "themida", "scylla", "iat rebuild", "dump", "procdump", "oep", "virtualization", "devirtualization", "handler", "vm entry", "dispatcher", "triton", "vtl", "novmp", "去虚拟化"],
+      "signals": [
+        "pack",
+        "packer",
+        "unpack",
+        "脱壳",
+        "upx",
+        "aspack",
+        "vmprotect",
+        "vmp",
+        "themida",
+        "scylla",
+        "iat rebuild",
+        "dump",
+        "procdump",
+        "oep",
+        "virtualization",
+        "devirtualization",
+        "handler",
+        "vm entry",
+        "dispatcher",
+        "triton",
+        "vtl",
+        "novmp",
+        "去虚拟化"
+      ],
       "files": [
         "05-crypto-unpack/01-pe-unpack-dump.md",
         "05-crypto-unpack/02-vmp-virtualization-analysis.md",
@@ -52,27 +144,138 @@
     },
     {
       "id": "ioc",
-      "signals": ["ip", "domain", "url", "c2", "mutex", "registry", "regkey", "file path", "pipe", "user-agent", "ioc extraction"],
-      "files": ["06-ioc-extraction/01-ioc-extraction.md"],
+      "signals": [
+        "ip",
+        "domain",
+        "url",
+        "c2",
+        "mutex",
+        "registry",
+        "regkey",
+        "file path",
+        "pipe",
+        "user-agent",
+        "ioc extraction"
+      ],
+      "files": [
+        "06-ioc-extraction/01-ioc-extraction.md"
+      ],
       "priority": 8
     },
     {
       "id": "yara-sigma",
-      "signals": ["yara", "sigma", "rule", "detection", "signature", "match", "condition", "pattern", "hex"],
-      "files": ["07-yara-sigma/01-yara-rule-writing.md"],
+      "signals": [
+        "yara",
+        "sigma",
+        "rule",
+        "detection",
+        "signature",
+        "match",
+        "condition",
+        "pattern",
+        "hex"
+      ],
+      "files": [
+        "07-yara-sigma/01-yara-rule-writing.md"
+      ],
       "priority": 7
     },
     {
       "id": "patch",
-      "signals": ["patch", "nop", "jmp", "virtualprotect", "byte patch", "modify", "hxd", "memory patch", "code patch"],
-      "files": ["08-patch/01-code-patching.md"],
+      "signals": [
+        "patch",
+        "nop",
+        "jmp",
+        "virtualprotect",
+        "byte patch",
+        "modify",
+        "hxd",
+        "memory patch",
+        "code patch"
+      ],
+      "files": [
+        "08-patch/01-code-patching.md"
+      ],
       "priority": 8
     },
     {
       "id": "av-evasion",
-      "signals": ["免杀", "av evasion", "antivirus bypass", "shellcode", "loader", "cobalt strike", "meterpreter", "veh", "syscall bypass", "anti sandbox", "杀软绕过", "payload", "msfvenom", "shellcode encrypt", "shellcode obfuscate", "花指令", "junk code", "uuid shellcode", "mac shellcode", "反沙箱", "免杀loader", "defender bypass", "火绒绕过", "360免杀", "卡巴斯基绕过", "edr bypass", "内存保护", "进程注入免杀"],
-      "files": ["09-av-evasion/01-ai-powered-evasion.md"],
+      "signals": [
+        "免杀",
+        "av evasion",
+        "antivirus bypass",
+        "shellcode",
+        "loader",
+        "cobalt strike",
+        "meterpreter",
+        "veh",
+        "syscall bypass",
+        "anti sandbox",
+        "杀软绕过",
+        "payload",
+        "msfvenom",
+        "shellcode encrypt",
+        "shellcode obfuscate",
+        "花指令",
+        "junk code",
+        "uuid shellcode",
+        "mac shellcode",
+        "反沙箱",
+        "免杀loader",
+        "defender bypass",
+        "火绒绕过",
+        "360免杀",
+        "卡巴斯基绕过",
+        "edr bypass",
+        "内存保护",
+        "进程注入免杀"
+      ],
+      "files": [
+        "09-av-evasion/01-ai-powered-evasion.md"
+      ],
       "priority": 10
+    },
+    {
+      "id": "license-keygen",
+      "signals": [
+        "license",
+        "keygen",
+        "注册码",
+        "激活码",
+        "serial",
+        "activation",
+        "CheckKey",
+        "校验函数",
+        "公钥替换",
+        "pubkey swap",
+        "Ed25519",
+        "PGP",
+        "签名链",
+        "自引用签名",
+        "云端授权",
+        "云校验",
+        "试用重置",
+        "MachineGuid",
+        "位域",
+        "CRC 校验",
+        "字符集映射",
+        "哈希拼接",
+        "校验串",
+        "licensed",
+        "trial",
+        "key file",
+        "注册表授权"
+      ],
+      "files": [
+        "10-license-keygen/01-license-mechanism-classification.md",
+        "10-license-keygen/02-validation-function-location.md",
+        "10-license-keygen/03-key-algorithm-recovery.md",
+        "10-license-keygen/04-signature-chain-pubkey-swap.md",
+        "10-license-keygen/05-keygen-frida-verification-loop.md",
+        "10-license-keygen/06-cloud-license-frida-hook.md",
+        "10-license-keygen/07-self-referencing-signature-convergence.md"
+      ],
+      "priority": 9
     }
   ]
 }

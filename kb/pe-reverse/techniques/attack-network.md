@@ -63,6 +63,14 @@ graph TD
     YARA["YARA Rule<br/>07-yara-sigma"]
     SIGMA["Sigma Rule<br/>07-yara-sigma"]
 
+    %% === Layer 4.5: License / Keygen ===
+    LICENSE["License Signal<br/>10-license-keygen"]
+    CHECK_FN["Validation Fn<br/>10-license-keygen"]
+    KEY_REC["Key Algorithm<br/>10-license-keygen"]
+    SIGSWAP["Pubkey Swap<br/>10-license-keygen"]
+    CLOUD["Cloud License<br/>10-license-keygen"]
+    CONVERGE["Self-Ref Converge<br/>10-license-keygen"]
+
     %% === Layer 6: AV Evasion ===
     AV_EVASION["AV Evasion<br/>09-av-evasion"]
     SC_PATCH["Shellcode Patch<br/>09-av-evasion"]
@@ -162,6 +170,21 @@ graph TD
     X64DBG -->|patch verify| PATCH_BYTES
     KEY_RECOVER -->|keygen logic| PATCH_OUT
     BREAKPOINT -->|conditional bp| PATCH
+
+    %% --- Edges: License / Keygen ---
+    STRINGS -->|license/activation strings| LICENSE
+    AOB -->|crc32/pgp signal| LICENSE
+    LICENSE -->|mechanism classify| CHECK_FN
+    GHIDRA -->|decompile entry| CHECK_FN
+    XREF -->|failed-msg backtrack| CHECK_FN
+    CHECK_FN -->|local algorithm| KEY_REC
+    CHECK_FN -->|embedded pubkey| SIGSWAP
+    CHECK_FN -->|network validation| CLOUD
+    CHECK_FN -->|dual-mechanism| CONVERGE
+    KEY_REC -->|frida in-process swap| FRIDA
+    SIGSWAP -->|pubkey patch| PATCH
+    CLOUD -->|hook query surface| FRIDA
+    CONVERGE -->|capture-backfill| FRIDA
 
     %% --- Edges: Patch → AV Evasion ---
     PATCH -->|extract shellcode| SC_PATCH
@@ -276,6 +299,19 @@ Import Table 稀疏 → Ghidra 找 PEB walk/API hash
     ├─ → triage_pe 检查 PE 结构
     ├─ → make_yara_stub 自检规则
     └─ → 实机测试 (WD/火绒/360)
+```
+
+### 路径 5.1: 许可证/keygen (License Signal→Classify→Recover/Swap/Hook→Verify)
+```
+激活信号（注册窗口/文件/注册表）
+  → 机制分类（本地算法/签名链/自引用/云端，10-license-keygen/01）
+  ├─ 本地算法 → 定位校验函数 (02) → 还原算法 (03) → keygen (Python 三段式)
+  │     └─ → Frida 进程内替换验证 (05)
+  ├─ 签名链 → 提取公钥 → 自持密钥对 → 公钥替换 patch (04)
+  │     └─ → 库级完整性自检 → 方法级补丁绕过
+  ├─ 自引用 → 占位注入 → 抓取切片 → 回填收敛 (07)
+  └─ 云端 → 状态伪造 / 查询面 hook / 试用重置 (06)
+  → 实机验证（标志位 0 + 重启保持）→ Report
 ```
 
 ### 路径 6: 恶意样本研判 (Triage→Dynamic→IOC→YARA/Sigma)

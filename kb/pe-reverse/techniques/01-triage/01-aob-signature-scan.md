@@ -193,6 +193,26 @@ def bytes_to_code_pattern(data):
     return ''.join(f'\\x{b:02X}' for b in data)
 ```
 
+## 许可证校验信号的快速识别（keygen 联动）
+
+利用特征码扫描做**策略性初筛**而非全量匹配——先扫下列高价值信号，命中即转
+`10-license-keygen`：
+
+```python
+# 校验函数典型 AOB（行为级，跨版本稳定）:
+#   key 校验失败分支:  cmp al, 0 / jz fail_label 前后的 8-16 字节
+#   CRC 查表现场:     查表基址寻址 + 异或回写（识别 0xEDB88320 系常量）
+HIGH_VALUE_SIGNALS = {
+    "crc32_poly": "20 83 B8 ED",        # CRC-32 标准/自定义 poly 常量
+    "ed25519_pub": None,                # 32B 公钥：用长度+熵做启发式扫描
+    "pgp_pubring": "99 02",             # PGP public key packet 头
+    "compare_loop": "3B ?? / 74 ?? / E8",  # cmp/jz/call 校验循环
+}
+```
+
+命中后的处置链：`10-license-keygen/01`（机制分类）→ `02`（定位）→ `03`（还原）。
+AOB 特征在此场景的定位效率优于字符串（校验函数常无关键字符串）。
+
 ## 攻击链
 
 ```
