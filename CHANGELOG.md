@@ -2,6 +2,42 @@
 
 All notable changes to the open-reverseLab project will be documented in this file.
 
+## [1.2.0] - 2026-09-06
+
+单一 release 标签 `v1.2.0`（本版本无分平台产物差异）。
+
+### Added — 文档站点与知识库
+
+**VitePress 站点上线（Cloudflare Pages）**
+- `feat(site)`：站点部署至 `reverselab.int0.cc`，含工具页、FAQ、自定义 404 与社交预览图
+- CI 自动部署（`deploy-site.yml`）；social preview 生成脚本跨平台化，PNG 直接入库
+- 板块徽章移除 emoji，改用色点标识
+
+**知识库扩充**
+- `feat(kb)`：新增 VMP 虚拟化与反虚拟化技术覆盖
+- 新增 license-keygen 技术分类（10 分类 / 31 篇）
+- 集成 reverse-skills workflows
+
+**项目文档**
+- English README 设为默认、中文版移至 `README.zh.md`（后续以中文为主 + EN/ZH 双版并存）
+- 新增 DeepWiki badge、`SPONSORS.md`（Sentry 致谢）、Contributor Covenant Code of Conduct、非商业声明
+- AI 环境快照协议（首次运行 `env.md` 探测）
+- Discord 风格 22 主题渐变切换器
+- 清理：移除 QQ 群、仅保留 Discord 邀请链接；修复死链并恢复 JSHookLocal 上游
+- prompts：平台感知的 AI 安装提示，并忽略嵌套项目
+
+### Fixed — Windows CI / 中文输出
+
+- 全局设置 `PYTHONIOENCODING=utf-8`；`ai_context` / `ai_toolcheck` 强制 UTF-8 stdout（修复 CJK 上下文 JSON 异常）
+- `kb_router` 返回 POSIX 风格路径（Windows CI 测试修复）
+- toolcheck 失败详情截断上限提升至 1500 字符（便于 CI 排障）
+- 处理 Windows 首次运行 UX 建议（issue #13）
+- 忽略本地 `.reasonix` 目录与生成的社交预览图
+
+### Notes
+
+- 英文站点（`site/en`）工作仍在进行中，未纳入本版本。
+
 ## [1.1.0] - 2026-07-08
 
 分平台 release 标签：
