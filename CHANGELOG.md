@@ -2,6 +2,24 @@
 
 All notable changes to the open-reverseLab project will be documented in this file.
 
+## [Unreleased] - 2026-09-07
+
+### Changed — README 重设计
+
+- `docs(readme)`：重写 `README.md` 与 `README.zh.md`，对用户 / 赞助者 / 维护者三类受众都更友好：
+  - 顶部居中 hero + 一句话定位 + 5 个浅色徽章（Docs / Discord / DeepWiki / License / Sponsor）
+  - **新增「Sponsored by Sentry」赞助位**，紧跟 hero，使用 `<picture>` 暗 / 亮双 wordmark 显著展示
+  - 新增「What is ReverseLab / 这是什么」「Who is this for / 适合谁」定位与受众说明
+  - 「快速开始」按角色拆分为「For humans / 给真人」与「For AI Agents / 面向 AI Agent」两段，长命令用 `<details>` 折叠
+  - 知识库统计改为「180+ 篇文章」口径，避免每次新增文章都要改单元格
+  - 链接到 `reverselab.int0.cc` 文档站作为权威信息源（站点是每次部署重新生成的）
+  - 「Sponsors」独立区块，二次露出 Sentry 并附赞助入口（`SPONSORS.md` + 邮箱）
+- `feat(assets)`：新增 `assets/sponsors/sentry-wordmark-light.svg` 与 `sentry-wordmark-dark.svg`（Sentry 品牌色 `#362D59` + 自适配暗色）
+
+### Fixed
+
+- README 中所有引用文件均已对照 git 索引（`START.md` / `START_HERE.bat` / `START_HERE.cmd` / `START_HERE.sh` / `.github/CONTRIBUTING.md` / `.github/CODE_OF_CONDUCT.md` / `SPONSORS.md`），不再有指向不存在文件的链接
+
 ## [1.2.0] - 2026-09-06
 
 单一 release 标签 `v1.2.0`（本版本无分平台产物差异）。
