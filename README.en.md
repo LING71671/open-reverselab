@@ -235,18 +235,31 @@ If something here disagrees with the site, **the site wins** — it is regenerat
 
 ReverseLab is sustained by people and organizations that fund the infrastructure, tooling, and review time.
 
-| Since | Sponsor | Support |
-| --- | --- | --- |
-| 2026-08 | **[Sentry](https://sentry.io)** | Sponsored account — error monitoring & performance tracing platform |
+<table width="100%">
+  <thead>
+    <tr>
+      <th width="180" align="left">Logo</th>
+      <th align="left">Sponsor / 赞助方</th>
+      <th width="110" align="left">Since / 时间</th>
+      <th align="left">Support / 支持内容</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="left" valign="middle">
+        <a href="https://sentry.io"><picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
+          <img src="assets/sponsors/sentry-wordmark-light.svg" width="150" alt="Sentry">
+        </picture></a>
+      </td>
+      <td valign="middle"><strong><a href="https://sentry.io">Sentry</a></strong></td>
+      <td valign="middle">2026-08</td>
+      <td valign="middle">Sponsored account — error monitoring &amp; performance tracing platform（错误监控与性能追踪平台）</td>
+    </tr>
+  </tbody>
+</table>
 
-<p align="center">
-  <a href="https://sentry.io"><picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-    <img src="assets/sponsors/sentry-wordmark-light.svg" width="200" alt="Sentry">
-  </picture></a>
-</p>
-
-**Want to sponsor?** See [SPONSORS.md](SPONSORS.md) or email **lingmoumou53@gmail.com** — we list every sponsor, big or small, with the support they provide.
+**Want to sponsor?** See [SPONSORS.md](SPONSORS.md) or email **belloshehubz@gmail.com** — we list every sponsor, big or small, with the support they provide.
 
 ---
 

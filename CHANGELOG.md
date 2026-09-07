@@ -16,6 +16,8 @@ All notable changes to the open-reverseLab project will be documented in this fi
   - 「Sponsors」独立区块，二次露出 Sentry 并附赞助入口（`SPONSORS.md` + 邮箱）
 - `feat(assets)`：新增 `assets/sponsors/sentry-wordmark-light.svg` 与 `sentry-wordmark-dark.svg`（Sentry 品牌色 `#362D59` + 自适配暗色）
 - `docs(readme)`：**中文改为默认语言** —— `README.md` 现为中文版，英文版移至 `README.en.md`，原 `README.zh.md` 移除（与 v1.2.0「后续以中文为主 + EN/ZH 双版并存」的方向一致）；两版顶部均加语言切换行（`简体中文 · English`）
+- `docs(sponsors)`：赞助方表格由 markdown 表格改为 `<table width="100%">` HTML 表格并新增 Logo 列（Sentry wordmark 直接入表），解决宽屏下表格不撑满、内容单薄的问题；`README.md` / `README.en.md` / `SPONSORS.md` 三处同步
+- `docs(sponsors)`：赞助联系邮箱更新为 **belloshehubz@gmail.com**（原 `lingmoumou53@gmail.com`），`README.md` / `README.en.md` / `SPONSORS.md` 三处同步
 
 ### Fixed
 

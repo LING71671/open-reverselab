@@ -235,18 +235,31 @@ cases/        轻量索引 —— 不复制大文件
 
 ReverseLab 的持续运营靠的是为基础设施、工具、审稿时间投入资源的人与组织。
 
-| 时间 | 赞助方 | 支持内容 |
-| --- | --- | --- |
-| 2026-08 | **[Sentry](https://sentry.io)** | 赞助账户 —— 错误监控与性能追踪平台 |
+<table width="100%">
+  <thead>
+    <tr>
+      <th width="180" align="left">Logo</th>
+      <th align="left">赞助方 / Sponsor</th>
+      <th width="110" align="left">时间 / Since</th>
+      <th align="left">支持内容 / Support</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="left" valign="middle">
+        <a href="https://sentry.io"><picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
+          <img src="assets/sponsors/sentry-wordmark-light.svg" width="150" alt="Sentry">
+        </picture></a>
+      </td>
+      <td valign="middle"><strong><a href="https://sentry.io">Sentry</a></strong></td>
+      <td valign="middle">2026-08</td>
+      <td valign="middle">赞助账户 —— 错误监控与性能追踪平台（error monitoring &amp; performance tracing）</td>
+    </tr>
+  </tbody>
+</table>
 
-<p align="center">
-  <a href="https://sentry.io"><picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-    <img src="assets/sponsors/sentry-wordmark-light.svg" width="200" alt="Sentry">
-  </picture></a>
-</p>
-
-**想成为赞助方？** 见 [SPONSORS.md](SPONSORS.md)，或邮件联系 **lingmoumou53@gmail.com** —— 无论大小，每一位赞助者都会被列出，并注明所提供支持。
+**想成为赞助方？** 见 [SPONSORS.md](SPONSORS.md)，或邮件联系 **belloshehubz@gmail.com** —— 无论大小，每一位赞助者都会被列出，并注明所提供支持。
 
 ---
 
