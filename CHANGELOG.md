@@ -2,7 +2,9 @@
 
 All notable changes to the open-reverseLab project will be documented in this file.
 
-## [Unreleased] - 2026-09-07
+## [1.2.1] - 2026-09-07
+
+单一 release 标签 `v1.2.1`。本版本为纯文档 / 品牌变更，无分平台产物差异，也不需要重新下载工具链。
 
 ### Changed — README 重设计
 
