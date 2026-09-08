@@ -1,6 +1,12 @@
 <div align="center">
 
-# ReverseLab
+# Open-ReverseLab — AI Reverse Engineering Agent & MCP Lab
+
+**Open-source AI-powered reverse-engineering platform for autonomous binary analysis, built for Claude Code, Codex, OpenCode and any MCP-compatible agent.**
+
+Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Binary Analysis
+
+---
 
 **An open-source reverse-engineering lab — executable knowledge base, 100+ MCP tools, Agent-native.**
 

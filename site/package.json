@@ -5,8 +5,8 @@
   "type": "module",
   "description": "ReverseLab VitePress documentation site",
   "scripts": {
-    "dev": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && vitepress dev .",
-    "build": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && vitepress build .",
+    "dev": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && vitepress dev .",
+    "build": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && vitepress build .",
     "preview": "vitepress preview ."
   },
   "devDependencies": {
