@@ -30,7 +30,7 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Bi
 
 <div align="center">
 
-**[Sentry](https://sentry.io)** 为 `openreverselab` 提供赞助账户 —— 错误监控与性能追踪平台，覆盖实验室全工具链。
+**[Sentry](https://sentry.io)** 为 `openreverselab` 提供赞助账户 —— 行业领先的错误监控与性能追踪平台。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
