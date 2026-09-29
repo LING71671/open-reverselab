@@ -1,5 +1,6 @@
-import { Plus, Workflow, ScrollText, Gauge, Database, FolderGit2, Settings } from "lucide-react";
+import { Plus, Workflow, ScrollText, Gauge, Database, Settings } from "lucide-react";
 import { HarnessView, SessionItem, useI18n } from "../../../core";
+import { Logo } from "../Logo";
 
 interface SidebarProps {
   sessions: SessionItem[];
@@ -153,7 +154,7 @@ export function Sidebar({
 
         <div className="flex items-center justify-between px-2.5 text-[10px] font-mono text-zinc-600">
           <div className="flex items-center gap-1.5">
-            <FolderGit2 className="w-3 h-3 text-zinc-600" />
+            <Logo size={12} className="text-zinc-500 hover:text-zinc-300" />
             <span className="text-zinc-500">open-reverseLab</span>
           </div>
           <span>v0.1.0</span>

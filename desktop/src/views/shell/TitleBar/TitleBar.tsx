@@ -1,4 +1,5 @@
 import { Minus, Square, X } from "lucide-react";
+import { Logo } from "../Logo";
 
 export function TitleBar({ title }: { title?: string }) {
   const handleMinimize = async () => {
@@ -31,12 +32,12 @@ export function TitleBar({ title }: { title?: string }) {
   return (
     <div
       data-tauri-drag-region
-      className="h-10 w-full bg-[#09090b] border-b border-zinc-900 flex items-center justify-between px-3 select-none shrink-0 z-50 text-zinc-400"
+      className="h-10 w-full bg-[#09090b] border-b border-zinc-900 flex items-center justify-between px-3 select-none shrink-0 z-50 text-zinc-400 font-sans"
     >
       <div className="flex items-center gap-3 pointer-events-none">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-zinc-400"></span>
-          <span className="text-xs font-mono font-semibold tracking-wider text-zinc-200">
+        <div className="flex items-center gap-2.5">
+          <Logo size={14} className="text-zinc-100" />
+          <span className="text-xs font-semibold tracking-wider text-zinc-200">
             REVERSE-LAB
           </span>
         </div>

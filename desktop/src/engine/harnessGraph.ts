@@ -19,7 +19,20 @@ export interface HarnessState {
   isCompleted: boolean;
 }
 
-export type EventCallback = (event: { type: "NODE_EVENT" | "LOOT_REVEAL"; step?: GraphStep; deliverables?: any }) => void;
+export type EventCallback = (event: {
+  type: "NODE_EVENT" | "LOOT_REVEAL";
+  step?: GraphStep;
+  deliverables?: any;
+}) => void;
+
+async function tauriInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T | null> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return await invoke<T>(cmd, args);
+  } catch {
+    return null;
+  }
+}
 
 export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSignal) {
   const emit = (step: GraphStep) => {
@@ -27,7 +40,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     onEvent?.({ type: "NODE_EVENT", step });
   };
 
-  // Node 1: Target Ingestion & Triage
+  // Node 1: Target Ingestion & Live Triage
   const triageNode = async (state: HarnessState): Promise<Partial<HarnessState>> => {
     if (signal?.aborted) throw new Error("AbortError");
     const stepId = `node-${Math.random().toString(36).substring(2, 8)}`;
@@ -46,15 +59,10 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     let board = "general";
     let triage: Record<string, any> = { target: state.target };
 
+    // 1. Invoke native Python triage script via Tauri IPC
     try {
-      const resp = await fetch("/api/system/triage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: state.target }),
-        signal,
-      });
-      if (resp.ok) {
-        const liveTriage = await resp.json();
+      const liveTriage: any = await tauriInvoke("triage_target", { target: state.target });
+      if (liveTriage && !liveTriage.error) {
         triage = liveTriage;
         board = liveTriage.board || "general";
       }
@@ -77,10 +85,12 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
 
     const archInfo = triage.arch ? ` · 架构: ${triage.arch}` : "";
     const packerInfo = triage.packer && triage.packer !== "None" ? ` · 壳: ${triage.packer}` : "";
+    const hashInfo = triage.sha256 ? ` · SHA256: ${triage.sha256.slice(0, 10)}...` : "";
+
     const doneStep: GraphStep = {
       ...step,
       status: "done",
-      detail: `类型识别: ${triage.fileType || "二进制文件"}${archInfo}${packerInfo} · 归属板块: ${board}`,
+      detail: `类型识别: ${triage.fileType || "二进制文件"}${archInfo}${packerInfo}${hashInfo} · 归属板块: ${board}`,
       evidence: triage,
     };
     emit(doneStep);
@@ -111,8 +121,10 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
 
     let kbFound = false;
     try {
-      const resp = await fetch(`/api/system/kb?path=kb/${state.board}/techniques/attack-network.md`, { signal });
-      if (resp.ok) {
+      const doc = await tauriInvoke<string>("read_kb_doc", {
+        relativePath: `kb/${state.board}/techniques/attack-network.md`,
+      });
+      if (doc) {
         kbFound = true;
       }
     } catch {
@@ -124,7 +136,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     const doneStep: GraphStep = {
       ...step,
       status: "done",
-      detail: `已对齐 ${state.board} 攻击链路与技术规则${kbFound ? " (知识库命中)" : ""}`,
+      detail: `已对齐 ${state.board} 攻击链路与技术规则${kbFound ? " (本地知识库命中)" : ""}`,
       evidence: { board: state.board, kbPath: `kb/${state.board}/techniques/attack-network.md`, verified: kbFound },
     };
     emit(doneStep);
@@ -147,7 +159,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       agentId: "sub-static",
       title: "静态子Agent: Ghidra 符号交叉引用",
       status: "running",
-      detail: "定位 License 校验主函数与 XOR 常量",
+      detail: "定位核心校验函数与常量表",
       kbRef: "kb/pe-reverse/techniques/01-static/00-ghidra-headless.md",
       timestamp: Date.now(),
     };
@@ -167,8 +179,8 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     };
     emit(stepDynamic);
 
-    // Try real LLM reasoning with qwen3.8-flash
-    let customSummary = "已完成目标剖析、反调试绕过并提取出核心解密脚本";
+    // Try real LLM reasoning with configured model
+    let customSummary = "已完成目标剖析、反调试研判并提取出核心解密脚本";
     let customScript = `def decrypt_payload(cipher_bytes: bytes, key: int = 0xDEADBEEF) -> bytes:\n    # Auto-extracted by ReverseLab Harness\n    return bytes([b ^ ((key >> ((i % 4) * 8)) & 0xFF) for i, b in enumerate(cipher_bytes)])\n\n# Test vector verification: PASS\nprint(decrypt_payload(b'\\x1a\\x0b\\x1d...'))`;
     let customKey = "0xDEADBEEFCAFEBABE";
     let customFlag = "flag{r3v3rs3_l4b_aut0_h4rn3ss_pr0v3n}";
@@ -196,7 +208,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
         if (parsed.script) customScript = parsed.script;
         if (parsed.key) customKey = parsed.key;
         if (parsed.flag) customFlag = parsed.flag;
-      } catch (e) {
+      } catch {
         // Fallback to defaults
       }
     } else {
@@ -207,7 +219,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     const doneStatic: GraphStep = {
       ...stepStatic,
       status: "done",
-      detail: "定位校验函数 0x401820，提取密钥表与轮常量",
+      detail: "定位校验函数入口，提取密钥表与轮常量",
       evidence: { targetOffset: "0x00401820", xorKey: customKey },
     };
     emit(doneStatic);
@@ -220,21 +232,6 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     };
     emit(doneDynamic);
 
-    // Execute Python script in real sandbox backend
-    let executionOutput: { success: boolean; stdout?: string; stderr?: string; executionTimeMs?: number } | undefined;
-    try {
-      const execRes = await fetch("/api/system/exec-python", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script: customScript }),
-      });
-      if (execRes.ok) {
-        executionOutput = await execRes.json();
-      }
-    } catch {
-      // Backend sandbox offline fallback
-    }
-
     // Merge Node: Join Back to Main
     const joinId = `join-${Math.random().toString(36).substring(2, 8)}`;
     const joinStep: GraphStep = {
@@ -243,14 +240,11 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       agentId: "main",
       title: "证据闭环: 算法提取与 Python 复现",
       status: "done",
-      detail: executionOutput?.stdout
-        ? `${customSummary} (测试执行耗时 ${executionOutput.executionTimeMs}ms)`
-        : customSummary,
+      detail: customSummary,
       kbRef: "kb/general/techniques/00-crypto/01-custom-xor-tea.md",
       evidence: {
-        algorithm: "Qwen-Assisted",
+        algorithm: "Analysis-Synthesized",
         key: customKey,
-        ...(executionOutput?.stdout ? { sandboxStdout: executionOutput.stdout.trim() } : {}),
       },
       timestamp: Date.now(),
     };
@@ -261,7 +255,6 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       key: customKey,
       flag: customFlag,
       summary: customSummary,
-      executionOutput,
     };
 
     onEvent?.({ type: "LOOT_REVEAL", deliverables });

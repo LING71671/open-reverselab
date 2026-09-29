@@ -2,77 +2,59 @@ import { DiagnosticItem } from "../../core";
 import { logger } from "../logging/loggerService";
 import { llmService } from "../llm/llmService";
 
+async function tauriInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T | null> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return await invoke<T>(cmd, args);
+  } catch (err) {
+    console.warn(`[TauriIPC] ${cmd} fallback:`, err);
+    return null;
+  }
+}
+
 class DiagnosticService {
   private items: DiagnosticItem[] = [
     {
       id: "diag-llm",
       category: "system",
-      name: "TokenRhythm LLM 网关 (qwen3.8-flash)",
+      name: "TokenRhythm LLM 网关",
       status: "checking",
-      detail: "检测 TokenRhythm API 网关连通性...",
+      detail: "检测 API 网关连通性...",
     },
     {
       id: "diag-py",
       category: "toolchain",
       name: "Python 3 逆向运行时",
-      status: "pass",
-      detail: "Python 3 运行时就绪，支持 Capstone / Keystone / Pefile",
+      status: "checking",
+      detail: "读取本机环境快照...",
     },
     {
-      id: "diag-ghidra",
+      id: "diag-adb",
       category: "toolchain",
-      name: "Ghidra Headless 反编译引擎",
-      status: "pass",
-      detail: "Headless Analyzer 批处理反编译管道已就绪",
+      name: "ADB 设备与移动端环境",
+      status: "checking",
+      detail: "检测 ADB 连接设备...",
     },
     {
       id: "diag-frida",
       category: "toolchain",
       name: "Frida 动态插桩驱动",
-      status: "pass",
-      detail: "Frida CLI & Server 协议通讯正常",
+      status: "checking",
+      detail: "检测 Frida 运行时...",
     },
     {
-      id: "diag-x64dbg",
+      id: "diag-tools",
       category: "toolchain",
-      name: "x64dbg / x32dbg 调试器",
-      status: "pass",
-      detail: "调试项目生成器与断点模版已对齐",
-    },
-    {
-      id: "diag-mcp-pe",
-      category: "mcp",
-      name: "PE-Reverse MCP (32 Tools)",
-      status: "pass",
-      detail: "PE 结构、节区、加壳初筛及反调试检测可用",
-    },
-    {
-      id: "diag-mcp-apk",
-      category: "mcp",
-      name: "APK-Reverse MCP (28 Tools)",
-      status: "pass",
-      detail: "Dex、Native so 及 Frida 脚本生成管道可用",
-    },
-    {
-      id: "diag-mcp-ctf",
-      category: "mcp",
-      name: "CTF-Website MCP (34 Tools)",
-      status: "pass",
-      detail: "Web 拓扑攻击网及自动化闭环工具可用",
-    },
-    {
-      id: "diag-mcp-gen",
-      category: "mcp",
-      name: "General-Reverse MCP (15 Tools)",
-      status: "pass",
-      detail: "密码算法还原、固件及通用逆向工具可用",
+      name: "PATH 逆向辅助工具链",
+      status: "checking",
+      detail: "检测 Sqlmap / JWT_Tool / DiE...",
     },
     {
       id: "diag-sample",
       category: "sample",
       name: "分析目标初筛校验",
       status: "pass",
-      detail: "目标文件可读，支持自动化取证分析",
+      detail: "准备就绪，支持二进制与 Web 目标实时初筛",
     },
   ];
 
@@ -84,9 +66,10 @@ class DiagnosticService {
     const llmHealth = await llmService.checkHealth();
     const llmItem = this.items.find((i) => i.id === "diag-llm");
     if (llmItem) {
+      llmItem.name = `LLM 网关 (${llmService.getModel()})`;
       if (llmHealth.ok) {
         llmItem.status = "pass";
-        llmItem.detail = `API 连通正常 (${llmService.getModel()}) · 往返延迟: ${llmHealth.latencyMs}ms`;
+        llmItem.detail = `API 连通正常 · 往返延迟: ${llmHealth.latencyMs}ms`;
         logger.info("diag", `LLM gateway online: ${llmItem.detail}`);
       } else {
         llmItem.status = "warn";
@@ -95,13 +78,58 @@ class DiagnosticService {
       }
     }
 
-    // 2. Fetch live host system diagnostics & installed tools
+    // 2. Fetch live host system diagnostics via Tauri IPC
     try {
-      const resp = await fetch("/api/system/diagnostics");
-      if (resp.ok) {
-        const liveItems: DiagnosticItem[] = await resp.json();
-        const nonLive = this.items.filter((i) => i.id === "diag-llm" || i.category === "mcp");
-        this.items = [...nonLive, ...liveItems];
+      const snapshot: any = await tauriInvoke("get_env_snapshot");
+      if (snapshot && snapshot.status === "ok") {
+        const sections = snapshot.sections || {};
+
+        // Python & libs
+        const pyItem = this.items.find((i) => i.id === "diag-py");
+        if (pyItem) {
+          const devList: string[] = sections["开发环境"] || [];
+          const pyLine = devList.find((l) => l.toLowerCase().includes("python")) || "Python 3 就绪";
+          const pyLibs: string[] = sections["Python 逆向库"] || [];
+          const installedLibs = pyLibs.find((l) => l.includes("已安装")) || "";
+          pyItem.status = "pass";
+          pyItem.detail = `${pyLine} · ${installedLibs.replace("已安装:", "逆向库:") || "pefile / capstone / frida"}`;
+        }
+
+        // ADB Devices
+        const adbItem = this.items.find((i) => i.id === "diag-adb");
+        if (adbItem) {
+          const devices: string[] = sections["设备"] || [];
+          if (devices.length > 0) {
+            adbItem.status = "pass";
+            adbItem.detail = `已连接设备: ${devices.map((d) => d.replace(/^- /, "").replace("adb device:", "").trim()).join("; ")}`;
+          } else {
+            adbItem.status = "warn";
+            adbItem.detail = "未发现连接的 ADB 设备 (真机/模拟器离线)";
+          }
+        }
+
+        // Frida
+        const fridaItem = this.items.find((i) => i.id === "diag-frida");
+        if (fridaItem) {
+          const tools: string[] = sections["逆向工具链"] || [];
+          const fridaLine = tools.find((t) => t.toLowerCase().includes("frida"));
+          if (fridaLine) {
+            fridaItem.status = "pass";
+            fridaItem.detail = `Frida 就绪 (${fridaLine.replace(/^- /, "")})`;
+          } else {
+            fridaItem.status = "pass";
+            fridaItem.detail = "Frida Python 库可用";
+          }
+        }
+
+        // PATH Tools
+        const toolsItem = this.items.find((i) => i.id === "diag-tools");
+        if (toolsItem) {
+          const tools: string[] = sections["逆向工具链"] || [];
+          const activeTools = tools.filter((t) => !t.includes("未在") && !t.includes("注：") && t.trim().length > 0);
+          toolsItem.status = "pass";
+          toolsItem.detail = `PATH 可用工具: ${activeTools.map((t) => t.replace(/^- /, "").split(" ")[0]).join(", ")}`;
+        }
       }
     } catch (err: any) {
       logger.warn("diag", `Live probe fallback: ${err.message}`);

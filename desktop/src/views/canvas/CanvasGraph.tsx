@@ -115,9 +115,9 @@ function FlowInner({ steps, selectedStep, onSelectStep }: CanvasGraphProps) {
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={20}
+          gap={24}
           size={1.5}
-          color="#3f3f46"
+          color="#52525b"
         />
         <Controls className="!m-4 !border-zinc-800 !bg-[#121215]" />
       </ReactFlow>
