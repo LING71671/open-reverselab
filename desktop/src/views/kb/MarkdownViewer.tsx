@@ -1,10 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, Copy } from "lucide-react";
+import remarkFrontmatter from "remark-frontmatter";
+import { Check, Copy, Tag, Compass } from "lucide-react";
 
 interface MarkdownViewerProps {
   content: string;
+}
+
+function parseFrontmatter(raw: string) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(raw.trim());
+  if (!match) {
+    return { meta: null, body: raw };
+  }
+
+  const yaml = match[1];
+  const body = match[2];
+
+  let summary = "";
+  let difficulty = "";
+  const tags: string[] = [];
+
+  const summaryMatch = /summary:\s*>?\s*\n?([^\n]+(?:\n\s+[^\n]+)*)/.exec(yaml);
+  if (summaryMatch) {
+    summary = summaryMatch[1].replace(/\n\s+/g, " ").trim();
+  }
+
+  const diffMatch = /difficulty:\s*["']?([^"'\n]+)/.exec(yaml);
+  if (diffMatch) {
+    difficulty = diffMatch[1].trim();
+  }
+
+  const tagsMatch = /tags:\s*\n((?:\s*-\s*[^\n]+\n?)+)/.exec(yaml);
+  if (tagsMatch) {
+    for (const line of tagsMatch[1].split("\n")) {
+      const clean = line.replace(/^\s*-\s*["']?/, "").replace(/["']?\s*$/, "").trim();
+      if (clean) tags.push(clean);
+    }
+  }
+
+  return {
+    meta: { summary, difficulty, tags },
+    body,
+  };
 }
 
 function CodeBlock({ children, className }: { children?: React.ReactNode; className?: string }) {
@@ -51,10 +89,40 @@ function CodeBlock({ children, className }: { children?: React.ReactNode; classN
 }
 
 export function MarkdownViewer({ content }: MarkdownViewerProps) {
+  const { meta, body } = useMemo(() => parseFrontmatter(content), [content]);
+
   return (
-    <div className="markdown-body select-text font-sans text-xs text-zinc-300 leading-relaxed space-y-3">
+    <div className="markdown-body select-text font-sans text-xs text-zinc-300 leading-relaxed space-y-3 p-6">
+      {/* Clean Structured Metadata Header parsed from Front-Matter */}
+      {meta && (meta.summary || meta.tags.length > 0) && (
+        <div className="mb-6 p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/80 space-y-2.5">
+          {meta.summary && (
+            <div className="flex items-start gap-2 text-zinc-300 text-xs leading-relaxed font-sans">
+              <Compass className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+              <span>{meta.summary}</span>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            {meta.difficulty && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-750 uppercase">
+                {meta.difficulty}
+              </span>
+            )}
+            {meta.tags.slice(0, 5).map((t, idx) => (
+              <span
+                key={idx}
+                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-950 text-zinc-400 border border-zinc-800 flex items-center gap-1"
+              >
+                <Tag className="w-2.5 h-2.5 text-zinc-500" />
+                <span>{t}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkFrontmatter]}
         components={{
           h1: ({ children }) => (
             <h1 className="text-base font-bold text-zinc-100 pb-2 border-b border-zinc-800 mt-6 mb-3 first:mt-0 font-sans tracking-tight">
@@ -147,7 +215,7 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
           ),
         }}
       >
-        {content}
+        {body}
       </ReactMarkdown>
     </div>
   );
