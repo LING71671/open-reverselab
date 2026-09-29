@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { BookOpen, FileCode, Search, ChevronRight, X, Play, Code2 } from "lucide-react";
 import { useI18n } from "../../core";
+import { MarkdownViewer } from "./MarkdownViewer";
 
 interface KbNavigatorProps {
   onSelectTechnique?: (ref: string) => void;
@@ -295,8 +296,8 @@ export function KbNavigator({ onSelectTechnique }: KbNavigatorProps) {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 p-6 overflow-y-auto font-mono text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap select-text bg-[#09090b]">
-              {activeDoc.content}
+            <div className="flex-1 p-6 overflow-y-auto bg-[#09090b]">
+              <MarkdownViewer content={activeDoc.content} />
             </div>
 
             {/* Footer */}
