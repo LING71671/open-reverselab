@@ -91,7 +91,7 @@ export function PromptConsole({
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t.prompt.wishPlaceholder}
-            className="w-full bg-transparent text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none font-mono leading-relaxed"
+            className="w-full bg-transparent text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none font-sans leading-relaxed"
           />
         </div>
 
@@ -115,10 +115,10 @@ export function PromptConsole({
                   type="button"
                   onClick={() => setIsEditingTarget(true)}
                   title={t.common.target}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-[11px] font-mono text-zinc-300 transition-all active:scale-95 cursor-pointer truncate max-w-[200px]"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-[11px] font-medium text-zinc-300 transition-all active:scale-95 cursor-pointer truncate max-w-[200px]"
                 >
                   <Paperclip className="w-3 h-3 text-zinc-400 shrink-0" />
-                  <span className="truncate">{target}</span>
+                  <span className="truncate">{target || t.common.target}</span>
                 </button>
 
                 <button
