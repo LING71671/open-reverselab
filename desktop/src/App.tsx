@@ -29,6 +29,7 @@ function AppContent() {
     isRunning,
     isToolMonitorOpen,
     executeHarness,
+    stopHarness,
     clearLogs,
     newSession,
     selectSession,
@@ -96,6 +97,7 @@ function AppContent() {
             isRunning={isRunning}
             defaultTarget={currentSession?.target}
             onExecute={executeHarness}
+            onStop={stopHarness}
           />
         </div>
 

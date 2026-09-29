@@ -73,15 +73,8 @@ export function PromptConsole({
     }
   };
 
-  const quickChips = [
-    { label: t.prompt.chipUpx, prompt: "Unpack and recover verification algorithm with python script" },
-    { label: t.prompt.chipAntiDebug, prompt: "Bypass IsDebuggerPresent anti-debug branch and dump payload" },
-    { label: t.prompt.chipNative, prompt: "Locate libsecurity.so exported symbols and recover encryption key" },
-    { label: t.prompt.chipJwt, prompt: "Audit JWT auth token vulnerabilities and generate exploit" },
-  ];
-
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 z-20">
+    <div className="w-full max-w-2xl mx-auto p-4 z-20">
       <input
         type="file"
         ref={fileInputRef}
@@ -89,37 +82,55 @@ export function PromptConsole({
         className="hidden"
       />
 
-      <div className="rounded-2xl bg-[#121215]/95 border border-zinc-800 shadow-2xl backdrop-blur-xl p-3 flex flex-col gap-2.5 transition-all">
-        {/* Top Control Bar: Mode Capsule + Target Pill */}
-        <div className="flex items-center justify-between gap-3 px-1">
-          <div className="flex items-center p-0.5 rounded-lg bg-zinc-950/80 border border-zinc-900">
-            <button
-              type="button"
-              onClick={() => setMode("wish")}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition cursor-pointer ${
-                mode === "wish"
-                  ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <Sparkles className="w-3 h-3 text-zinc-300" />
-              <span>{t.prompt.wish}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("interactive")}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition cursor-pointer ${
-                mode === "interactive"
-                  ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <Terminal className="w-3 h-3 text-zinc-300" />
-              <span>{t.prompt.interactive}</span>
-            </button>
-          </div>
+      <div className="rounded-xl bg-[#121215]/95 border border-zinc-800/90 shadow-2xl backdrop-blur-xl transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40">
+        {/* 1. Main Text Input Area */}
+        <div className="p-3 pb-1.5">
+          <textarea
+            ref={textareaRef}
+            rows={2}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              mode === "wish" ? t.prompt.wishPlaceholder : t.prompt.interactivePlaceholder
+            }
+            className="w-full bg-transparent text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none font-mono leading-relaxed"
+          />
+        </div>
 
-          <div className="flex items-center gap-1.5">
+        {/* 2. Unified Bottom Actions Toolbar */}
+        <div className="px-2.5 pb-2 pt-1 flex items-center justify-between gap-2 border-t border-zinc-900/60">
+          {/* Left: Mode Switcher + Target File Attachment */}
+          <div className="flex items-center gap-1.5 overflow-x-auto min-w-0">
+            {/* Mode Capsule */}
+            <div className="flex items-center p-0.5 rounded-lg bg-zinc-950 border border-zinc-800/80 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMode("wish")}
+                title={t.prompt.wish}
+                className={`p-1.5 rounded-md transition-all cursor-pointer active:scale-95 ${
+                  mode === "wish"
+                    ? "bg-zinc-800 text-zinc-100 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("interactive")}
+                title={t.prompt.interactive}
+                className={`p-1.5 rounded-md transition-all cursor-pointer active:scale-95 ${
+                  mode === "interactive"
+                    ? "bg-zinc-800 text-zinc-100 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Target Attachment Chip */}
             {isEditingTarget ? (
               <input
                 type="text"
@@ -128,84 +139,56 @@ export function PromptConsole({
                 onChange={(e) => setTarget(e.target.value)}
                 onBlur={() => setIsEditingTarget(false)}
                 onKeyDown={(e) => e.key === "Enter" && setIsEditingTarget(false)}
-                className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-xs font-mono text-zinc-200 focus:outline-none"
+                className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-[11px] font-mono text-zinc-200 focus:outline-none shrink-0"
               />
             ) : (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink min-w-0">
                 <button
                   type="button"
                   onClick={() => setIsEditingTarget(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-[11px] font-mono text-zinc-300 transition cursor-pointer"
+                  title={t.common.target}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-[11px] font-mono text-zinc-300 transition-all active:scale-95 cursor-pointer truncate max-w-[200px]"
                 >
-                  <Paperclip className="w-3 h-3 text-zinc-500" />
-                  <span className="text-zinc-500">{t.common.target}:</span>
-                  <span className="truncate max-w-[200px]">{target}</span>
+                  <Paperclip className="w-3 h-3 text-zinc-400 shrink-0" />
+                  <span className="truncate">{target}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
+                  title={t.common.target}
+                  className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all active:scale-95 cursor-pointer shrink-0"
                 >
                   <UploadCloud className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Big Input Area */}
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            rows={3}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              mode === "wish" ? t.prompt.wishPlaceholder : t.prompt.interactivePlaceholder
-            }
-            className="w-full bg-transparent px-2 py-1 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none resize-none font-sans leading-relaxed"
-          />
-        </div>
-
-        {/* Bottom Bar: Quick Chips + Run/Stop Action */}
-        <div className="flex items-center justify-between gap-3 pt-1 border-t border-zinc-900/60">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            {quickChips.map((chip, idx) => (
-              <button
-                type="button"
-                key={idx}
-                onClick={() => setPrompt(chip.prompt)}
-                className="px-2 py-0.5 rounded bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800/60 text-[11px] font-mono text-zinc-400 hover:text-zinc-200 transition whitespace-nowrap cursor-pointer"
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-
+          {/* Right: Shortcut Badge + Silky Submit/Stop Button */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-mono text-zinc-600 hidden sm:inline">
-              Ctrl + Enter
-            </span>
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800/80 text-[10px] font-mono text-zinc-500 hidden sm:inline-block">
+              ⌘↵
+            </kbd>
+
             {isRunning ? (
               <button
                 type="button"
                 onClick={onStop}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-800/60 text-rose-200 text-xs font-mono transition cursor-pointer"
+                title={t.common.stop}
+                className="w-7 h-7 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 flex items-center justify-center transition-all duration-200 active:scale-90 animate-pulse cursor-pointer shadow-sm"
               >
-                <Square className="w-3 h-3 fill-rose-200" />
-                <span>{t.common.stop}</span>
+                <Square className="w-3 h-3 fill-rose-300" />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={!prompt.trim()}
-                className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium transition disabled:opacity-30 cursor-pointer"
+                title={t.common.run}
+                className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 flex items-center justify-center transition-all duration-200 active:scale-90 disabled:opacity-20 disabled:hover:bg-zinc-100 cursor-pointer shadow-sm"
               >
-                <span>{t.common.run}</span>
-                <ArrowUp className="w-3.5 h-3.5" />
+                <ArrowUp className="w-3.5 h-3.5 stroke-[2.5]" />
               </button>
             )}
           </div>

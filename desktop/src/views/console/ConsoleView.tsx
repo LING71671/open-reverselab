@@ -1,5 +1,5 @@
 import { CheckCircle2, Loader2, XCircle, Clock } from "lucide-react";
-import { GraphStep } from "../../core";
+import { GraphStep, useI18n } from "../../core";
 
 interface ConsoleViewProps {
   steps: GraphStep[];
@@ -8,11 +8,13 @@ interface ConsoleViewProps {
 }
 
 export function ConsoleView({ steps, selectedStep, onSelectStep }: ConsoleViewProps) {
+  const { t } = useI18n();
+
   if (steps.length === 0) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 font-mono text-xs select-none">
-        <p>No active execution session</p>
-        <p className="text-[11px] text-zinc-700 mt-1">Enter an objective in the console below to start</p>
+        <p>{t.console.empty}</p>
+        <p className="text-[11px] text-zinc-700 mt-1">{t.console.emptyHint}</p>
       </div>
     );
   }
@@ -58,7 +60,10 @@ export function ConsoleView({ steps, selectedStep, onSelectStep }: ConsoleViewPr
 
             {step.evidence && (
               <div className="mt-2 pl-5">
-                <pre className="text-[11px] bg-zinc-950 p-2 rounded border border-zinc-900 text-zinc-300 overflow-x-auto">
+                <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+                  {t.console.evidence}:
+                </span>
+                <pre className="mt-1 p-2 rounded bg-zinc-950/80 border border-zinc-900 text-[10px] text-zinc-400 overflow-x-auto">
                   {JSON.stringify(step.evidence, null, 2)}
                 </pre>
               </div>

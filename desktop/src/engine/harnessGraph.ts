@@ -21,13 +21,15 @@ export interface HarnessState {
 
 export type EventCallback = (event: { type: "NODE_EVENT" | "LOOT_REVEAL"; step?: GraphStep; deliverables?: any }) => void;
 
-export function createHarnessEngine(onEvent?: EventCallback) {
+export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSignal) {
   const emit = (step: GraphStep) => {
+    if (signal?.aborted) return;
     onEvent?.({ type: "NODE_EVENT", step });
   };
 
   // Node 1: Target Ingestion & Triage
   const triageNode = async (state: HarnessState): Promise<Partial<HarnessState>> => {
+    if (signal?.aborted) throw new Error("AbortError");
     const stepId = `node-${Math.random().toString(36).substring(2, 8)}`;
     const step: GraphStep = {
       id: stepId,
@@ -75,6 +77,7 @@ export function createHarnessEngine(onEvent?: EventCallback) {
 
   // Node 2: Attack Network Routing (KB Query)
   const kbRoutingNode = async (state: HarnessState): Promise<Partial<HarnessState>> => {
+    if (signal?.aborted) throw new Error("AbortError");
     const parentId = state.steps[state.steps.length - 1]?.id || null;
     const stepId = `node-${Math.random().toString(36).substring(2, 8)}`;
     const step: GraphStep = {
@@ -90,6 +93,7 @@ export function createHarnessEngine(onEvent?: EventCallback) {
     emit(step);
 
     await new Promise((r) => setTimeout(r, 400));
+    if (signal?.aborted) throw new Error("AbortError");
 
     const doneStep: GraphStep = {
       ...step,
@@ -106,6 +110,7 @@ export function createHarnessEngine(onEvent?: EventCallback) {
 
   // Node 3: Parallel Sub-Agent Execution & Join
   const subAgentNode = async (state: HarnessState): Promise<Partial<HarnessState>> => {
+    if (signal?.aborted) throw new Error("AbortError");
     const parentId = state.steps[state.steps.length - 1]?.id || null;
 
     // Sub-Agent 1: Static Decompiler (Above)
@@ -142,7 +147,7 @@ export function createHarnessEngine(onEvent?: EventCallback) {
     let customKey = "0xDEADBEEFCAFEBABE";
     let customFlag = "flag{r3v3rs3_l4b_aut0_h4rn3ss_pr0v3n}";
 
-    if (llmService.getApiKey()) {
+    if (llmService.getApiKey() && !signal?.aborted) {
       try {
         const res = await llmService.complete(
           [
@@ -156,7 +161,7 @@ export function createHarnessEngine(onEvent?: EventCallback) {
               content: `目标: ${state.target}\n归属板块: ${state.board}\n特征: ${JSON.stringify(state.triageInfo)}\n用户需求: ${state.wish || "快速逆向核心校验算法并生成解密脚本"}`,
             },
           ],
-          { maxTokens: 1024, temperature: 0.2 }
+          { maxTokens: 1024, temperature: 0.2, signal }
         );
 
         const cleanJson = res.content.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();

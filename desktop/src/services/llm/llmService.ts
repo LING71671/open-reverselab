@@ -108,6 +108,7 @@ export class LlmService {
       model?: string;
       temperature?: number;
       maxTokens?: number;
+      signal?: AbortSignal;
     }
   ): Promise<CompletionResult> {
     const start = performance.now();
@@ -126,6 +127,7 @@ export class LlmService {
         temperature: options?.temperature ?? 0.3,
         max_tokens: options?.maxTokens ?? 2048,
       }),
+      signal: options?.signal,
     });
 
     const durationMs = Math.round(performance.now() - start);

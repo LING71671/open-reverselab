@@ -1,6 +1,20 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { LogEntry, LogLevel } from "../../core";
-import { Search, Trash2, Copy, Check, ChevronDown, ChevronRight, Terminal, ArrowDown } from "lucide-react";
+import { LogEntry, LogLevel, useI18n } from "../../core";
+import {
+  Search,
+  Trash2,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  ArrowDown,
+  ListFilter,
+  Terminal,
+  ShieldCheck,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
 
 interface LogConsoleProps {
   logs: LogEntry[];
@@ -8,6 +22,7 @@ interface LogConsoleProps {
 }
 
 export function LogConsole({ logs, onClear }: LogConsoleProps) {
+  const { t, locale } = useI18n();
   const [filterLevel, setFilterLevel] = useState<"all" | LogLevel>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
@@ -38,6 +53,8 @@ export function LogConsole({ logs, onClear }: LogConsoleProps) {
     });
   }, [logs, filterLevel, searchQuery]);
 
+  const errorCount = useMemo(() => logs.filter((l) => l.level === "error").length, [logs]);
+
   useEffect(() => {
     if (autoScroll) {
       endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,33 +78,85 @@ export function LogConsole({ logs, onClear }: LogConsoleProps) {
   const getLevelBadge = (level: LogLevel) => {
     switch (level) {
       case "tool":
-        return <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">TOOL</span>;
+        return (
+          <span
+            title={locale === "zh" ? "工具调用" : "Tool Call"}
+            className="flex items-center justify-center w-4 h-4 rounded bg-zinc-800/80 text-zinc-300 border border-zinc-700/60 shrink-0"
+          >
+            <Terminal className="w-2.5 h-2.5" />
+          </span>
+        );
       case "evidence":
-        return <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-900/60">EVID</span>;
+        return (
+          <span
+            title={locale === "zh" ? "提取证据" : "Evidence"}
+            className="flex items-center justify-center w-4 h-4 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shrink-0"
+          >
+            <ShieldCheck className="w-2.5 h-2.5" />
+          </span>
+        );
       case "error":
-        return <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 border border-rose-900/60">ERR</span>;
+        return (
+          <span
+            title={locale === "zh" ? "异常错误" : "Error"}
+            className="flex items-center justify-center w-4 h-4 rounded bg-rose-950/80 text-rose-400 border border-rose-800/60 shrink-0"
+          >
+            <AlertCircle className="w-2.5 h-2.5" />
+          </span>
+        );
       case "warn":
-        return <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-900/60">WARN</span>;
+        return (
+          <span
+            title={locale === "zh" ? "警告提示" : "Warning"}
+            className="flex items-center justify-center w-4 h-4 rounded bg-amber-950/80 text-amber-400 border border-amber-800/60 shrink-0"
+          >
+            <AlertTriangle className="w-2.5 h-2.5" />
+          </span>
+        );
       default:
-        return <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-500">INFO</span>;
+        return (
+          <span
+            title={locale === "zh" ? "系统信息" : "Info"}
+            className="flex items-center justify-center w-4 h-4 rounded bg-zinc-900 text-zinc-500 border border-zinc-800/60 shrink-0"
+          >
+            <Info className="w-2.5 h-2.5" />
+          </span>
+        );
     }
   };
+
+  const filterOptions = [
+    { id: "all" as const, label: t.console.all, icon: ListFilter },
+    { id: "tool" as const, label: t.console.tool, icon: Terminal },
+    { id: "evidence" as const, label: t.console.evidence, icon: ShieldCheck },
+    { id: "error" as const, label: t.console.error, icon: AlertCircle },
+    { id: "info" as const, label: t.console.info, icon: Info },
+  ];
 
   return (
     <div className="w-full h-full flex flex-col bg-[#09090b] text-zinc-200 select-none overflow-hidden font-mono text-xs">
       <div className="h-10 px-4 border-b border-zinc-900 bg-[#0d0d10] flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-1">
-          {(["all", "tool", "evidence", "error", "info"] as const).map((lvl) => (
+        {/* Symbol/Icon-first Filter Control Bar */}
+        <div className="flex items-center gap-1 bg-zinc-950/60 p-0.5 rounded-lg border border-zinc-900">
+          {filterOptions.map((opt) => (
             <button
-              key={lvl}
-              onClick={() => setFilterLevel(lvl)}
-              className={`px-2 py-0.5 rounded text-[11px] font-mono uppercase transition cursor-pointer ${
-                filterLevel === lvl
-                  ? "bg-zinc-800 text-zinc-100 font-semibold"
-                  : "text-zinc-500 hover:text-zinc-300"
+              key={opt.id}
+              onClick={() => setFilterLevel(opt.id)}
+              title={opt.label}
+              className={`p-1.5 rounded-md transition-all duration-150 cursor-pointer flex items-center gap-1 active:scale-90 ${
+                filterLevel === opt.id
+                  ? opt.id === "error"
+                    ? "bg-rose-950/80 text-rose-300 border border-rose-800/80 shadow-sm"
+                    : opt.id === "evidence"
+                    ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 shadow-sm"
+                    : "bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/60 border border-transparent"
               }`}
             >
-              {lvl}
+              <opt.icon className="w-3.5 h-3.5" />
+              {opt.id === "error" && errorCount > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              )}
             </button>
           ))}
         </div>
@@ -98,7 +167,7 @@ export function LogConsole({ logs, onClear }: LogConsoleProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search logs..."
+            placeholder={t.console.searchPlaceholder}
             className="w-full pl-8 pr-2 py-1 rounded-md bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-700"
           />
         </div>
@@ -106,7 +175,7 @@ export function LogConsole({ logs, onClear }: LogConsoleProps) {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setAutoScroll(!autoScroll)}
-            title="Auto-scroll toggle"
+            title={t.console.autoScroll}
             className={`p-1 rounded text-xs transition cursor-pointer ${
               autoScroll ? "text-zinc-200 bg-zinc-800" : "text-zinc-600 hover:text-zinc-400"
             }`}
@@ -116,7 +185,7 @@ export function LogConsole({ logs, onClear }: LogConsoleProps) {
 
           <button
             onClick={handleCopyAll}
-            title="Copy logs"
+            title={t.console.copy}
             className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -124,7 +193,7 @@ export function LogConsole({ logs, onClear }: LogConsoleProps) {
 
           <button
             onClick={onClear}
-            title="Clear logs"
+            title={t.console.clear}
             className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-rose-400 transition cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -132,71 +201,62 @@ export function LogConsole({ logs, onClear }: LogConsoleProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+      <div className="flex-1 overflow-y-auto p-4 space-y-1 font-mono">
         {filteredLogs.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-zinc-600 gap-2">
-            <Terminal className="w-6 h-6 text-zinc-700" />
-            <span className="text-[11px]">No log entries matching filter</span>
+          <div className="h-full flex items-center justify-center text-zinc-600 text-xs">
+            {t.console.empty}
           </div>
         ) : (
           filteredLogs.map((log) => {
-            const hasExtra = Boolean(log.command || log.payload);
             const isExpanded = expandedIds.has(log.id);
+            const hasDetails = log.payload || log.command;
 
             return (
               <div
                 key={log.id}
-                className="group p-1.5 rounded-lg hover:bg-zinc-900/60 border border-transparent hover:border-zinc-800/60 transition"
+                className="py-1 px-2 rounded hover:bg-zinc-900/50 transition flex flex-col gap-1 border border-transparent hover:border-zinc-800/40"
               >
-                <div className="flex items-start gap-2.5 leading-snug">
-                  {hasExtra ? (
+                <div className="flex items-start gap-2 leading-relaxed">
+                  {hasDetails ? (
                     <button
                       onClick={() => toggleExpand(log.id)}
                       className="mt-0.5 text-zinc-500 hover:text-zinc-300 cursor-pointer"
                     >
-                      {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      {isExpanded ? (
+                        <ChevronDown className="w-3 h-3" />
+                      ) : (
+                        <ChevronRight className="w-3 h-3" />
+                      )}
                     </button>
                   ) : (
-                    <span className="w-3" />
+                    <span className="w-3 shrink-0" />
                   )}
 
-                  <span className="text-zinc-600 shrink-0 text-[11px]">
+                  <span className="text-zinc-600 shrink-0 text-[10px]">
                     {new Date(log.timestamp).toLocaleTimeString()}
                   </span>
 
-                  <div className="shrink-0">{getLevelBadge(log.level)}</div>
+                  <span className="shrink-0">{getLevelBadge(log.level)}</span>
 
                   <span className="text-zinc-400 shrink-0 text-[11px]">
                     [{log.agentId}]
                   </span>
 
-                  <div className="flex-1 text-zinc-300 break-words text-[11px]">
-                    {log.message}
-                    {log.durationMs !== undefined && (
-                      <span className="ml-2 text-zinc-500 text-[10px]">
-                        ({log.durationMs}ms)
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-zinc-200 break-all">{log.message}</span>
                 </div>
 
-                {isExpanded && hasExtra && (
-                  <div className="mt-2 ml-7 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800/80 space-y-2 text-[11px]">
+                {isExpanded && hasDetails && (
+                  <div className="ml-8 mt-1 p-2.5 rounded bg-zinc-950 border border-zinc-800/80 text-[11px] text-zinc-400 space-y-1 overflow-x-auto">
                     {log.command && (
-                      <div>
-                        <div className="text-[10px] uppercase text-zinc-500 mb-0.5">CLI Command</div>
-                        <div className="text-zinc-200 bg-zinc-900 p-1.5 rounded text-xs select-text">
-                          {log.command}
-                        </div>
+                      <div className="flex gap-2 text-zinc-300">
+                        <span className="text-zinc-500">cmd:</span>
+                        <code className="text-zinc-200">{log.command}</code>
                       </div>
                     )}
                     {log.payload && (
-                      <div>
-                        <div className="text-[10px] uppercase text-zinc-500 mb-0.5">Structured Data</div>
-                        <pre className="text-zinc-300 bg-zinc-900 p-2 rounded overflow-x-auto text-[10px] select-text">
-                          {JSON.stringify(log.payload, null, 2)}
-                        </pre>
-                      </div>
+                      <pre className="text-zinc-400 text-[10px] leading-tight">
+                        {JSON.stringify(log.payload, null, 2)}
+                      </pre>
                     )}
                   </div>
                 )}

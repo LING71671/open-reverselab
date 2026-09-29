@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { GraphStep, LogEntry, DiagnosticItem, SessionItem, Deliverables, HarnessView, HarnessMode } from "../../core";
 import { logger, diagnosticService } from "../../services";
 import { createHarnessEngine } from "../../engine/harnessGraph";
@@ -16,6 +16,7 @@ interface HarnessContextType {
   isRunning: boolean;
   isToolMonitorOpen: boolean;
   executeHarness: (target: string, prompt: string, mode: HarnessMode) => Promise<void>;
+  stopHarness: () => void;
   runDiagnostics: () => Promise<void>;
   clearLogs: () => void;
   newSession: () => void;
@@ -64,6 +65,8 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
   const [isRunning, setIsRunning] = useState(false);
   const [isToolMonitorOpen, setIsToolMonitorOpen] = useState(false);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     return logger.subscribe((entry) => {
       setLogs((prev) => [...prev, entry]);
@@ -100,6 +103,12 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
   );
 
   const executeHarness = async (target: string, prompt: string, mode: HarnessMode) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsRunning(true);
     setSteps([]);
     setSelectedStep(null);
@@ -116,7 +125,7 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     );
 
     try {
-      const app = createHarnessEngine(handleGraphEvent);
+      const app = createHarnessEngine(handleGraphEvent, controller.signal);
       await app.invoke(
         {
           target,
@@ -132,15 +141,36 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
           configurable: { thread_id: `harness-${Date.now()}` },
         }
       );
-    } catch (err) {
-      logger.error("main", "Harness execution failed", err);
-      console.error("Harness error:", err);
+    } catch (err: any) {
+      if (controller.signal.aborted || err?.message === "AbortError") {
+        logger.warn("main", "Session execution cancelled by user");
+      } else {
+        logger.error("main", "Harness execution failed", err);
+      }
     } finally {
       setIsRunning(false);
+      abortControllerRef.current = null;
       setSessions((prev) =>
         prev.map((s) => (s.id === activeSessionId ? { ...s, status: "completed" } : s))
       );
     }
+  };
+
+  const stopHarness = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsRunning(false);
+    setSteps((prev) =>
+      prev.map((s) =>
+        s.status === "running" ? { ...s, status: "failed", detail: "Aborted by user" } : s
+      )
+    );
+    logger.warn("main", "Analysis halted by user");
+    setSessions((prev) =>
+      prev.map((s) => (s.id === activeSessionId ? { ...s, status: "idle" } : s))
+    );
   };
 
   const runDiagnostics = async () => {
@@ -157,7 +187,7 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     const newId = `sess-${Date.now()}`;
     const item: SessionItem = {
       id: newId,
-      title: "新建逆向会话",
+      title: "New Session",
       target: "samples/target.exe",
       time: "Just now",
       status: "idle",
@@ -193,6 +223,7 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
         isRunning,
         isToolMonitorOpen,
         executeHarness,
+        stopHarness,
         runDiagnostics,
         clearLogs,
         newSession,
