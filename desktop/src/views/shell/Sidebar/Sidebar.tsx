@@ -97,26 +97,32 @@ export function Sidebar({
         <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-1.5 px-2">
           {t.sidebar.history}
         </div>
-        {sessions.map((s) => {
-          const isActive = s.id === activeSessionId;
-          return (
-            <div
-              key={s.id}
-              onClick={() => onSelectSession(s.id)}
-              className={`p-2.5 rounded-lg cursor-pointer transition flex flex-col gap-0.5 border ${
-                isActive
-                  ? "bg-zinc-900/90 border-zinc-800 text-zinc-100"
-                  : "border-transparent text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-300"
-              }`}
-            >
-              <div className="text-xs font-medium truncate">{formatTitle(s.title)}</div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                <span className="truncate max-w-[110px]">{s.target}</span>
-                <span>{formatTime(s.time)}</span>
+        {sessions.length === 0 ? (
+          <div className="py-8 px-2 text-center text-[11px] font-mono text-zinc-600">
+            {t.sidebar.noHistory}
+          </div>
+        ) : (
+          sessions.map((s) => {
+            const isActive = s.id === activeSessionId;
+            return (
+              <div
+                key={s.id}
+                onClick={() => onSelectSession(s.id)}
+                className={`p-2.5 rounded-lg cursor-pointer transition flex flex-col gap-0.5 border ${
+                  isActive
+                    ? "bg-zinc-900/90 border-zinc-800 text-zinc-100"
+                    : "border-transparent text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-300"
+                }`}
+              >
+                <div className="text-xs font-medium truncate">{formatTitle(s.title)}</div>
+                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                  <span className="truncate max-w-[110px]">{s.target}</span>
+                  <span>{formatTime(s.time)}</span>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* Footer: Environment & Settings */}

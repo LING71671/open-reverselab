@@ -14,7 +14,7 @@ export function PromptConsole({
   isRunning,
   onExecute,
   onStop,
-  defaultTarget = "samples/challenge_auth.exe",
+  defaultTarget = "",
 }: PromptConsoleProps) {
   const { t } = useI18n();
   const [target, setTarget] = useState(defaultTarget);
@@ -24,7 +24,7 @@ export function PromptConsole({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (defaultTarget) setTarget(defaultTarget);
+    setTarget(defaultTarget || "");
   }, [defaultTarget]);
 
   const handleSubmit = (e?: React.FormEvent) => {

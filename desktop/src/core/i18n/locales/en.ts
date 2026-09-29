@@ -24,6 +24,7 @@ export const en = {
     diag: "Diag",
     kb: "KB",
     history: "History",
+    noHistory: "No history",
     environment: "Environment",
     toolsUnit: "Tools",
   },

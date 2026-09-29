@@ -27,35 +27,13 @@ interface HarnessContextType {
   dismissLoot: () => void;
 }
 
-const INITIAL_SESSIONS: SessionItem[] = [
-  {
-    id: "sess-1",
-    title: "PE 样本分析与脱壳",
-    target: "samples/challenge_auth.exe",
-    time: "Today",
-    status: "idle",
-  },
-  {
-    id: "sess-2",
-    title: "CTF Web 靶场全自主探测",
-    target: "http://target.ctf.local:8080",
-    time: "Yesterday",
-    status: "completed",
-  },
-  {
-    id: "sess-3",
-    title: "Android Native 校验定位",
-    target: "samples/mobile_banking.apk",
-    time: "Sep 27",
-    status: "completed",
-  },
-];
+const INITIAL_SESSIONS: SessionItem[] = [];
 
 const HarnessContext = createContext<HarnessContextType | null>(null);
 
 export function HarnessProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<SessionItem[]>(INITIAL_SESSIONS);
-  const [activeSessionId, setActiveSessionId] = useState("sess-1");
+  const [activeSessionId, setActiveSessionId] = useState("");
   const [viewMode, setViewMode] = useState<HarnessView>("canvas");
   const [steps, setSteps] = useState<GraphStep[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -73,7 +51,7 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const currentSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
+  const currentSession = sessions.find((s) => s.id === activeSessionId);
 
   const handleGraphEvent = useCallback(
     (event: { type: "NODE_EVENT" | "LOOT_REVEAL"; step?: GraphStep; deliverables?: any }) => {
@@ -114,15 +92,31 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     setSelectedStep(null);
     setDeliverables(null);
 
-    logger.info("main", `Starting ${mode.toUpperCase()} session on ${target}: ${prompt}`);
+    let currentId = activeSessionId;
+    if (!currentId || !sessions.some((s) => s.id === currentId)) {
+      currentId = `sess-${Date.now()}`;
+      setActiveSessionId(currentId);
+      setSessions((prev) => [
+        {
+          id: currentId,
+          target: target || "target.bin",
+          title: prompt.slice(0, 16) || "新分析",
+          time: "Just now",
+          status: "running",
+        },
+        ...prev,
+      ]);
+    } else {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentId
+            ? { ...s, target: target || s.target, title: prompt.slice(0, 16), status: "running" }
+            : s
+        )
+      );
+    }
 
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === activeSessionId
-          ? { ...s, target, title: prompt.slice(0, 16), status: "running" }
-          : s
-      )
-    );
+    logger.info("main", `Starting ${mode.toUpperCase()} session on ${target}: ${prompt}`);
 
     try {
       const app = createHarnessEngine(handleGraphEvent, controller.signal);
@@ -151,7 +145,7 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
       setIsRunning(false);
       abortControllerRef.current = null;
       setSessions((prev) =>
-        prev.map((s) => (s.id === activeSessionId ? { ...s, status: "completed" } : s))
+        prev.map((s) => (s.id === currentId ? { ...s, status: "completed" } : s))
       );
     }
   };
@@ -187,8 +181,8 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     const newId = `sess-${Date.now()}`;
     const item: SessionItem = {
       id: newId,
-      title: "New Session",
-      target: "samples/target.exe",
+      title: "新分析",
+      target: "",
       time: "Just now",
       status: "idle",
     };

@@ -6,7 +6,6 @@ export * from "./console/LogConsole";
 export * from "./console/ConsoleView";
 export * from "./diagnostics/DiagnosticsPanel";
 export * from "./prompt/PromptConsole";
-export * from "./prompt/Launcher";
 export * from "./overlays/DetailDrawer";
 export * from "./overlays/ToolMonitorDrawer";
 export * from "./overlays/LootCard";

@@ -25,7 +25,7 @@ function reverseLabNativePlugin(): Plugin {
             const script = resolve(repoRoot, "scripts/misc/triage_target.py");
             execFile(
               "python",
-              [script, target || "samples/challenge_auth.exe"],
+              [script, target || "target.bin"],
               { cwd: repoRoot, timeout: 15000 },
               (err, stdout, stderr) => {
                 res.setHeader("Content-Type", "application/json");

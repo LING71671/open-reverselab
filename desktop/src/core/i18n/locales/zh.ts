@@ -26,6 +26,7 @@ export const zh: TranslationKey = {
     diag: "诊断",
     kb: "知识库",
     history: "历史",
+    noHistory: "暂无历史记录",
     environment: "环境",
     toolsUnit: "工具",
   },
