@@ -1,4 +1,4 @@
-import { Plus, Terminal, Network, FolderGit2, Activity, BookOpen, Settings } from "lucide-react";
+import { Plus, Workflow, ScrollText, Gauge, Database, FolderGit2, Settings } from "lucide-react";
 import { HarnessView, SessionItem, useI18n } from "../../../core";
 
 interface SidebarProps {
@@ -25,14 +25,20 @@ export function Sidebar({
   const { t, locale } = useI18n();
 
   const navItems: { id: HarnessView; label: string; icon: any }[] = [
-    { id: "canvas", label: t.sidebar.graph, icon: Network },
-    { id: "console", label: t.sidebar.logs, icon: Terminal },
-    { id: "diagnostics", label: t.sidebar.diag, icon: Activity },
-    { id: "kb", label: t.sidebar.kb, icon: BookOpen },
+    { id: "canvas", label: t.sidebar.graph, icon: Workflow },
+    { id: "console", label: t.sidebar.logs, icon: ScrollText },
+    { id: "diagnostics", label: t.sidebar.diag, icon: Gauge },
+    { id: "kb", label: t.sidebar.kb, icon: Database },
   ];
+
+  const formatTitle = (title: string) => {
+    if (locale === "zh" && title === "New Session") return "新建会话";
+    return title;
+  };
 
   const formatTime = (timeStr: string) => {
     if (locale === "zh") {
+      if (timeStr === "Just now") return "刚刚";
       if (timeStr === "Today") return "今天";
       if (timeStr === "Yesterday") return "昨天";
       if (timeStr === "Sep 27") return "9月27日";
@@ -41,12 +47,12 @@ export function Sidebar({
   };
 
   return (
-    <aside className="w-56 h-full bg-[#0d0d10] border-r border-zinc-900 flex flex-col select-none shrink-0 z-10 font-sans">
+    <aside className="w-56 h-full bg-[#0b0b0e] border-r border-zinc-900/90 flex flex-col select-none shrink-0 z-10 font-sans">
       {/* New Analysis Button */}
-      <div className="p-3 border-b border-zinc-900/80">
+      <div className="p-3 border-b border-zinc-900/60">
         <button
           onClick={onNewSession}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 text-xs font-medium text-zinc-200 transition cursor-pointer active:scale-95"
+          className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 text-xs font-medium text-zinc-200 transition cursor-pointer active:scale-95 shadow-sm"
         >
           <Plus className="w-3.5 h-3.5 text-zinc-400" />
           <span>{t.sidebar.newAnalysis}</span>
@@ -55,7 +61,7 @@ export function Sidebar({
 
       {/* Vertical Navigation Items */}
       <div className="px-2 pt-3 pb-2 border-b border-zinc-900/60">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5 px-2">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-1.5 px-2">
           {t.sidebar.views}
         </div>
         <nav className="space-y-0.5">
@@ -65,15 +71,18 @@ export function Sidebar({
               <button
                 key={item.id}
                 onClick={() => onToggleView(item.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 ${
+                className={`group relative w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 ${
                   isActive
-                    ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50"
+                    ? "bg-zinc-800/70 text-zinc-100 shadow-sm border border-zinc-700/50"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40 border border-transparent"
                 }`}
               >
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3.5 bg-zinc-200 rounded-r" />
+                )}
                 <item.icon
                   className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                    isActive ? "text-zinc-100" : "text-zinc-500"
+                    isActive ? "text-zinc-100" : "text-zinc-500 group-hover:text-zinc-300"
                   }`}
                 />
                 <span className="truncate">{item.label}</span>
@@ -85,7 +94,7 @@ export function Sidebar({
 
       {/* History Session List */}
       <div className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5 px-2">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-1.5 px-2">
           {t.sidebar.history}
         </div>
         {sessions.map((s) => {
@@ -100,7 +109,7 @@ export function Sidebar({
                   : "border-transparent text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-300"
               }`}
             >
-              <div className="text-xs font-medium truncate">{s.title}</div>
+              <div className="text-xs font-medium truncate">{formatTitle(s.title)}</div>
               <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
                 <span className="truncate max-w-[110px]">{s.target}</span>
                 <span>{formatTime(s.time)}</span>

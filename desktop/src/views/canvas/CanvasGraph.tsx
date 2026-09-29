@@ -113,7 +113,12 @@ function FlowInner({ steps, selectedStep, onSelectStep }: CanvasGraphProps) {
         maxZoom={1.5}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1c1c20" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1.5}
+          color="#3f3f46"
+        />
         <Controls className="!m-4 !border-zinc-800 !bg-[#121215]" />
       </ReactFlow>
     </div>

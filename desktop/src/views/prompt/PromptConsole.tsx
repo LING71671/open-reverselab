@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Sparkles, Terminal, ArrowUp, Square, Paperclip, UploadCloud } from "lucide-react";
+import { ArrowUp, Square, Paperclip, UploadCloud } from "lucide-react";
 import { HarnessMode, useI18n } from "../../core";
 import { logger } from "../../services";
 
@@ -17,7 +17,6 @@ export function PromptConsole({
   defaultTarget = "samples/challenge_auth.exe",
 }: PromptConsoleProps) {
   const { t } = useI18n();
-  const [mode, setMode] = useState<HarnessMode>("wish");
   const [target, setTarget] = useState(defaultTarget);
   const [prompt, setPrompt] = useState("");
   const [isEditingTarget, setIsEditingTarget] = useState(false);
@@ -31,7 +30,7 @@ export function PromptConsole({
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!prompt.trim() || isRunning) return;
-    onExecute(target.trim(), prompt.trim(), mode);
+    onExecute(target.trim(), prompt.trim(), "wish");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -91,46 +90,15 @@ export function PromptConsole({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              mode === "wish" ? t.prompt.wishPlaceholder : t.prompt.interactivePlaceholder
-            }
+            placeholder={t.prompt.wishPlaceholder}
             className="w-full bg-transparent text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none font-mono leading-relaxed"
           />
         </div>
 
         {/* 2. Unified Bottom Actions Toolbar */}
         <div className="px-2.5 pb-2 pt-1 flex items-center justify-between gap-2 border-t border-zinc-900/60">
-          {/* Left: Mode Switcher + Target File Attachment */}
+          {/* Left: Target File Attachment */}
           <div className="flex items-center gap-1.5 overflow-x-auto min-w-0">
-            {/* Mode Capsule */}
-            <div className="flex items-center p-0.5 rounded-lg bg-zinc-950 border border-zinc-800/80 shrink-0">
-              <button
-                type="button"
-                onClick={() => setMode("wish")}
-                title={t.prompt.wish}
-                className={`p-1.5 rounded-md transition-all cursor-pointer active:scale-95 ${
-                  mode === "wish"
-                    ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("interactive")}
-                title={t.prompt.interactive}
-                className={`p-1.5 rounded-md transition-all cursor-pointer active:scale-95 ${
-                  mode === "interactive"
-                    ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                <Terminal className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Target Attachment Chip */}
             {isEditingTarget ? (
               <input
                 type="text"
@@ -165,12 +133,8 @@ export function PromptConsole({
             )}
           </div>
 
-          {/* Right: Shortcut Badge + Silky Submit/Stop Button */}
-          <div className="flex items-center gap-2 shrink-0">
-            <kbd className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800/80 text-[10px] font-mono text-zinc-500 hidden sm:inline-block">
-              ⌘↵
-            </kbd>
-
+          {/* Right: Submit / Stop Button */}
+          <div className="flex items-center shrink-0">
             {isRunning ? (
               <button
                 type="button"
