@@ -66,6 +66,8 @@ export const en = {
     flag: "Flag",
     script: "Script",
     saveScript: "Save .py",
+    runScript: "Run Script",
+    output: "Execution Output",
   },
   diagnostics: {
     title: "Diagnostics",

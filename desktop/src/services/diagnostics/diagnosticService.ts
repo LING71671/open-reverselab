@@ -80,7 +80,7 @@ class DiagnosticService {
     logger.info("diag", "Starting full environment and toolchain probe...");
     const start = Date.now();
 
-    // Probe LLM gateway in background
+    // 1. Probe LLM gateway in background
     const llmHealth = await llmService.checkHealth();
     const llmItem = this.items.find((i) => i.id === "diag-llm");
     if (llmItem) {
@@ -93,6 +93,18 @@ class DiagnosticService {
         llmItem.detail = `网关异常: ${llmHealth.error || "未配置 API Key"}`;
         logger.warn("diag", `LLM gateway warning: ${llmItem.detail}`);
       }
+    }
+
+    // 2. Fetch live host system diagnostics & installed tools
+    try {
+      const resp = await fetch("/api/system/diagnostics");
+      if (resp.ok) {
+        const liveItems: DiagnosticItem[] = await resp.json();
+        const nonLive = this.items.filter((i) => i.id === "diag-llm" || i.category === "mcp");
+        this.items = [...nonLive, ...liveItems];
+      }
+    } catch (err: any) {
+      logger.warn("diag", `Live probe fallback: ${err.message}`);
     }
 
     if (target) {

@@ -68,6 +68,8 @@ export const zh: TranslationKey = {
     flag: "标识",
     script: "脚本",
     saveScript: "保存脚本",
+    runScript: "运行测试",
+    output: "执行输出",
   },
   diagnostics: {
     title: "诊断中心",

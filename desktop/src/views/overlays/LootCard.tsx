@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, X, Download } from "lucide-react";
+import { Copy, Check, X, Download, Play, Loader2, Terminal } from "lucide-react";
 import { Deliverables, useI18n } from "../../core";
 
 interface LootCardProps {
@@ -10,6 +10,8 @@ interface LootCardProps {
 export function LootCard({ deliverables, onClose }: LootCardProps) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [isRunningScript, setIsRunningScript] = useState(false);
+  const [execResult, setExecResult] = useState(deliverables.executionOutput);
 
   const handleCopy = () => {
     if (deliverables.script) {
@@ -28,6 +30,28 @@ export function LootCard({ deliverables, onClose }: LootCardProps) {
       a.download = "solve_decrypt.py";
       a.click();
       URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleRunScript = async () => {
+    if (!deliverables.script || isRunningScript) return;
+    setIsRunningScript(true);
+    try {
+      const res = await fetch("/api/system/exec-python", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ script: deliverables.script }),
+      });
+      const data = await res.json();
+      setExecResult(data);
+    } catch (err: any) {
+      setExecResult({
+        success: false,
+        stderr: `Execution failed: ${err.message}`,
+        executionTimeMs: 0,
+      });
+    } finally {
+      setIsRunningScript(false);
     }
   };
 
@@ -81,6 +105,18 @@ export function LootCard({ deliverables, onClose }: LootCardProps) {
               </span>
               <div className="flex items-center gap-1.5">
                 <button
+                  onClick={handleRunScript}
+                  disabled={isRunningScript}
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[11px] font-mono transition cursor-pointer disabled:opacity-50"
+                >
+                  {isRunningScript ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Play className="w-3 h-3 fill-emerald-400" />
+                  )}
+                  <span>{t.loot.runScript}</span>
+                </button>
+                <button
                   onClick={handleDownload}
                   className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-mono transition cursor-pointer"
                 >
@@ -105,9 +141,35 @@ export function LootCard({ deliverables, onClose }: LootCardProps) {
                 </button>
               </div>
             </div>
-            <pre className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800/80 text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-48 leading-relaxed">
+            <pre className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800/80 text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-40 leading-relaxed">
               {deliverables.script}
             </pre>
+
+            {execResult && (
+              <div className="mt-2 p-2.5 rounded-xl bg-zinc-950/90 border border-zinc-800/80 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <div className="flex items-center gap-1.5 text-zinc-400">
+                    <Terminal className="w-3 h-3 text-zinc-500" />
+                    <span>{t.loot.output}</span>
+                    {execResult.executionTimeMs !== undefined && (
+                      <span className="text-zinc-600">({execResult.executionTimeMs}ms)</span>
+                    )}
+                  </div>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                      execResult.success
+                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                        : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                    }`}
+                  >
+                    {execResult.success ? "PASS" : "FAIL"}
+                  </span>
+                </div>
+                <pre className="text-[11px] font-mono text-zinc-300 whitespace-pre-wrap break-all max-h-28 overflow-y-auto leading-relaxed">
+                  {execResult.stdout || execResult.stderr || "No output generated"}
+                </pre>
+              </div>
+            )}
           </div>
         )}
 

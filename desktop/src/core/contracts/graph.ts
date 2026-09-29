@@ -17,4 +17,10 @@ export interface Deliverables {
   key?: string;
   flag?: string;
   summary?: string;
+  executionOutput?: {
+    success: boolean;
+    stdout?: string;
+    stderr?: string;
+    executionTimeMs?: number;
+  };
 }

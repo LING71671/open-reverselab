@@ -43,27 +43,44 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     };
     emit(step);
 
-    const lower = state.target.toLowerCase();
     let board = "general";
-    let triage: Record<string, any> = { type: "Binary / Protocol", size: "Unknown" };
+    let triage: Record<string, any> = { target: state.target };
 
-    if (lower.startsWith("http://") || lower.startsWith("https://")) {
-      board = "ctf-website";
-      triage = { type: "Web Target", scheme: "HTTP/HTTPS", host: state.target };
-    } else if (lower.endsWith(".apk") || lower.endsWith(".dex")) {
-      board = "apk-reverse";
-      triage = { type: "Android Package", arch: "arm64-v8a", packer: "SecShell (Suspected)" };
-    } else if (lower.endsWith(".exe") || lower.endsWith(".dll")) {
-      board = "pe-reverse";
-      triage = { type: "Windows PE32+", subsystem: "GUI", entropy: 6.84, packer: "UPX" };
+    try {
+      const resp = await fetch("/api/system/triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: state.target }),
+        signal,
+      });
+      if (resp.ok) {
+        const liveTriage = await resp.json();
+        triage = liveTriage;
+        board = liveTriage.board || "general";
+      }
+    } catch {
+      // fallback heuristic
+      const lower = state.target.toLowerCase();
+      if (lower.startsWith("http://") || lower.startsWith("https://")) {
+        board = "ctf-website";
+        triage = { fileType: "Web Target", host: state.target };
+      } else if (lower.endsWith(".apk") || lower.endsWith(".dex")) {
+        board = "apk-reverse";
+        triage = { fileType: "Android Package", arch: "arm64-v8a" };
+      } else if (lower.endsWith(".exe") || lower.endsWith(".dll")) {
+        board = "pe-reverse";
+        triage = { fileType: "Windows PE Binary", arch: "x86_64" };
+      }
     }
 
-    await new Promise((r) => setTimeout(r, 400));
+    if (signal?.aborted) throw new Error("AbortError");
 
+    const archInfo = triage.arch ? ` · 架构: ${triage.arch}` : "";
+    const packerInfo = triage.packer && triage.packer !== "None" ? ` · 壳: ${triage.packer}` : "";
     const doneStep: GraphStep = {
       ...step,
       status: "done",
-      detail: `类型识别: ${triage.type} · 归属板块: ${board}`,
+      detail: `类型识别: ${triage.fileType || "二进制文件"}${archInfo}${packerInfo} · 归属板块: ${board}`,
       evidence: triage,
     };
     emit(doneStep);
@@ -92,14 +109,23 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     };
     emit(step);
 
-    await new Promise((r) => setTimeout(r, 400));
+    let kbFound = false;
+    try {
+      const resp = await fetch(`/api/system/kb?path=kb/${state.board}/techniques/attack-network.md`, { signal });
+      if (resp.ok) {
+        kbFound = true;
+      }
+    } catch {
+      // fallback
+    }
+
     if (signal?.aborted) throw new Error("AbortError");
 
     const doneStep: GraphStep = {
       ...step,
       status: "done",
-      detail: "已对齐最优攻击链：反调试绕过 → 内存脱壳 → 校验算法逆向",
-      evidence: { matchCount: 3, technique: "02-dynamic/anti-debug" },
+      detail: `已对齐 ${state.board} 攻击链路与技术规则${kbFound ? " (知识库命中)" : ""}`,
+      evidence: { board: state.board, kbPath: `kb/${state.board}/techniques/attack-network.md`, verified: kbFound },
     };
     emit(doneStep);
 
@@ -194,6 +220,21 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     };
     emit(doneDynamic);
 
+    // Execute Python script in real sandbox backend
+    let executionOutput: { success: boolean; stdout?: string; stderr?: string; executionTimeMs?: number } | undefined;
+    try {
+      const execRes = await fetch("/api/system/exec-python", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ script: customScript }),
+      });
+      if (execRes.ok) {
+        executionOutput = await execRes.json();
+      }
+    } catch {
+      // Backend sandbox offline fallback
+    }
+
     // Merge Node: Join Back to Main
     const joinId = `join-${Math.random().toString(36).substring(2, 8)}`;
     const joinStep: GraphStep = {
@@ -202,9 +243,15 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       agentId: "main",
       title: "证据闭环: 算法提取与 Python 复现",
       status: "done",
-      detail: customSummary,
+      detail: executionOutput?.stdout
+        ? `${customSummary} (测试执行耗时 ${executionOutput.executionTimeMs}ms)`
+        : customSummary,
       kbRef: "kb/general/techniques/00-crypto/01-custom-xor-tea.md",
-      evidence: { algorithm: "Qwen-Assisted", key: customKey },
+      evidence: {
+        algorithm: "Qwen-Assisted",
+        key: customKey,
+        ...(executionOutput?.stdout ? { sandboxStdout: executionOutput.stdout.trim() } : {}),
+      },
       timestamp: Date.now(),
     };
     emit(joinStep);
@@ -214,6 +261,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       key: customKey,
       flag: customFlag,
       summary: customSummary,
+      executionOutput,
     };
 
     onEvent?.({ type: "LOOT_REVEAL", deliverables });

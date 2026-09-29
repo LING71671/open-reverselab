@@ -81,7 +81,7 @@ export function PromptConsole({
         className="hidden"
       />
 
-      <div className="rounded-xl bg-[#121215]/80 border border-zinc-800/80 shadow-2xl backdrop-blur-xl transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40">
+      <div className="rounded-xl bg-[#121215]/70 border border-zinc-800/70 shadow-2xl backdrop-blur-md transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40">
         {/* 1. Main Text Input Area */}
         <div className="p-3 pb-1.5">
           <textarea

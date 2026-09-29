@@ -93,7 +93,7 @@ function AppContent() {
           </div>
 
           {/* Floating Prompt Console on Top of Grid Dots */}
-          <div className="absolute bottom-4 left-0 right-0 z-20 pointer-events-none px-4">
+          <div className="absolute bottom-6 left-0 right-0 z-20 pointer-events-none px-4">
             <div className="pointer-events-auto max-w-2xl mx-auto">
               <PromptConsole
                 isRunning={isRunning}
