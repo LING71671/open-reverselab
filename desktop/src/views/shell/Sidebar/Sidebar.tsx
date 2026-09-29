@@ -61,7 +61,7 @@ export function Sidebar({
 
       {/* Vertical Navigation Items */}
       <div className="px-2 pt-3 pb-2 border-b border-zinc-900/60">
-        <div className="text-[11px] font-medium tracking-wide text-zinc-500 mb-1.5 px-2.5 font-sans select-none">
+        <div className="text-xs font-semibold text-zinc-500 mb-1.5 px-2.5 font-sans select-none">
           {t.sidebar.views}
         </div>
         <nav className="space-y-0.5">
@@ -94,7 +94,7 @@ export function Sidebar({
 
       {/* History Session List */}
       <div className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-        <div className="text-[11px] font-medium tracking-wide text-zinc-500 mb-1.5 px-2.5 font-sans select-none">
+        <div className="text-xs font-semibold text-zinc-500 mb-1.5 px-2.5 font-sans select-none">
           {t.sidebar.history}
         </div>
         {sessions.length === 0 ? (

@@ -2,8 +2,8 @@
 @import "@xyflow/react/dist/style.css";
 
 @theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", monospace;
+  --font-sans: "Inter", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", "Microsoft YaHei UI", "Microsoft YaHei", monospace;
 }
 
 :root {
@@ -29,6 +29,8 @@ body {
   background-color: var(--bg-canvas);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
   overflow: hidden;
   user-select: none;
 }
