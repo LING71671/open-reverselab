@@ -73,7 +73,7 @@ export function PromptConsole({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 z-20">
+    <div className="w-full">
       <input
         type="file"
         ref={fileInputRef}
@@ -81,7 +81,7 @@ export function PromptConsole({
         className="hidden"
       />
 
-      <div className="rounded-xl bg-[#121215]/95 border border-zinc-800/90 shadow-2xl backdrop-blur-xl transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40">
+      <div className="rounded-xl bg-[#121215]/80 border border-zinc-800/80 shadow-2xl backdrop-blur-xl transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40">
         {/* 1. Main Text Input Area */}
         <div className="p-3 pb-1.5">
           <textarea

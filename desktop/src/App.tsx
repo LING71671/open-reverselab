@@ -60,10 +60,10 @@ function AppContent() {
           onToggleView={setViewMode}
         />
 
-        {/* Center Main Stage + Big Prompt Console */}
-        <div className="flex-1 flex flex-col relative overflow-hidden bg-[#09090b]">
-          {/* Swappable Views (Graph | Logs | Diagnostics | KB) */}
-          <div className="flex-1 relative overflow-hidden">
+        {/* Center Main Stage with Full-Bleed Canvas + Floating Prompt Console */}
+        <div className="flex-1 relative overflow-hidden bg-[#09090b]">
+          {/* Swappable Views (Graph | Logs | Diagnostics | KB) Full Bleed */}
+          <div className="absolute inset-0 w-full h-full overflow-hidden">
             {viewMode === "canvas" && (
               <CanvasGraph
                 steps={steps}
@@ -92,13 +92,17 @@ function AppContent() {
             )}
           </div>
 
-          {/* Large Prompt Console with Wish/Interactive mode capsule */}
-          <PromptConsole
-            isRunning={isRunning}
-            defaultTarget={currentSession?.target}
-            onExecute={executeHarness}
-            onStop={stopHarness}
-          />
+          {/* Floating Prompt Console on Top of Grid Dots */}
+          <div className="absolute bottom-4 left-0 right-0 z-20 pointer-events-none px-4">
+            <div className="pointer-events-auto max-w-2xl mx-auto">
+              <PromptConsole
+                isRunning={isRunning}
+                defaultTarget={currentSession?.target}
+                onExecute={executeHarness}
+                onStop={stopHarness}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Drawers & Overlays */}
