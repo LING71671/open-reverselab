@@ -3,6 +3,7 @@ export type StepStatus = "pending" | "running" | "done" | "failed";
 export interface GraphStep {
   id: string;
   parentId: string | null;
+  parentIds?: string[];
   agentId: string;
   title: string;
   status: StepStatus;

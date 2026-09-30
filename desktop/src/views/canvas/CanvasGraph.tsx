@@ -30,29 +30,48 @@ function FlowInner({ steps, selectedStep, onSelectStep }: CanvasGraphProps) {
     const edgeList: Edge[] = [];
 
     const X_GAP = 300;
-    const Y_GAP = 120;
-
-    const agentSlots: Record<string, number> = {
-      main: 0,
-      "sub-ida": -1,
-      "sub-frida": 1,
-      "sub-ai": 2,
-    };
+    const Y_GAP = 130;
 
     let mainIndex = 0;
+    const branchCounters: Record<string, number> = {};
     const stepPositions: Record<string, { x: number; y: number }> = {};
 
     steps.forEach((step) => {
       let x = 80;
       let y = 180;
 
-      if (step.agentId === "main") {
+      // Extract all parent IDs
+      const parentIds: string[] = [];
+      if (step.parentIds && step.parentIds.length > 0) {
+        parentIds.push(...step.parentIds);
+      } else if (step.parentId) {
+        parentIds.push(step.parentId);
+      }
+
+      if (step.agentId === "main" && parentIds.length > 1) {
+        // Multi-parent Join / Merge node back to main
+        const maxX = Math.max(...parentIds.map((p) => stepPositions[p]?.x ?? 80));
+        x = maxX + X_GAP;
+        y = 180;
+        mainIndex = Math.floor((x - 80) / X_GAP) + 1;
+      } else if (step.agentId === "main" || parentIds.length === 0) {
+        // Sequential main step
         x = 80 + mainIndex * X_GAP;
         y = 180;
         mainIndex++;
       } else {
-        const parentPos = step.parentId && stepPositions[step.parentId] ? stepPositions[step.parentId] : { x: 80 + (mainIndex - 1) * X_GAP, y: 180 };
-        const slotOffset = agentSlots[step.agentId] ?? 1;
+        // Branching child step
+        const firstParentId = parentIds[0];
+        const parentPos = stepPositions[firstParentId]
+          ? stepPositions[firstParentId]
+          : { x: 80 + (mainIndex - 1) * X_GAP, y: 180 };
+
+        const branchIdx = branchCounters[firstParentId] || 0;
+        branchCounters[firstParentId] = branchIdx + 1;
+
+        const offsetMap = [-1, 1, -2, 2];
+        const slotOffset = offsetMap[branchIdx % offsetMap.length] ?? 1;
+
         x = parentPos.x + X_GAP;
         y = 180 + slotOffset * Y_GAP;
       }
@@ -70,18 +89,21 @@ function FlowInner({ steps, selectedStep, onSelectStep }: CanvasGraphProps) {
         } as HarnessNodeData,
       });
 
-      if (step.parentId && stepPositions[step.parentId]) {
-        edgeList.push({
-          id: `e-${step.parentId}-${step.id}`,
-          source: step.parentId,
-          target: step.id,
-          animated: step.status === "running",
-          style: {
-            stroke: step.status === "running" ? "#71717a" : "#27272a",
-            strokeWidth: 1.5,
-          },
-        });
-      }
+      // Add edge for each parent
+      parentIds.forEach((pId) => {
+        if (stepPositions[pId]) {
+          edgeList.push({
+            id: `e-${pId}-${step.id}`,
+            source: pId,
+            target: step.id,
+            animated: step.status === "running",
+            style: {
+              stroke: step.status === "running" ? "#a1a1aa" : "#3f3f46",
+              strokeWidth: 1.5,
+            },
+          });
+        }
+      });
     });
 
     return { nodes: nodeList, edges: edgeList };
