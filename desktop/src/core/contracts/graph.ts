@@ -18,6 +18,10 @@ export interface Deliverables {
   key?: string;
   flag?: string;
   summary?: string;
+  savedArtifacts?: {
+    report_path?: string;
+    script_path?: string;
+  };
   executionOutput?: {
     success: boolean;
     stdout?: string;

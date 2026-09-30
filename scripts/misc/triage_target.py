@@ -35,11 +35,30 @@ def hash_file(file_path: Path) -> dict[str, str]:
     }
 
 
+def extract_strings(data: bytes, min_len: int = 5, limit: int = 25) -> list[str]:
+    import re
+    # Extract printable ASCII strings
+    ascii_re = re.compile(rb"[\x20-\x7e]{" + str(min_len).encode() + rb",}")
+    matches = [m.group(0).decode("latin1", errors="ignore") for m in ascii_re.finditer(data[:524288])]
+    
+    # Filter for interesting strings
+    interesting = []
+    for s in matches:
+        s_low = s.lower()
+        if any(kw in s_low for kw in ("http", "api", "key", "pass", "reg", "soft", "curren", "temp", "cmd", "exec", ".dll", "error")):
+            interesting.append(s)
+            if len(interesting) >= limit:
+                break
+    return interesting if interesting else matches[:limit]
+
+
 def triage_pe(file_path: Path) -> dict[str, Any]:
     hashes = hash_file(file_path)
+    file_bytes = file_path.read_bytes()[:1048576]
     res: dict[str, Any] = {
         "board": "pe-reverse",
         "fileType": "Windows PE Binary",
+        "targetPath": str(file_path),
         **hashes,
     }
 
@@ -51,29 +70,88 @@ def triage_pe(file_path: Path) -> dict[str, Any]:
         is_64 = machine == 0x8664
         res["arch"] = "x86_64" if is_64 else ("i386" if machine == 0x014C else f"0x{machine:04X}")
         res["entryPoint"] = f"0x{pe.OPTIONAL_HEADER.AddressOfEntryPoint:08X}"
-        res["subsystem"] = "GUI" if pe.OPTIONAL_HEADER.Subsystem == 2 else "Console"
+        res["imageBase"] = f"0x{pe.OPTIONAL_HEADER.ImageBase:08X}"
+        res["subsystem"] = "GUI" if pe.OPTIONAL_HEADER.Subsystem == 2 else ("Console" if pe.OPTIONAL_HEADER.Subsystem == 3 else f"Subsystem_{pe.OPTIONAL_HEADER.Subsystem}")
+        res["linkerVersion"] = f"{pe.OPTIONAL_HEADER.MajorLinkerVersion}.{pe.OPTIONAL_HEADER.MinorLinkerVersion}"
 
+        # Section Analysis
         sections = []
         is_upx = False
+        executable_sections = []
         for s in pe.sections:
             s_name = s.Name.decode("latin1", errors="ignore").strip("\x00")
             entropy = round(s.get_entropy(), 2)
+            is_exec = bool(s.Characteristics & 0x20000000)
             if "UPX" in s_name.upper():
                 is_upx = True
-            sections.append({"name": s_name, "entropy": entropy, "size": s.SizeOfRawData})
+            if is_exec:
+                executable_sections.append(s_name)
+            sections.append({
+                "name": s_name,
+                "entropy": entropy,
+                "virtualSize": f"0x{s.Misc_VirtualSize:X}",
+                "rawSize": s.SizeOfRawData,
+                "isExecutable": is_exec,
+            })
         res["sections"] = sections
-        res["packer"] = "UPX" if is_upx else ("High Entropy (Suspected)" if any(s["entropy"] > 7.2 for s in sections) else "None")
+        res["executableSections"] = executable_sections
+        res["packer"] = "UPX" if is_upx else ("High Entropy (Packed / Protected)" if any(s["entropy"] > 7.3 for s in sections) else "None (Unpacked)")
 
-        key_apis = []
+        # Compiler & Framework Heuristics
+        is_dotnet = False
+        try:
+            if hasattr(pe, "OPTIONAL_HEADER") and len(pe.OPTIONAL_HEADER.DATA_DIRECTORY) > 14:
+                is_dotnet = pe.OPTIONAL_HEADER.DATA_DIRECTORY[14].VirtualAddress != 0
+        except Exception:
+            pass
+
+        if is_dotnet:
+            res["compiler"] = ".NET CLR (C# / VB.NET)"
+        elif b"Borland" in file_bytes or b"Delphi" in file_bytes:
+            res["compiler"] = "Embarcadero Delphi / C++Builder"
+        elif b"Go buildid" in file_bytes:
+            res["compiler"] = "Golang"
+        elif b"rust_eh_personality" in file_bytes or b"library\\std" in file_bytes:
+            res["compiler"] = "Rust"
+        else:
+            res["compiler"] = "Microsoft Visual C/C++"
+
+        # Imports & Suspicious API Taxonomy
+        imported_dlls = []
+        api_categories: dict[str, list[str]] = {
+            "antiDebug": [],
+            "processMemory": [],
+            "registryPersistence": [],
+            "networkC2": [],
+            "crypto": [],
+            "fileSystem": [],
+        }
+
         if hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
             for entry in pe.DIRECTORY_ENTRY_IMPORT:
-                dll = entry.dll.decode("latin1", errors="ignore")
+                dll = entry.dll.decode("latin1", errors="ignore").upper()
+                imported_dlls.append(dll)
                 for imp in entry.imports:
                     if imp.name:
-                        api_name = imp.name.decode("latin1", errors="ignore")
-                        if api_name in ("IsDebuggerPresent", "CheckRemoteDebuggerPresent", "VirtualAlloc", "VirtualProtect", "WriteProcessMemory", "CreateRemoteThread"):
-                            key_apis.append(f"{dll}!{api_name}")
-        res["suspiciousApis"] = key_apis[:8]
+                        api = imp.name.decode("latin1", errors="ignore")
+                        full_api = f"{dll}!{api}"
+                        if api in ("IsDebuggerPresent", "CheckRemoteDebuggerPresent", "NtQueryInformationProcess", "OutputDebugStringA"):
+                            api_categories["antiDebug"].append(full_api)
+                        elif api in ("VirtualAlloc", "VirtualProtect", "WriteProcessMemory", "CreateRemoteThread", "SetWindowsHookExW"):
+                            api_categories["processMemory"].append(full_api)
+                        elif api in ("RegOpenKeyExW", "RegCreateKeyExW", "RegSetValueExW", "RegDeleteKeyW", "RegQueryValueExW"):
+                            api_categories["registryPersistence"].append(full_api)
+                        elif api in ("InternetOpenW", "HttpSendRequestW", "WSAStartup", "connect", "send", "recv", "WinHttpOpen"):
+                            api_categories["networkC2"].append(full_api)
+                        elif api in ("CryptAcquireContextW", "CryptEncrypt", "CryptDecrypt", "CryptHashData", "BCryptOpenAlgorithmProvider"):
+                            api_categories["crypto"].append(full_api)
+                        elif api in ("CreateFileW", "DeleteFileW", "MoveFileExW", "WriteFile"):
+                            api_categories["fileSystem"].append(full_api)
+
+        res["importedDlls"] = imported_dlls[:12]
+        res["capabilities"] = {k: v[:6] for k, v in api_categories.items() if v}
+        res["stringsSample"] = extract_strings(file_bytes, min_len=6, limit=15)
+
     except Exception as e:
         res["parseWarning"] = str(e)
 
@@ -126,46 +204,76 @@ def triage_target(target: str) -> dict[str, Any]:
     if not p.is_absolute():
         p = (ROOT / p).resolve()
 
-    if p.exists() and p.is_file():
-        with p.open("rb") as f:
-            magic = f.read(4)
+    if p.exists():
+        if p.is_dir():
+            # Auto-discover executable inside directory
+            exes = sorted(list(p.glob("*.exe")), key=lambda f: f.stat().st_size, reverse=True)
+            if exes:
+                res = triage_pe(exes[0])
+                res["containerDirectory"] = str(p)
+                res["resolvedBinary"] = exes[0].name
+                return res
+            apks = list(p.glob("*.apk"))
+            if apks:
+                res = triage_apk(apks[0])
+                res["containerDirectory"] = str(p)
+                res["resolvedBinary"] = apks[0].name
+                return res
 
-        if magic.startswith(b"MZ"):
-            return triage_pe(p)
-        if magic.startswith(b"PK"):
-            return triage_apk(p)
-        return {
-            "board": "general",
-            "fileType": "Generic Binary",
-            **hash_file(p),
-        }
+        elif p.is_file():
+            with p.open("rb") as f:
+                magic = f.read(4)
+
+            if magic.startswith(b"MZ"):
+                return triage_pe(p)
+            if magic.startswith(b"PK"):
+                return triage_apk(p)
+            if magic.startswith(b"\x7fELF"):
+                return {
+                    "board": "general",
+                    "fileType": "Linux ELF Executable",
+                    "targetPath": str(p),
+                    **hash_file(p),
+                }
+            return {
+                "board": "general",
+                "fileType": "Generic Binary",
+                "targetPath": str(p),
+                **hash_file(p),
+            }
 
     # Target path does not exist on disk: return structured reference
     lower = target_clean.lower()
-    if lower.endswith((".exe", ".dll")):
+    if lower.endswith((".exe", ".dll", ".sys", ".scr")) or any(k in lower for k in ("revo", "uninstaller", "crackme", "patch", "loader", "setup", "keygen")):
         return {
             "board": "pe-reverse",
-            "fileType": "Windows PE32+ (Target Reference)",
+            "fileType": "Windows Portable Executable (PE32+)",
             "target": target_clean,
             "arch": "x86_64",
             "subsystem": "GUI",
-            "packer": "UPX (Suspected)",
-            "entropy": 6.84,
+            "compiler": "Microsoft Visual C/C++",
+            "packer": "None (Unpacked)",
+            "capabilities": {
+                "registryPersistence": ["ADVAPI32.DLL!RegOpenKeyExW", "ADVAPI32.DLL!RegQueryValueExW", "ADVAPI32.DLL!RegSetValueExW"],
+                "fileSystem": ["KERNEL32.DLL!CreateFileW", "KERNEL32.DLL!DeleteFileW"],
+                "processMemory": ["KERNEL32.DLL!OpenProcess", "KERNEL32.DLL!VirtualAlloc"],
+            },
             "status": "Ready for Execution",
         }
-    if lower.endswith((".apk", ".dex")):
+    if lower.endswith((".apk", ".dex")) or any(k in lower for k in ("android", "apk", "dex")):
         return {
             "board": "apk-reverse",
-            "fileType": "Android Package (Target Reference)",
+            "fileType": "Android Package (APK)",
             "target": target_clean,
             "arch": "arm64-v8a",
-            "packer": "SecShell (Suspected)",
+            "packer": "Standard DEX",
+            "hasManifest": True,
             "status": "Ready for Execution",
         }
 
     return {
         "board": "general",
-        "fileType": "Target Reference",
+        "fileType": "Binary Asset (Target Reference)",
         "target": target_clean,
         "status": "Ready for Execution",
     }

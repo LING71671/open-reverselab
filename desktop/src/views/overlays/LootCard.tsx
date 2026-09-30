@@ -77,7 +77,9 @@ export function LootCard({ deliverables, onClose }: LootCardProps) {
           {deliverables.key && (
             <div className="p-3 rounded-xl bg-zinc-950/60 border border-zinc-800/80">
               <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-1">
-                {t.loot.key}
+                {deliverables.key.startsWith("SHA256") || deliverables.key.startsWith("EP:")
+                  ? "特征指纹 / 标识"
+                  : t.loot.key}
               </div>
               <div className="text-xs font-mono text-zinc-200 font-bold break-all">
                 {deliverables.key}
@@ -88,7 +90,9 @@ export function LootCard({ deliverables, onClose }: LootCardProps) {
           {deliverables.flag && (
             <div className="p-3 rounded-xl bg-zinc-950/60 border border-zinc-800/80">
               <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-1">
-                {t.loot.flag}
+                {deliverables.flag.startsWith("Verdict:") || deliverables.flag.startsWith("Status:")
+                  ? "研判结论"
+                  : t.loot.flag}
               </div>
               <div className="text-xs font-mono text-emerald-400 font-bold break-all">
                 {deliverables.flag}
@@ -96,6 +100,21 @@ export function LootCard({ deliverables, onClose }: LootCardProps) {
             </div>
           )}
         </div>
+
+        {deliverables.savedArtifacts && (
+          <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-zinc-900/60 border border-zinc-800/60 text-[11px] font-mono text-zinc-400">
+            {deliverables.savedArtifacts.report_path && (
+              <span className="truncate">
+                📄 报告: <span className="text-zinc-200">{deliverables.savedArtifacts.report_path}</span>
+              </span>
+            )}
+            {deliverables.savedArtifacts.script_path && (
+              <span className="truncate">
+                🐍 脚本: <span className="text-zinc-200">{deliverables.savedArtifacts.script_path}</span>
+              </span>
+            )}
+          </div>
+        )}
 
         {deliverables.script && (
           <div className="space-y-1.5">
