@@ -8,7 +8,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const host = process.env.TAURI_DEV_HOST;
-const repoRoot = resolve(__dirname, "..");
+const repoRoot = resolve(import.meta.dirname, "..");
 
 function reverseLabNativePlugin(): Plugin {
   return {
