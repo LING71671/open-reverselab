@@ -1,4 +1,5 @@
-import { Plus, Workflow, ScrollText, Gauge, Database, Settings } from "lucide-react";
+import { useState } from "react";
+import { Plus, Workflow, ScrollText, Gauge, Database, Settings, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { HarnessView, SessionItem, useI18n } from "../../../core";
 import { Logo } from "../Logo";
 
@@ -7,6 +8,8 @@ interface SidebarProps {
   activeSessionId: string;
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
+  onArchiveSession?: (id: string) => void;
+  onDeleteSession?: (id: string) => void;
   onOpenTools: () => void;
   onOpenSettings?: () => void;
   activeView: HarnessView;
@@ -18,6 +21,8 @@ export function Sidebar({
   activeSessionId,
   onSelectSession,
   onNewSession,
+  onArchiveSession,
+  onDeleteSession,
   onOpenTools,
   onOpenSettings,
   activeView,
@@ -46,6 +51,9 @@ export function Sidebar({
     }
     return timeStr;
   };
+
+  const [showArchived, setShowArchived] = useState(false);
+  const filteredSessions = sessions.filter((s) => (showArchived ? !!s.isArchived : !s.isArchived));
 
   return (
     <aside className="w-56 h-full bg-[#0b0b0e] border-r border-zinc-900/90 flex flex-col select-none shrink-0 z-10 font-sans">
@@ -95,29 +103,82 @@ export function Sidebar({
 
       {/* History Session List */}
       <div className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-        <div className="text-xs font-semibold text-zinc-500 mb-1.5 px-2.5 font-sans select-none">
-          {t.sidebar.history}
+        <div className="flex items-center justify-between px-2.5 mb-2">
+          <div className="text-xs font-semibold text-zinc-500 font-sans select-none">
+            {t.sidebar.history}
+          </div>
+          <div className="flex items-center gap-1 text-[10px] font-mono">
+            <button
+              onClick={() => setShowArchived(false)}
+              className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                !showArchived
+                  ? "bg-zinc-800 text-zinc-200 font-medium"
+                  : "text-zinc-500 hover:text-zinc-400"
+              }`}
+            >
+              活跃
+            </button>
+            <button
+              onClick={() => setShowArchived(true)}
+              className={`px-1.5 py-0.5 rounded transition cursor-pointer ${
+                showArchived
+                  ? "bg-zinc-800 text-zinc-200 font-medium"
+                  : "text-zinc-500 hover:text-zinc-400"
+              }`}
+            >
+              归档
+            </button>
+          </div>
         </div>
-        {sessions.length === 0 ? (
+
+        {filteredSessions.length === 0 ? (
           <div className="py-8 px-2 text-center text-xs text-zinc-500 font-sans select-none">
-            {t.sidebar.noHistory}
+            {showArchived ? "暂无归档记录" : t.sidebar.noHistory}
           </div>
         ) : (
-          sessions.map((s) => {
+          filteredSessions.map((s) => {
             const isActive = s.id === activeSessionId;
             return (
               <div
                 key={s.id}
                 onClick={() => onSelectSession(s.id)}
-                className={`p-2.5 rounded-lg cursor-pointer transition flex flex-col gap-0.5 border ${
+                className={`group p-2.5 rounded-lg cursor-pointer transition flex flex-col gap-1 border ${
                   isActive
-                    ? "bg-zinc-900/90 border-zinc-800 text-zinc-100"
+                    ? "bg-zinc-900/90 border-zinc-800 text-zinc-100 shadow-sm"
                     : "border-transparent text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-300"
                 }`}
               >
-                <div className="text-xs font-medium truncate">{formatTitle(s.title)}</div>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="text-xs font-medium truncate flex-1">{formatTitle(s.title)}</div>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onArchiveSession?.(s.id);
+                      }}
+                      title={s.isArchived ? "取消归档" : "归档会话"}
+                      className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
+                    >
+                      {s.isArchived ? (
+                        <ArchiveRestore className="w-3 h-3" />
+                      ) : (
+                        <Archive className="w-3 h-3" />
+                      )}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSession?.(s.id);
+                      }}
+                      title="删除会话"
+                      className="p-1 rounded hover:bg-rose-950/80 text-zinc-400 hover:text-rose-400 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                  <span className="truncate max-w-[110px]">{s.target}</span>
+                  <span className="truncate max-w-[100px]">{s.target || "未指定目标"}</span>
                   <span>{formatTime(s.time)}</span>
                 </div>
               </div>

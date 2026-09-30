@@ -21,6 +21,8 @@ interface HarnessContextType {
   clearLogs: () => void;
   newSession: () => void;
   selectSession: (id: string) => void;
+  archiveSession: (id: string) => void;
+  deleteSession: (id: string) => void;
   selectStep: (step: GraphStep | null) => void;
   setViewMode: (view: HarnessView) => void;
   setToolMonitorOpen: (open: boolean) => void;
@@ -32,8 +34,26 @@ const INITIAL_SESSIONS: SessionItem[] = [];
 const HarnessContext = createContext<HarnessContextType | null>(null);
 
 export function HarnessProvider({ children }: { children: ReactNode }) {
-  const [sessions, setSessions] = useState<SessionItem[]>(INITIAL_SESSIONS);
-  const [activeSessionId, setActiveSessionId] = useState("");
+  const [sessions, setSessions] = useState<SessionItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("reverselab_sessions");
+      return saved ? JSON.parse(saved) : INITIAL_SESSIONS;
+    } catch {
+      return INITIAL_SESSIONS;
+    }
+  });
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    try {
+      const saved = localStorage.getItem("reverselab_sessions");
+      if (saved) {
+        const list = JSON.parse(saved);
+        if (list.length > 0) return list[0].id;
+      }
+    } catch {
+      // ignore
+    }
+    return "";
+  });
   const [viewMode, setViewMode] = useState<HarnessView>("canvas");
   const [steps, setSteps] = useState<GraphStep[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -177,6 +197,14 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     setLogs([]);
   };
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("reverselab_sessions", JSON.stringify(sessions));
+    } catch {
+      // ignore
+    }
+  }, [sessions]);
+
   const newSession = () => {
     const newId = `sess-${Date.now()}`;
     const item: SessionItem = {
@@ -202,6 +230,29 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     setDeliverables(null);
   };
 
+  const archiveSession = (id: string) => {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isArchived: !s.isArchived } : s))
+    );
+  };
+
+  const deleteSession = (id: string) => {
+    setSessions((prev) => {
+      const remaining = prev.filter((s) => s.id !== id);
+      if (activeSessionId === id) {
+        if (remaining.length > 0) {
+          setActiveSessionId(remaining[0].id);
+        } else {
+          setActiveSessionId("");
+        }
+        setSteps([]);
+        setSelectedStep(null);
+        setDeliverables(null);
+      }
+      return remaining;
+    });
+  };
+
   return (
     <HarnessContext.Provider
       value={{
@@ -222,6 +273,8 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
         clearLogs,
         newSession,
         selectSession,
+        archiveSession,
+        deleteSession,
         selectStep: setSelectedStep,
         setViewMode,
         setToolMonitorOpen: setIsToolMonitorOpen,

@@ -365,9 +365,23 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     if (signal?.aborted) throw new Error("AbortError");
     const parentId = state.steps[state.steps.length - 1]?.id || null;
 
+    // 1. Immediately emit the Planner Step so the canvas never hangs after step 2
+    const plannerId = `plan-${Math.random().toString(36).substring(2, 8)}`;
+    const plannerStep: GraphStep = {
+      id: plannerId,
+      parentId,
+      agentId: "main",
+      title: "AI 逆向意图解析与拓扑编排",
+      status: "running",
+      detail: `正在解析意图 "${state.wish || "自主逆向分析与脚本复现"}" 并规划任务拓扑...`,
+      kbRef: `kb/${state.board}/techniques/attack-network.md`,
+      timestamp: Date.now(),
+    };
+    emit(plannerStep);
+
     let plan = createDomainAwareFallbackPlan(state.wish, state.target, state.board, state.triageInfo);
 
-    // If LLM service is available, prompt AI to dynamically orchestrate sub-agent steps
+    // 2. Query LLM with strict 4s timeout so remote delay never stalls execution
     if (llmService.getApiKey() && !signal?.aborted) {
       try {
         const res = await llmService.complete(
@@ -399,7 +413,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
               content: `目标: ${state.target}\n归属板块: ${state.board}\n特征: ${JSON.stringify(state.triageInfo)}\n用户逆向意图: ${state.wish || "快速逆向核心校验算法并生成解密脚本"}`,
             },
           ],
-          { maxTokens: 1536, temperature: 0.25, signal }
+          { maxTokens: 1536, temperature: 0.25, timeoutMs: 4000, signal }
         );
 
         const cleanJson = res.content.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
@@ -420,6 +434,19 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
 
     if (signal?.aborted) throw new Error("AbortError");
 
+    // Complete the planner step
+    const plannerDone: GraphStep = {
+      ...plannerStep,
+      status: "done",
+      detail: plan.summary,
+      evidence: {
+        orchestrator: "ReverseLab AI Harness",
+        plannedSteps: plan.steps.length,
+        board: state.board,
+      },
+    };
+    emit(plannerDone);
+
     // Dynamic Step Execution: Emit each sub-agent step sequentially with real-time UI animation
     const subStepIds: string[] = [];
     const completedSteps: GraphStep[] = [];
@@ -432,7 +459,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
 
       const stepRunning: GraphStep = {
         id: stepId,
-        parentId,
+        parentId: plannerId,
         agentId: stepDef.agentId || "sub-agent",
         title: stepDef.title || `分析子任务 #${i + 1}`,
         status: "running",
@@ -527,7 +554,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     onEvent?.({ type: "LOOT_REVEAL", deliverables });
 
     return {
-      steps: [...state.steps, ...completedSteps, joinStep],
+      steps: [...state.steps, plannerDone, ...completedSteps, joinStep],
       deliverables,
       isCompleted: true,
     };

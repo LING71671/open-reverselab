@@ -4,4 +4,5 @@ export interface SessionItem {
   target: string;
   time: string;
   status: "idle" | "running" | "completed";
+  isArchived?: boolean;
 }

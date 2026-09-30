@@ -33,6 +33,8 @@ function AppContent() {
     clearLogs,
     newSession,
     selectSession,
+    archiveSession,
+    deleteSession,
     selectStep,
     setViewMode,
     setToolMonitorOpen,
@@ -54,6 +56,8 @@ function AppContent() {
           activeSessionId={activeSessionId}
           onSelectSession={selectSession}
           onNewSession={newSession}
+          onArchiveSession={archiveSession}
+          onDeleteSession={deleteSession}
           onOpenTools={() => setToolMonitorOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
           activeView={viewMode}

@@ -108,6 +108,7 @@ export class LlmService {
       model?: string;
       temperature?: number;
       maxTokens?: number;
+      timeoutMs?: number;
       signal?: AbortSignal;
     }
   ): Promise<CompletionResult> {
@@ -115,45 +116,61 @@ export class LlmService {
     const model = options?.model || this.defaultModel;
     const url = this.resolveUrl("/chat/completions");
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: options?.temperature ?? 0.3,
-        max_tokens: options?.maxTokens ?? 2048,
-      }),
-      signal: options?.signal,
-    });
+    const timeoutMs = options?.timeoutMs ?? 5000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const durationMs = Math.round(performance.now() - start);
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`LLM Error ${res.status}: ${errText}`);
+    const abortHandler = () => controller.abort();
+    if (options?.signal) {
+      options.signal.addEventListener("abort", abortHandler);
     }
 
-    const data = await res.json();
-    const choice = data.choices?.[0];
-    const message = choice?.message || {};
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: options?.temperature ?? 0.3,
+          max_tokens: options?.maxTokens ?? 2048,
+        }),
+        signal: controller.signal,
+      });
 
-    return {
-      content: message.content || "",
-      reasoning: message.reasoning_content || undefined,
-      usage: data.usage
-        ? {
-            promptTokens: data.usage.prompt_tokens || 0,
-            completionTokens: data.usage.completion_tokens || 0,
-            totalTokens: data.usage.total_tokens || 0,
-          }
-        : undefined,
-      durationMs,
-      model,
-    };
+      const durationMs = Math.round(performance.now() - start);
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`LLM Error ${res.status}: ${errText}`);
+      }
+
+      const data = await res.json();
+      const choice = data.choices?.[0];
+      const message = choice?.message || {};
+
+      return {
+        content: message.content || "",
+        reasoning: message.reasoning_content || undefined,
+        usage: data.usage
+          ? {
+              promptTokens: data.usage.prompt_tokens || 0,
+              completionTokens: data.usage.completion_tokens || 0,
+              totalTokens: data.usage.total_tokens || 0,
+            }
+          : undefined,
+        durationMs,
+        model,
+      };
+    } finally {
+      clearTimeout(timer);
+      if (options?.signal) {
+        options.signal.removeEventListener("abort", abortHandler);
+      }
+    }
   }
 }
 
