@@ -29,12 +29,31 @@ export function TitleBar({ title }: { title?: string }) {
     }
   };
 
+  const handleMouseDown = async (e: React.MouseEvent) => {
+    if (e.button === 0 && !(e.target as HTMLElement).closest("button")) {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().startDragging();
+      } catch (err) {
+        console.warn("startDragging error:", err);
+      }
+    }
+  };
+
+  const handleDoubleClick = async (e: React.MouseEvent) => {
+    if (!(e.target as HTMLElement).closest("button")) {
+      await handleMaximize();
+    }
+  };
+
   return (
     <div
       data-tauri-drag-region
-      className="h-10 w-full bg-[#09090b] border-b border-zinc-900 flex items-center justify-between px-3 select-none shrink-0 z-50 text-zinc-400 font-sans"
+      onMouseDown={handleMouseDown}
+      onDoubleClick={handleDoubleClick}
+      className="h-10 w-full bg-[#09090b] border-b border-zinc-900 flex items-center justify-between px-3 select-none shrink-0 z-50 text-zinc-400 font-sans cursor-default"
     >
-      <div className="flex items-center gap-3 pointer-events-none">
+      <div className="flex items-center gap-3 select-none pointer-events-none">
         <div className="flex items-center gap-2.5">
           <Logo size={14} className="text-zinc-100" />
           <span className="text-xs font-semibold tracking-wider text-zinc-200">

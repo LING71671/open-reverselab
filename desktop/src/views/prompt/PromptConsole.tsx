@@ -20,12 +20,40 @@ export function PromptConsole({
   const [target, setTarget] = useState(defaultTarget);
   const [prompt, setPrompt] = useState("");
   const [isEditingTarget, setIsEditingTarget] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTarget(defaultTarget || "");
   }, [defaultTarget]);
+
+  // Listen to native Tauri file drop events
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      try {
+        const { getCurrentWebview } = await import("@tauri-apps/api/webview");
+        unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+          if (event.payload.type === "over") {
+            setIsDraggingOver(true);
+          } else if (event.payload.type === "drop" && event.payload.paths.length > 0) {
+            setIsDraggingOver(false);
+            const droppedPath = event.payload.paths[0];
+            setTarget(droppedPath);
+            logger.info("triage", `目标文件已拖入: ${droppedPath}`);
+          } else {
+            setIsDraggingOver(false);
+          }
+        });
+      } catch {
+        // Fallback in non-tauri web environments
+      }
+    })();
+    return () => {
+      unlisten?.();
+    };
+  }, []);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -40,17 +68,13 @@ export function PromptConsole({
     }
   };
 
-  const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     try {
       const buffer = await file.arrayBuffer();
       const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const sha256 = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
-      // Magic byte detection
       const uint8 = new Uint8Array(buffer.slice(0, 4));
       let fileType = "Unknown Binary";
       if (uint8[0] === 0x4d && uint8[1] === 0x5a) {
@@ -64,16 +88,48 @@ export function PromptConsole({
       setTarget(file.name);
       logger.info(
         "triage",
-        `Sample: ${file.name} (${(file.size / 1024).toFixed(1)} KB) · ${fileType}`,
+        `目标载入: ${file.name} (${(file.size / 1024).toFixed(1)} KB) · ${fileType}`,
         { sha256, sizeBytes: file.size, fileType }
       );
     } catch (err: any) {
-      logger.error("triage", `Read error: ${err.message}`);
+      logger.error("triage", `文件读取异常: ${err.message}`);
+    }
+  };
+
+  const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await processFile(e.dataTransfer.files[0]);
     }
   };
 
   return (
-    <div className="w-full">
+    <div
+      className="w-full"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <input
         type="file"
         ref={fileInputRef}
@@ -81,7 +137,21 @@ export function PromptConsole({
         className="hidden"
       />
 
-      <div className="rounded-xl bg-[#121215]/70 border border-zinc-800/70 shadow-2xl backdrop-blur-md transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40">
+      <div
+        className={`rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40 ${
+          isDraggingOver
+            ? "bg-zinc-900/90 border-zinc-400 ring-2 ring-zinc-500/50 scale-[1.01]"
+            : "bg-[#121215]/70 border-zinc-800/70"
+        }`}
+      >
+        {/* Drag over banner overlay */}
+        {isDraggingOver && (
+          <div className="px-4 py-2 bg-zinc-800/90 rounded-t-xl text-center text-xs font-mono text-zinc-100 flex items-center justify-center gap-2 border-b border-zinc-700">
+            <UploadCloud className="w-4 h-4 animate-bounce" />
+            <span>释放鼠标以载入逆向分析目标</span>
+          </div>
+        )}
+
         {/* 1. Main Text Input Area */}
         <div className="p-3 pb-1.5">
           <textarea
@@ -107,7 +177,7 @@ export function PromptConsole({
                 onChange={(e) => setTarget(e.target.value)}
                 onBlur={() => setIsEditingTarget(false)}
                 onKeyDown={(e) => e.key === "Enter" && setIsEditingTarget(false)}
-                className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-[11px] font-mono text-zinc-200 focus:outline-none shrink-0"
+                className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-xs font-mono text-zinc-200 focus:outline-none shrink-0"
               />
             ) : (
               <div className="flex items-center gap-1 shrink min-w-0">
@@ -115,7 +185,7 @@ export function PromptConsole({
                   type="button"
                   onClick={() => setIsEditingTarget(true)}
                   title={t.common.target}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-[11px] font-medium text-zinc-300 transition-all active:scale-95 cursor-pointer truncate max-w-[200px]"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-xs font-medium text-zinc-300 transition-all active:scale-95 cursor-pointer truncate max-w-[280px]"
                 >
                   <Paperclip className="w-3 h-3 text-zinc-400 shrink-0" />
                   <span className="truncate">{target || t.common.target}</span>

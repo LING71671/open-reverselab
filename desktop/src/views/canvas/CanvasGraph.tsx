@@ -109,8 +109,14 @@ function FlowInner({ steps, selectedStep, onSelectStep }: CanvasGraphProps) {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        minZoom={0.3}
-        maxZoom={1.5}
+        minZoom={0.2}
+        maxZoom={2.0}
+        panOnDrag={true}
+        selectionOnDrag={false}
+        panOnScroll={false}
+        zoomOnScroll={true}
+        nodesDraggable={true}
+        elementsSelectable={true}
         proOptions={{ hideAttribution: true }}
       >
         <Background
@@ -119,7 +125,10 @@ function FlowInner({ steps, selectedStep, onSelectStep }: CanvasGraphProps) {
           size={1.5}
           color="#52525b"
         />
-        <Controls className="!m-4 !border-zinc-800 !bg-[#121215]" />
+        <Controls
+          showInteractive={false}
+          className="!m-4 !border-zinc-800 !bg-[#121215]"
+        />
       </ReactFlow>
     </div>
   );
