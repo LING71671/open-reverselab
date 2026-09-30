@@ -29,7 +29,7 @@ export class LlmService {
     this.defaultModel =
       localStorage.getItem("reverselab_model") ||
       (import.meta.env.VITE_LLM_MODEL as string) ||
-      "qwen3.8-flash";
+      "deepseek-v4-flash-0731";
   }
 
   public getApiKey(): string {
@@ -116,7 +116,7 @@ export class LlmService {
     const model = options?.model || this.defaultModel;
     const url = this.resolveUrl("/chat/completions");
 
-    const timeoutMs = options?.timeoutMs ?? 5000;
+    const timeoutMs = options?.timeoutMs ?? 30000;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 

@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 // @ts-expect-error type error without @types/node package
 import process from "node:process";
 import { execFile } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const host = process.env.TAURI_DEV_HOST;
@@ -134,6 +134,47 @@ print(json.dumps(results))
           }));
           res.end(JSON.stringify({ list }));
         }
+      });
+
+      // 5. Real Report & Script saving: POST /api/system/save-report
+      server.middlewares.use("/api/system/save-report", (req, res, next) => {
+        if (req.method !== "POST") return next();
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", () => {
+          try {
+            const { target, summary, script, key, flag } = JSON.parse(body || "{}");
+            const cleanName = (target || "target")
+              .split(/[\\/]/)
+              .pop()
+              .replace(/\.[^/.]+$/, "");
+            const reportsDir = resolve(repoRoot, "reports");
+            const exportsDir = resolve(repoRoot, "exports");
+            mkdirSync(reportsDir, { recursive: true });
+            mkdirSync(exportsDir, { recursive: true });
+
+            const reportRel = `reports/${cleanName}_analysis.md`;
+            const scriptRel = `exports/${cleanName}_forensics.py`;
+            const reportPath = resolve(repoRoot, reportRel);
+            const scriptPath = resolve(repoRoot, scriptRel);
+
+            const reportMd = `# Analysis Report: ${target}\n\n## 1. Summary\n${summary}\n\n## 2. Key Artifacts\n- Target: ${target}\n- Recovered Key/Fingerprint: ${key || "None"}\n- Verdict: ${flag || "None"}\n\n## 3. Verified Script\n\`\`\`python\n${script}\n\`\`\`\n`;
+            writeFileSync(reportPath, reportMd, "utf-8");
+            writeFileSync(scriptPath, script || "# Empty script\n", "utf-8");
+
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                status: "saved",
+                report_path: reportRel,
+                script_path: scriptRel,
+              })
+            );
+          } catch (e: any) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
       });
     },
   };
