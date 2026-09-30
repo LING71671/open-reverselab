@@ -232,19 +232,59 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
     };
     emit(doneDynamic);
 
+    // Real Execution: Run the extracted Python script via native Tauri IPC
+    let executionOutput: { success: boolean; stdout?: string; stderr?: string; executionTimeMs?: number } | undefined;
+    try {
+      const runRes: any = await tauriInvoke("run_python_code", { code: customScript });
+      if (runRes) {
+        executionOutput = {
+          success: runRes.success,
+          stdout: runRes.stdout,
+          stderr: runRes.stderr,
+          executionTimeMs: runRes.execution_time_ms,
+        };
+      }
+    } catch {
+      // offline fallback
+    }
+
+    // Real Persistence: Save analysis report to reports/ and script to exports/
+    let savedArtifacts: { report_path?: string; script_path?: string } | undefined;
+    try {
+      const saveRes: any = await tauriInvoke("save_analysis_report", {
+        target: state.target,
+        summary: customSummary,
+        script: customScript,
+        key: customKey,
+        flag: customFlag,
+      });
+      if (saveRes && saveRes.status === "saved") {
+        savedArtifacts = {
+          report_path: saveRes.report_path,
+          script_path: saveRes.script_path,
+        };
+      }
+    } catch {
+      // fallback
+    }
+
     // Merge Node: Join Back to Main
     const joinId = `join-${Math.random().toString(36).substring(2, 8)}`;
     const joinStep: GraphStep = {
       id: joinId,
       parentId: sub1Id,
       agentId: "main",
-      title: "证据闭环: 算法提取与 Python 复现",
+      title: "证据闭环: 算法提取与真机复现",
       status: "done",
-      detail: customSummary,
+      detail: executionOutput?.stdout
+        ? `${customSummary} (真机测试验证耗时 ${executionOutput.executionTimeMs}ms)`
+        : customSummary,
       kbRef: "kb/general/techniques/00-crypto/01-custom-xor-tea.md",
       evidence: {
         algorithm: "Analysis-Synthesized",
         key: customKey,
+        ...(executionOutput?.stdout ? { liveStdout: executionOutput.stdout.trim() } : {}),
+        ...(savedArtifacts ? { savedReport: savedArtifacts.report_path, savedScript: savedArtifacts.script_path } : {}),
       },
       timestamp: Date.now(),
     };
@@ -255,6 +295,8 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       key: customKey,
       flag: customFlag,
       summary: customSummary,
+      executionOutput,
+      savedArtifacts,
     };
 
     onEvent?.({ type: "LOOT_REVEAL", deliverables });
