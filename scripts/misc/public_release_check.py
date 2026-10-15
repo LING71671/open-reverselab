@@ -137,16 +137,24 @@ def main() -> int:
                     failures.append(f"MCP {name} missing local entry: {arg}")
 
     # This public repository intentionally avoids publishing personal commit
-    # addresses. Contributors can override this locally only when they have
-    # explicitly chosen to publish their address.
+    # addresses on directly pushed commits. Commits created by GitHub's merge
+    # machinery (squash/rebase merge, committer web-flow) keep the PR author's
+    # own address, which is that contributor's choice and outside this
+    # repository's push hygiene, so the rule does not apply to them.
     if not scoped:
         author_email = subprocess.check_output(
             ["git", "-C", str(ROOT), "log", "-1", "--format=%ae"],
             text=True,
             encoding="utf-8",
         ).strip()
+        committer_email = subprocess.check_output(
+            ["git", "-C", str(ROOT), "log", "-1", "--format=%ce"],
+            text=True,
+            encoding="utf-8",
+        ).strip()
         if (
             author_email
+            and "noreply" not in committer_email.lower()
             and "noreply" not in author_email.lower()
             and os.environ.get("ALLOW_PUBLIC_COMMIT_EMAIL") != "1"
         ):
