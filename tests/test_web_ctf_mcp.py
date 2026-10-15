@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -102,8 +103,8 @@ def test_ctf_autopilot_round_invokes_controller(tmp_path, monkeypatch):
         stdout = '{"ok": true}'
         stderr = ""
 
-    def fake_run(cmd, cwd, capture_output, text, timeout):
-        called.update({"cmd": cmd, "cwd": cwd, "timeout": timeout})
+    def fake_run(cmd, cwd, capture_output, text, timeout, stdin=None):
+        called.update({"cmd": cmd, "cwd": cwd, "timeout": timeout, "stdin": stdin})
         return FakeCompleted()
 
     monkeypatch.setattr(web_ctf, "CTF_AUTOPILOT", controller)
@@ -123,4 +124,6 @@ def test_ctf_autopilot_round_invokes_controller(tmp_path, monkeypatch):
     assert "--execute" in called["cmd"]
     assert "--allow-network-cve" in called["cmd"]
     assert called["cmd"][called["cmd"].index("--max-actions") + 1] == "2"
+    # The controller subprocess must not inherit the MCP server's stdio pipe.
+    assert called["stdin"] is subprocess.DEVNULL
     assert called["timeout"] == 60
