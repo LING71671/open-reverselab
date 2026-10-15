@@ -334,6 +334,7 @@ def ctf_autopilot_round(
             cwd=str(REVERSE_ROOT),
             capture_output=True,
             text=True,
+            stdin=subprocess.DEVNULL,  # child must not inherit the MCP stdio pipe: interactive tools (sqlmap "Press Enter") block on it until timeout
             timeout=max(timeout + 30, 60),
         )
     except subprocess.TimeoutExpired:
@@ -450,6 +451,7 @@ def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict:
             env=env,
             capture_output=True,
             text=True,
+            stdin=subprocess.DEVNULL,  # same as above: EOF stdin instead of inheriting the MCP pipe
             timeout=timeout,
         )
         return {
