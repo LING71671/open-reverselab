@@ -26,6 +26,26 @@
   --rl-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
 }
 
+/* Dark mode: Precision obsidian lab console */
+.dark {
+  --rl-bg: oklch(0.135 0.012 280);
+  --rl-surface: oklch(0.175 0.015 280);
+  --rl-surface-2: oklch(0.215 0.018 280);
+  --rl-ink: oklch(0.960 0.005 280);
+  --rl-ink-soft: oklch(0.820 0.010 280);
+  --rl-muted: oklch(0.580 0.015 280);
+  --rl-line: oklch(0.250 0.015 280);
+  --rl-primary: oklch(0.680 0.160 278);
+  --rl-primary-2: oklch(0.740 0.150 278);
+  --rl-primary-soft: oklch(0.240 0.040 278);
+  --rl-accent: oklch(0.740 0.160 65);
+  --rl-accent-soft: oklch(0.250 0.050 65);
+  --rl-ok: oklch(0.700 0.150 150);
+  --rl-warn: oklch(0.750 0.150 75);
+  --rl-danger: oklch(0.700 0.180 25);
+  --rl-code-bg: oklch(0.110 0.010 280);
+}
+
 /* map onto VitePress tokens */
 :root {
   --vp-c-bg: var(--rl-bg);
@@ -57,6 +77,32 @@
   --vp-nav-height: 60px;
   --vp-sidebar-width: 300px;
   --vp-layout-max-width: 1440px;
+}
+
+.dark {
+  --vp-c-bg: var(--rl-bg);
+  --vp-c-bg-alt: var(--rl-surface);
+  --vp-c-bg-elv: var(--rl-surface);
+  --vp-c-bg-soft: var(--rl-surface);
+  --vp-c-text-1: var(--rl-ink);
+  --vp-c-text-2: var(--rl-ink-soft);
+  --vp-c-text-3: var(--rl-muted);
+  --vp-c-divider: var(--rl-line);
+  --vp-c-border: var(--rl-line);
+  --vp-c-border-hard: var(--rl-line);
+  --vp-c-gutter: var(--rl-line);
+  --vp-c-brand-1: var(--rl-primary);
+  --vp-c-brand-2: var(--rl-primary-2);
+  --vp-c-brand-3: var(--rl-primary);
+  --vp-c-brand-soft: var(--rl-primary-soft);
+  --vp-c-green: var(--rl-ok);
+  --vp-c-green-soft: oklch(0.240 0.040 150);
+  --vp-c-yellow: var(--rl-warn);
+  --vp-c-yellow-soft: oklch(0.240 0.040 75);
+  --vp-c-red: var(--rl-danger);
+  --vp-c-red-soft: oklch(0.240 0.040 25);
+  --vp-code-block-bg: var(--rl-code-bg);
+  --vp-code-bg: var(--rl-surface-2);
 }
 
 /* typography: display heads in IBM Plex Sans */
@@ -216,4 +262,31 @@ h1, h2, h3, .vp-doc h1, .vp-doc h2, .vp-doc h3,
 .rl-tool:hover {
   border-color: var(--rl-primary);
   color: var(--rl-primary);
+}
+
+/* Dark mode board chip & custom block adjustments */
+.dark .rl-board-chip {
+  color: hsl(var(--bd-hue) 80% 80%);
+  background: hsl(var(--bd-hue) 45% 15%);
+  border-color: hsl(var(--bd-hue) 40% 25%);
+}
+
+.dark .custom-block.tip { background: var(--rl-primary-soft); }
+.dark .custom-block.warning { background: var(--rl-accent-soft); }
+.dark .custom-block.danger { background: oklch(0.240 0.040 25 / 0.6); }
+
+/* Global scrollbar refinement */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--rl-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--rl-line);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rl-muted);
 }
