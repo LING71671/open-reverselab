@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Workflow, ScrollText, Gauge, Database, Settings, Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Plus, Workflow, ScrollText, Gauge, Database, Settings, Archive, ArchiveRestore, Trash2, MessageSquare } from "lucide-react";
 import { HarnessView, SessionItem, useI18n } from "../../../core";
 import { Logo } from "../Logo";
 
@@ -31,6 +31,7 @@ export function Sidebar({
   const { t, locale } = useI18n();
 
   const navItems: { id: HarnessView; label: string; icon: any }[] = [
+    { id: "chat", label: t.sidebar.chat, icon: MessageSquare },
     { id: "canvas", label: t.sidebar.graph, icon: Workflow },
     { id: "console", label: t.sidebar.logs, icon: ScrollText },
     { id: "diagnostics", label: t.sidebar.diag, icon: Gauge },
@@ -178,7 +179,9 @@ export function Sidebar({
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                  <span className="truncate max-w-[100px]">{s.target || "未指定目标"}</span>
+                  <span className="truncate max-w-[100px]">
+                    {s.target && s.target !== "target.bin" ? s.target : "未指定目标"}
+                  </span>
                   <span>{formatTime(s.time)}</span>
                 </div>
               </div>

@@ -2,6 +2,7 @@ export * from "./shell/TitleBar/TitleBar";
 export * from "./shell/Sidebar/Sidebar";
 export * from "./shell/Logo";
 export * from "./canvas/CanvasGraph";
+export * from "./chat/AgentChatView";
 export * from "./canvas/nodes/HarnessNode";
 export * from "./console/LogConsole";
 export * from "./console/ConsoleView";

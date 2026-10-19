@@ -206,18 +206,50 @@ def triage_target(target: str) -> dict[str, Any]:
 
     if p.exists():
         if p.is_dir():
-            # Auto-discover executable inside directory
-            exes = sorted(list(p.glob("*.exe")), key=lambda f: f.stat().st_size, reverse=True)
+            # Discover and inventory all binaries / samples inside directory
+            all_samples = []
+            for ext in ("*.exe", "*.dll", "*.sys", "*.apk", "*.dex", "*.so", "*.bin"):
+                for f in p.glob(ext):
+                    all_samples.append({
+                        "name": f.name,
+                        "path": str(f),
+                        "sizeBytes": f.stat().st_size,
+                        "ext": f.suffix.lower(),
+                        "type": "PE Executable" if f.suffix.lower() == ".exe" else (
+                            "Dynamic Library" if f.suffix.lower() == ".dll" else (
+                                "Kernel Driver" if f.suffix.lower() == ".sys" else (
+                                    "Android Package" if f.suffix.lower() == ".apk" else "Binary Module"
+                                )
+                            )
+                        ),
+                    })
+            all_samples.sort(key=lambda x: x["sizeBytes"], reverse=True)
+
+            # Auto-discover primary executable
+            exes = [s for s in all_samples if s["ext"] == ".exe"]
             if exes:
-                res = triage_pe(exes[0])
+                primary = exes[0]
+                primary_path = Path(primary["path"])
+                res = triage_pe(primary_path)
+                res["isContainerDirectory"] = True
                 res["containerDirectory"] = str(p)
-                res["resolvedBinary"] = exes[0].name
+                res["resolvedBinary"] = primary["name"]
+                for s in all_samples:
+                    s["isPrimary"] = (s["name"] == primary["name"])
+                res["discoveredSamples"] = all_samples[:30]
                 return res
-            apks = list(p.glob("*.apk"))
+
+            apks = [s for s in all_samples if s["ext"] == ".apk"]
             if apks:
-                res = triage_apk(apks[0])
+                primary = apks[0]
+                primary_path = Path(primary["path"])
+                res = triage_apk(primary_path)
+                res["isContainerDirectory"] = True
                 res["containerDirectory"] = str(p)
-                res["resolvedBinary"] = apks[0].name
+                res["resolvedBinary"] = primary["name"]
+                for s in all_samples:
+                    s["isPrimary"] = (s["name"] == primary["name"])
+                res["discoveredSamples"] = all_samples[:30]
                 return res
 
         elif p.is_file():

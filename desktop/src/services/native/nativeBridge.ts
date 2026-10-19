@@ -41,6 +41,15 @@ export interface TriageResult {
   }>;
   executableSections?: string[];
   importedDlls?: string[];
+  isContainerDirectory?: boolean;
+  discoveredSamples?: Array<{
+    name: string;
+    path: string;
+    sizeBytes: number;
+    ext: string;
+    type: string;
+    isPrimary?: boolean;
+  }>;
   capabilities?: Record<string, string[]>;
   stringsSample?: string[];
   error?: string;

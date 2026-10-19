@@ -11,17 +11,22 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.81",
+    "@ai-sdk/react": "^4.0.125",
     "@langchain/core": "^1.2.13",
     "@langchain/langgraph": "^1.4.18",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@xyflow/react": "^12.12.0",
+    "ai": "^4.1.0",
     "lucide-react": "^1.48.0",
+    "mermaid": "^12.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
     "remark-frontmatter": "^5.0.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -1,6 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DiagnosticItem } from "../../core";
-import { CheckCircle2, AlertTriangle, XCircle, RefreshCw, Cpu, Database, FileSearch, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  RefreshCw,
+  Cpu,
+  Database,
+  ShieldCheck,
+  Activity,
+  FolderTree,
+} from "lucide-react";
+import { useHarness } from "../../state";
 
 interface DiagnosticsPanelProps {
   currentTarget?: string;
@@ -63,35 +74,37 @@ const DEFAULT_DIAGNOSTICS: DiagnosticItem[] = [
     status: "pass",
     detail: "15 tools · 密码算法还原 / TEA / XOR / 固件分析",
   },
-  {
-    id: "diag-sample",
-    category: "sample",
-    name: "当前目标文件可访问性",
-    status: "pass",
-    detail: "样本文件在磁盘上可读，节区熵 6.84，特征检测完成",
-  },
 ];
 
 export function DiagnosticsPanel({ currentTarget }: DiagnosticsPanelProps) {
+  const { activeDiagnostics, discoveredSamples, currentSession } = useHarness();
   const [items, setItems] = useState<DiagnosticItem[]>(DEFAULT_DIAGNOSTICS);
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleRunDiagnostics = () => {
+  const fetchLiveDiagnostics = async () => {
     setIsScanning(true);
-    setTimeout(() => {
-      setItems((prev) =>
-        prev.map((item) => {
-          if (item.category === "sample" && currentTarget) {
-            return {
-              ...item,
-              detail: `目标 [${currentTarget}] 路径已验证，PE32+ 架构，无签名锁死`,
-            };
-          }
-          return item;
-        })
-      );
+    try {
+      const res = await fetch("/api/system/diagnostics");
+      if (res.ok) {
+        const liveItems: DiagnosticItem[] = await res.json();
+        setItems((prev) => {
+          const mcpItems = prev.filter((i) => i.category === "mcp");
+          return [...liveItems, ...mcpItems];
+        });
+      }
+    } catch {
+      // offline fallback
+    } finally {
       setIsScanning(false);
-    }, 800);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveDiagnostics();
+  }, []);
+
+  const handleRunDiagnostics = () => {
+    fetchLiveDiagnostics();
   };
 
   const getStatusIcon = (status: DiagnosticItem["status"]) => {
@@ -107,9 +120,9 @@ export function DiagnosticsPanel({ currentTarget }: DiagnosticsPanelProps) {
     }
   };
 
-  const toolchainItems = items.filter((i) => i.category === "toolchain");
+  const toolchainItems = items.filter((i) => i.category === "toolchain" || i.category === "system");
   const mcpItems = items.filter((i) => i.category === "mcp");
-  const sampleItems = items.filter((i) => i.category === "sample");
+
 
   return (
     <div className="w-full h-full bg-[#09090b] text-zinc-100 flex flex-col font-sans select-none overflow-y-auto p-6 space-y-6">
@@ -134,26 +147,85 @@ export function DiagnosticsPanel({ currentTarget }: DiagnosticsPanelProps) {
         </button>
       </div>
 
+      {/* 1. Live Pipeline Sub-stream Branch Diagnostics */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 uppercase tracking-wider">
-          <FileSearch className="w-3.5 h-3.5" />
-          <span>目标初筛状态</span>
+          <Activity className="w-3.5 h-3.5 text-cyan-400" />
+          <span>全链路支流实时诊断 (Pipeline Branch Diagnostics)</span>
         </div>
-        <div className="space-y-1.5">
-          {sampleItems.map((item) => (
-            <div
-              key={item.id}
-              className="p-3 rounded-xl bg-[#121215] border border-zinc-800/80 flex items-center justify-between"
-            >
-              <div>
-                <div className="text-xs font-medium text-zinc-200">{item.name}</div>
-                <div className="text-[11px] font-mono text-zinc-400 mt-0.5">{item.detail}</div>
+        {Object.keys(activeDiagnostics).length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {Object.values(activeDiagnostics).map((diag) => (
+              <div
+                key={diag.stageId}
+                className="p-3 rounded-xl bg-[#121215] border border-zinc-800/80 space-y-1.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium text-zinc-200">{diag.stageName}</div>
+                  <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                    <span className="text-zinc-500">{diag.durationMs}ms</span>
+                    {getStatusIcon(diag.status === "pass" ? "pass" : diag.status === "warn" ? "warn" : "fail")}
+                  </div>
+                </div>
+                <div className="text-[11px] font-mono text-zinc-400">{diag.summary}</div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {diag.metrics.map((m, idx) => (
+                    <span
+                      key={idx}
+                      className="px-1.5 py-0.5 rounded bg-black/60 border border-zinc-800 text-[10px] font-mono text-zinc-300"
+                    >
+                      <span className="text-zinc-500">{m.label}: </span>
+                      <span className={m.status === "warn" ? "text-amber-400" : m.status === "fail" ? "text-rose-400" : "text-emerald-400"}>
+                        {m.value} {m.unit || ""}
+                      </span>
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="shrink-0">{getStatusIcon(item.status)}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-3 rounded-xl bg-[#121215] border border-zinc-800/60 text-xs font-mono text-zinc-500">
+            暂无活跃流水线执行数据，在控制台输入目标并执行分析后将实时更新各支流指标 (TTFT、熵值、吞吐率等)
+          </div>
+        )}
       </div>
+
+      {/* 2. Discovered Target & Samples Inventory */}
+      {discoveredSamples.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 uppercase tracking-wider">
+            <FolderTree className="w-3.5 h-3.5 text-emerald-400" />
+            <span>目标容器与关联样本清单 ({discoveredSamples.length} 个)</span>
+          </div>
+          <div className="p-3 rounded-xl bg-[#121215] border border-zinc-800/80 space-y-2">
+            {(currentTarget || currentSession?.target) && (
+              <div className="text-xs font-mono text-zinc-400">
+                <span className="text-zinc-500">容器主路径: </span>
+                <span className="text-zinc-200">{currentTarget || currentSession?.target}</span>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              {discoveredSamples.map((sample, idx) => (
+                <div
+                  key={`${sample.name}-${idx}`}
+                  className={`px-2 py-1 rounded text-[10px] font-mono border ${
+                    sample.isPrimary
+                      ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold"
+                      : "bg-zinc-900 border-zinc-800 text-zinc-400"
+                  }`}
+                >
+                  <span className="text-zinc-500">[{sample.ext.replace(".", "").toUpperCase()}] </span>
+                  <span>{sample.name} </span>
+                  <span className="text-zinc-500">({(sample.sizeBytes / (1024 * 1024)).toFixed(1)}MB)</span>
+                  {sample.isPrimary && <span className="text-emerald-400 ml-1 text-[9px]">PRIMARY</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
 
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 uppercase tracking-wider">

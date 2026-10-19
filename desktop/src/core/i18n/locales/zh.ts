@@ -21,6 +21,7 @@ export const zh: TranslationKey = {
   sidebar: {
     newAnalysis: "新建分析",
     views: "视图",
+    chat: "对话",
     graph: "图谱",
     logs: "日志",
     diag: "诊断",

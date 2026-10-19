@@ -453,7 +453,7 @@ else:
               content: `目标路径: ${targetPath}\n归属板块: ${state.board}\n真实初筛特征: ${JSON.stringify(triageSummary)}\n用户逆向意图: ${state.wish || "全面分析该程序的二进制结构与特权API调用链"}`,
             },
           ],
-          { model: "deepseek-v4-flash-0731", maxTokens: 3072, temperature: 0.2, timeoutMs: 30000, signal }
+          { model: llmService.getModel() || "deepseek-v4-flash-0731", maxTokens: 3072, temperature: 0.2, timeoutMs: 30000, signal }
         );
 
         const cleanJson = res.content.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();

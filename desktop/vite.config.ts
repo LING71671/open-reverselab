@@ -143,7 +143,7 @@ print(json.dumps(results))
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
           try {
-            const { target, summary, script, key, flag } = JSON.parse(body || "{}");
+            const { target, summary, script, key, flag, executionOutput } = JSON.parse(body || "{}");
             const cleanName = (target || "target")
               .split(/[\\/]/)
               .pop()
@@ -158,7 +158,10 @@ print(json.dumps(results))
             const reportPath = resolve(repoRoot, reportRel);
             const scriptPath = resolve(repoRoot, scriptRel);
 
-            const reportMd = `# Analysis Report: ${target}\n\n## 1. Summary\n${summary}\n\n## 2. Key Artifacts\n- Target: ${target}\n- Recovered Key/Fingerprint: ${key || "None"}\n- Verdict: ${flag || "None"}\n\n## 3. Verified Script\n\`\`\`python\n${script}\n\`\`\`\n`;
+            let reportMd = `# Analysis Report: ${target}\n\n## 1. Summary\n${summary}\n\n## 2. Key Artifacts\n- Target: ${target}\n- Recovered Key/Fingerprint: ${key || "None"}\n- Verdict: ${flag || "None"}\n\n## 3. Verified Script\n\`\`\`python\n${script}\n\`\`\`\n`;
+            if (executionOutput?.stdout) {
+              reportMd += `\n## 4. Execution Output (Verified Finished Product)\n\`\`\`\n${executionOutput.stdout}\n\`\`\`\n`;
+            }
             writeFileSync(reportPath, reportMd, "utf-8");
             writeFileSync(scriptPath, script || "# Empty script\n", "utf-8");
 
@@ -172,6 +175,47 @@ print(json.dumps(results))
             );
           } catch (e: any) {
             res.statusCode = 500;
+            res.end(JSON.stringify({ error: e.message }));
+          }
+        });
+      });
+
+      // 6. Autonomous Headless Harness Execution endpoint: POST /api/harness/run
+      server.middlewares.use("/api/harness/run", (req, res, next) => {
+        if (req.method !== "POST") return next();
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", () => {
+          try {
+            const { target, prompt, model } = JSON.parse(body || "{}");
+            const script = resolve(repoRoot, "scripts/misc/run_harness.py");
+            const args = [
+              script,
+              "--target",
+              target || "target.bin",
+              "--prompt",
+              prompt || "深度静态排查与反调试/注册表行为分析",
+              "--output-json",
+            ];
+            if (model) {
+              args.push("--model", model);
+            }
+            execFile("python", args, { cwd: repoRoot, timeout: 60000 }, (err, stdout, stderr) => {
+              res.setHeader("Content-Type", "application/json");
+              if (err && !stdout) {
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: stderr || err.message }));
+              } else {
+                try {
+                  const jsonStr = stdout.slice(stdout.indexOf("{"));
+                  res.end(jsonStr);
+                } catch {
+                  res.end(stdout);
+                }
+              }
+            });
+          } catch (e: any) {
+            res.statusCode = 400;
             res.end(JSON.stringify({ error: e.message }));
           }
         });

@@ -13,11 +13,27 @@ export interface GraphStep {
   timestamp: number;
 }
 
+export interface GoalAssertion {
+  name: string;
+  expected: string;
+  actual: string;
+  passed: boolean;
+}
+
+export interface GoalVerification {
+  objective: string;
+  status: "verified" | "failed" | "in_progress";
+  passRate: string;
+  assertions: GoalAssertion[];
+  timestamp: number;
+}
+
 export interface Deliverables {
   script?: string;
   key?: string;
   flag?: string;
   summary?: string;
+  goalVerification?: GoalVerification;
   savedArtifacts?: {
     report_path?: string;
     script_path?: string;

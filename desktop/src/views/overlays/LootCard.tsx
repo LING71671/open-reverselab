@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, X, Download, Play, Loader2, Terminal } from "lucide-react";
+import { Copy, Check, X, Download, Play, Loader2, Terminal, FileText } from "lucide-react";
 import { Deliverables, useI18n } from "../../core";
 
 interface LootCardProps {
@@ -104,13 +104,17 @@ export function LootCard({ deliverables, onClose }: LootCardProps) {
         {deliverables.savedArtifacts && (
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-zinc-900/60 border border-zinc-800/60 text-[11px] font-mono text-zinc-400">
             {deliverables.savedArtifacts.report_path && (
-              <span className="truncate">
-                📄 报告: <span className="text-zinc-200">{deliverables.savedArtifacts.report_path}</span>
+              <span className="flex items-center gap-1.5 truncate">
+                <FileText className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                <span className="text-zinc-500">Report:</span>
+                <span className="text-zinc-200">{deliverables.savedArtifacts.report_path}</span>
               </span>
             )}
             {deliverables.savedArtifacts.script_path && (
-              <span className="truncate">
-                🐍 脚本: <span className="text-zinc-200">{deliverables.savedArtifacts.script_path}</span>
+              <span className="flex items-center gap-1.5 truncate">
+                <Terminal className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                <span className="text-zinc-500">Script:</span>
+                <span className="text-zinc-200">{deliverables.savedArtifacts.script_path}</span>
               </span>
             )}
           </div>

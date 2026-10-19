@@ -5,6 +5,7 @@ import {
   TitleBar,
   Sidebar,
   CanvasGraph,
+  AgentChatView,
   LogConsole,
   DiagnosticsPanel,
   PromptConsole,
@@ -68,6 +69,7 @@ function AppContent() {
         <div className="flex-1 relative overflow-hidden bg-[#09090b]">
           {/* Swappable Views (Graph | Logs | Diagnostics | KB) Full Bleed */}
           <div className="absolute inset-0 w-full h-full overflow-hidden">
+            {viewMode === "chat" && <AgentChatView />}
             {viewMode === "canvas" && (
               <CanvasGraph
                 steps={steps}

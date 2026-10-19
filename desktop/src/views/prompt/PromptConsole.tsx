@@ -1,7 +1,20 @@
-import React, { useState, useRef, useEffect } from "react";
-import { ArrowUp, Square, Paperclip, UploadCloud } from "lucide-react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import {
+  ArrowUp,
+  Square,
+  Paperclip,
+  UploadCloud,
+  ChevronDown,
+  Check,
+  Plus,
+  Trash2,
+  RotateCw,
+  Loader2,
+  X,
+} from "lucide-react";
 import { HarnessMode, useI18n } from "../../core";
-import { logger } from "../../services";
+import { logger, llmService } from "../../services";
+import { ProviderConfig, deriveProviderName } from "../../services/llm/llmService";
 
 interface PromptConsoleProps {
   isRunning: boolean;
@@ -21,14 +34,131 @@ export function PromptConsole({
   const [prompt, setPrompt] = useState("");
   const [isEditingTarget, setIsEditingTarget] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  // Providers & Models hierarchy
+  const [providers, setProviders] = useState<ProviderConfig[]>(() => llmService.getProviders());
+  const [activeProviderId, setActiveProviderId] = useState<string>(() =>
+    llmService.getActiveProviderId()
+  );
+  const [models, setModels] = useState<string[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>(() => llmService.getModel() || "");
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [modelFilter, setModelFilter] = useState("");
+
+  // Provider creation form
+  const [isAddingProvider, setIsAddingProvider] = useState(false);
+  const [newProvName, setNewProvName] = useState("");
+  const [newProvUrl, setNewProvUrl] = useState("");
+  const [newProvKey, setNewProvKey] = useState("");
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
+  const filterInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTarget(defaultTarget || "");
   }, [defaultTarget]);
 
-  // Listen to native Tauri file drop events
+  const activeProvider = useMemo(() => {
+    return providers.find((p) => p.id === activeProviderId) || providers[0];
+  }, [providers, activeProviderId]);
+
+  const loadModelsForProvider = useCallback(async (providerId?: string) => {
+    setIsLoadingModels(true);
+    try {
+      const fetched = await llmService.fetchModels(providerId);
+      setModels(fetched);
+      if (!llmService.getModel() && fetched.length > 0) {
+        setSelectedModel(fetched[0]);
+        llmService.setModel(fetched[0]);
+      }
+    } catch {
+      setModels([]);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeProvider?.id) {
+      loadModelsForProvider(activeProvider.id);
+    }
+  }, [activeProvider?.id, loadModelsForProvider]);
+
+  // Dismiss menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
+        setIsModelMenuOpen(false);
+        setIsAddingProvider(false);
+        setModelFilter("");
+      }
+    };
+    if (isModelMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      setTimeout(() => filterInputRef.current?.focus(), 50);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isModelMenuOpen]);
+
+  const handleSelectProvider = (id: string) => {
+    setActiveProviderId(id);
+    llmService.setActiveProviderId(id);
+    setIsAddingProvider(false);
+  };
+
+  const handleSaveNewProvider = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newProvUrl.trim()) return;
+    const newP: ProviderConfig = {
+      id: `prov-${Date.now()}`,
+      name: newProvName.trim() || deriveProviderName(newProvUrl.trim()),
+      baseUrl: newProvUrl.trim(),
+      apiKey: newProvKey.trim() || undefined,
+    };
+    llmService.addProvider(newP);
+    setProviders(llmService.getProviders());
+    setActiveProviderId(newP.id);
+    setIsAddingProvider(false);
+    setNewProvName("");
+    setNewProvUrl("");
+    setNewProvKey("");
+  };
+
+  const handleDeleteProvider = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    llmService.removeProvider(id);
+    const updated = llmService.getProviders();
+    setProviders(updated);
+    setActiveProviderId(llmService.getActiveProviderId());
+  };
+
+  const handleSelectModel = (modelId: string) => {
+    const trimmed = modelId.trim();
+    if (!trimmed) return;
+    setSelectedModel(trimmed);
+    llmService.setModel(trimmed);
+    setIsModelMenuOpen(false);
+    setModelFilter("");
+    logger.info("llm", `Model: ${trimmed}`);
+  };
+
+  const filteredModels = useMemo(() => {
+    const q = modelFilter.trim().toLowerCase();
+    if (!q) return models;
+    return models.filter((m) => m.toLowerCase().includes(q));
+  }, [models, modelFilter]);
+
+  const hasExactMatch = useMemo(() => {
+    const q = modelFilter.trim().toLowerCase();
+    return models.some((m) => m.toLowerCase() === q);
+  }, [models, modelFilter]);
+
+  // Native Tauri drag-drop
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     (async () => {
@@ -41,13 +171,13 @@ export function PromptConsole({
             setIsDraggingOver(false);
             const droppedPath = event.payload.paths[0];
             setTarget(droppedPath);
-            logger.info("triage", `目标文件已拖入: ${droppedPath}`);
+            logger.info("triage", `Target: ${droppedPath}`);
           } else {
             setIsDraggingOver(false);
           }
         });
       } catch {
-        // Fallback in non-tauri web environments
+        // web fallback
       }
     })();
     return () => {
@@ -58,11 +188,14 @@ export function PromptConsole({
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!prompt.trim() || isRunning) return;
-    onExecute(target.trim(), prompt.trim(), "wish");
+    const currentTarget = target.trim();
+    const currentPrompt = prompt.trim();
+    setPrompt(""); // Immediately clear input field upon submission
+    onExecute(currentTarget, currentPrompt, "wish");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
@@ -70,141 +203,317 @@ export function PromptConsole({
 
   const processFile = async (file: File) => {
     try {
-      const buffer = await file.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const sha256 = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-
-      const uint8 = new Uint8Array(buffer.slice(0, 4));
-      let fileType = "Unknown Binary";
-      if (uint8[0] === 0x4d && uint8[1] === 0x5a) {
-        fileType = "PE";
-      } else if (uint8[0] === 0x50 && uint8[1] === 0x4b) {
-        fileType = "APK/ZIP";
-      } else if (uint8[0] === 0x7f && uint8[1] === 0x45 && uint8[2] === 0x4c && uint8[3] === 0x46) {
-        fileType = "ELF";
-      }
-
       setTarget(file.name);
-      logger.info(
-        "triage",
-        `目标载入: ${file.name} (${(file.size / 1024).toFixed(1)} KB) · ${fileType}`,
-        { sha256, sizeBytes: file.size, fileType }
-      );
+      logger.info("triage", `Target: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
     } catch (err: any) {
-      logger.error("triage", `文件读取异常: ${err.message}`);
+      logger.error("triage", `${err.message}`);
     }
   };
 
   const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await processFile(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      await processFile(e.dataTransfer.files[0]);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      await processFile(files[0]);
     }
   };
 
   return (
     <div
-      className="w-full"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      className={`relative w-full rounded-2xl border transition-all duration-200 bg-[#0e0e11]/90 backdrop-blur-xl shadow-2xl ${
+        isDraggingOver
+          ? "border-emerald-500/80 ring-2 ring-emerald-500/20 bg-emerald-950/10"
+          : "border-zinc-800/80 hover:border-zinc-700/80 focus-within:border-zinc-600/80"
+      }`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDraggingOver(true);
+      }}
+      onDragLeave={() => setIsDraggingOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDraggingOver(false);
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          processFile(files[0]);
+        }
+      }}
     >
       <input
-        type="file"
         ref={fileInputRef}
-        onChange={handleFileChosen}
+        type="file"
         className="hidden"
+        onChange={handleFileChosen}
+        title="Choose target file"
       />
 
-      <div
-        className={`rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-200 focus-within:border-zinc-700/80 focus-within:ring-1 focus-within:ring-zinc-700/40 ${
-          isDraggingOver
-            ? "bg-zinc-900/90 border-zinc-400 ring-2 ring-zinc-500/50 scale-[1.01]"
-            : "bg-[#121215]/70 border-zinc-800/70"
-        }`}
-      >
-        {/* Drag over banner overlay */}
-        {isDraggingOver && (
-          <div className="px-4 py-2 bg-zinc-800/90 rounded-t-xl text-center text-xs font-mono text-zinc-100 flex items-center justify-center gap-2 border-b border-zinc-700">
-            <UploadCloud className="w-4 h-4 animate-bounce" />
-            <span>释放鼠标以载入逆向分析目标</span>
-          </div>
-        )}
-
-        {/* 1. Main Text Input Area */}
-        <div className="p-3 pb-1.5">
-          <textarea
-            ref={textareaRef}
-            rows={2}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t.prompt.wishPlaceholder}
-            className="w-full bg-transparent text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none font-sans leading-relaxed"
-          />
+      {isDraggingOver && (
+        <div className="absolute inset-0 z-20 rounded-2xl flex flex-col items-center justify-center bg-zinc-950/85 backdrop-blur-sm border-2 border-dashed border-emerald-500/60 pointer-events-none">
+          <UploadCloud className="w-8 h-8 text-emerald-400 mb-2 animate-bounce" />
+          <div className="text-xs font-mono font-medium text-emerald-300">Drop target file</div>
         </div>
+      )}
 
-        {/* 2. Unified Bottom Actions Toolbar */}
-        <div className="px-2.5 pb-2 pt-1 flex items-center justify-between gap-2 border-t border-zinc-900/60">
-          {/* Left: Target File Attachment */}
-          <div className="flex items-center gap-1.5 overflow-x-auto min-w-0">
+      <div className="p-3">
+        {/* Target Header */}
+        <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800/50 text-[11px] font-mono">
+          <div className="flex items-center gap-1.5 text-zinc-400 min-w-0">
+            <span className="text-zinc-500 shrink-0 uppercase tracking-wider text-[10px]">
+              TARGET:
+            </span>
             {isEditingTarget ? (
               <input
                 type="text"
-                autoFocus
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
                 onBlur={() => setIsEditingTarget(false)}
-                onKeyDown={(e) => e.key === "Enter" && setIsEditingTarget(false)}
-                className="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-700 text-xs font-mono text-zinc-200 focus:outline-none shrink-0"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setIsEditingTarget(false);
+                }}
+                autoFocus
+                placeholder="sample.exe / https://..."
+                className="bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 w-64"
               />
             ) : (
-              <div className="flex items-center gap-1 shrink min-w-0">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingTarget(true)}
-                  title={t.common.target}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-xs font-medium text-zinc-300 transition-all active:scale-95 cursor-pointer truncate max-w-[280px]"
-                >
-                  <Paperclip className="w-3 h-3 text-zinc-400 shrink-0" />
-                  <span className="truncate">{target || t.common.target}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title={t.common.target}
-                  className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-all active:scale-95 cursor-pointer shrink-0"
-                >
-                  <UploadCloud className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <span
+                onClick={() => setIsEditingTarget(true)}
+                className="text-zinc-300 hover:text-white cursor-pointer truncate max-w-[280px] bg-zinc-900/60 px-2 py-0.5 rounded border border-zinc-800/60 hover:border-zinc-700 transition"
+                title="Click to edit target"
+              >
+                {target || "No target (click to set)"}
+              </span>
             )}
           </div>
+        </div>
 
-          {/* Right: Submit / Stop Button */}
-          <div className="flex items-center shrink-0">
+        {/* Input Textarea */}
+        <textarea
+          ref={textareaRef}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Instruction..."
+          rows={3}
+          className="w-full bg-transparent resize-none text-xs font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none leading-relaxed"
+        />
+
+        {/* Bottom Toolbar */}
+        <div className="flex items-center justify-between pt-2 mt-1 border-t border-zinc-800/40">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach file"
+              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60 transition-all cursor-pointer"
+            >
+              <Paperclip className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* 2-Tier Provider/Model Picker */}
+            <div className="relative" ref={modelMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800/80 text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-all active:scale-95 cursor-pointer"
+              >
+                <span className="text-zinc-500 max-w-[70px] truncate">
+                  {activeProvider?.name || "Provider"}
+                </span>
+                <span className="text-zinc-700">/</span>
+                <span className="text-zinc-300 max-w-[130px] truncate font-medium">
+                  {selectedModel || "Select Model"}
+                </span>
+                <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0 ml-0.5" />
+              </button>
+
+              {isModelMenuOpen && (
+                <div className="absolute right-0 bottom-full mb-1.5 w-[460px] rounded-xl bg-[#121215] border border-zinc-800 shadow-2xl p-0 z-50 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-xl flex divide-x divide-zinc-800/80 overflow-hidden">
+                  {/* Tier 1: Providers 一级栏 */}
+                  <div className="w-44 flex flex-col p-1.5 bg-zinc-950/40">
+                    <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-zinc-800/60">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider font-semibold">
+                        Provider
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingProvider(!isAddingProvider)}
+                        title="Add Provider"
+                        className="p-0.5 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition cursor-pointer"
+                      >
+                        {isAddingProvider ? (
+                          <X className="w-3 h-3" />
+                        ) : (
+                          <Plus className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+
+                    {isAddingProvider ? (
+                      <form onSubmit={handleSaveNewProvider} className="p-1 space-y-1.5">
+                        <input
+                          type="text"
+                          value={newProvName}
+                          onChange={(e) => setNewProvName(e.target.value)}
+                          placeholder="Name..."
+                          className="w-full px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-zinc-700"
+                        />
+                        <input
+                          type="text"
+                          value={newProvUrl}
+                          onChange={(e) => setNewProvUrl(e.target.value)}
+                          placeholder="Base URL..."
+                          className="w-full px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-zinc-700"
+                        />
+                        <input
+                          type="password"
+                          value={newProvKey}
+                          onChange={(e) => setNewProvKey(e.target.value)}
+                          placeholder="API Key..."
+                          className="w-full px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-zinc-700"
+                        />
+                        <div className="flex gap-1 pt-0.5">
+                          <button
+                            type="submit"
+                            disabled={!newProvUrl.trim()}
+                            className="flex-1 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] font-mono text-zinc-200 disabled:opacity-40 cursor-pointer"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingProvider(false)}
+                            className="px-2 py-1 rounded bg-zinc-900 text-[10px] font-mono text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex-1 space-y-0.5 max-h-56 overflow-y-auto">
+                        {providers.map((p) => {
+                          const isActive = p.id === activeProvider?.id;
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => handleSelectProvider(p.id)}
+                              className={`group flex items-center justify-between px-2 py-1.5 rounded-lg text-left text-xs font-mono transition-colors cursor-pointer ${
+                                isActive
+                                  ? "bg-zinc-800 text-zinc-100 font-medium"
+                                  : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
+                              }`}
+                            >
+                              <span className="truncate flex-1">{p.name}</span>
+                              {providers.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteProvider(e, p.id)}
+                                  className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-rose-400 transition p-0.5 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {providers.length === 0 && (
+                          <div className="p-2 text-center text-[11px] font-mono text-zinc-600">
+                            No providers. Click + to add.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tier 2: Models 二级栏 */}
+                  <div className="flex-1 flex flex-col p-1.5 min-w-0">
+                    <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-zinc-800/60">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider font-semibold truncate">
+                        Model
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => loadModelsForProvider(activeProvider?.id)}
+                        disabled={isLoadingModels}
+                        title="Refresh models"
+                        className="p-0.5 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition cursor-pointer"
+                      >
+                        <RotateCw
+                          className={`w-3 h-3 ${isLoadingModels ? "animate-spin text-zinc-400" : ""}`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Filter / Custom Model Input */}
+                    <div className="p-1 mb-1">
+                      <input
+                        ref={filterInputRef}
+                        type="text"
+                        value={modelFilter}
+                        onChange={(e) => setModelFilter(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && modelFilter.trim()) {
+                            handleSelectModel(modelFilter.trim());
+                          }
+                        }}
+                        placeholder="Model or custom..."
+                        className="w-full px-2 py-1 rounded bg-zinc-950/80 border border-zinc-800 text-xs font-mono text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-700"
+                      />
+                    </div>
+
+                    {/* Model List */}
+                    <div className="flex-1 space-y-0.5 max-h-52 overflow-y-auto">
+                      {modelFilter.trim() && !hasExactMatch && (
+                        <button
+                          type="button"
+                          onClick={() => handleSelectModel(modelFilter.trim())}
+                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left text-xs font-mono text-zinc-200 hover:bg-zinc-800/60 cursor-pointer border border-dashed border-zinc-800"
+                        >
+                          <span className="truncate">{modelFilter.trim()}</span>
+                          <span className="text-[10px] text-zinc-500 font-mono">Enter</span>
+                        </button>
+                      )}
+
+                      {isLoadingModels && models.length === 0 ? (
+                        <div className="py-6 flex flex-col items-center justify-center gap-1.5 text-xs font-mono text-zinc-500">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Loading...</span>
+                        </div>
+                      ) : filteredModels.length === 0 ? (
+                        <div className="py-6 text-center text-xs font-mono text-zinc-600">
+                          No models returned.
+                          <br />
+                          Type ID above.
+                        </div>
+                      ) : (
+                        filteredModels.map((m) => {
+                          const isCurrent = m === selectedModel;
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => handleSelectModel(m)}
+                              className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left text-xs font-mono transition-colors cursor-pointer ${
+                                isCurrent
+                                  ? "bg-zinc-800 text-zinc-100 font-medium"
+                                  : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                              }`}
+                            >
+                              <span className="truncate">{m}</span>
+                              {isCurrent && (
+                                <Check className="w-3.5 h-3.5 text-zinc-200 shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit / Stop */}
             {isRunning ? (
               <button
                 type="button"

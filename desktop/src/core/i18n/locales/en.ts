@@ -19,6 +19,7 @@ export const en = {
   sidebar: {
     newAnalysis: "New Analysis",
     views: "Views",
+    chat: "Chat",
     graph: "Graph",
     logs: "Logs",
     diag: "Diag",
