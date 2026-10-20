@@ -36,6 +36,12 @@ function toEnSidebar(zh: Record<string, unknown>): Record<string, unknown> {
 
 const enSidebar = toEnSidebar(sidebar)
 
+// Deployment is GitHub Pages (project pages), so every absolute asset URL and
+// canonical link must be prefixed with the repository base path.
+const base = process.env.VITEPRESS_BASE || '/'
+const siteUrl = (process.env.VITEPRESS_SITE_URL || 'https://ling71671.github.io/open-reverselab').replace(/\/$/, '')
+const socialPreview = `${siteUrl}/assets/social-preview.png`
+
 const zhThemeConfig = {
   nav: [
     { text: '知识库', link: '/kb/ctf-website/README', activeMatch: '/kb/' },
@@ -70,7 +76,7 @@ const zhThemeConfig = {
   lightModeSwitchTitle: '切换到浅色模式',
   darkModeSwitchTitle: '切换到深色模式',
   footer: {
-    message: 'GPL-3.0 · 仅供授权环境下的学习与防御性研究使用',
+    message: `GPL-3.0 · 仅供授权环境下的学习与防御性研究使用 · <a href="${base}disclaimer">免责声明</a>`,
     copyright: '© 2026 ReverseLab',
   },
 }
@@ -109,7 +115,7 @@ const enThemeConfig = {
   lightModeSwitchTitle: 'Switch to light theme',
   darkModeSwitchTitle: 'Switch to dark theme',
   footer: {
-    message: 'GPL-3.0 · For authorized learning and defensive research only',
+    message: `GPL-3.0 · For authorized learning and defensive research only · <a href="${base}en/disclaimer">Disclaimer</a>`,
     copyright: '© 2026 ReverseLab',
   },
 }
@@ -135,7 +141,7 @@ const languageDetectScript = `(function () {
 })();`
 
 export default defineConfig({
-  base: process.env.VITEPRESS_BASE || '/',
+  base,
   lang: 'zh-CN',
   title: 'ReverseLab',
   description: '开源逆向工程实验环境：183 篇可执行知识库 + 100+ MCP 自动化工具。Agent 原生，目录即约定。',
@@ -148,10 +154,10 @@ export default defineConfig({
     ['meta', { property: 'og:description', content: '183 篇可执行知识库文章 + 100+ MCP 自动化工具，覆盖 CTF/APK/PE/加密/游戏作弊全领域。' }],
     ['meta', { property: 'og:site_name', content: 'ReverseLab' }],
     ['meta', { property: 'og:locale', content: 'zh_CN' }],
-    ['meta', { property: 'og:image', content: 'https://reverselab.int0.cc/assets/social-preview.png' }],
+    ['meta', { property: 'og:image', content: socialPreview }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:image', content: 'https://reverselab.int0.cc/assets/social-preview.png' }],
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/assets/favicon.svg' }],
+    ['meta', { name: 'twitter:image', content: socialPreview }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}assets/favicon.svg` }],
   ],
 
   locales: {
@@ -226,7 +232,7 @@ export default defineConfig({
   ],
 
   sitemap: {
-    hostname: 'https://reverselab.int0.cc',
+    hostname: siteUrl,
   },
 
   vite: {

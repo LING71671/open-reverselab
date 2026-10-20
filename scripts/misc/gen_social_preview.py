@@ -105,7 +105,7 @@ def main() -> None:
     # footer line + url
     d.line([72, H - 52, W - 72, H - 52], fill=LINE, width=1)
     url_f = font(24, bold=False)
-    d.text((74, H - 42), "reverselab.int0.cc", font=url_f, fill=ACCENT)
+    d.text((74, H - 42), "ling71671.github.io/open-reverselab", font=url_f, fill=ACCENT)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     img.save(OUT, format="PNG", optimize=True)

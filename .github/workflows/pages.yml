@@ -52,7 +52,9 @@ jobs:
       - name: Build site
         working-directory: site
         env:
-          VITEPRESS_BASE: ${{ steps.pages.outputs.base_path || '/open-reverselab/' }}
+          # configure-pages emits base_path without a trailing slash; VitePress
+          # requires one, so append it (and fall back to the project-pages path).
+          VITEPRESS_BASE: ${{ steps.pages.outputs.base_path || '/open-reverselab' }}/
         run: npm run build
 
       - name: Upload artifact

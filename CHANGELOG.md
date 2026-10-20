@@ -14,7 +14,7 @@ All notable changes to the open-reverseLab project will be documented in this fi
   - 新增「What is ReverseLab / 这是什么」「Who is this for / 适合谁」定位与受众说明
   - 「快速开始」按角色拆分为「For humans / 给真人」与「For AI Agents / 面向 AI Agent」两段，长命令用 `<details>` 折叠
   - 知识库统计改为「180+ 篇文章」口径，避免每次新增文章都要改单元格
-  - 链接到 `reverselab.int0.cc` 文档站作为权威信息源（站点是每次部署重新生成的）
+  - 链接到文档站作为权威信息源（站点是每次部署重新生成的）
   - 「Sponsors」独立区块，二次露出 Sentry 并附赞助入口（`SPONSORS.md` + 邮箱）
 - `feat(assets)`：新增 `assets/sponsors/sentry-wordmark-light.svg` 与 `sentry-wordmark-dark.svg`（Sentry 品牌色 `#362D59` + 自适配暗色）
 - `docs(readme)`：**中文改为默认语言** —— `README.md` 现为中文版，英文版移至 `README.en.md`，原 `README.zh.md` 移除（与 v1.2.0「后续以中文为主 + EN/ZH 双版并存」的方向一致）；两版顶部均加语言切换行（`简体中文 · English`）
@@ -32,7 +32,7 @@ All notable changes to the open-reverseLab project will be documented in this fi
 ### Added — 文档站点与知识库
 
 **VitePress 站点上线（Cloudflare Pages）**
-- `feat(site)`：站点部署至 `reverselab.int0.cc`，含工具页、FAQ、自定义 404 与社交预览图
+- `feat(site)`：站点部署上线，含工具页、FAQ、自定义 404 与社交预览图
 - CI 自动部署（`deploy-site.yml`）；social preview 生成脚本跨平台化，PNG 直接入库
 - 板块徽章移除 emoji，改用色点标识
 
