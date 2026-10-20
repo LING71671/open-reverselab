@@ -46,7 +46,8 @@
    - (b) CTF (Capture The Flag) competitions and similar educational cybersecurity exercises conducted in controlled, authorized environments;
    - (c) bona fide academic research and publication, subject to all applicable ethical review and institutional approval requirements;
    - (d) personal study and self-education;
-   - (e) reverse engineering, analysis, and security research on software, firmware, or devices for which the User holds lawful ownership or has obtained explicit, written, prior authorization from the lawful owner.
+   - (e) reverse engineering, analysis, and security research on software, firmware, or devices for which the User holds lawful ownership or has obtained explicit, written, prior authorization from the lawful owner, including vulnerability verification performed against an instance of third-party software that the User has lawfully deployed and is authorized to test;
+   - (f) detection engineering and defensive research — including the development and validation of antivirus, EDR, sandbox, or emulation detection logic, YARA and Sigma rules, and behavioural analysis of malicious samples — conducted in an isolated laboratory environment.
 
 4.2 **Authorization must be specific, written, and prior.** Implied, retrospective, or verbal authorization is insufficient. The User bears the burden of proving authorization was obtained.
 
@@ -58,10 +59,10 @@
    - (a) unauthorized access to, interference with, or compromise of any system, network, device, or data;
    - (b) development, distribution, or operation of malicious software (malware, ransomware, spyware, rootkits, botnets, etc.);
    - (c) theft, exfiltration, or unauthorized collection of data or intellectual property;
-   - (d) circumvention of copyright protection, digital rights management (DRM), or access control mechanisms, except as expressly permitted by applicable law;
+   - (d) circumvention of copyright protection, digital rights management (DRM), or access control mechanisms, except (i) as expressly permitted by applicable law, or (ii) research on the licence or activation mechanisms of software that the User lawfully owns or is expressly authorized to test, carried out in an isolated environment or within an authorized CTF / crackme exercise;
    - (e) fraud, identity theft, phishing, or any form of deception;
    - (f) harassment, stalking, doxing, or any form of unlawful surveillance;
-   - (g) sabotage, denial-of-service attacks, or disruption of services;
+   - (g) sabotage, denial-of-service attacks, or disruption of services; provided that denial-of-service resilience testing and the validation of defensive detection rules — conducted against a system that the User owns or is expressly authorized to test, within an isolated laboratory environment or an authorized CTF range, and limited to the minimum load necessary to validate the finding — is not prohibited by this clause;
    - (h) any activity that violates the Computer Fraud and Abuse Act (CFAA, 18 U.S.C. § 1030), the UK Computer Misuse Act 1990, the Cybersecurity Law of the People's Republic of China, the EU Directive 2013/40/EU on attacks against information systems, or any equivalent law in any jurisdiction;
    - (i) any activity in or involving a country, region, entity, or individual subject to comprehensive sanctions, embargoes, or trade restrictions administered by the United Nations, the United States, the European Union, the United Kingdom, or any other applicable authority;
    - (j) any other activity that violates any applicable law, regulation, or third-party right.
@@ -133,7 +134,7 @@ This disclaimer is published in English and Chinese. In the event of any conflic
 15.6 **No confidential or privileged relationship.** No communication with the Project authors, contributors, or maintainers creates any attorney-client, fiduciary, confidential, or other special relationship. All communications are non-confidential unless a separate written agreement expressly provides otherwise.
 
 15.7 **Third-party transactions.**
-   - (a) The Project is licensed under GPL-3.0, which explicitly permits the commercial resale, redistribution, and bundling of the software by any party, provided the terms of the license are complied with. Accordingly, a third party's resale or commercialization of the Project or any Derivative does not, in and of itself, violate the Project's license.
+   - (a) The Project is licensed under GPL-3.0-only, which explicitly permits the commercial resale, redistribution, and bundling of the software by any party, provided the terms of the license are complied with. Accordingly, a third party's resale or commercialization of the Project or any Derivative does not, in and of itself, violate the Project's license.
    - (b) However, the Project is and remains provided free of charge by its authors. The Project authors have never charged, and will never charge, any fee for the Project itself. Any resale, relicensing, bundling, or commercialization by any third party is an act of that third party alone. The Project authors do not participate in, authorize, endorse, derive any benefit from, or bear any responsibility for such transactions.
    - (c) Any payment made by a User to any third party in connection with the Project or any Derivative — including but not limited to purchase, subscription, licensing, service, support, or consulting fees — does not establish any contractual, fiduciary, or other relationship between that User and the Project authors, contributors, or maintainers. Such payment confers no additional rights, privileges, or legitimate expectations upon the User as against the Project authors.
    - (d) The free nature of the Project is not altered, waived, or diminished by any third party's commercial activity. Any User who paid a third party for access to the Project retains the right to obtain the Project directly from the original repository free of charge.
@@ -154,4 +155,12 @@ This disclaimer constitutes the entire understanding between the User and the Pr
 
 ### 18. Survival
 
-All provisions of this disclaimer that by their nature should survive termination or cessation of use — including but not limited to provisions Regarding liability, indemnification, warranty disclaimer, integrity of the disclaimer, educational communication, unauthorized distribution and impersonation, AI/ML training, and governing law — shall survive indefinitely.
+All provisions of this disclaimer that by their nature should survive termination or cessation of use — including but not limited to provisions Regarding liability, indemnification, warranty disclaimer, integrity of the disclaimer, educational communication, unauthorized distribution and impersonation, AI/ML training, abuse reporting, and governing law — shall survive indefinitely.
+
+### 19. Abuse Reporting
+
+19.1 **Reporting channel.** Anyone who becomes aware that the Project or any Derivative is being used for unauthorized access, denial-of-service, malware deployment, or any other prohibited use may report it privately through the GitHub Security Advisory of the original Project repository (`https://github.com/LING71671/open-reverselab`), using the subject prefix `[abuse]`.
+
+19.2 **Handling.** The Project maintainers may, at their sole discretion, review any such report and — where the report is substantiated and the relevant content is within the maintainers' control — update, annotate, or remove the content concerned. The maintainers undertake no obligation to monitor third-party use, to respond within any particular period, or to take any specific action.
+
+19.3 **No admission.** Receipt or handling of a report does not constitute an admission of responsibility for the reported conduct, nor a waiver of any provision of this disclaimer.
