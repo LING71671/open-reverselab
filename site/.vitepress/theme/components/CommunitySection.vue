@@ -21,10 +21,6 @@ const t = computed(() => ({
   sentryDesc: isEn.value
     ? 'Sentry supports openreverselab with sponsored error monitoring and performance tracing for our automated toolchains.'
     : 'Sentry 为 Open-ReverseLab 逆向实验环境提供赞助账户，保障自动化分析工具链的错误监控与性能追踪。',
-  discordTitle: isEn.value ? 'Discord Community' : '官方技术社区 (Discord)',
-  discordDesc: isEn.value
-    ? 'Join reverse engineers and CTF players to discuss unpack recipes, algorithms, and AI agent workflows.'
-    : '与逆向工程师、CTF 选手与 Agent 开发者一同探讨脱壳配方、密码还原与自动化打靶技巧。',
   deepwikiTitle: isEn.value ? 'DeepWiki Semantic Q&A' : 'DeepWiki 知识库问答',
   deepwikiDesc: isEn.value
     ? 'Query the entire 185-article knowledge base semantically via DeepWiki AI.'
@@ -84,16 +80,6 @@ const t = computed(() => ({
         <h4 class="rl-community-name">{{ t.sentryTitle }}</h4>
         <p class="rl-community-desc">{{ t.sentryDesc }}</p>
         <a class="rl-community-link" href="https://sentry.io" target="_blank" rel="noopener">sentry.io →</a>
-      </div>
-
-      <div class="rl-community-card">
-        <div class="rl-community-top">
-          <span class="rl-community-badge rl-badge-discord">DISCORD</span>
-          <span class="rl-community-label">Community</span>
-        </div>
-        <h4 class="rl-community-name">{{ t.discordTitle }}</h4>
-        <p class="rl-community-desc">{{ t.discordDesc }}</p>
-        <a class="rl-community-link" href="https://discord.gg/But5j58J2f" target="_blank" rel="noopener">discord.gg/But5j58J2f →</a>
       </div>
 
       <div class="rl-community-card">
@@ -243,10 +229,6 @@ const t = computed(() => ({
 .rl-badge-sentry {
   background: oklch(0.350 0.120 295 / 0.15);
   color: oklch(0.480 0.180 295);
-}
-.rl-badge-discord {
-  background: rgba(88, 101, 242, 0.15);
-  color: #5865f2;
 }
 .rl-badge-deepwiki {
   background: oklch(0.520 0.140 150 / 0.15);
