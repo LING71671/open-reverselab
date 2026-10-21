@@ -7,7 +7,6 @@
 .reverselab-local/
 dist/
 tmp/
-SECURITY.md
 
 # Python / Node caches
 __pycache__/
