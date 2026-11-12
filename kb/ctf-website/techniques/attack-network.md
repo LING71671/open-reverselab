@@ -40,14 +40,9 @@ graph TD
     PAYBY["Payment Bypass<br/>12-payment"]
     PRICE["Price Manip<br/>12-payment"]
     CALLBACK["Callback Forge<br/>12-payment"]
-    SIGALG["Sign Alg Attack<br/>13-signature"]
-    SIGIMPL["Sign Impl Bug<br/>13-signature"]
-    SIGKEY["Sign Key Leak<br/>13-signature"]
-    PAYWALL["Paywall Bypass<br/>23-paywall"]
-    PAYWALL_UA["UA Spoof<br/>23-paywall"]
-    PAYWALL_BLOCK["Script Block<br/>23-paywall"]
-    PAYWALL_JSONLD["JSON-LD Extract<br/>23-paywall"]
-    PAYWALL_ARCHIVE["Archive Proxy<br/>23-paywall"]
+    SIGALG["Sign Alg Attack<br/>general/signature"]
+    SIGIMPL["Sign Impl Bug<br/>general/signature"]
+    SIGKEY["Sign Key Leak<br/>general/signature"]
 
     %% === Layer 1: Credential / Info Leak ===
     CRED["Credential Leak<br/>session/token/key"]
@@ -186,16 +181,6 @@ graph TD
     IAM -->|aws s3 cp| FLAG
     SATOKEN -->|kubectl exec cat| FLAG
 
-    %% --- Edges: Paywall → Direct Flag ---
-    PAYWALL -->|UA spoof| FLAG
-    PAYWALL -->|JSON-LD| FLAG
-    PAYWALL -->|archive.is| FLAG
-    PAYWALL -->|DOM manip| FLAG
-    PAYWALL_UA -->|Googlebot| FLAG
-    PAYWALL_BLOCK -->|SDK block| FLAG
-    PAYWALL_JSONLD -->|articleBody| FLAG
-    PAYWALL_ARCHIVE -->|cached content| FLAG
-
     %% --- Cross-category edges ---
     XSS -.->|admin bot| SSRF
     XSS -.->|admin bot| BE
@@ -264,16 +249,6 @@ Pod RCE → /var/run/secrets/kubernetes.io/serviceaccount/token
   └─ → etcd:2379 → read all secrets → DB passwords → Flag
 ```
 
-### 路径 7: 从 Paywall 到 Flag (23-paywall-bypass)
-```
-Paywall 识别 → 指纹 CMS/Paywall 服务
-  ├─ → UA 伪装 (Googlebot) + Cookie 清除 → 服务器直接返回全文 → Flag
-  ├─ → declarativeNetRequest block → 阻止 paywall SDK → 正文自然可见 → Flag
-  ├─ → JSON-LD extraction → <script> articleBody → DOMPurify 注入 → Flag
-  ├─ → archive.is proxy → fetch 缓存页面 → .TEXT-BLOCK 提取 → Flag
-  └─ → DOM/CSS 操作 → 移除 overlay + 恢复正文 → Flag
-```
-
 ## 攻击网中的关键枢纽节点
 
 这些节点被最多其他节点依赖，是攻击网中的 choke point：
@@ -307,11 +282,6 @@ Web Cache Deception → /account.json → cached PII → Flag
 Cache Poisoning → JS hijack → XSS → Cookie steal → Flag
   (unkeyed header → 缓存恶意JS → 全站XSS → 凭证窃取)
 
-Paywall → UA spoof → Recon → Fingerprint → CVE
-  (Googlebot UA 获取完整HTML → 发现隐藏API端点 → CVE链)
-
-Paywall → JSON-LD → info leak → API key → Admin
-  (提取完整JSON → 发现内部endpoint → 密钥泄露 → 提权)
 ```
 
 ## 攻击网驱动决策

@@ -261,7 +261,7 @@ from collections import defaultdict
 
 NEXT_HOP = {
     "Laravel": ["04-config-exposure", "payment-php", "deserialization"],
-    "Spring": ["ssti", "grpc-protobuf", "kubernetes-container"],
+    "Spring": ["ssti", "general/protocol/03-grpc-protobuf", "kubernetes-container"],
     "WordPress": ["payment-php", "file-upload-xxe-lfi"],
     "Magento": ["payment-php", "graphql"],
     "Redis": ["03-nosql-injection", "ssrf"],

@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["injection", "prototype-pollution", "nodejs", "template", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/07-client/postmessage", "ctf-website/07-client/js-runtime", "ctf-website/02-auth/jwt/06-claim-missing"]
+related_articles: ["ctf-website/07-client/postmessage", "general/protocol/04-js-runtime-reversing", "ctf-website/02-auth/jwt/06-claim-missing"]
 ---
 
 # Prototype Pollution (原型链污染)
@@ -205,7 +205,7 @@ parser/source 命中
 | Sink | key 名、触发路径、业务动作、状态变化 |
 | 成功样本 | 权限/渲染/请求/flag 差异可重复出现 |
 | 失败样本 | parser 不解析嵌套、merge 跳过 key、sink 只读 own property |
-| 下一跳 | 前端转 `07-client/js-runtime/postmessage`；模板转 SSTI；token 转 JWT |
+| 下一跳 | 前端转 `general/protocol/04-js-runtime-reversing` / `07-client/postmessage`；模板转 SSTI；token 转 JWT |
 
 ## MCP 工具映射
 

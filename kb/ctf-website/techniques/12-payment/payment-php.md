@@ -18,7 +18,7 @@ difficulty: "advanced"
 tags: ["php", "payment", "type-juggling", "deserialization", "laravel", "framework", "web-security"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/12-payment/payment-bypass", "ctf-website/13-signature/02-implementation"]
+related_articles: ["ctf-website/12-payment/payment-bypass", "general/signature/02-implementation"]
 ---
 # PHP Payment Attacks — PHP 支付专项攻击手册
 

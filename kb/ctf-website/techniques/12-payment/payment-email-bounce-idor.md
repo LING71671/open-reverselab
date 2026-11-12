@@ -1,6 +1,6 @@
 ---
 id: "ctf-website/12-payment/payment-email-bounce-idor"
-title: "退信滥用 + 订单号授权绕过窃取卡密"
+title: "退信滥用 + 订单号授权绕过"
 title_en: "Bounce Email Abuse + Order ID Authorization Bypass to Steal Card Keys"
 summary: >
   利用退信（NDR/Bounce）逻辑中的信息泄露和授权绕过漏洞，通过构造不存在邮箱触发退信，
@@ -17,13 +17,13 @@ difficulty: "advanced"
 tags: ["idor", "email-bounce", "information-disclosure", "payment", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/14-idor/01-idor-enumeration", "ctf-website/12-payment/platform-fingerprints", "ctf-website/12-payment/payment-digital-goods", "ctf-website/12-payment/payment-callback-async", "ctf-website/24-database/06-card-platform", "ctf-website/24-database/05-backup-log-leak"]
+related_articles: ["ctf-website/14-idor/01-idor-enumeration", "ctf-website/12-payment/payment-digital-goods", "ctf-website/12-payment/payment-callback-async", "ctf-website/24-database/05-backup-log-leak"]
 ---
-# 退信滥用 + 订单号授权绕过窃取卡密
+# 退信滥用 + 订单号授权绕过
 
 ## 场景
 
-电商/发卡系统在处理订单通知邮件时，退信（NDR/Bounce）逻辑存在信息泄露和授权绕过，攻击者通过构造不存在邮箱触发退信，利用退信内容或退信处理接口，结合订单号 IDOR 批量提取数据库中的卡密/优惠券码。
+电商与数字商品系统在处理订单通知邮件时，退信（NDR/Bounce）逻辑可能存在信息泄露与授权绕过，未授权请求可通过退信内容或退信处理接口，结合订单号 IDOR 访问他人订单详情或兑换凭证。
 
 ## 输入信号
 
@@ -92,7 +92,7 @@ related_articles: ["ctf-website/14-idor/01-idor-enumeration", "ctf-website/12-pa
 | 邮件 | `Message-ID`, `Return-Path`, `X-Original-To`, 收件人 | 解析 NDR multipart 与原始正文 | 邮件模板、重发接口 |
 | 订单 | `order_id`, `order_sn`, `out_trade_no`, `trade_no` | 匿名/跨账号/退信 token 对比 | IDOR、回调重放 |
 | 卡密/权益 | `card_key`, `coupon`, `download_url`, `license` | 未支付/已支付/退款后三态回读 | 数字商品、发货状态机 |
-| 数据库 | 表前缀、字段名、报错、日志片段 | 反推订单表和卡密表 | 备份/日志、发卡平台 |
+| 数据库 | 表前缀、字段名、报错、日志片段 | 反推订单表和凭证表 | 备份/日志、支付状态机 |
 | 支付 | `status`, `paid_at`, `amount`, `refund_id` | 观察退信是否触发重发/补发 | 支付状态机、异步队列 |
 
 三元组解析器：
@@ -150,7 +150,7 @@ def extract_dir(mail_dir, out_csv="exports/bounce_order_tuple.csv"):
 
 判定节奏：
 
-1. 用平台指纹确定订单查询和支付插件路径。
+1. 定位订单查询、通知重发与支付回调路径。
 2. 生成一组可控订单：正常邮箱、不可达邮箱、同域别名、大小写邮箱。
 3. 把 NDR 原文、订单详情、支付状态回读对齐成 `bounce_order_tuple.csv`。
 4. 如果退信里有 `order_id` 但无卡密，继续打订单详情/重发接口。
@@ -163,7 +163,7 @@ def extract_dir(mail_dir, out_csv="exports/bounce_order_tuple.csv"):
 2. 获取订单号：支付回调 URL、邮件链接、页面跳转 Referer、Burp 被动扫描
 3. 测试订单查询接口：不带 Cookie/Token 直接 GET /order/detail?id=1001
    → 若返回订单信息 + 卡密 → 直接 IDOR，跳过后续步骤
-4. 若需要"支付后才发卡密"：填假邮箱下单但不支付
+4. 若需要"支付后才发兑换码"：填假邮箱下单但不支付
    → 部分系统下单时已生成卡密入库，只是不展示
    → 退信触发时系统可能把卡密回显
 5. 退信利用：

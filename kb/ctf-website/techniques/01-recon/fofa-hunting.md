@@ -38,7 +38,7 @@ FOFA 是国内主流的网络空间测绘搜索引擎（类比 Shodan/Censys）�
 | 找数据库入口 | `org="X" && (port="3306" || port="6379" || port="27017")` | `ip,port,protocol,banner` | database/noSQL |
 | 找管理后台 | `org="X" && (title="后台" || body="admin")` | `host,title,status` | auth/BAC |
 | 找配置泄露 | `body="DB_PASSWORD" || body="APP_ENV="` | `host,url,body` | config exposure |
-| 找支付/发卡平台 | `(body="卡密" || body="发卡" || body="dujiaoka" || body="epay")` | `host,title,body` | payment/platform |
+| 找支付回调接口 | `body="notify_url" || body="out_trade_no"` | `host,title,body` | payment/callback |
 | 找框架 CVE | `app="Product" && body="version"` | `host,app,server` | cve workflow |
 | 找同源资产 | `cert="domain" || header="unique-header"` | `ip,host,cert` | origin/CDN |
 
@@ -335,7 +335,7 @@ RULES = [
     (r"phpmyadmin|adminer|后台|管理", 4, "admin-panel"),
     (r"swagger|openapi|api-docs|graphql", 4, "api-schema"),
     (r"DB_PASSWORD|APP_ENV|\.env|Index of", 5, "config-leak"),
-    (r"发卡|卡密|dujiaoka|epay|payment|checkout", 5, "payment"),
+    (r"payment|checkout|billing|invoice|notify_url", 5, "payment"),
     (r"Spring|Laravel|ThinkPHP|Struts|Confluence|WebLogic", 3, "cve-candidate"),
 ]
 

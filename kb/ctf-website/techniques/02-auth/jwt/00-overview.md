@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["authentication", "jwt", "token", "web-security", "signature-bypass", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/02-auth/jwt/01-alg-none", "ctf-website/02-auth/jwt/02-algorithm-confusion", "ctf-website/02-auth/jwt/03-weak-key-bruteforce", "ctf-website/02-auth/jwt/04-kid-injection", "ctf-website/02-auth/jwt/05-jku-x5u-abuse", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/02-auth/jwt/07-theft-replay", "ctf-website/13-signature/00-overview"]
+related_articles: ["ctf-website/02-auth/jwt/01-alg-none", "ctf-website/02-auth/jwt/02-algorithm-confusion", "ctf-website/02-auth/jwt/03-weak-key-bruteforce", "ctf-website/02-auth/jwt/04-kid-injection", "ctf-website/02-auth/jwt/05-jku-x5u-abuse", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/02-auth/jwt/07-theft-replay", "general/signature/00-overview"]
 ---
 
 # JWT 攻击全景

@@ -77,7 +77,7 @@ The lab is built to be run, not browsed. If a step can't be executed, it doesn't
 
 ```
 kb/                                180+ articles, 5 boards
-├── ctf-website/techniques/        26 categories, 118 articles — Web attack surface
+├── ctf-website/techniques/        25 categories, 110 articles — Web attack surface
 ├── apk-reverse/techniques/         8 categories,  23 articles — Android reverse
 ├── pe-reverse/techniques/          9 categories,  24 articles — Windows PE / binary
 ├── general/techniques/             5 categories,  17 articles — Crypto · Protocol · Cheat · IoT · SDR
@@ -86,7 +86,7 @@ kb/                                180+ articles, 5 boards
 
 | Board | Trigger signals | MCP entry points |
 | --- | --- | --- |
-| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · CAPTCHA · Cloudflare · ReDoS · Slowloris · DoS · Paywall | `http_probe`, `run_ctf_tool`, `kb_router` |
+| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · CAPTCHA · Cloudflare · ReDoS · Slowloris · DoS | `http_probe`, `run_ctf_tool`, `kb_router` |
 | `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · native | `android_app_baseline`, `android_crypto_unpack_recipe`, `android_frida_*` |
 | `pe-reverse` | PE · EXE · DLL · x64dbg · Ghidra · Procmon · packer · malware | `triage_pe`, `ghidra_headless_analyze`, `make_x64dbg_breakpoint_script`, `sample_full_workup` |
 | `general` | AES · DES · RSA · protobuf · game cheat · EAC / BE / Vanguard · firmware · JTAG · SDR | `die_scan`, `ghidra_*`, `rizin_*`, `python_re_tool_*` |

@@ -40,7 +40,7 @@ tags:
   - "data-analysis"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/24-database/00-overview", "ctf-website/24-database/05-backup-log-leak", "ctf-website/24-database/06-card-platform", "ctf-website/12-payment/payment-digital-goods", "ctf-website/12-payment/payment-email-bounce-idor"]
+related_articles: ["ctf-website/24-database/00-overview", "ctf-website/24-database/05-backup-log-leak", "ctf-website/12-payment/payment-digital-goods", "ctf-website/12-payment/payment-email-bounce-idor"]
 ---
 # Database Dump Cleaning — 泄露数据清洗方法论
 
@@ -453,7 +453,7 @@ def tag_record(text):
 | `classified_records.csv` | 全量字段、行号、标签、置信度 |
 | `entity_index.sqlite` | 按订单/商品/用户/卡密查询 |
 | `callback_replay_seed.jsonl` | 给签名/回调文档复放 |
-| `card_inventory_candidates.csv` | 给数字商品/发卡平台核对 |
+| `card_inventory_candidates.csv` | 给数字商品订单核对 |
 | `noise_rules.json` | 记录被剔除的模板、占位符和冲突锚点 |
 
 成功样本：一个泄露值能从原始行号追到实体标签、订单或商品，再追到卡密/下载链接/回调样本。失败样本：只有格式相似但无锚点，或同一前缀被多个实体冲突占用。
@@ -468,7 +468,7 @@ def tag_record(text):
 | 锚点证据 | 订单/API/商品目录/字段名如何把 prefix 绑定到实体 |
 | 成功样本 | classified CSV/SQLite 中可复查的实体映射、可用 URL/token/CDK/订单字段 |
 | 失败样本 | 噪声规则、无法归类前缀、冲突锚点、格式相似但实体不一致的样本 |
-| 下一跳 | 转 `12-payment`、`23-paywall-bypass`、`04-config-exposure` 或 SQLi 抽取链的文件路径 |
+| 下一跳 | 转 `12-payment`、`04-config-exposure` 或 SQLi 抽取链的文件路径 |
 
 ## MCP 工具映射
 

@@ -119,7 +119,7 @@ ROUTES = [
     ("payment", ["order", "invoice", "payment", "refund", "coupon"], ["12-payment/payment-logic.md", "24-database/01-sqli-fundamentals.md"]),
     ("graphql", ["graphql", "mutation", "query"], ["03-injection/graphql.md"]),
     ("config", ["debug", "actuator", "env", "config"], ["24-database/04-config-exposure.md"]),
-    ("secret", ["key", "secret", "integration", "webhook"], ["17-api-attacks/02-api-key-leak.md", "13-signature/02-implementation.md"]),
+    ("secret", ["key", "secret", "integration", "webhook"], ["17-api-attacks/02-api-key-leak.md", "general/signature/02-implementation.md"]),
     ("idor", ["user_id", "org_id", "tenant_id", "{id}"], ["14-idor/01-idor-enumeration.md"]),
 ]
 

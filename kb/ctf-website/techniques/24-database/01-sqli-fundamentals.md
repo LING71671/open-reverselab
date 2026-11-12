@@ -43,7 +43,7 @@ tags:
   - "blind-injection"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/24-database/02-sqli-advanced", "ctf-website/12-payment/payment-logic", "ctf-website/12-payment/platform-fingerprints"]
+related_articles: ["ctf-website/24-database/02-sqli-advanced", "ctf-website/12-payment/payment-logic"]
 ---
 # SQL Injection Core — SQL 注入基础与全类型覆盖
 
@@ -496,7 +496,7 @@ EXEC xp_cmdshell 'whoami';
 | HPP | `?id=1&id=2 UNION SELECT...` |
 | 编码绕过 | `CHAR(115,101,108,101,99,116)` |
 
-## 8. 订单/发卡数据库抽取优先级
+## 8. 订单/支付数据库抽取优先级
 
 SQLi 在支付题里不要平均抽库。先定位能改变业务结果的表：订单、流水、卡密、库存、优惠券、用户余额、回调日志。抽取顺序错了，会浪费大量请求数。
 
@@ -588,5 +588,4 @@ Evidence 最少要保留三组：`schema_rank.json`、`critical_row_extract.json
 
 - [[sqli-nosqli]] — SQL/NoSQL 注入
 - [[02-sqli-advanced]] — 高级注入技术
-- [[06-card-platform]] — 发卡平台实战
 - [[04-config-exposure]] — 配置文件读取

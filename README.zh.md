@@ -77,7 +77,7 @@ ReverseLab 是一份「观点鲜明、可直接跑」的逆向工程攻击知识
 
 ```
 kb/                                180+ 篇文章，5 大板块
-├── ctf-website/techniques/        26 类 118 篇 —— Web 攻击全表面
+├── ctf-website/techniques/        25 类 110 篇 —— Web 攻击全表面
 ├── apk-reverse/techniques/         8 类  23 篇 —— Android 逆向
 ├── pe-reverse/techniques/          9 类  24 篇 —— Windows PE / 二进制
 ├── general/techniques/             5 类  17 篇 —— 密码学 · 协议 · 作弊 · IoT · SDR
@@ -86,7 +86,7 @@ kb/                                180+ 篇文章，5 大板块
 
 | 板块 | 触发信号 | MCP 入口 |
 | --- | --- | --- |
-| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · CAPTCHA · Cloudflare · ReDoS · Slowloris · DoS · Paywall | `http_probe`、`run_ctf_tool`、`kb_router` |
+| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · CAPTCHA · Cloudflare · ReDoS · Slowloris · DoS | `http_probe`、`run_ctf_tool`、`kb_router` |
 | `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · native | `android_app_baseline`、`android_crypto_unpack_recipe`、`android_frida_*` |
 | `pe-reverse` | PE · EXE · DLL · x64dbg · Ghidra · Procmon · packer · malware | `triage_pe`、`ghidra_headless_analyze`、`make_x64dbg_breakpoint_script`、`sample_full_workup` |
 | `general` | AES · DES · RSA · protobuf · 游戏作弊 · EAC / BE / Vanguard · 固件 · JTAG · SDR | `die_scan`、`ghidra_*`、`rizin_*`、`python_re_tool_*` |

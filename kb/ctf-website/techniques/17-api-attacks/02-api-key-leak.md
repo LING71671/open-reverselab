@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["api", "api-keys", "github-dorking", "firebase", "stripe", "aws", "cloud"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/17-api-attacks/01-api-discovery-leak", "ctf-website/10-cloud/aws-iam-privesc", "ctf-website/10-cloud/ci-cd-pipeline", "ctf-website/12-payment/payment-logic", "ctf-website/13-signature/03-key-attacks"]
+related_articles: ["ctf-website/17-api-attacks/01-api-discovery-leak", "ctf-website/10-cloud/aws-iam-privesc", "ctf-website/10-cloud/ci-cd-pipeline", "ctf-website/12-payment/payment-logic", "general/signature/03-key-attacks"]
 ---
 
 # API 密钥泄露与利用 — GitHub Dorking、客户端密钥链、云服务滥用

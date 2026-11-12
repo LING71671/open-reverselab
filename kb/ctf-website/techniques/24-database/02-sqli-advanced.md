@@ -43,7 +43,7 @@ tags:
   - "advanced"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/12-payment/payment-logic", "ctf-website/12-payment/payment-race-lost-update", "ctf-website/12-payment/payment-callback-async", "ctf-website/13-signature/06-replay-nonce"]
+related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/12-payment/payment-logic", "ctf-website/12-payment/payment-race-lost-update", "ctf-website/12-payment/payment-callback-async", "general/signature/06-replay-nonce"]
 ---
 # Advanced SQLi & WAF Bypass — 高级注入与绕过技术
 
@@ -544,5 +544,4 @@ print(prioritize(sample))
 
 - [[01-sqli-fundamentals]] — SQL 注入基础
 - [[03-nosql-injection]] — NoSQL 注入
-- [[06-card-platform]] — 发卡平台实战
 - [[sqli-nosqli]] — SQL/NoSQL 注入

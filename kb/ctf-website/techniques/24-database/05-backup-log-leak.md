@@ -42,7 +42,7 @@ tags:
   - "git-leak"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/24-database/04-config-exposure", "ctf-website/24-database/01-sqli-fundamentals", "ctf-website/12-payment/platform-fingerprints", "ctf-website/12-payment/payment-digital-goods"]
+related_articles: ["ctf-website/24-database/04-config-exposure", "ctf-website/24-database/01-sqli-fundamentals", "ctf-website/12-payment/payment-digital-goods"]
 ---
 # Database Backup & Log Leak — 数据库备份与日志泄露
 
@@ -353,7 +353,7 @@ def summarize_sql_dump(path):
 
 遇到大 dump：先 `rg -n "flag\\{|CTF\\{|admin|password|token|secret" dump.sql`，再按表拆分；不要先整库导入。
 
-### 6.3 支付/发卡表定位
+### 6.3 支付/订单表定位
 
 支付题拿到 dump 后，优先找“订单账本”和“权益账本”的断点：订单表、支付流水表、卡密表、优惠券表、发货表。
 
@@ -397,7 +397,7 @@ def payment_dump_map(path):
 
 ## 7. 命中后的订单/卡密抽取路线
 
-备份和日志命中后，优先产出“可操作索引”，而不是整库笔记。对支付/发卡题，最有价值的是表关系、最近订单、未使用卡密、回调 raw body、签名字段、安装默认账号。
+备份和日志命中后，优先产出“可操作索引”，而不是整库笔记。对支付/订单题，最有价值的是表关系、最近订单、未核销凭证、回调 raw body、签名字段、安装默认账号。
 
 | 命中物 | 第一轮提取 | 第二轮动作 |
 |---|---|---|
@@ -477,5 +477,4 @@ def build_graph(path):
 
 - [[04-config-exposure]] — 配置文件泄露
 - [[01-sqli-fundamentals]] — 数据库连接后的利用
-- [[06-card-platform]] — 发卡平台实战
 - [[file-upload-xxe-lfi]] — 文件读取

@@ -17,7 +17,7 @@ difficulty: "advanced"
 tags: ["payment", "callback", "webhook", "async", "race-condition", "ssrf", "web-security"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/12-payment/payment-bypass", "ctf-website/13-signature/00-overview"]
+related_articles: ["ctf-website/12-payment/payment-bypass", "general/signature/00-overview"]
 ---
 # Payment Callback & Async Attack — 支付回调与异步攻击深度手册
 

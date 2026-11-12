@@ -42,7 +42,7 @@ tags:
   - "default-passwords"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/24-database/05-backup-log-leak", "ctf-website/12-payment/platform-fingerprints", "ctf-website/13-signature/02-implementation"]
+related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/24-database/05-backup-log-leak", "general/signature/02-implementation"]
 ---
 # Database Config Exposure — 数据库配置泄露
 

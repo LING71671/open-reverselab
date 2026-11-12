@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "purpose": "Signal → technique file mapping for kb_router.py",
   "entries": [
     {
@@ -21,7 +21,8 @@
         "00-workflow/24h-loop-orchestration.md",
         "attack-network.md"
       ],
-      "priority": 10
+      "priority": 10,
+      "track": "red"
     },
     {
       "id": "jwt",
@@ -49,6 +50,165 @@
         "02-auth/jwt/08-cve-library.md",
         "02-auth/jwt/09-toolchain-operations.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "jwt-defense",
+      "defense_files": [
+        "02-auth/jwt/00-overview-defense.md",
+        "02-auth/jwt/01-alg-none-defense.md",
+        "02-auth/jwt/02-algorithm-confusion-defense.md",
+        "02-auth/jwt/03-weak-key-bruteforce-defense.md",
+        "02-auth/jwt/04-kid-injection-defense.md",
+        "02-auth/jwt/05-jku-x5u-abuse-defense.md",
+        "02-auth/jwt/06-claim-missing-defense.md",
+        "02-auth/jwt/07-theft-replay-defense.md",
+        "02-auth/jwt/08-cve-library-defense.md",
+        "02-auth/jwt/09-toolchain-operations-defense.md"
+      ]
+    },
+    {
+      "id": "jwt-defense",
+      "track": "blue",
+      "defends": "jwt",
+      "signals": [
+        "JWT防御",
+        "算法白名单",
+        "密钥隔离",
+        "Claim校验",
+        "Bearer防护",
+        "JWKS",
+        "jwt_tool",
+        "JWT防御全景",
+        "JSON Web Token加固",
+        "JWT验证规范",
+        "JWT纵深防御",
+        "Token安全架构",
+        "alg:none",
+        "none算法",
+        "无签名防御",
+        "JWT",
+        "InvalidAlgorithmError",
+        "alg:none防御",
+        "禁用none算法",
+        "JWT算法白名单",
+        "无签名拦截",
+        "PyJWT algorithms",
+        "算法混淆",
+        "RS256",
+        "HS256",
+        "HMAC",
+        "密钥类型绑定",
+        "PublicKey",
+        "算法混淆防御",
+        "RS256转HS256防御",
+        "JWT公钥安全",
+        "algorithm confusion defense",
+        "弱密钥防御",
+        "密钥熵",
+        "密钥轮换",
+        "SECRET_KEY",
+        "hashcat防御",
+        "JWT强密钥",
+        "HMAC密钥规范",
+        "JWT密钥轮换",
+        "防爆破",
+        "CSPRNG",
+        "kid",
+        "Key ID",
+        "路径穿越防御",
+        "SQL参数化",
+        "命令注入防御",
+        "KeyStore",
+        "多租户隔离",
+        "JWT kid防御",
+        "kid注入修复",
+        "KeyStore白名单",
+        "路径穿越拦截",
+        "SQL参数化查询",
+        "jku",
+        "x5u",
+        "x5c",
+        "jwk",
+        "SSRF防御",
+        "DNS Rebinding",
+        "密钥源劫持防御",
+        "jku防御",
+        "x5u防御",
+        "JWKS白名单",
+        "JWT密钥源防护",
+        "DNS重绑定防御",
+        "禁跟随重定向",
+        "exp",
+        "nbf",
+        "iss",
+        "aud",
+        "at+jwt",
+        "Token混用",
+        "权限回源",
+        "JWT Claim防御",
+        "exp验证",
+        "aud校验",
+        "iss验证",
+        "Token类型隔离",
+        "ID Token混用防御",
+        "Bearer Token",
+        "HttpOnly",
+        "SameSite",
+        "Referrer-Policy",
+        "jti吊销",
+        "Refresh轮换",
+        "Reuse Detection",
+        "重放防御",
+        "JWT窃取防御",
+        "Token重放防御",
+        "Refresh Token轮换",
+        "jti黑名单",
+        "HttpOnly Cookie",
+        "CVE",
+        "jsonwebtoken",
+        "PyJWT",
+        "python-jose",
+        "jjwt",
+        "golang-jwt",
+        "版本基线",
+        "key callback",
+        "JWT CVE修复",
+        "JWT库升级",
+        "jsonwebtoken安全配置",
+        "PyJWT安全版本",
+        "key callback防护",
+        "JWT依赖检查",
+        "JWT门禁",
+        "回归矩阵",
+        "防御流水线",
+        "错误收敛",
+        "CI/CD检查",
+        "结果矩阵",
+        "JWT防御测试",
+        "CI门禁",
+        "JWT回归矩阵",
+        "错误响应收敛",
+        "蓝队验证流水线",
+        "json web token",
+        "bearer",
+        "authorization header",
+        "token",
+        "eyJ",
+        "jws",
+        "jwe"
+      ],
+      "files": [
+        "02-auth/jwt/00-overview-defense.md",
+        "02-auth/jwt/01-alg-none-defense.md",
+        "02-auth/jwt/02-algorithm-confusion-defense.md",
+        "02-auth/jwt/03-weak-key-bruteforce-defense.md",
+        "02-auth/jwt/04-kid-injection-defense.md",
+        "02-auth/jwt/05-jku-x5u-abuse-defense.md",
+        "02-auth/jwt/06-claim-missing-defense.md",
+        "02-auth/jwt/07-theft-replay-defense.md",
+        "02-auth/jwt/08-cve-library-defense.md",
+        "02-auth/jwt/09-toolchain-operations-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -70,6 +230,45 @@
       "files": [
         "02-auth/oauth-sso.md"
       ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "oauth-defense",
+      "defense_files": [
+        "02-auth/oauth-sso-defense.md"
+      ]
+    },
+    {
+      "id": "oauth-defense",
+      "track": "blue",
+      "defends": "oauth",
+      "signals": [
+        "OAuth",
+        "OIDC",
+        "redirect_uri",
+        "state",
+        "nonce",
+        "PKCE",
+        "S256",
+        "ID Token",
+        "Token Binding",
+        "OAuth防御",
+        "OIDC加固",
+        "redirect_uri精确匹配",
+        "PKCE强制",
+        "state绑定",
+        "ID Token隔离",
+        "SSO账号绑定",
+        "oauth2",
+        "openid",
+        "sso",
+        "authorization code",
+        "implicit flow",
+        "state nonce",
+        "access token"
+      ],
+      "files": [
+        "02-auth/oauth-sso-defense.md"
+      ],
       "priority": 9
     },
     {
@@ -87,6 +286,42 @@
       "files": [
         "02-auth/saml-attacks.md"
       ],
+      "priority": 8,
+      "track": "red",
+      "defended_by": "saml-defense",
+      "defense_files": [
+        "02-auth/saml-attacks-defense.md"
+      ]
+    },
+    {
+      "id": "saml-defense",
+      "track": "blue",
+      "defends": "saml",
+      "signals": [
+        "SAML",
+        "XML Signature Wrapping",
+        "XSW",
+        "Void Canonicalization",
+        "Round-Trip",
+        "Assertion",
+        "InResponseTo",
+        "Replay",
+        "SAML防御",
+        "XSW防御",
+        "XML签名验证",
+        "Void Canonicalization修复",
+        "SAML防重放",
+        "SAML Schema校验",
+        "xml signature",
+        "saml response",
+        "xml canonicalization",
+        "xml wrapping",
+        "identity provider",
+        "idp"
+      ],
+      "files": [
+        "02-auth/saml-attacks-defense.md"
+      ],
       "priority": 8
     },
     {
@@ -103,6 +338,40 @@
       "files": [
         "02-auth/ldap-injection.md"
       ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "ldap-defense",
+      "defense_files": [
+        "02-auth/ldap-injection-defense.md"
+      ]
+    },
+    {
+      "id": "ldap-defense",
+      "track": "blue",
+      "defends": "ldap",
+      "signals": [
+        "LDAP",
+        "过滤器注入",
+        "RFC 4515",
+        "JNDI",
+        "trustURLCodebase",
+        "anonymous bind",
+        "OpenLDAP",
+        "盲注防御",
+        "LDAP注入防御",
+        "LDAP filter escaping",
+        "JNDI加固",
+        "OpenLDAP ACL",
+        "匿名绑定禁用",
+        "active directory",
+        "directory service",
+        "ldap filter",
+        "389",
+        "636"
+      ],
+      "files": [
+        "02-auth/ldap-injection-defense.md"
+      ],
       "priority": 7
     },
     {
@@ -117,6 +386,40 @@
       ],
       "files": [
         "02-auth/host-header.md"
+      ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "host-header-defense",
+      "defense_files": [
+        "02-auth/host-header-defense.md"
+      ]
+    },
+    {
+      "id": "host-header-defense",
+      "track": "blue",
+      "defends": "host-header",
+      "signals": [
+        "Host header",
+        "X-Forwarded-Host",
+        "X-Original-Host",
+        "Forwarded",
+        "密码重置劫持",
+        "vhost绕过",
+        "Cache Poisoning",
+        "Canonical Origin",
+        "Host头防御",
+        "Host header defense",
+        "X-Forwarded-Host加固",
+        "密码重置链接固定域名",
+        "vhost隔离",
+        "缓存投毒防御",
+        "host injection",
+        "password reset",
+        "vhost",
+        "host override"
+      ],
+      "files": [
+        "02-auth/host-header-defense.md"
       ],
       "priority": 7
     },
@@ -140,6 +443,51 @@
       "files": [
         "03-injection/sqli-nosqli.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "sqli-defense",
+      "defense_files": [
+        "03-injection/sqli-nosqli-defense.md"
+      ]
+    },
+    {
+      "id": "sqli-defense",
+      "track": "blue",
+      "defends": "sqli",
+      "signals": [
+        "SQLi防御",
+        "NoSQLi防御",
+        "参数化查询",
+        "预编译语句",
+        "宽字节防御",
+        "MongoDB注入防护",
+        "最小权限DB",
+        "Content-Type严格校验",
+        "SQL注入防御",
+        "NoSQL注入防御",
+        "Prepared Statement",
+        "MongoDB安全",
+        "二阶注入防护",
+        "OOB阻断",
+        "支付账本隔离",
+        "WAFFLED防御",
+        "sql",
+        "sqli",
+        "sql injection",
+        "database",
+        "mysql",
+        "postgresql",
+        "oracle",
+        "mssql",
+        "sqlite",
+        "nosql",
+        "mongodb",
+        "query",
+        "waf bypass sql"
+      ],
+      "files": [
+        "03-injection/sqli-nosqli-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -162,6 +510,49 @@
       "files": [
         "03-injection/ssti.md"
       ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "ssti-defense",
+      "defense_files": [
+        "03-injection/ssti-defense.md"
+      ]
+    },
+    {
+      "id": "ssti-defense",
+      "track": "blue",
+      "defends": "ssti",
+      "signals": [
+        "SSTI防御",
+        "模板注入防御",
+        "SandboxedEnvironment",
+        "ALLOWS_NOTHING_RESOLVER",
+        "CSTI防护",
+        "静态模板绑定",
+        "反射链阻断",
+        "Jinja2沙盒",
+        "Thymeleaf安全",
+        "FreeMarker加固",
+        "Smarty安全",
+        "CSTI防御",
+        "模板引擎加固",
+        "表达式注入防护",
+        "ssti",
+        "template injection",
+        "template engine",
+        "jinja2",
+        "twig",
+        "freemarker",
+        "thymeleaf",
+        "velocity",
+        "smarty",
+        "razor",
+        "pebble",
+        "tornado",
+        "erb"
+      ],
+      "files": [
+        "03-injection/ssti-defense.md"
+      ],
       "priority": 9
     },
     {
@@ -179,6 +570,45 @@
       ],
       "files": [
         "03-injection/prototype-pollution.md"
+      ],
+      "priority": 8,
+      "track": "red",
+      "defended_by": "prototype-pollution-defense",
+      "defense_files": [
+        "03-injection/prototype-pollution-defense.md"
+      ]
+    },
+    {
+      "id": "prototype-pollution-defense",
+      "track": "blue",
+      "defends": "prototype-pollution",
+      "signals": [
+        "prototype pollution防御",
+        "__proto__拦截",
+        "Object.create(null)",
+        "hasOwn防御",
+        "deep merge加固",
+        "qs安全配置",
+        "原型冻结",
+        "原型链污染防御",
+        "Prototype Pollution防护",
+        "__proto__过滤",
+        "constructor.prototype拦截",
+        "Object.freeze",
+        "Object.hasOwn",
+        "safe merge",
+        "prototype pollution",
+        "pp",
+        "__proto__",
+        "constructor.prototype",
+        "node.js",
+        "object merge",
+        "deep copy",
+        "ejs",
+        "pug"
+      ],
+      "files": [
+        "03-injection/prototype-pollution-defense.md"
       ],
       "priority": 8
     },
@@ -199,6 +629,46 @@
       "files": [
         "03-injection/graphql.md"
       ],
+      "priority": 8,
+      "track": "red",
+      "defended_by": "graphql-defense",
+      "defense_files": [
+        "03-injection/graphql-defense.md"
+      ]
+    },
+    {
+      "id": "graphql-defense",
+      "track": "blue",
+      "defends": "graphql",
+      "signals": [
+        "GraphQL防御",
+        "introspection禁用",
+        "query complexity",
+        "depth limit",
+        "field authorization",
+        "APQ白名单",
+        "field suggestion关闭",
+        "AST复杂度限制",
+        "字段级鉴权",
+        "禁用Introspection",
+        "关闭Field Suggestion",
+        "Batch限流",
+        "APQ安全",
+        "Subscription鉴权",
+        "graphql",
+        "graphiql",
+        "introspection",
+        "mutation",
+        "subscription",
+        "fragment",
+        "alias",
+        "persisted query",
+        "__typename",
+        "__schema"
+      ],
+      "files": [
+        "03-injection/graphql-defense.md"
+      ],
       "priority": 8
     },
     {
@@ -217,6 +687,43 @@
       "files": [
         "03-injection/hpp-crlf.md"
       ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "hpp-crlf-defense",
+      "defense_files": [
+        "03-injection/hpp-crlf-defense.md"
+      ]
+    },
+    {
+      "id": "hpp-crlf-defense",
+      "track": "blue",
+      "defends": "hpp-crlf",
+      "signals": [
+        "HPP防御",
+        "CRLF防御",
+        "重复参数拦截",
+        "JSON重复键",
+        "响应头注入防护",
+        "parser differential防御",
+        "Header归一化",
+        "参数污染防护",
+        "Header注入防护",
+        "JSON重复键检测",
+        "解析器一致性",
+        "HTTP响应拆分防御",
+        "hpp",
+        "parameter pollution",
+        "crlf",
+        "crlf injection",
+        "response splitting",
+        "header injection",
+        "smtp injection",
+        "email injection",
+        "%0d%0a"
+      ],
+      "files": [
+        "03-injection/hpp-crlf-defense.md"
+      ],
       "priority": 7
     },
     {
@@ -234,20 +741,41 @@
       "files": [
         "03-injection/redos-timing.md"
       ],
-      "priority": 7
+      "priority": 7,
+      "track": "red",
+      "defended_by": "redos-timing-defense",
+      "defense_files": [
+        "03-injection/redos-timing-defense.md"
+      ]
     },
     {
-      "id": "grpc",
+      "id": "redos-timing-defense",
+      "track": "blue",
+      "defends": "redos-timing",
       "signals": [
-        "grpc",
-        "protobuf",
-        "protocol buffer",
-        "grpc-web",
-        "h2",
-        "field number"
+        "ReDoS防御",
+        "RE2",
+        "恒定时间比较",
+        "timingSafeEqual",
+        "compare_digest",
+        "WAF Fail-Closed",
+        "event loop隔离",
+        "线性正则",
+        "时序攻击防御",
+        "RE2引擎",
+        "防回溯",
+        "侧信道防护",
+        "redos",
+        "regex",
+        "backtracking",
+        "regular expression",
+        "timing attack",
+        "side channel",
+        "catastrophic backtracking",
+        "event loop block"
       ],
       "files": [
-        "03-injection/grpc-protobuf.md"
+        "03-injection/redos-timing-defense.md"
       ],
       "priority": 7
     },
@@ -267,6 +795,42 @@
       "files": [
         "04-ssrf/ssrf.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "ssrf-defense",
+      "defense_files": [
+        "04-ssrf/ssrf-defense.md"
+      ]
+    },
+    {
+      "id": "ssrf-defense",
+      "track": "blue",
+      "defends": "ssrf",
+      "signals": [
+        "SSRF",
+        "DNS rebinding",
+        "Gopher",
+        "cloud metadata",
+        "IMDSv2",
+        "内网隔离",
+        "SSRF防御",
+        "DNS Pinning",
+        "禁Gopher协议",
+        "禁用重定向",
+        "IMDSv2强制",
+        "内网IP过滤",
+        "出口代理隔离",
+        "blue-team",
+        "server-side request forgery",
+        "metadata",
+        "169.254",
+        "internal network",
+        "url parser",
+        "imds"
+      ],
+      "files": [
+        "04-ssrf/ssrf-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -283,6 +847,40 @@
       ],
       "files": [
         "04-ssrf/open-redirect.md"
+      ],
+      "priority": 8,
+      "track": "red",
+      "defended_by": "open-redirect-defense",
+      "defense_files": [
+        "04-ssrf/open-redirect-defense.md"
+      ]
+    },
+    {
+      "id": "open-redirect-defense",
+      "track": "blue",
+      "defends": "open-redirect",
+      "signals": [
+        "open redirect",
+        "URL parser differential",
+        "redirect_uri",
+        "OAuth redirect",
+        "302",
+        "开放重定向防御",
+        "URL解析器一致性",
+        "白名单校验",
+        "OAuth redirect_uri加固",
+        "反斜杠拦截",
+        "相对路径跳转",
+        "CRLF防御",
+        "blue-team",
+        "redirect",
+        "301",
+        "location header",
+        "next param",
+        "return url"
+      ],
+      "files": [
+        "04-ssrf/open-redirect-defense.md"
       ],
       "priority": 8
     },
@@ -301,6 +899,43 @@
       ],
       "files": [
         "05-deserialization/deserialization.md"
+      ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "deserialization-defense",
+      "defense_files": [
+        "05-deserialization/deserialization-defense.md"
+      ]
+    },
+    {
+      "id": "deserialization-defense",
+      "track": "blue",
+      "defends": "deserialization",
+      "signals": [
+        "deserialization",
+        "pickle",
+        "ObjectInputStream",
+        "PHP unserialize",
+        "YAML",
+        "ViewState",
+        "反序列化防御",
+        "安全反序列化",
+        "ObjectInputFilter",
+        "RestrictedUnpickler",
+        "allowed_classes",
+        "safe_load",
+        "HMAC签名",
+        "blue-team",
+        "unserialize",
+        "ysoserial",
+        "gadget",
+        "binaryformatter",
+        "node-serialize",
+        "hessian",
+        "jackson polymorphic"
+      ],
+      "files": [
+        "05-deserialization/deserialization-defense.md"
       ],
       "priority": 9
     },
@@ -322,6 +957,43 @@
       "files": [
         "06-file-attacks/file-upload-xxe-lfi.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "file-attacks-defense",
+      "defense_files": [
+        "06-file-attacks/file-upload-xxe-lfi-defense.md"
+      ]
+    },
+    {
+      "id": "file-attacks-defense",
+      "track": "blue",
+      "defends": "file-attacks",
+      "signals": [
+        "file upload",
+        "XXE",
+        "LFI",
+        "path traversal",
+        "Zip Slip",
+        "文件上传防御",
+        "XXE防御",
+        "路径穿越防御",
+        "文件上传安全",
+        "XXE禁用",
+        "Zip Slip防御",
+        "图片重编码",
+        "defusedxml",
+        "realpath校验",
+        "blue-team",
+        "php wrapper",
+        "pdf generation",
+        "wkhtmltopdf",
+        "include",
+        "../",
+        "file read"
+      ],
+      "files": [
+        "06-file-attacks/file-upload-xxe-lfi-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -342,28 +1014,47 @@
       "files": [
         "07-client/admin-bot-xss.md"
       ],
-      "priority": 10
+      "priority": 10,
+      "track": "red",
+      "defended_by": "xss-defense",
+      "defense_files": [
+        "07-client/admin-bot-xss-defense.md"
+      ]
     },
     {
-      "id": "js-runtime",
+      "id": "xss-defense",
+      "track": "blue",
+      "defends": "xss",
       "signals": [
-        "javascript",
-        "js",
-        "obfuscation",
-        "deobfuscate",
-        "webpack",
-        "hook",
-        "fetch api",
-        "webcrypto",
-        "cryptojs",
-        "ast",
-        "babel",
-        "wasm"
+        "XSS防御",
+        "CSP加固",
+        "Trusted Types",
+        "DOM Clobbering防御",
+        "Admin Bot隔离",
+        "HttpOnly Cookie",
+        "Sanitizer加固",
+        "CSP策略",
+        "DOMPurify配置",
+        "DOM Clobbering防护",
+        "Admin Bot安全",
+        "mXSS防御",
+        "外带阻断",
+        "xss",
+        "cross site scripting",
+        "csp",
+        "content security policy",
+        "dom clobbering",
+        "svg",
+        "sanitizer",
+        "dompurify",
+        "admin bot",
+        "mutation xss",
+        "exfiltration"
       ],
       "files": [
-        "07-client/js-runtime.md"
+        "07-client/admin-bot-xss-defense.md"
       ],
-      "priority": 8
+      "priority": 10
     },
     {
       "id": "websocket",
@@ -379,6 +1070,44 @@
       ],
       "files": [
         "07-client/websocket.md"
+      ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "websocket-defense",
+      "defense_files": [
+        "07-client/websocket-defense.md"
+      ]
+    },
+    {
+      "id": "websocket-defense",
+      "track": "blue",
+      "defends": "websocket",
+      "signals": [
+        "WebSocket防御",
+        "CSWSH防护",
+        "逐事件鉴权",
+        "Socket.IO ACL",
+        "MQTT主题ACL",
+        "并发幂等锁",
+        "seq防重放",
+        "CSWSH防御",
+        "Socket.IO鉴权",
+        "MQTT ACL",
+        "消息重放防护",
+        "WebSocket竞态防御",
+        "Origin白名单",
+        "实时消息注入防护",
+        "websocket",
+        "ws",
+        "wss",
+        "socket.io",
+        "mqtt",
+        "cswsh",
+        "real-time",
+        "realtime"
+      ],
+      "files": [
+        "07-client/websocket-defense.md"
       ],
       "priority": 7
     },
@@ -398,6 +1127,43 @@
       "files": [
         "07-client/cors-csrf.md"
       ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "cors-csrf-defense",
+      "defense_files": [
+        "07-client/cors-csrf-defense.md"
+      ]
+    },
+    {
+      "id": "cors-csrf-defense",
+      "track": "blue",
+      "defends": "cors-csrf",
+      "signals": [
+        "CORS防御",
+        "CSRF防御",
+        "Origin精确白名单",
+        "SameSite加固",
+        "Sec-Fetch-Site",
+        "preflight校验",
+        "CSRF Token绑定",
+        "Origin白名单",
+        "Vary Origin",
+        "SameSite Cookie",
+        "CSRF Token验证",
+        "Simple Request防护",
+        "cors",
+        "csrf",
+        "cross origin",
+        "access-control",
+        "same origin",
+        "cross-site request forgery",
+        "samesite",
+        "aca-header",
+        "origin header"
+      ],
+      "files": [
+        "07-client/cors-csrf-defense.md"
+      ],
       "priority": 9
     },
     {
@@ -413,23 +1179,39 @@
       "files": [
         "07-client/postmessage.md"
       ],
-      "priority": 7
+      "priority": 7,
+      "track": "red",
+      "defended_by": "postmessage-defense",
+      "defense_files": [
+        "07-client/postmessage-defense.md"
+      ]
     },
     {
-      "id": "web-crypto",
+      "id": "postmessage-defense",
+      "track": "blue",
+      "defends": "postmessage",
       "signals": [
-        "web crypto",
-        "subtle",
-        "crypto.subtle",
-        "math.random",
-        "prng",
-        "rsa key",
-        "extractable",
-        "ecb",
-        "jwe"
+        "postMessage防御",
+        "origin精确校验",
+        "targetOrigin指定",
+        "event.source竞态防护",
+        "消息schema白名单",
+        "OAuth回包防护",
+        "跨域通信安全",
+        "targetOrigin通配符禁用",
+        "null origin防护",
+        "event.source验证",
+        "OAuth弹窗安全",
+        "DOM XSS防御",
+        "postmessage",
+        "post message",
+        "window.postmessage",
+        "cross origin communication",
+        "event.source",
+        "structured clone"
       ],
       "files": [
-        "07-client/web-crypto-abuse.md"
+        "07-client/postmessage-defense.md"
       ],
       "priority": 7
     },
@@ -449,6 +1231,42 @@
       "files": [
         "08-infra/race-cache-smuggling.md"
       ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "race-smuggling-defense",
+      "defense_files": [
+        "08-infra/race-cache-smuggling-defense.md"
+      ]
+    },
+    {
+      "id": "race-smuggling-defense",
+      "track": "blue",
+      "defends": "race-smuggling",
+      "signals": [
+        "race condition",
+        "cache poisoning",
+        "request smuggling",
+        "CL.TE",
+        "TE.CL",
+        "H2.CL",
+        "竞态防御",
+        "请求走私防御",
+        "条件竞争防御",
+        "原子更新",
+        "幂等性设计",
+        "缓存投毒防御",
+        "Unkeyed Header隔离",
+        "HTTP请求走私防御",
+        "禁用H2降级",
+        "blue-team",
+        "turbo intruder",
+        "concurrent",
+        "toctou",
+        "double spend"
+      ],
+      "files": [
+        "08-infra/race-cache-smuggling-defense.md"
+      ],
       "priority": 9
     },
     {
@@ -465,6 +1283,40 @@
       "files": [
         "08-infra/http2-attacks.md"
       ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "http2-defense",
+      "defense_files": [
+        "08-infra/http2-attacks-defense.md"
+      ]
+    },
+    {
+      "id": "http2-defense",
+      "track": "blue",
+      "defends": "http2",
+      "signals": [
+        "HTTP/2",
+        "HPACK",
+        "CONTINUATION",
+        "H2C",
+        "CVE-2026-49975",
+        "CVE-2024-28182",
+        "HTTP/2防御",
+        "HTTP2防御",
+        "HPACK Bomb防护",
+        "CONTINUATION Flood防御",
+        "H2C禁用",
+        "CVE-2026-49975缓解",
+        "流控超时",
+        "协议层加固",
+        "blue-team",
+        "http2",
+        "h2",
+        "stream multiplexing"
+      ],
+      "files": [
+        "08-infra/http2-attacks-defense.md"
+      ],
       "priority": 7
     },
     {
@@ -480,6 +1332,42 @@
       ],
       "files": [
         "08-infra/web-cache-deception.md"
+      ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "cache-deception-defense",
+      "defense_files": [
+        "08-infra/web-cache-deception-defense.md"
+      ]
+    },
+    {
+      "id": "cache-deception-defense",
+      "track": "blue",
+      "defends": "cache-deception",
+      "signals": [
+        "web cache deception",
+        "缓存欺骗",
+        "Cache-Control",
+        "Vary",
+        "path delimiter",
+        "CDN加固",
+        "Web Cache Deception防御",
+        "缓存欺骗防御",
+        "Cache-Control private",
+        "CDN路径一致性",
+        "分号矩阵参数拦截",
+        "Content-Type校验",
+        "blue-team",
+        "cache deception",
+        "web cache",
+        "cdn cache",
+        "cached response",
+        "x-cache",
+        "cache hit",
+        "fat get"
+      ],
+      "files": [
+        "08-infra/web-cache-deception-defense.md"
       ],
       "priority": 7
     },
@@ -502,7 +1390,8 @@
         "09-cve/cve-correlation-graph.md",
         "09-cve/multi-cve-chain-playbook.md"
       ],
-      "priority": 10
+      "priority": 10,
+      "track": "both"
     },
     {
       "id": "cloud-serverless",
@@ -525,6 +1414,64 @@
       "files": [
         "10-cloud/serverless-lambda.md",
         "10-cloud/aws-iam-privesc.md"
+      ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "cloud-serverless-defense",
+      "defense_files": [
+        "10-cloud/serverless-lambda-defense.md",
+        "10-cloud/aws-iam-privesc-defense.md"
+      ]
+    },
+    {
+      "id": "cloud-serverless-defense",
+      "track": "blue",
+      "defends": "cloud-serverless",
+      "signals": [
+        "Serverless defense",
+        "Lambda hardening",
+        "event validation",
+        "per-function IAM role",
+        "warm start /tmp isolation",
+        "Lambda code signing",
+        "Serverless防御",
+        "Lambda加固",
+        "最小执行角色",
+        "Event Injection防护",
+        "冷启动tmp隔离",
+        "Secrets Manager",
+        "Lambda代码签名",
+        "AWS IAM defense",
+        "IMDSv2",
+        "PassRole condition",
+        "Permission Boundary",
+        "SCP guardrail",
+        "AssumeRole trust policy",
+        "least privilege",
+        "AWS IAM防御",
+        "IMDSv2加固",
+        "PassRole条件限制",
+        "SCP护栏",
+        "Trust Policy收敛",
+        "云凭证防护",
+        "lambda",
+        "serverless",
+        "aws",
+        "cloud function",
+        "azure function",
+        "metadata service",
+        "169.254.169.254",
+        "iam role",
+        "function url",
+        "sts",
+        "assume role",
+        "passrole",
+        "policy simulation",
+        "irsa"
+      ],
+      "files": [
+        "10-cloud/serverless-lambda-defense.md",
+        "10-cloud/aws-iam-privesc-defense.md"
       ],
       "priority": 7
     },
@@ -553,6 +1500,81 @@
         "10-cloud/k8s-rbac-attack-paths.md",
         "10-cloud/container-runtime-escape.md"
       ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "kubernetes-defense",
+      "defense_files": [
+        "10-cloud/kubernetes-container-defense.md",
+        "10-cloud/k8s-rbac-attack-paths-defense.md",
+        "10-cloud/container-runtime-escape-defense.md"
+      ]
+    },
+    {
+      "id": "kubernetes-defense",
+      "track": "blue",
+      "defends": "kubernetes",
+      "signals": [
+        "Kubernetes defense",
+        "Pod Security Admission",
+        "kubelet 10250 hardening",
+        "etcd mTLS",
+        "NetworkPolicy",
+        "IMDSv2 hop-limit",
+        "runc CVE-2024-21626 defense",
+        "Kubernetes加固",
+        "Pod Security restricted",
+        "kubelet认证",
+        "etcd隔离",
+        "NetworkPolicy阻断",
+        "容器逃逸防御",
+        "runc补丁",
+        "Kubernetes RBAC defense",
+        "automountServiceAccountToken",
+        "least privilege RBAC",
+        "secrets isolation",
+        "pods/exec restriction",
+        "ClusterRoleBinding",
+        "Kubernetes RBAC防御",
+        "K8s最小权限",
+        "ServiceAccount Token禁用挂载",
+        "pods exec限制",
+        "ClusterRoleBinding检查",
+        "RBAC防提权",
+        "container escape defense",
+        "docker.sock isolation",
+        "drop capabilities",
+        "seccomp",
+        "AppArmor",
+        "non-root container",
+        "runc patch",
+        "Docker socket禁止挂载",
+        "Capabilities收敛",
+        "Seccomp基线",
+        "AppArmor配置",
+        "runc升级",
+        "无特权容器",
+        "kubernetes",
+        "k8s",
+        "pod",
+        "container",
+        "docker",
+        "service account",
+        "kubelet",
+        "etcd",
+        "runc",
+        "rbac",
+        "hostpath",
+        "selfsubjectaccessreview",
+        "pods/exec",
+        "docker.sock",
+        "privileged",
+        "containerd"
+      ],
+      "files": [
+        "10-cloud/kubernetes-container-defense.md",
+        "10-cloud/k8s-rbac-attack-paths-defense.md",
+        "10-cloud/container-runtime-escape-defense.md"
+      ],
       "priority": 7
     },
     {
@@ -578,6 +1600,80 @@
         "10-cloud/ci-cd-pipeline.md",
         "10-cloud/github-actions-abuse-paths.md",
         "10-cloud/terraform-state-secrets.md"
+      ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "ci-cd-defense",
+      "defense_files": [
+        "10-cloud/ci-cd-pipeline-defense.md",
+        "10-cloud/github-actions-abuse-paths-defense.md",
+        "10-cloud/terraform-state-secrets-defense.md"
+      ]
+    },
+    {
+      "id": "ci-cd-defense",
+      "track": "blue",
+      "defends": "ci-cd",
+      "signals": [
+        "CI/CD defense",
+        "pipeline hardening",
+        "GitHub Actions env indirection",
+        "Jenkins security",
+        "ephemeral runner",
+        "OIDC claims",
+        "artifact provenance",
+        "CI/CD安全加固",
+        "Pipeline防御",
+        "Workflow注入防护",
+        "Jenkins认证收口",
+        "临时Runner隔离",
+        "OIDC精确绑定",
+        "SLSA产物签名",
+        "GitHub Actions defense",
+        "GITHUB_TOKEN least privilege",
+        "pull_request_target mitigation",
+        "SHA pinning",
+        "OIDC sub restriction",
+        "workflow hardening",
+        "GitHub Actions防御",
+        "pull_request_target加固",
+        "GITHUB_TOKEN最小权限",
+        "Action固定SHA",
+        "OIDC条件限制",
+        "Workflow安全检查",
+        "Terraform defense",
+        "tfstate encryption",
+        "remote backend hardening",
+        "ephemeral resources",
+        "CI artifact isolation",
+        "IaC security",
+        "Terraform State防御",
+        "tfstate加密",
+        "IaC凭证保护",
+        "远端Backend加固",
+        "ephemeral资源",
+        "tfvars防泄露",
+        "CI制品隔离",
+        "ci/cd",
+        "jenkins",
+        "github actions",
+        "gitlab ci",
+        "pipeline",
+        "runner",
+        "workflow",
+        "self-hosted",
+        "groovy",
+        "pull_request_target",
+        "github_token",
+        "oidc",
+        "terraform",
+        "tfstate",
+        "iac"
+      ],
+      "files": [
+        "10-cloud/ci-cd-pipeline-defense.md",
+        "10-cloud/github-actions-abuse-paths-defense.md",
+        "10-cloud/terraform-state-secrets-defense.md"
       ],
       "priority": 7
     },
@@ -618,9 +1714,149 @@
         "12-payment/payment-php.md",
         "12-payment/payment-subscription.md",
         "12-payment/payment-digital-goods.md",
-        "12-payment/payment-email-bounce-idor.md",
-        "12-payment/platform-fingerprints.md",
-        "12-payment/ticket-rush-api-reversing.md"
+        "12-payment/payment-email-bounce-idor.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "payment-defense",
+      "defense_files": [
+        "12-payment/payment-logic-defense.md",
+        "12-payment/payment-bypass-defense.md",
+        "12-payment/payment-callback-async-defense.md",
+        "12-payment/payment-php-defense.md",
+        "12-payment/payment-subscription-defense.md",
+        "12-payment/payment-digital-goods-defense.md",
+        "12-payment/payment-email-bounce-idor-defense.md"
+      ]
+    },
+    {
+      "id": "payment-defense",
+      "track": "blue",
+      "defends": "payment",
+      "signals": [
+        "Payment Logic",
+        "支付逻辑防御",
+        "账本一致性",
+        "状态机保护",
+        "防SQLi账本篡改",
+        "Open Redirect防护",
+        "优惠券封顶",
+        "payment logic defense",
+        "ledger consistency",
+        "支付业务逻辑安全",
+        "账本不变量",
+        "优惠券积分互斥",
+        "CWE-840",
+        "Payment Bypass",
+        "支付防御",
+        "权威计价",
+        "状态机校验",
+        "精度控制",
+        "DTO白名单",
+        "防重放",
+        "payment hardening",
+        "integer cents",
+        "单向状态机",
+        "服务端计价",
+        "类型强校验",
+        "CWE-472",
+        "payment callback",
+        "回调验签",
+        "幂等性",
+        "Webhook SSRF",
+        "DNS Rebinding",
+        "MQ签名",
+        "异步竞态",
+        "支付回调防御",
+        "webhook verification",
+        "constant time compare",
+        "idempotency key",
+        "anti-ssrf",
+        "DNS rebinding defense",
+        "PHP防御",
+        "strict_types",
+        "hash_equals",
+        "in_array严格模式",
+        "禁用unserialize",
+        "BCMath",
+        "Laravel Cashier",
+        "WooCommerce",
+        "PHP payment hardening",
+        "type juggling defense",
+        "declare strict_types",
+        "safe deserialization",
+        "subscription defense",
+        "试用风控",
+        "proration校验",
+        "续费宽限期",
+        "metered billing",
+        "seat配额",
+        "Stripe webhook",
+        "subscription hardening",
+        "trial abuse prevention",
+        "proration security",
+        "seat enforcement",
+        "Stripe billing defense",
+        "dunning state machine",
+        "IAP防御",
+        "receipt服务端校验",
+        "purchaseToken去重",
+        "沙盒隔离",
+        "卡密加密生成",
+        "防重复发货",
+        "虚拟货币账本",
+        "IAP defense",
+        "App Store Server API",
+        "Google Play Developer API",
+        "purchaseToken replay",
+        "license key security",
+        "digital goods hardening",
+        "退信泄露防御",
+        "NDR安全",
+        "订单IDOR防护",
+        "卡密保护",
+        "所有权校验",
+        "CWE-639",
+        "CWE-862",
+        "bounce email defense",
+        "NDR leak prevention",
+        "order IDOR defense",
+        "card key protection",
+        "payment",
+        "pay",
+        "支付",
+        "checkout",
+        "order",
+        "订单",
+        "trade",
+        "notify",
+        "callback",
+        "webhook",
+        "alipay",
+        "wechat pay",
+        "stripe",
+        "paypal",
+        "amount",
+        "金额",
+        "coupon",
+        "优惠券",
+        "discount",
+        "refund",
+        "退款",
+        "balance",
+        "余额",
+        "recharge",
+        "充值",
+        "invoice"
+      ],
+      "files": [
+        "12-payment/payment-logic-defense.md",
+        "12-payment/payment-bypass-defense.md",
+        "12-payment/payment-callback-async-defense.md",
+        "12-payment/payment-php-defense.md",
+        "12-payment/payment-subscription-defense.md",
+        "12-payment/payment-digital-goods-defense.md",
+        "12-payment/payment-email-bounce-idor-defense.md"
       ],
       "priority": 10
     },
@@ -644,6 +1880,50 @@
       ],
       "files": [
         "12-payment/payment-bypass.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "payment-bypass-defense",
+      "defense_files": [
+        "12-payment/payment-bypass-defense.md"
+      ]
+    },
+    {
+      "id": "payment-bypass-defense",
+      "track": "blue",
+      "defends": "payment-bypass",
+      "signals": [
+        "Payment Bypass",
+        "支付防御",
+        "权威计价",
+        "状态机校验",
+        "精度控制",
+        "DTO白名单",
+        "防重放",
+        "账本一致性",
+        "payment hardening",
+        "integer cents",
+        "单向状态机",
+        "服务端计价",
+        "类型强校验",
+        "CWE-840",
+        "CWE-472",
+        "支付绕过",
+        "zero price",
+        "零元购",
+        "amount tampering",
+        "price manipulation",
+        "type confusion",
+        "mass assignment",
+        "state machine",
+        "rounding attack",
+        "float precision",
+        "currency attack",
+        "coupon abuse",
+        "discount abuse"
+      ],
+      "files": [
+        "12-payment/payment-bypass-defense.md"
       ],
       "priority": 10
     },
@@ -671,6 +1951,53 @@
       ],
       "files": [
         "12-payment/payment-callback-async.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "payment-callback-defense",
+      "defense_files": [
+        "12-payment/payment-callback-async-defense.md"
+      ]
+    },
+    {
+      "id": "payment-callback-defense",
+      "track": "blue",
+      "defends": "payment-callback",
+      "signals": [
+        "payment callback",
+        "回调验签",
+        "幂等性",
+        "Webhook SSRF",
+        "DNS Rebinding",
+        "MQ签名",
+        "异步竞态",
+        "防重放",
+        "支付回调防御",
+        "webhook verification",
+        "constant time compare",
+        "idempotency key",
+        "anti-ssrf",
+        "DNS rebinding defense",
+        "支付回调",
+        "async payment",
+        "异步支付",
+        "notify",
+        "webhook",
+        "signature bypass",
+        "签名绕过",
+        "idempotency",
+        "幂等",
+        "replay attack",
+        "settlement",
+        "结算",
+        "reconciliation",
+        "对账",
+        "message queue",
+        "mq attack",
+        "TOCTOU payment"
+      ],
+      "files": [
+        "12-payment/payment-callback-async-defense.md"
       ],
       "priority": 10
     },
@@ -701,6 +2028,55 @@
       ],
       "files": [
         "12-payment/payment-subscription.md"
+      ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "payment-subscription-defense",
+      "defense_files": [
+        "12-payment/payment-subscription-defense.md"
+      ]
+    },
+    {
+      "id": "payment-subscription-defense",
+      "track": "blue",
+      "defends": "payment-subscription",
+      "signals": [
+        "subscription defense",
+        "试用风控",
+        "proration校验",
+        "续费宽限期",
+        "metered billing",
+        "seat配额",
+        "Stripe webhook",
+        "subscription hardening",
+        "trial abuse prevention",
+        "proration security",
+        "seat enforcement",
+        "Stripe billing defense",
+        "dunning state machine",
+        "subscription",
+        "订阅",
+        "recurring",
+        "定期付款",
+        "trial",
+        "试用",
+        "renewal",
+        "续费",
+        "auto-renew",
+        "自动续费",
+        "proration",
+        "按比例",
+        "plan switch",
+        "升级",
+        "降级",
+        "计量计费",
+        "seat",
+        "license",
+        "stripe billing",
+        "invoice"
+      ],
+      "files": [
+        "12-payment/payment-subscription-defense.md"
       ],
       "priority": 9
     },
@@ -733,6 +2109,57 @@
       "files": [
         "12-payment/payment-digital-goods.md"
       ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "payment-digital-goods-defense",
+      "defense_files": [
+        "12-payment/payment-digital-goods-defense.md"
+      ]
+    },
+    {
+      "id": "payment-digital-goods-defense",
+      "track": "blue",
+      "defends": "payment-digital-goods",
+      "signals": [
+        "IAP防御",
+        "receipt服务端校验",
+        "purchaseToken去重",
+        "沙盒隔离",
+        "卡密加密生成",
+        "防重复发货",
+        "虚拟货币账本",
+        "IAP defense",
+        "App Store Server API",
+        "Google Play Developer API",
+        "purchaseToken replay",
+        "license key security",
+        "digital goods hardening",
+        "digital goods",
+        "虚拟商品",
+        "IAP",
+        "in-app purchase",
+        "内购",
+        "receipt",
+        "收据",
+        "app store",
+        "google play",
+        "steam",
+        "cdkey",
+        "卡密",
+        "license key",
+        "激活码",
+        "virtual currency",
+        "虚拟货币",
+        "token",
+        "代币",
+        "loyalty points",
+        "积分",
+        "gift card",
+        "礼品卡"
+      ],
+      "files": [
+        "12-payment/payment-digital-goods-defense.md"
+      ],
       "priority": 9
     },
     {
@@ -748,8 +2175,6 @@
         "订单越权",
         "order enumeration",
         "guest order leak",
-        "card key leak",
-        "卡密泄露",
         "voucher leak",
         "IDOR",
         "insecure direct object reference",
@@ -760,6 +2185,48 @@
       ],
       "files": [
         "12-payment/payment-email-bounce-idor.md"
+      ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "payment-bounce-idor-defense",
+      "defense_files": [
+        "12-payment/payment-email-bounce-idor-defense.md"
+      ]
+    },
+    {
+      "id": "payment-bounce-idor-defense",
+      "track": "blue",
+      "defends": "payment-bounce-idor",
+      "signals": [
+        "退信泄露防御",
+        "NDR安全",
+        "订单IDOR防护",
+        "卡密保护",
+        "所有权校验",
+        "CWE-639",
+        "CWE-862",
+        "bounce email defense",
+        "NDR leak prevention",
+        "order IDOR defense",
+        "card key protection",
+        "bounce",
+        "退信",
+        "NDR",
+        "non-delivery receipt",
+        "email bounce",
+        "bounce callback",
+        "order idor",
+        "订单越权",
+        "order enumeration",
+        "guest order leak",
+        "voucher leak",
+        "IDOR",
+        "insecure direct object reference",
+        "CWE-200",
+        "order detail leak"
+      ],
+      "files": [
+        "12-payment/payment-email-bounce-idor-defense.md"
       ],
       "priority": 9
     },
@@ -792,6 +2259,56 @@
       "files": [
         "12-payment/payment-race-lost-update.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "race-lost-update-defense",
+      "defense_files": [
+        "12-payment/payment-race-lost-update-defense.md"
+      ]
+    },
+    {
+      "id": "race-lost-update-defense",
+      "track": "blue",
+      "defends": "race-lost-update",
+      "signals": [
+        "lost update防御",
+        "并发扣款锁",
+        "原子更新",
+        "SELECT FOR UPDATE",
+        "CAS版本号",
+        "复式记账",
+        "TOCTOU防护",
+        "lost update defense",
+        "atomic balance update",
+        "optimistic locking",
+        "double entry ledger",
+        "concurrency control",
+        "lost update",
+        "race condition",
+        "TOCTOU",
+        "optimistic lock",
+        "version conflict",
+        "乐观锁",
+        "version number",
+        "balance bypass",
+        "quota bypass",
+        "余额绕过",
+        "new-api",
+        "new api",
+        "one api",
+        "ai gateway",
+        "LLM proxy",
+        "并发扣费",
+        "write skew",
+        "double spend",
+        "重复消费",
+        "竞争条件",
+        "数据库竞态",
+        "SQLite write lock"
+      ],
+      "files": [
+        "12-payment/payment-race-lost-update-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -821,154 +2338,54 @@
       "files": [
         "12-payment/payment-php.md"
       ],
-      "priority": 10
+      "priority": 10,
+      "track": "red",
+      "defended_by": "payment-php-defense",
+      "defense_files": [
+        "12-payment/payment-php-defense.md"
+      ]
     },
     {
-      "id": "signature",
+      "id": "payment-php-defense",
+      "track": "blue",
+      "defends": "payment-php",
       "signals": [
-        "sign",
-        "signature",
-        "sign_type",
-        "sign_method",
-        "hmac",
-        "hash",
-        "md5 sign",
-        "sha1 sign",
-        "sha256 sign",
-        "signature bypass",
-        "签名",
-        "signature forgery",
-        "签名伪造",
-        "signature verification",
-        "verify sign",
-        "check sign"
-      ],
-      "files": [
-        "13-signature/00-overview.md",
-        "13-signature/01-algorithm.md",
-        "13-signature/02-implementation.md",
-        "13-signature/03-key-attacks.md",
-        "13-signature/04-canonicalization.md",
-        "13-signature/05-length-extension.md",
-        "13-signature/06-replay-nonce.md"
-      ],
-      "priority": 10
-    },
-    {
-      "id": "signature-algorithm",
-      "signals": [
-        "algorithm downgrade",
-        "alg:none",
-        "sign_type",
-        "sign_method",
-        "algorithm confusion",
-        "rs256 hs256",
-        "md5 downgrade",
-        "none algorithm",
-        "空签名",
-        "算法降级"
-      ],
-      "files": [
-        "13-signature/01-algorithm.md"
-      ],
-      "priority": 10
-    },
-    {
-      "id": "signature-implementation",
-      "signals": [
-        "strcmp bypass",
-        "md5 array",
-        "sha1 array",
+        "PHP防御",
+        "strict_types",
+        "hash_equals",
+        "in_array严格模式",
+        "禁用unserialize",
+        "BCMath",
+        "Laravel Cashier",
+        "WooCommerce",
+        "PHP payment hardening",
+        "type juggling defense",
+        "declare strict_types",
+        "safe deserialization",
+        "php",
+        "laravel",
+        "thinkphp",
+        "wordpress",
+        "magento",
+        "extract",
+        "strcmp",
+        "type juggling",
         "magic hash",
         "0e",
-        "type juggling sign",
-        "== vs ===",
-        "timing attack sign",
-        "extract bypass",
-        "parse_str",
-        "variable override"
+        "php serialization",
+        "phar",
+        "php session",
+        "eloquent",
+        "mass assignment",
+        "cashier",
+        "omnipay",
+        "yansongda",
+        "composer"
       ],
       "files": [
-        "13-signature/02-implementation.md"
+        "12-payment/payment-php-defense.md"
       ],
       "priority": 10
-    },
-    {
-      "id": "signature-key",
-      "signals": [
-        "weak key",
-        "弱密钥",
-        "secret key leak",
-        "hardcoded key",
-        "key reuse",
-        "api key leak",
-        ".env key",
-        "secret_key",
-        "app_key",
-        "hmac key",
-        "signing key",
-        "jwt secret",
-        "密钥泄露"
-      ],
-      "files": [
-        "13-signature/03-key-attacks.md"
-      ],
-      "priority": 10
-    },
-    {
-      "id": "signature-canonicalization",
-      "signals": [
-        "canonicalization",
-        "参数排序",
-        "url encoding sign",
-        "json canonicalization",
-        "xml canonicalization",
-        "c14n",
-        "parameter pollution",
-        "hpp",
-        "规范化"
-      ],
-      "files": [
-        "13-signature/04-canonicalization.md"
-      ],
-      "priority": 9
-    },
-    {
-      "id": "signature-length-extension",
-      "signals": [
-        "length extension",
-        "hash length extension",
-        "hash extender",
-        "hashpumpy",
-        "md5 extension",
-        "sha1 extension",
-        "sha256 extension",
-        "长度扩展",
-        "hash length attack"
-      ],
-      "files": [
-        "13-signature/05-length-extension.md"
-      ],
-      "priority": 9
-    },
-    {
-      "id": "signature-replay",
-      "signals": [
-        "replay attack",
-        "重放",
-        "nonce bypass",
-        "nonce reuse",
-        "timestamp bypass",
-        "replay sig",
-        "signature replay",
-        "expired sign",
-        "nonce predict",
-        "signature nonce"
-      ],
-      "files": [
-        "13-signature/06-replay-nonce.md"
-      ],
-      "priority": 9
     },
     {
       "id": "supply-chain",
@@ -984,6 +2401,42 @@
       ],
       "files": [
         "11-supply-chain/dependency-confusion.md"
+      ],
+      "priority": 7,
+      "track": "red",
+      "defended_by": "supply-chain-defense",
+      "defense_files": [
+        "11-supply-chain/dependency-confusion-defense.md"
+      ]
+    },
+    {
+      "id": "supply-chain-defense",
+      "track": "blue",
+      "defends": "supply-chain",
+      "signals": [
+        "dependency confusion defense",
+        "scoped registry",
+        "extra-index-url risk",
+        "lockfile integrity",
+        "ignore-scripts",
+        "supply chain hardening",
+        "依赖混淆防御",
+        "供应链加固",
+        "npm私有源绑定",
+        "pip extra-index-url风险",
+        "lockfile完整性校验",
+        "包发布Token保护",
+        "dependency confusion",
+        "supply chain",
+        "npm",
+        "pypi",
+        "typosquatting",
+        "manifest confusion",
+        "package hijack",
+        "package.json"
+      ],
+      "files": [
+        "11-supply-chain/dependency-confusion-defense.md"
       ],
       "priority": 7
     },
@@ -1005,6 +2458,61 @@
       "files": [
         "01-recon/recon-routing.md",
         "01-recon/version-fingerprinting.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "recon-defense",
+      "defense_files": [
+        "01-recon/recon-routing-defense.md",
+        "01-recon/version-fingerprinting-defense.md"
+      ]
+    },
+    {
+      "id": "recon-defense",
+      "track": "blue",
+      "defends": "recon",
+      "signals": [
+        "路由绕过",
+        "X-Original-URL",
+        "X-Rewrite-URL",
+        "代理差异",
+        "路径规范化",
+        "Method Override",
+        "403 bypass",
+        "路由加固",
+        "反向代理安全",
+        "X-Original-URL防御",
+        "Method Override禁用",
+        "鉴权一致性",
+        "403绕过防御",
+        "blue-team",
+        "fingerprint",
+        "版本识别",
+        "Server header",
+        "X-Powered-By",
+        "错误栈泄露",
+        "lockfile",
+        "指纹最小化",
+        "指纹隐藏",
+        "错误信息收敛",
+        "lockfile拦截",
+        "Server头剥离",
+        "debug模式关闭",
+        "CVE暴露防御",
+        "favicon隔离",
+        "recon",
+        "reconnaissance",
+        "header fuzzing",
+        "route",
+        "directory",
+        "path",
+        "technology stack",
+        "wappalyzer",
+        "whatweb"
+      ],
+      "files": [
+        "01-recon/recon-routing-defense.md",
+        "01-recon/version-fingerprinting-defense.md"
       ],
       "priority": 10
     },
@@ -1036,6 +2544,55 @@
       "files": [
         "01-recon/cloudflare-bypass.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "cloudflare-bypass-defense",
+      "defense_files": [
+        "01-recon/cloudflare-bypass-defense.md"
+      ]
+    },
+    {
+      "id": "cloudflare-bypass-defense",
+      "track": "blue",
+      "defends": "cloudflare-bypass",
+      "signals": [
+        "Cloudflare",
+        "origin IP",
+        "mTLS",
+        "Authenticated Origin Pulls",
+        "源站隐藏",
+        "CDN加固",
+        "CF-Connecting-IP",
+        "Cloudflare加固",
+        "AOP mTLS",
+        "源站白名单",
+        "TLS证书隔离",
+        "外发邮件隔离",
+        "防直连",
+        "blue-team",
+        "cf-ray",
+        "cf-cache-status",
+        "cdn bypass",
+        "源站",
+        "real ip",
+        "true ip",
+        "waf bypass",
+        "cdn",
+        "cloudfront",
+        "akamai",
+        "fastly",
+        "imperva",
+        "dns history",
+        "securitytrails",
+        "censys",
+        "shodan",
+        "crt.sh",
+        "certificate transparency",
+        "ssl search"
+      ],
+      "files": [
+        "01-recon/cloudflare-bypass-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1065,6 +2622,54 @@
       "files": [
         "01-recon/captcha-bypass.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "captcha-bypass-defense",
+      "defense_files": [
+        "01-recon/captcha-bypass-defense.md"
+      ]
+    },
+    {
+      "id": "captcha-bypass-defense",
+      "track": "blue",
+      "defends": "captcha-bypass",
+      "signals": [
+        "CAPTCHA",
+        "验证码",
+        "reCAPTCHA",
+        "Turnstile",
+        "短信验证码",
+        "Token 重放",
+        "人机验证加固",
+        "anti-bot",
+        "CAPTCHA防御",
+        "防重放",
+        "一次性Token",
+        "验证码绑定",
+        "reCAPTCHA服务端校验",
+        "Turnstile加固",
+        "短信防爆破",
+        "blue-team",
+        "hcaptcha",
+        "geetest",
+        "极验",
+        "滑块",
+        "slider",
+        "ddddocr",
+        "2captcha",
+        "anticaptcha",
+        "capsolver",
+        "ocr",
+        "token reuse",
+        "automation",
+        "playwright",
+        "stealth",
+        "sms verify",
+        "验证码绕过"
+      ],
+      "files": [
+        "01-recon/captcha-bypass-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1090,6 +2695,49 @@
       "files": [
         "01-recon/fofa-hunting.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "fofa-defense",
+      "defense_files": [
+        "01-recon/fofa-hunting-defense.md"
+      ]
+    },
+    {
+      "id": "fofa-defense",
+      "track": "blue",
+      "defends": "fofa",
+      "signals": [
+        "FOFA",
+        "Shodan",
+        "资产测绘",
+        "暴露面收敛",
+        "数据库端口暴露",
+        "Banner 隐藏",
+        "默认后台",
+        "资产测绘防御",
+        "FOFA防御",
+        "端口收敛",
+        "零信任接入",
+        "配置泄露防护",
+        "Banner最小化",
+        "blue-team",
+        "网络空间测绘",
+        "asset discovery",
+        "space mapping",
+        "fofa.so",
+        "hunter",
+        "quake",
+        "被动收集",
+        "passive recon",
+        "网络空间搜索引擎",
+        "scan engine",
+        "org filter",
+        "fofa query",
+        "fofa语法"
+      ],
+      "files": [
+        "01-recon/fofa-hunting-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1108,7 +2756,8 @@
       "files": [
         "attack-network.md"
       ],
-      "priority": 10
+      "priority": 10,
+      "track": "both"
     },
     {
       "id": "idor",
@@ -1130,6 +2779,60 @@
       "files": [
         "14-idor/01-idor-enumeration.md",
         "14-idor/02-bac-business-logic.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "idor-defense",
+      "defense_files": [
+        "14-idor/01-idor-enumeration-defense.md",
+        "14-idor/02-bac-business-logic-defense.md"
+      ]
+    },
+    {
+      "id": "idor-defense",
+      "track": "blue",
+      "defends": "idor",
+      "signals": [
+        "IDOR防御",
+        "BOLA",
+        "对象级授权",
+        "多租户隔离",
+        "UUID v4",
+        "GraphQL防批量",
+        "CWE-639",
+        "IDOR defense",
+        "BOLA prevention",
+        "object level authorization",
+        "multi-tenant isolation",
+        "GraphQL alias limit",
+        "BAC防御",
+        "默认拒绝",
+        "RBAC矩阵",
+        "防方法覆写",
+        "Actuator加固",
+        "多步流程锁",
+        "CWE-862",
+        "BAC defense",
+        "default deny access control",
+        "method override bypass defense",
+        "Spring Actuator hardening",
+        "workflow state token",
+        "idor",
+        "insecure direct object reference",
+        "越权",
+        "authorization bypass",
+        "object reference",
+        "uuid predictable",
+        "batch idor",
+        "graphql idor",
+        "enumeration",
+        "id increment",
+        "horizontal privilege",
+        "vertical privilege"
+      ],
+      "files": [
+        "14-idor/01-idor-enumeration-defense.md",
+        "14-idor/02-bac-business-logic-defense.md"
       ],
       "priority": 10
     },
@@ -1155,6 +2858,59 @@
         "15-mass-assignment/01-mass-assignment.md",
         "15-mass-assignment/02-parameter-tampering.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "mass-assignment-defense",
+      "defense_files": [
+        "15-mass-assignment/01-mass-assignment-defense.md",
+        "15-mass-assignment/02-parameter-tampering-defense.md"
+      ]
+    },
+    {
+      "id": "mass-assignment-defense",
+      "track": "blue",
+      "defends": "mass-assignment",
+      "signals": [
+        "mass assignment防御",
+        "DTO白名单",
+        "$fillable",
+        "strong_parameters",
+        "禁用extract",
+        "GraphQL Input校验",
+        "CWE-915",
+        "mass assignment defense",
+        "DTO allowlist",
+        "Spring WebDataBinder",
+        "Rails strong parameters",
+        "Django serializer fields",
+        "参数篡改防御",
+        "优惠券并发锁",
+        "TOCTOU防护",
+        "货币锁定",
+        "折扣封顶",
+        "CWE-20",
+        "parameter tampering defense",
+        "coupon race protection",
+        "TOCTOU prevention",
+        "currency pinning",
+        "mass assignment",
+        "批量赋值",
+        "属性注入",
+        "parameter injection",
+        "laravel fillable",
+        "spring boot binding",
+        "nesting params",
+        "price manipulation",
+        "价格篡改",
+        "coupon stacking",
+        "优惠券叠加",
+        "currency confusion",
+        "race condition coupon"
+      ],
+      "files": [
+        "15-mass-assignment/01-mass-assignment-defense.md",
+        "15-mass-assignment/02-parameter-tampering-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1177,6 +2933,64 @@
       "files": [
         "16-rate-limit/01-rate-limit-bypass.md",
         "16-rate-limit/02-brute-force-tactics.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "rate-limit-defense",
+      "defense_files": [
+        "16-rate-limit/01-rate-limit-bypass-defense.md",
+        "16-rate-limit/02-brute-force-tactics-defense.md"
+      ]
+    },
+    {
+      "id": "rate-limit-defense",
+      "track": "blue",
+      "defends": "rate-limit",
+      "signals": [
+        "X-Forwarded-For spoofing",
+        "IPv6 /64 rotation",
+        "CDN origin bypass",
+        "canonical rate limit",
+        "atomic token bucket",
+        "CAPTCHA replay",
+        "429 Retry-After",
+        "速率限制防御",
+        "可信代理",
+        "X-Forwarded-For剥离",
+        "IPv6限流",
+        "Redis Lua原子限流",
+        "参数规范化",
+        "CDN源站锁定",
+        "验证码防重放",
+        "credential spraying",
+        "MFA fatigue",
+        "timing side channel",
+        "credential stuffing",
+        "Argon2id",
+        "FIDO2",
+        "Kerberoasting defense",
+        "反凭证喷洒",
+        "MFA疲劳防御",
+        "Number Matching",
+        "恒定时间认证",
+        "用户枚举防御",
+        "凭证复用检查",
+        "Kerberoasting防御",
+        "rate limit",
+        "速率限制",
+        "brute force",
+        "暴力破解",
+        "凭证喷洒",
+        "push bombing",
+        "ip rotation",
+        "x-forwarded-for",
+        "throttle bypass",
+        "password spray",
+        "concurrent bypass"
+      ],
+      "files": [
+        "16-rate-limit/01-rate-limit-bypass-defense.md",
+        "16-rate-limit/02-brute-force-tactics-defense.md"
       ],
       "priority": 10
     },
@@ -1203,6 +3017,67 @@
         "17-api-attacks/01-api-discovery-leak.md",
         "17-api-attacks/02-api-key-leak.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "api-attacks-defense",
+      "defense_files": [
+        "17-api-attacks/01-api-discovery-leak-defense.md",
+        "17-api-attacks/02-api-key-leak-defense.md"
+      ]
+    },
+    {
+      "id": "api-attacks-defense",
+      "track": "blue",
+      "defends": "api-attacks",
+      "signals": [
+        "OpenAPI exposure",
+        "GraphQL introspection",
+        "Source Map leak",
+        "WSDL XXE",
+        "API version drift",
+        "actuator exposure",
+        "default-deny gateway",
+        "API防御",
+        "禁用Swagger",
+        "GraphQL内省禁用",
+        "Source Map隔离",
+        "API版本治理",
+        "网关鉴权",
+        "Postman防泄露",
+        "WSDL安全",
+        "API key leak",
+        "secret scanning",
+        "OIDC federation",
+        "Firebase security rules",
+        "restricted key",
+        "log redaction",
+        "key rotation",
+        "API密钥防御",
+        "密钥隔离",
+        "Firebase安全规则",
+        "CI密钥门禁",
+        "OIDC无密钥认证",
+        "日志掩码",
+        "Stripe受限密钥",
+        "密钥轮换",
+        "api",
+        "swagger",
+        "openapi",
+        "wsdl",
+        "soap",
+        "postman collection",
+        "github dorking",
+        "firebase config",
+        "aws key",
+        "gcp key",
+        "stripe key",
+        "source map",
+        "unwebpack"
+      ],
+      "files": [
+        "17-api-attacks/01-api-discovery-leak-defense.md",
+        "17-api-attacks/02-api-key-leak-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1226,6 +3101,66 @@
       "files": [
         "18-cors-csp-advanced/01-csp-bypass.md",
         "18-cors-csp-advanced/02-xs-leaks-browser-sidechannels.md"
+      ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "csp-cors-advanced-defense",
+      "defense_files": [
+        "18-cors-csp-advanced/01-csp-bypass-defense.md",
+        "18-cors-csp-advanced/02-xs-leaks-browser-sidechannels-defense.md"
+      ]
+    },
+    {
+      "id": "csp-cors-advanced-defense",
+      "track": "blue",
+      "defends": "csp-cors-advanced",
+      "signals": [
+        "strict-dynamic",
+        "CSP nonce",
+        "Trusted Types",
+        "base-uri none",
+        "DOM Clobbering defense",
+        "CSS exfiltration",
+        "JSONP hardening",
+        "CSP防御",
+        "strict-dynamic加固",
+        "Nonce单次生成",
+        "DOM Clobbering防御",
+        "Base标签防御",
+        "CSS外带阻断",
+        "JSONP加固",
+        "Sec-Fetch-Site",
+        "CORP same-origin",
+        "COOP same-origin",
+        "frame-ancestors",
+        "Document-Policy",
+        "SameSite Strict",
+        "BREACH defense",
+        "XS-Leaks防御",
+        "Fetch Metadata",
+        "跨源隔离",
+        "CORP",
+        "COOP",
+        "侧信道防御",
+        "XS-Search防御",
+        "csp bypass",
+        "content security policy",
+        "csp evaluator",
+        "jsonp",
+        "cdn gadget",
+        "dom clobber",
+        "strict-dynamic bypass",
+        "xs-leaks",
+        "cross-site leak",
+        "side channel",
+        "frame counting",
+        "xs-search",
+        "xs-leak",
+        "performance api"
+      ],
+      "files": [
+        "18-cors-csp-advanced/01-csp-bypass-defense.md",
+        "18-cors-csp-advanced/02-xs-leaks-browser-sidechannels-defense.md"
       ],
       "priority": 9
     },
@@ -1251,6 +3186,65 @@
         "19-dns-email/01-subdomain-takeover.md",
         "19-dns-email/02-email-spoofing.md"
       ],
+      "priority": 9,
+      "track": "red",
+      "defended_by": "dns-email-defense",
+      "defense_files": [
+        "19-dns-email/01-subdomain-takeover-defense.md",
+        "19-dns-email/02-email-spoofing-defense.md"
+      ]
+    },
+    {
+      "id": "dns-email-defense",
+      "track": "blue",
+      "defends": "dns-email",
+      "signals": [
+        "dangling DNS",
+        "subdomain takeover defense",
+        "CAA record",
+        "domain verification TXT",
+        "GitHub Pages verification",
+        "CloudFront takeover",
+        "Elastic IP hygiene",
+        "子域名接管防御",
+        "悬空DNS清理",
+        "CNAME生命周期",
+        "DNS CAA",
+        "云资源下线",
+        "GitHub Pages域验证",
+        "弹性IP回收",
+        "NS委派保护",
+        "SPF -all",
+        "DKIM 2048-bit",
+        "DMARC p=reject",
+        "strict alignment",
+        "SMTP header injection",
+        "iCal injection",
+        "homograph spoofing",
+        "邮件伪造防御",
+        "SPF严格配置",
+        "DKIM加固",
+        "显示名伪造检测",
+        "SMTP头注入防御",
+        "iCal安全",
+        "同形字过滤",
+        "subdomain takeover",
+        "子域名接管",
+        "cname takeover",
+        "email spoofing",
+        "spf",
+        "dkim",
+        "dmarc",
+        "smtp injection",
+        "phishing",
+        "microsoft 365",
+        "spf bypass",
+        "sender forgery"
+      ],
+      "files": [
+        "19-dns-email/01-subdomain-takeover-defense.md",
+        "19-dns-email/02-email-spoofing-defense.md"
+      ],
       "priority": 9
     },
     {
@@ -1273,31 +3267,66 @@
         "20-oauth-deep/01-oauth-attack-chains.md",
         "20-oauth-deep/02-session-fixation-attacks.md"
       ],
-      "priority": 10
+      "priority": 10,
+      "track": "red",
+      "defended_by": "oauth-deep-defense",
+      "defense_files": [
+        "20-oauth-deep/01-oauth-attack-chains-defense.md",
+        "20-oauth-deep/02-session-fixation-attacks-defense.md"
+      ]
     },
     {
-      "id": "mobile-bridge",
+      "id": "oauth-deep-defense",
+      "track": "blue",
+      "defends": "oauth-deep",
       "signals": [
-        "webview",
-        "addjavascriptinterface",
-        "deeplink",
-        "intent hijacking",
-        "cordova",
-        "react native",
-        "electron",
-        "nodeintegration",
-        "contextisolation",
-        "flutter",
-        "platform channel",
-        "capacitor",
-        "wkwebview",
-        "javascript bridge"
+        "PKCE S256",
+        "exact redirect_uri",
+        "OAuth state CSRF",
+        "RFC 9700",
+        "authorization code reuse",
+        "scope allowlist",
+        "disable implicit flow",
+        "OAuth防御",
+        "PKCE强制S256",
+        "redirect_uri精确匹配",
+        "OAuth CSRF防御",
+        "授权码防重放",
+        "Scope白名单",
+        "禁用Implicit Flow",
+        "session regeneration",
+        "__Host- cookie",
+        "JWT revocation",
+        "algorithm pinning",
+        "session isolation",
+        "Redis ACL",
+        "anti-CSRF",
+        "Session固定防御",
+        "会话ID轮换",
+        "SSO全局注销",
+        "JWT吊销",
+        "算法固定",
+        "Session隔离",
+        "Redis会话加固",
+        "SameSite防御",
+        "oauth attack",
+        "pkce bypass",
+        "redirect_uri bypass",
+        "state replay",
+        "scope escalation",
+        "implicit flow",
+        "session fixation",
+        "sso hijack",
+        "remember-me",
+        "refresh token abuse",
+        "sameSite bypass",
+        "session puzzling"
       ],
       "files": [
-        "21-mobile-bridge/01-webview-attacks.md",
-        "21-mobile-bridge/02-cordova-reactnative.md"
+        "20-oauth-deep/01-oauth-attack-chains-defense.md",
+        "20-oauth-deep/02-session-fixation-attacks-defense.md"
       ],
-      "priority": 9
+      "priority": 10
     },
     {
       "id": "dos",
@@ -1343,57 +3372,252 @@
         "22-dos/12-ssrf-dos.md",
         "22-dos/13-database-dos.md"
       ],
-      "priority": 8
+      "priority": 8,
+      "track": "red",
+      "defended_by": "dos-defense",
+      "defense_files": [
+        "22-dos/01-application-layer-dos-defense.md",
+        "22-dos/02-resource-exhaustion-defense.md",
+        "22-dos/03-amplification-drdos-defense.md",
+        "22-dos/04-redos-defense.md",
+        "22-dos/05-http2-continuation-defense.md",
+        "22-dos/06-tcp-state-exhaustion-defense.md",
+        "22-dos/07-dns-dos-defense.md",
+        "22-dos/08-tls-exhaustion-defense.md",
+        "22-dos/09-cache-cdn-dos-defense.md",
+        "22-dos/10-api-abuse-defense.md",
+        "22-dos/11-cloud-container-dos-defense.md",
+        "22-dos/12-ssrf-dos-defense.md",
+        "22-dos/13-database-dos-defense.md"
+      ]
     },
     {
-      "id": "paywall-bypass",
+      "id": "dos-defense",
+      "track": "blue",
+      "defends": "dos",
       "signals": [
-        "paywall",
-        "付费墙",
-        "付费订阅",
-        "metered paywall",
-        "hard paywall",
-        "registration wall",
-        "piano",
-        "tinypass",
-        "poool",
-        "sophi",
-        "zephr",
-        "wallkit",
-        "axate",
-        "agate",
-        "leaky paywall",
-        "substack paywall",
-        "ghost paywall",
-        "medium paywall",
-        "beehiiv",
-        "googlebot",
-        "bingbot",
-        "user-agent spoof",
-        "referer spoof",
-        "declarativeNetRequest",
-        "archive.is",
-        "json-ld articleBody",
-        "amp paywall",
-        "amp-access",
-        "bloomberg paywall",
-        "wsj paywall",
-        "nytimes paywall",
-        "cookie paywall",
-        "localStorage meter",
-        "piano overlay",
-        "news paywall",
-        "publisher paywall",
-        "site paywall"
+        "Slowloris 半开连接拦截 408",
+        "RUDY 慢速 POST 超时断开",
+        "HTTP/2 RST_STREAM 速率限制与 GOAWAY",
+        "WebSocket 并发连接配额与帧超时",
+        "GraphQL 别名与深度复杂度拦截",
+        "TOCTOU 原子令牌桶限流 429",
+        "Slowloris 防御",
+        "RUDY 防护",
+        "CVE-2023-44487 缓解",
+        "HTTP/2 Rapid Reset 加固",
+        "WebSocket 连接限制",
+        "GraphQL 查询复杂度限制",
+        "原子限流",
+        "application layer DoS defense",
+        "HashDoS 参数数量上限拦截",
+        "XML DTD 与外部实体禁用",
+        "Zip 解压比与总字节硬限制",
+        "ulimit RLIMIT_NOFILE 与 TasksMax",
+        "PgBouncer 池化与 statement_timeout",
+        "JSON 深度与键数量守卫",
+        "HashDoS 防御",
+        "defusedxml",
+        "Zip Bomb 检测",
+        "文件描述符限制",
+        "线程池隔离",
+        "JSON 解析深度限制",
+        "Fork Bomb 防护",
+        "resource exhaustion defense",
+        "BCP38 rp_filter 严格源路由校验",
+        "BIND RRL 响应限速与禁止外部递归",
+        "NTP monlist 禁用与 restrict 收紧",
+        "Memcached UDP 端口关闭 (-U 0)",
+        "UDP 反射端口 17/19/161/389/1900/3702 封禁",
+        "QUIC Retry 与 DTLS Cookie 源验证",
+        "DRDoS 防御",
+        "BCP38",
+        "uRPF",
+        "DNS RRL",
+        "NTP monlist 禁用",
+        "Memcached 加固",
+        "UDP 放大防护",
+        "amplification defense",
+        "RE2 线性时间引擎替换 NFA",
+        "嵌套量词与重叠交替拦截",
+        "regex 超时保护 TimeoutError",
+        "输入长度硬上限预处理",
+        "Event Loop 零阻塞正则匹配",
+        "ReDoS 防御",
+        "Google RE2",
+        "线性时间正则",
+        "回溯消除",
+        "regex 超时",
+        "安全正则写法",
+        "CVE-2020-5243 修复",
+        "redos defense",
+        "CONTINUATION 帧数与头部总字节上限",
+        "SETTINGS_HEADER_TABLE_SIZE 限制",
+        "RFC 9218 可扩展优先级替旧优先级",
+        "QUIC Retry 地址验证与 0-RTT 反重放",
+        "CVE-2024-27316 补丁版本核验",
+        "GOAWAY ENHANCE_YOUR_CALM 断连",
+        "CONTINUATION Flood 防御",
+        "CVE-2024-27316 修复",
+        "HPACK Bomb 防护",
+        "HTTP/2 帧限制",
+        "QUIC 防护",
+        "HTTP/3 抗重放",
+        "Envoy HTTP/2 加固",
+        "http2 continuation defense",
+        "tcp_syncookies=1 抗 SYN Flood",
+        "nftables NOTRACK 与 SYNPROXY",
+        "Sockstress 零窗口超时与最小速率淘汰",
+        "nf_conntrack_max 扩容与超时收紧",
+        "tcp_wmem 与 tcp_orphans 内存边界",
+        "TCP Fast Open 禁用或密钥轮转",
+        "SYN Flood 防御",
+        "Sockstress 防护",
+        "conntrack 优化",
+        "TIME_WAIT 调优",
+        "SYNPROXY",
+        "Linux sysctl 加固",
+        "Socket Buffer 防护",
+        "tcp state exhaustion defense",
+        "子域香农熵与 NXDOMAIN 比例告警",
+        "RFC 8198 NSEC 否定缓存合成",
+        "BIND fetches-per-zone 限制",
+        "Unbound 0x20-bit 与端口随机化",
+        "Anycast 多节点分散承载",
+        "dnsdist 动态规则拦截随机子域",
+        "DNS Water Torture 防御",
+        "Phantom Domain 防护",
+        "NXDOMAIN Flood 缓解",
+        "DNS 缓存投毒防御",
+        "RFC 8198",
+        "dnsdist 限流",
+        "BIND9 加固",
+        "dns dos defense",
+        "禁用纯 RSA 密钥交换改用 ECDHE+ECDSA",
+        "禁用 TLS 1.2 客户端重协商",
+        "ssl_handshake_timeout 与握手限速",
+        "mTLS ssl_verify_depth 链深度上限",
+        "共享 Session Cache 与轮转 Ticket Key",
+        "边缘 TLS 卸载与硬件加速",
+        "TLS 握手加固",
+        "ECDSA 性能优化",
+        "禁用 TLS 重协商",
+        "CVE-2011-1473 防护",
+        "mTLS 证书链深度",
+        "Session Ticket 轮转",
+        "ssl_handshake_timeout",
+        "tls exhaustion defense",
+        "Origin IP mTLS 双向认证与防火墙隔离",
+        "Cache Key 查询参数白名单归一化",
+        "max_ranges=1 防多 Range 放大",
+        "禁止缓存 4xx/5xx/空响应体",
+        "剥离未键控 X-Forwarded-Host 头部",
+        "Origin Shield 层级收敛回源流量",
+        "Cache Busting 防御",
+        "源站隐藏",
+        "CDN 源站保护",
+        "Cache Poison 防护",
+        "CPDoS 缓解",
+        "Range 攻击防御",
+        "Authenticated Origin Pulls",
+        "cache cdn dos defense",
+        "Keyset 游标分页与 HMAC 签名校验",
+        "批量数组上限与异步流式导出",
+        "滑动窗口/令牌桶按用户身份限流",
+        "Elasticsearch max_buckets 与脚本禁用",
+        "Webhook 出站连接池隔离与严格超时",
+        "Pillow MAX_IMAGE_PIXELS 防像素炸弹",
+        "API 限流加固",
+        "Keyset 分页",
+        "Pixel Flood 防御",
+        "Webhook 超时隔离",
+        "搜索聚合限制",
+        "X-Forwarded-For 防伪造",
+        "批量 API 配额",
+        "api abuse defense",
+        "ResourceQuota 按优先级作用域隔离",
+        "HPA maxReplicas 与 scaleUp 步长上限",
+        "Serverless 预留并发与预算告警",
+        "IMDSv2 HttpPutResponseHopLimit=1",
+        "NetworkPolicy 阻断 169.254.169.254",
+        "容器 PID 上限与非特权只读根文件系统",
+        "Kubernetes DoS 防御",
+        "ResourceQuota 隔离",
+        "HPA 限流",
+        "Denial of Wallet 防护",
+        "IMDSv2 加固",
+        "容器 PID 限制",
+        "NetworkPolicy",
+        "cloud container dos defense",
+        "URL Scheme 严格白名单仅限 https",
+        "DNS 解析后校验证书并锁定目标 IP",
+        "阻止环回/私网/链路本地/IPv6 映射地址",
+        "禁用 HTTP 重定向或逐跳重校验",
+        "X-Fetch-Depth 防递归 SSRF 自调用",
+        "IMDSv2 跳数=1 与 Redis 危险命令重命名",
+        "SSRF DoS 防御",
+        "Gopher 协议封禁",
+        "DNS Rebinding 防护",
+        "出站网络隔离",
+        "递归 SSRF 防护",
+        "Redis 命令禁用",
+        "ssrf dos defense",
+        "statement_timeout 与 lock_timeout 强约束",
+        "idle_in_transaction_session_timeout 回收",
+        "PgBouncer 事务级池化隔离",
+        "max_wal_size 与 temp_file_limit 磁盘护栏",
+        "参数化查询与 ORM 复杂度/行数硬限",
+        "MongoDB noscripting 与 maxTimeMS",
+        "数据库 DoS 防御",
+        "PostgreSQL 超时加固",
+        "PgBouncer 连接池",
+        "行锁与死锁防护",
+        "WAL 磁盘保护",
+        "慢查询拦截",
+        "MongoDB 加固",
+        "database dos defense",
+        "dos",
+        "ddos",
+        "denial of service",
+        "拒绝服务",
+        "slowloris",
+        "slow http",
+        "rapid reset",
+        "h2 rapid reset",
+        "CVE-2023-44487",
+        "rudy",
+        "websocket dos",
+        "graphql amplification",
+        "resource exhaustion",
+        "hashdos",
+        "billion laughs",
+        "xml bomb",
+        "zip bomb",
+        "amplification",
+        "drdos",
+        "dns amplification",
+        "ntp monlist",
+        "memcached udp",
+        "ip spoofing",
+        "反射攻击",
+        "放大攻击"
       ],
       "files": [
-        "23-paywall-bypass/01-paywall-detection-bypass.md",
-        "23-paywall-bypass/02-http-header-manipulation.md",
-        "23-paywall-bypass/03-network-rule-blocking.md",
-        "23-paywall-bypass/04-content-extraction.md",
-        "23-paywall-bypass/05-dom-css-manipulation.md"
+        "22-dos/01-application-layer-dos-defense.md",
+        "22-dos/02-resource-exhaustion-defense.md",
+        "22-dos/03-amplification-drdos-defense.md",
+        "22-dos/04-redos-defense.md",
+        "22-dos/05-http2-continuation-defense.md",
+        "22-dos/06-tcp-state-exhaustion-defense.md",
+        "22-dos/07-dns-dos-defense.md",
+        "22-dos/08-tls-exhaustion-defense.md",
+        "22-dos/09-cache-cdn-dos-defense.md",
+        "22-dos/10-api-abuse-defense.md",
+        "22-dos/11-cloud-container-dos-defense.md",
+        "22-dos/12-ssrf-dos-defense.md",
+        "22-dos/13-database-dos-defense.md"
       ],
-      "priority": 9
+      "priority": 8
     },
     {
       "id": "database-attacks",
@@ -1432,11 +3656,6 @@
         "blind",
         "time-based",
         "error-based",
-        "发卡",
-        "卡密",
-        "CDK",
-        "卡盟",
-        "die缺失",
         "IDOR"
       ],
       "files": [
@@ -1446,9 +3665,161 @@
         "24-database/03-nosql-injection.md",
         "24-database/04-config-exposure.md",
         "24-database/05-backup-log-leak.md",
-        "24-database/06-card-platform.md",
-        "24-database/07-data-cleaning.md",
-        "24-database/README.md"
+        "24-database/07-data-cleaning.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "database-attacks-defense",
+      "defense_files": [
+        "24-database/01-sqli-fundamentals-defense.md",
+        "24-database/02-sqli-advanced-defense.md",
+        "24-database/03-nosql-injection-defense.md",
+        "24-database/04-config-exposure-defense.md",
+        "24-database/05-backup-log-leak-defense.md",
+        "24-database/07-data-cleaning-defense.md"
+      ]
+    },
+    {
+      "id": "database-attacks-defense",
+      "track": "blue",
+      "defends": "database-attacks",
+      "signals": [
+        "参数化查询 Prepared Statement 防注入",
+        "关闭 ATTR_EMULATE_PREPARES 与 utf8mb4 统一",
+        "ORDER BY LIMIT IN 标识符白名单",
+        "secure_file_priv 与 FILE 权限回收",
+        "SQL 错误详情屏蔽与通用错误页",
+        "max_execution_time statement_timeout 抗时间盲注",
+        "SQL 注入防御",
+        "参数化查询",
+        "Prepared Statement",
+        "宽字节防御",
+        "utf8mb4",
+        "secure_file_priv",
+        "标识符白名单",
+        "查询超时",
+        "最小权限",
+        "错误信息收敛",
+        "HPP 重复参数拒绝与 Content-Type 锁定",
+        "二阶注入零信任数据库读取",
+        "OOB DNS HTTP SMB 出口防火墙阻断",
+        "INSERT UPDATE 质量赋值与白名单约束",
+        "ORDER BY LIMIT JSON_EXTRACT 安全封装",
+        "支付状态机 FOR UPDATE 事务锁与幂等键",
+        "高级 SQL 注入防御",
+        "二阶注入防御",
+        "OOB 带外阻断",
+        "HPP 防御",
+        "解析器一致性",
+        "UPDATE 注入防御",
+        "ORDER BY 白名单",
+        "事务锁",
+        "幂等性",
+        "出口管控",
+        "MongoDB $操作符清洗与标量类型强校验",
+        "MongoDB javascriptEnabled false 禁用 $where",
+        "Redis ACL 禁用 CONFIG SLAVEOF MODULE",
+        "Elasticsearch 禁用动态脚本与 query_string 收敛",
+        "CouchDB require_valid_user 与版本升级",
+        "Memcached 127.0.0.1 绑定与禁用 UDP",
+        "NoSQL 注入防御",
+        "MongoDB 防护",
+        "Redis ACL",
+        "Elasticsearch 安全",
+        "CouchDB 加固",
+        "Memcached 隔离",
+        "操作符过滤",
+        "类型校验",
+        "会话签名",
+        "禁用服务端JS",
+        "Webroot 隔离 .env 与 config.php 外移",
+        "Nginx 阻断 .git .svn .bak .swp 访问",
+        "禁用 allow_url_include 与收紧 open_basedir",
+        "关闭 phpinfo Spring Actuator env 与 Debug 模式",
+        "消除默认凭证 root sa postgres 空密码",
+        "数据库凭证与支付密钥独立作用域",
+        "配置防泄露",
+        ".env 隔离",
+        "Nginx 阻断",
+        "Git 泄露防护",
+        "phpinfo 关闭",
+        "Actuator 加固",
+        "Debug 模式关闭",
+        "默认密码清理",
+        "密钥管理",
+        "Webroot 隔离",
+        "备份文件移出 Webroot 与静态加密存储",
+        "关闭 MySQL general_log 与日志敏感字段遮罩",
+        "CI/CD 删除 /install 目录与 install.sql",
+        "phpMyAdmin Adminer 禁用或内网 VPN 隔离",
+        "SQL dump 与回调 raw_body 日志防泄露",
+        "数据库备份防护",
+        "SQL 泄露防御",
+        "日志掩码化",
+        "general_log 关闭",
+        "install.sql 清理",
+        "phpMyAdmin 隔离",
+        "Adminer 防护",
+        "备份加密",
+        "运维加固",
+        "静态拦截",
+        "抗前缀聚类 CSPRNG 不透明卡密与哈希存储",
+        "PII 令牌化 假名化 与字段掩码化",
+        "金丝雀 Canary 数据埋点与泄露溯源",
+        "泄露后凭证轮换与会话/卡密吊销",
+        "HTML JSON 导出面最小化与泄露遏制",
+        "泄露遏制",
+        "凭证轮换",
+        "数据遮罩",
+        "假名化",
+        "令牌化",
+        "金丝雀检测",
+        "抗前缀聚类",
+        "PII 保护",
+        "应急响应",
+        "防数据爬取",
+        "database",
+        "SQL",
+        "注入",
+        "sqli",
+        "脱库",
+        "数据库",
+        "备份",
+        "backup",
+        "dump",
+        "nosql",
+        "mongodb",
+        "redis",
+        "elasticsearch",
+        "默认密码",
+        "default password",
+        "连接字符串",
+        "connection string",
+        "config.php",
+        ".env",
+        "源码泄露",
+        "phpmyadmin",
+        "adminer",
+        "宽字节",
+        "GBK",
+        "WAF bypass",
+        "二阶注入",
+        "second order",
+        "OOB",
+        "DNSLog",
+        "盲注",
+        "blind",
+        "time-based",
+        "error-based",
+        "IDOR"
+      ],
+      "files": [
+        "24-database/01-sqli-fundamentals-defense.md",
+        "24-database/02-sqli-advanced-defense.md",
+        "24-database/03-nosql-injection-defense.md",
+        "24-database/04-config-exposure-defense.md",
+        "24-database/05-backup-log-leak-defense.md",
+        "24-database/07-data-cleaning-defense.md"
       ],
       "priority": 10
     },
@@ -1468,6 +3839,43 @@
       "files": [
         "09-cve/01-browser-sandbox-escape.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "chrome-uaf-blink-defense",
+      "defense_files": [
+        "09-cve/01-browser-sandbox-escape-defense.md"
+      ]
+    },
+    {
+      "id": "chrome-uaf-blink-defense",
+      "track": "blue",
+      "defends": "chrome-uaf-blink",
+      "signals": [
+        "CVE-2026-2441",
+        "Blink UAF defense",
+        "CSSFontFeatureValuesMap",
+        "Chromium patch",
+        "renderer sandbox",
+        "PartitionAlloc",
+        "browser hardening",
+        "CVE-2026-2441防御",
+        "Blink UAF加固",
+        "CSSFontFeatureValuesMap值拷贝",
+        "Chrome版本核查",
+        "浏览器沙箱",
+        "MiraclePtr",
+        "CFI",
+        "chrome",
+        "blink",
+        "cssfontfeaturevalues",
+        "uaf",
+        "use after free",
+        "chromium",
+        "hashmap rehash"
+      ],
+      "files": [
+        "09-cve/01-browser-sandbox-escape-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1484,6 +3892,43 @@
       ],
       "files": [
         "09-cve/02-redis-zipmap-rce.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "redis-valkey-restore-zipmap-defense",
+      "defense_files": [
+        "09-cve/02-redis-zipmap-rce-defense.md"
+      ]
+    },
+    {
+      "id": "redis-valkey-restore-zipmap-defense",
+      "track": "blue",
+      "defends": "redis-valkey-restore-zipmap",
+      "signals": [
+        "CVE-2026-25243",
+        "Redis defense",
+        "Valkey defense",
+        "zipmap canonical check",
+        "RESTORE ACL",
+        "RDB_TYPE_HASH_ZIPMAP",
+        "heap overflow mitigation",
+        "CVE-2026-25243防御",
+        "Redis RESTORE加固",
+        "Valkey补丁",
+        "zipmap长度校验",
+        "ACL禁用RESTORE",
+        "RDB type 9",
+        "内存越界防护",
+        "redis",
+        "valkey",
+        "restore",
+        "zipmap",
+        "rdb",
+        "serialized value",
+        "heap buffer overflow"
+      ],
+      "files": [
+        "09-cve/02-redis-zipmap-rce-defense.md"
       ],
       "priority": 10
     },
@@ -1502,6 +3947,42 @@
       "files": [
         "11-dos/01-valkey-resp-dos.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "valkey-resp-dos-defense",
+      "defense_files": [
+        "11-dos/01-valkey-resp-dos-defense.md"
+      ]
+    },
+    {
+      "id": "valkey-resp-dos-defense",
+      "track": "blue",
+      "defends": "valkey-resp-dos",
+      "signals": [
+        "CVE-2026-27623",
+        "Valkey DoS defense",
+        "RESP state machine",
+        "reqtype reset",
+        "pre-auth DoS mitigation",
+        "Valkey 9.0.3",
+        "CVE-2026-27623防御",
+        "Valkey DoS加固",
+        "RESP状态机补丁",
+        "reqtype清零",
+        "Valkey 9.0.3升级",
+        "预认证网络隔离",
+        "mTLS接入",
+        "valkey",
+        "resp",
+        "pipeline",
+        "multibulk",
+        "pre-auth dos",
+        "assertion failure",
+        "networking.c"
+      ],
+      "files": [
+        "11-dos/01-valkey-resp-dos-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1518,6 +3999,41 @@
       ],
       "files": [
         "09-cve/03-cpanel-caldav-traversal.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "cpanel-caldav-traversal-defense",
+      "defense_files": [
+        "09-cve/03-cpanel-caldav-traversal-defense.md"
+      ]
+    },
+    {
+      "id": "cpanel-caldav-traversal-defense",
+      "track": "blue",
+      "defends": "cpanel-caldav-traversal",
+      "signals": [
+        "CVE-2026-29205",
+        "cPanel defense",
+        "cpdavd",
+        "CalDAV path traversal",
+        "URL decode before validate",
+        "ReducedPrivileges",
+        "2079 2080 hardening",
+        "CVE-2026-29205防御",
+        "cPanel加固",
+        "CalDAV路径穿越防护",
+        "ReducedPrivileges生命周期",
+        "URL解码校验顺序",
+        "端口隔离",
+        "cpanel",
+        "whm",
+        "caldav",
+        "path traversal",
+        "maildir",
+        "plus alias"
+      ],
+      "files": [
+        "09-cve/03-cpanel-caldav-traversal-defense.md"
       ],
       "priority": 10
     },
@@ -1536,6 +4052,42 @@
       "files": [
         "09-cve/06-nginx-rewrite-heapoverflow.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "nginx-rewrite-heapoverflow-defense",
+      "defense_files": [
+        "09-cve/06-nginx-rewrite-heapoverflow-defense.md"
+      ]
+    },
+    {
+      "id": "nginx-rewrite-heapoverflow-defense",
+      "track": "blue",
+      "defends": "nginx-rewrite-heapoverflow",
+      "signals": [
+        "CVE-2026-42945",
+        "NGINX defense",
+        "rewrite set mismatch",
+        "heap overflow mitigation",
+        "nginx.conf hardening",
+        "ASLR PIE",
+        "CVE-2026-42945防御",
+        "NGINX堆溢出防护",
+        "rewrite配置加固",
+        "set指令风险",
+        "nginx.conf检查",
+        "ASLR",
+        "1.30.1升级",
+        "nginx",
+        "rewrite",
+        "set",
+        "heap overflow",
+        "buffer overflow",
+        "capture group",
+        "ngx_http_rewrite_module"
+      ],
+      "files": [
+        "09-cve/06-nginx-rewrite-heapoverflow-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1552,6 +4104,42 @@
       ],
       "files": [
         "09-cve/04-nezha-path-traversal-jwt.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "nezha-path-traversal-defense",
+      "defense_files": [
+        "09-cve/04-nezha-path-traversal-jwt-defense.md"
+      ]
+    },
+    {
+      "id": "nezha-path-traversal-defense",
+      "track": "blue",
+      "defends": "nezha-path-traversal",
+      "signals": [
+        "CVE-2026-53519",
+        "Nezha Monitoring defense",
+        "Go HasPrefix bypass",
+        "path traversal defense",
+        "JWT secret rotation",
+        "config.yaml protection",
+        "CVE-2026-53519防御",
+        "哪吒监控加固",
+        "Go路径遍历防护",
+        "filepath.Clean边界校验",
+        "JWT密钥轮换",
+        "HS256加固",
+        "sqlite.db隔离",
+        "nezha",
+        "哪吒",
+        "dashboard",
+        "monitoring",
+        "path traversal",
+        "jwt secret",
+        "fallbackToFrontend"
+      ],
+      "files": [
+        "09-cve/04-nezha-path-traversal-jwt-defense.md"
       ],
       "priority": 10
     },
@@ -1571,6 +4159,43 @@
       "files": [
         "09-cve/05-litellm-privesc.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "litellm-privesc-defense",
+      "defense_files": [
+        "09-cve/05-litellm-privesc-defense.md"
+      ]
+    },
+    {
+      "id": "litellm-privesc-defense",
+      "track": "blue",
+      "defends": "litellm-privesc",
+      "signals": [
+        "CVE-2026-47101",
+        "LiteLLM defense",
+        "allowed_routes bypass",
+        "RBAC enforcement",
+        "proxy_admin isolation",
+        "API key scope hardening",
+        "CVE-2026-47101防御",
+        "LiteLLM加固",
+        "allowed_routes校验",
+        "proxy_admin隔离",
+        "LLM网关安全",
+        "RBAC防提权",
+        "自修改角色拦截",
+        "litellm",
+        "api key",
+        "key/generate",
+        "user/update",
+        "proxy_admin",
+        "internal_user",
+        "privilege escalation",
+        "allowed_routes"
+      ],
+      "files": [
+        "09-cve/05-litellm-privesc-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1587,7 +4212,8 @@
       "files": [
         "../../windows/techniques/notepadpp-config-injection.md"
       ],
-      "priority": 10
+      "priority": 10,
+      "track": "red"
     },
     {
       "id": "page-cache-write",
@@ -1610,6 +4236,47 @@
       "files": [
         "../../general/techniques/01-kernel/01-page-cache-write-family.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "page-cache-write-defense",
+      "defense_files": [
+        "../../general/techniques/01-kernel/01-page-cache-write-family-defense.md"
+      ]
+    },
+    {
+      "id": "page-cache-write-defense",
+      "track": "blue",
+      "defends": "page-cache-write",
+      "signals": [
+        "AF_ALG disable",
+        "seccomp splice block",
+        "dm-verity",
+        "rxrpc blacklist",
+        "espintcp hardening",
+        "page cache protection",
+        "page cache defense",
+        "seccomp",
+        "AF_ALG",
+        "kernel hardening",
+        "KSPP",
+        "page cache",
+        "copy fail",
+        "dirty frag",
+        "fragnesia",
+        "dirtydecrypt",
+        "splice",
+        "vmsplice",
+        "in-place decrypt",
+        "authencesn",
+        "CVE-2026-31431",
+        "CVE-2026-43284",
+        "CVE-2026-43500",
+        "CVE-2026-46300",
+        "CVE-2026-31635"
+      ],
+      "files": [
+        "../../general/techniques/01-kernel/01-page-cache-write-family-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1625,6 +4292,37 @@
       ],
       "files": [
         "../../general/techniques/01-kernel/02-slab-cross-cache.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "slab-cross-cache-defense",
+      "defense_files": [
+        "../../general/techniques/01-kernel/02-slab-cross-cache-defense.md"
+      ]
+    },
+    {
+      "id": "slab-cross-cache-defense",
+      "track": "blue",
+      "defends": "slab-cross-cache",
+      "signals": [
+        "unprivileged_bpf_disabled",
+        "SLUB hardening",
+        "init_on_free",
+        "CONFIG_RANDOM_KMALLOC_CACHES",
+        "KFENCE",
+        "CVE-2026-31429",
+        "slab defense",
+        "unprivileged BPF",
+        "KSPP",
+        "cross-cache defense",
+        "slab",
+        "skb_small_head_cache",
+        "cross cache",
+        "kmem_cache_free",
+        "warn_free_bad_obj"
+      ],
+      "files": [
+        "../../general/techniques/01-kernel/02-slab-cross-cache-defense.md"
       ],
       "priority": 10
     },
@@ -1644,6 +4342,38 @@
       "files": [
         "../../general/techniques/01-kernel/03-mm-null-ptrace-bypass.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "fd-theft-pidfd-defense",
+      "defense_files": [
+        "../../general/techniques/01-kernel/03-mm-null-ptrace-bypass-defense.md"
+      ]
+    },
+    {
+      "id": "fd-theft-pidfd-defense",
+      "track": "blue",
+      "defends": "fd-theft-pidfd",
+      "signals": [
+        "pidfd_getfd block",
+        "yama ptrace_scope",
+        "SUID reduction",
+        "CVE-2026-46333",
+        "dumpable hardening",
+        "seccomp",
+        "FD theft defense",
+        "pidfd_getfd",
+        "SUID hardening",
+        "pidfd",
+        "fd theft",
+        "keysign",
+        "ssh keysign",
+        "chage",
+        "mm-null",
+        "ptrace"
+      ],
+      "files": [
+        "../../general/techniques/01-kernel/03-mm-null-ptrace-bypass-defense.md"
+      ],
       "priority": 10
     },
     {
@@ -1660,6 +4390,39 @@
       ],
       "files": [
         "../../general/techniques/01-kernel/04-cifswitch-nss-privesc.md"
+      ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "cifswitch-nss-defense",
+      "defense_files": [
+        "../../general/techniques/01-kernel/04-cifswitch-nss-privesc-defense.md"
+      ]
+    },
+    {
+      "id": "cifswitch-nss-defense",
+      "track": "blue",
+      "defends": "cifswitch-nss",
+      "signals": [
+        "unprivileged_userns_clone",
+        "request-key hardening",
+        "cifs.upcall confinement",
+        "vet_description",
+        "NSS protection",
+        "QVD-2026-29453",
+        "CIFSwitch defense",
+        "cifs.upcall",
+        "user namespace restriction",
+        "request-key",
+        "AppArmor",
+        "NSS injection defense",
+        "cifs",
+        "spnego",
+        "nss",
+        "name service switch",
+        "cifswitch"
+      ],
+      "files": [
+        "../../general/techniques/01-kernel/04-cifswitch-nss-privesc-defense.md"
       ],
       "priority": 10
     },
@@ -1678,7 +4441,76 @@
       "files": [
         "../../general/techniques/01-kernel/05-pintheft-io-uring-page-cache.md"
       ],
+      "priority": 10,
+      "track": "red",
+      "defended_by": "pintheft-io-uring-defense",
+      "defense_files": [
+        "../../general/techniques/01-kernel/05-pintheft-io-uring-page-cache-defense.md"
+      ]
+    },
+    {
+      "id": "pintheft-io-uring-defense",
+      "track": "blue",
+      "defends": "pintheft-io-uring",
+      "signals": [
+        "io_uring_disabled",
+        "rds blacklist",
+        "FOLL_PIN hardening",
+        "seccomp io_uring",
+        "QVD-2026-27616",
+        "dm-verity",
+        "PinTheft defense",
+        "io_uring hardening",
+        "RDS disable",
+        "FOLL_PIN",
+        "page cache protection",
+        "rds",
+        "io_uring",
+        "pin count",
+        "zerocopy",
+        "double free",
+        "dangling pointer"
+      ],
+      "files": [
+        "../../general/techniques/01-kernel/05-pintheft-io-uring-page-cache-defense.md"
+      ],
       "priority": 10
+    },
+    {
+      "id": "crypto-rsa-attack",
+      "signals": [
+        "rsa",
+        "public key crypto",
+        "small exponent",
+        "e=3",
+        "e = 3",
+        "common modulus",
+        "same n",
+        "prime modulus",
+        "n = getprime",
+        "related message",
+        "franklin-reiter",
+        "m2 = m1",
+        "hastad",
+        "broadcast attack",
+        "crt",
+        "chinese remainder",
+        "中国剩余定理",
+        "fermat factorization",
+        "shared prime",
+        "batch gcd",
+        "wiener",
+        "continued fraction",
+        "coppersmith",
+        "modulus reuse",
+        "同余式组",
+        "取余"
+      ],
+      "files": [
+        "../../general/techniques/crypto/04-rsa-attack-family.md"
+      ],
+      "priority": 10,
+      "track": "both"
     }
   ]
 }

@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["authentication", "jwt", "signature-bypass", "web-security", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/13-signature/01-algorithm"]
+related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/06-claim-missing", "general/signature/01-algorithm"]
 ---
 
 # JWT `alg: none` 无签名绕过

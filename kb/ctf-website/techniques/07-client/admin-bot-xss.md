@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["xss", "client-side", "csp", "ctf", "browser"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/07-client/js-runtime", "ctf-website/07-client/postmessage", "ctf-website/02-auth/jwt/07-theft-replay"]
+related_articles: ["general/protocol/04-js-runtime-reversing", "ctf-website/07-client/postmessage", "ctf-website/02-auth/jwt/07-theft-replay"]
 ---
 # Admin Bot / XSS 实战
 

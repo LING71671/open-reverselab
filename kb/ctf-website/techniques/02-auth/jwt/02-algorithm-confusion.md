@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["authentication", "jwt", "algorithm-confusion", "web-security", "crypto", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/04-kid-injection", "ctf-website/02-auth/jwt/05-jku-x5u-abuse", "ctf-website/13-signature/01-algorithm"]
+related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/04-kid-injection", "ctf-website/02-auth/jwt/05-jku-x5u-abuse", "general/signature/01-algorithm"]
 ---
 
 # JWT 算法混淆 (Algorithm Confusion)

@@ -145,6 +145,85 @@ if __name__ == "__main__":
 4. 如果命中连续主键、分页游标、排序字段，跳 SQL：用 `id__in`, `sort`, `filter`, `where`, `ids[]` 观察报错和返回顺序。
 5. 如果命中 `tenant_id/org_id`，把同一目标对象挂到不同父对象下，区分“对象归属校验缺失”和“父对象边界缺失”。
 
+#### 0.2 写探测 Oracle 的三个前提：载体正确、对照可读、零副作用
+
+「同一 session、同一路径、只改一个对象引用」只是 Oracle 的**设计**，它能不能成立还取决于请求**载体**。
+载体错了，扫描器会给出一片整齐的 `403`，看起来像“目标鉴权很严”，实际是自己的请求根本没通过前置校验。
+
+**真实踩坑（CTFd / Flask-WTF 系）**：CSRF token 的取法随 `Content-Type` 切换 ——
+
+```python
+# 框架侧（伪码）：is_json 为真才看头部，否则只看表单字段
+if request.is_json:
+    token = request.headers.get("CSRF-Token")
+else:
+    token = request.form.get("nonce")
+```
+
+于是同一个畸形 body，只差一个请求头，结论完全相反：
+
+| 请求形态 | 响应 | 误读 |
+|---|---|---|
+| `PATCH /api/v1/users/me`，裸 body，**无** `Content-Type` | `403` | “鉴权门存在” |
+| 同上，带 `Content-Type: application/json` | `400` | CSRF 通过 → 鉴权通过 → body 解析失败 |
+| form-encoded，无 `nonce` 字段 | `403` | 同上 |
+| form-encoded，带 `nonce` 字段 | `400` | 表单载体同样生效 |
+
+**代价**：整张写探测矩阵（几十条 POST/PATCH/DELETE）全部伪命为“门存在”，报告会得出“目标无越权”的假阴性结论。
+凡是把 `403 vs 400` 当作鉴权门判据的扫描器，都必须给裸 body 显式补上 `Content-Type: application/json`。
+
+**三个前提**：
+
+| 前提 | 要求 | 违反后的症状 |
+|---|---|---|
+| 载体正确 | CSRF/token 的传递方式与内容类型匹配；先 A/B 单条验证 | 全表统一 403，假阴性 |
+| 对照可读 | 必须有一条**已知能进 view** 的对照（自目标 + 畸形 body），且它返回“解析失败”码 | 无法区分「鉴权门」与「CSRF 拒绝」 |
+| 零副作用 | 载体不产生净变更 | 打到真实对象上造成不可逆写入 |
+
+**零副作用载体**（选一个即可，都不落写）：
+
+| 载体 | 为什么安全 | 命中信号 |
+|---|---|---|
+| 畸形 body `b"{"` | JSON 解析必失败，写逻辑永不执行 | `400/422` = 进了 view（门缺失）；`403` = 门在 |
+| 不存在的 ID（如 `999999`） | 最多走到 `first_or_404()` | 同上；`404` 需区分“未注册路由”与“对象不存在” |
+| 写成当前值 | 值不变，净变更为零 | 回读校验一致 |
+
+**分类表**（配合对照使用）：
+
+| 状态码 | 含义 | 备注 |
+|---|---|---|
+| `400`/`422`/`500` | **已进入 view** | 鉴权门缺失；这是唯一需要深挖的分支 |
+| `403` | 鉴权门或 CSRF 拒绝 | 必须由对照消歧 |
+| `404` | 路由未注册 **或** 对象不存在 | `PUT` 全表 404 ⇒ 该动词根本没注册，可排除动词混淆 |
+| `405` | 方法未允许 | 排除 |
+| `200`/`201` | 写入成功 | 立即回读 + 回滚 |
+
+**门禁式实现**：把对照写成硬门禁，对照不达标就中止整轮，不写结论。
+
+```python
+class OracleBroken(RuntimeError):
+    """对照未返回预期的『已进入 view』状态，整轮矩阵不可信。"""
+
+CONTROL = ("PATCH", "/api/v1/users/me")   # 自目标：授权范围内，且必然经过鉴权层
+
+def assert_oracle(client, malformed=b"{", json_hdrs={"Content-Type": "application/json"}):
+    """对照必须拿到 400（鉴权通过 + body 解析失败），否则拒绝产出结论。"""
+    for attempt in (1, 2):
+        code, _, _ = client.request(*CONTROL, raw_body=malformed, headers=json_hdrs)
+        if code == 400:
+            return True
+        client.refresh_nonce(post_login=True)   # 第二跳：token 失效是最常见原因
+    raise OracleBroken(f"control returned {code}, expected 400")
+```
+
+两个易漏点：
+
+- **长跑之间要刷新 token**。会话 cookie 仍有效（`GET /me` 照样 200），但 CSRF nonce 可能已换代，
+  于是对照组从 `400` 变成 `403`。扫描器应在开跑前 `ensure_session`（会话在则刷 token，不在则重登），
+  而不是只验会话。
+- **动词混淆要单独扫**。同一个资源的不同 HTTP 方法各自挂装饰器，漏挂一个就是一条越权路径。
+  用 sentinel ID + 畸形 body 把所有 verb 打一遍，成本极低。
+
 ### 1. ID 类型识别与预测
 
 ```

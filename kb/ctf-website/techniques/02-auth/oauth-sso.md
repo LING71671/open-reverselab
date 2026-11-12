@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["authentication", "oauth", "oidc", "sso", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/02-auth/host-header", "ctf-website/02-auth/jwt/00-overview", "ctf-website/13-signature/00-overview", "ctf-website/13-signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/14-idor/02-bac-business-logic"]
+related_articles: ["ctf-website/02-auth/host-header", "ctf-website/02-auth/jwt/00-overview", "general/signature/00-overview", "general/signature/06-replay-nonce", "ctf-website/12-payment/payment-callback-async", "ctf-website/14-idor/02-bac-business-logic"]
 ---
 
 # OAuth 2.0 / OIDC 攻击实战

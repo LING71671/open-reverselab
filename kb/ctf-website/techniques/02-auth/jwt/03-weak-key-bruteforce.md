@@ -15,7 +15,7 @@ difficulty: "advanced"
 tags: ["authentication", "jwt", "bruteforce", "web-security", "crypto", "ctf"]
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/24-database/04-config-exposure", "ctf-website/13-signature/03-key-attacks"]
+related_articles: ["ctf-website/02-auth/jwt/00-overview", "ctf-website/02-auth/jwt/06-claim-missing", "ctf-website/24-database/04-config-exposure", "general/signature/03-key-attacks"]
 ---
 
 # JWT 弱 HMAC 密钥爆破

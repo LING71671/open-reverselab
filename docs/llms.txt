@@ -1,6 +1,6 @@
 # ReverseLab — Open-Source Reverse Engineering Lab & MCP Tool Ecosystem
 
-> 183-article knowledge base, 100+ MCP automation tools for reverse engineering.
+> 322-article knowledge base, 100+ MCP automation tools for reverse engineering.
 > Agent-native architecture. Covers CTF, APK, PE, cryptography, game cheating, and more.
 
 ## Quick Links
@@ -11,97 +11,175 @@
 - GitHub: https://github.com/LING71671/open-reverselab
 - Full LLM dump: https://ling71671.github.io/open-reverselab/llms-full.txt
 
-## CTF Website — Web 攻击全表面 (118 articles)
+## CTF Website — Web 攻击全表面 (191 articles)
 
 - [24h Loop Orchestration](https://ling71671.github.io/open-reverselab/kb/ctf-website/00-workflow/24h-loop-orchestration/)
   >
+- [CAPTCHA & Anti-Automation Defense Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/captcha-bypass-defense/)
+  >
 - [CAPTCHA Bypass Techniques and Automation](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/captcha-bypass/)
+  >
+- [Origin Server Hiding & Anti-CDN-Bypass Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/cloudflare-bypass-defense/)
   >
 - [Cloudflare Bypass: Finding the Real Origin Server IP](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/cloudflare-bypass/)
   >
+- [External Attack Surface Reduction & Cyberspace Exposure Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/fofa-hunting-defense/)
+  >
 - [FOFA Asset Mapping and Vulnerability Hunting](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/fofa-hunting/)
+  >
+- [Route Normalization Consistency & Reverse Proxy Header Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/recon-routing-defense/)
   >
 - [Recon and Routing Bypass](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/recon-routing/)
   >
+- [Technology Fingerprint Minimization & Runtime Error Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/version-fingerprinting-defense/)
+  >
 - [Version Fingerprinting](https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/version-fingerprinting/)
+  >
+- [Host Header Injection and Virtual Host Bypass Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/host-header-defense/)
   >
 - [Host Header Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/host-header/)
   >
+- [JWT Security Architecture and Defense Overview](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/00-overview-defense/)
+  >
 - [JWT Attack Overview](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/00-overview/)
+  >
+- [JWT alg:none Signature Bypass Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/01-alg-none-defense/)
   >
 - [JWT alg:none Signature Bypass](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/01-alg-none/)
   >
+- [JWT Algorithm Confusion (RS/ES to HS) Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/02-algorithm-confusion-defense/)
+  >
 - [JWT Algorithm Confusion Attack](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/02-algorithm-confusion/)
+  >
+- [JWT Weak HMAC Secret and Exposure Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/03-weak-key-bruteforce-defense/)
   >
 - [JWT Weak HMAC Key Bruteforce](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/03-weak-key-bruteforce/)
   >
+- [JWT kid Parameter Injection Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/04-kid-injection-defense/)
+  >
 - [JWT kid Parameter Injection](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/04-kid-injection/)
+  >
+- [JWT jku, x5u, and x5c Key Source Hijacking Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/05-jku-x5u-abuse-defense/)
   >
 - [JWT jku / x5u Key Source Hijacking](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/05-jku-x5u-abuse/)
   >
+- [JWT Claim Enforcement and Token Type Isolation Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/06-claim-missing-defense/)
+  >
 - [JWT Claim Validation Missing and Token Confusion](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/06-claim-missing/)
+  >
+- [JWT Theft, Replay, and Persistence Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/07-theft-replay-defense/)
   >
 - [JWT Theft, Replay, and Persistence](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/07-theft-replay/)
   >
+- [JWT Library CVE Remediation and Safe Wrapper Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/08-cve-library-defense/)
+  >
 - [JWT Library CVEs and Fingerprint Routing](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/08-cve-library/)
+  >
+- [JWT Defense Verification Pipeline, CI Gates, and Result Matrix](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-operations-defense/)
   >
 - [JWT Toolchain, Operations Workflow, and Result Matrix](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-operations/)
   >
+- [LDAP Filter Injection and Anonymous Bind Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/ldap-injection-defense/)
+  >
 - [LDAP Injection](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/ldap-injection/)
+  >
+- [OAuth 2.0 and OIDC SSO Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/oauth-sso-defense/)
   >
 - [OAuth 2.0 / OIDC Attack Techniques](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/oauth-sso/)
   >
+- [SAML 2.0 XSW, Void Canonicalization, and Replay Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/saml-attacks-defense/)
+  >
 - [SAML 2.0 Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/saml-attacks/)
+  >
+- [GraphQL Defense and Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/graphql-defense/)
   >
 - [GraphQL Attack Techniques](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/graphql/)
   >
-- [gRPC and Protobuf Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/grpc-protobuf/)
+- [HPP and CRLF Header Injection Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/hpp-crlf-defense/)
   >
 - [HPP, CRLF Injection, and Header Injection](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/hpp-crlf/)
   >
+- [Prototype Pollution Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/prototype-pollution-defense/)
+  >
 - [Prototype Pollution](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/prototype-pollution/)
+  >
+- [ReDoS and Timing Side-Channel Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/redos-timing-defense/)
   >
 - [ReDoS and Timing Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/redos-timing/)
   >
+- [SQLi and NoSQLi Defense and Ledger Isolation](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/sqli-nosqli-defense/)
+  >
 - [Advanced SQLi and NoSQLi Injection](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/sqli-nosqli/)
+  >
+- [Server-Side Template Injection (SSTI) Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/ssti-defense/)
   >
 - [Server-Side Template Injection (SSTI)](https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/ssti/)
   >
+- [Open Redirect & URL Parser Differential Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/open-redirect-defense/)
+  >
 - [Open Redirect & Redirect Chain Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/open-redirect/)
+  >
+- [SSRF Defense-in-Depth: Protocol Allowlisting, DNS Pinning & IMDSv2](https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/ssrf-defense/)
   >
 - [SSRF (Server-Side Request Forgery)](https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/ssrf/)
   >
+- [Polyglot Deserialization Hardening & Type Allowlisting](https://ling71671.github.io/open-reverselab/kb/ctf-website/05-deserialization/deserialization-defense/)
+  >
 - [Deserialization Vulnerabilities](https://ling71671.github.io/open-reverselab/kb/ctf-website/05-deserialization/deserialization/)
+  >
+- [File Upload Sandboxing, XXE Disabling & Path Traversal Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/06-file-attacks/file-upload-xxe-lfi-defense/)
   >
 - [File Upload / XXE / LFI / Path Traversal](https://ling71671.github.io/open-reverselab/kb/ctf-website/06-file-attacks/file-upload-xxe-lfi/)
   >
+- [Admin Bot and XSS Defense-in-Depth](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/admin-bot-xss-defense/)
+  >
 - [Admin Bot / XSS Practical Guide](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/admin-bot-xss/)
+  >
+- [CORS and CSRF Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/cors-csrf-defense/)
   >
 - [Advanced CORS / CSRF Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/cors-csrf/)
   >
-- [JS Runtime / Browser Reversing](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/js-runtime/)
+- [PostMessage Cross-Origin Communication Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/postmessage-defense/)
   >
 - [PostMessage / Cross-Origin Communication Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/postmessage/)
   >
-- [Web Crypto API Abuse](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/web-crypto-abuse/)
+- [WebSocket, Socket.IO, and MQTT Security Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/websocket-defense/)
   >
 - [WebSocket Attack Practical Guide](https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/websocket/)
   >
+- [HTTP/2 Protocol Hardening: HPACK Limits, CONTINUATION Bounds & H2C Disabling](https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/http2-attacks-defense/)
+  >
 - [HTTP/2 Attacks — HPACK Bomb & Stream Multiplexing Abuse](https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/http2-attacks/)
+  >
+- [Concurrency Atomicity, Cache Key Isolation & HTTP Request Smuggling Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/race-cache-smuggling-defense/)
   >
 - [Race Condition / Cache Poisoning / Request Smuggling](https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/race-cache-smuggling/)
   >
+- [Web Cache Deception Defense & CDN/Origin Path Consistency](https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/web-cache-deception-defense/)
+  >
 - [Web Cache Deception](https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/web-cache-deception/)
+  >
+- [Blink UAF Defense: CSSFontFeatureValuesMap Iterator Lifecycle & Browser Sandbox Hardening (CVE-2026-2441)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/01-browser-sandbox-escape-defense/)
   >
 - [Blink UAF: CSSFontFeatureValuesMap Iterator Dangling Pointer (CVE-2026-2441)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/01-browser-sandbox-escape/)
   >
+- [Redis/Valkey RESTORE Defense: zipmap Canonical Validation & ACL Isolation (CVE-2026-25243)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/02-redis-zipmap-rce-defense/)
+  >
 - [Redis/Valkey RESTORE: zipmap Length Prefix Step Mismatch (CVE-2026-25243)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/02-redis-zipmap-rce/)
+  >
+- [cPanel CalDAV Path Traversal & Privilege Drop Hardening (CVE-2026-29205)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/03-cpanel-caldav-traversal-defense/)
   >
 - [cPanel CalDAV Pre-Auth Path Traversal (CVE-2026-29205)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/03-cpanel-caldav-traversal/)
   >
+- [Nezha Monitoring Defense: Go Path Segment Containment & JWT Key Isolation (CVE-2026-53519)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/04-nezha-path-traversal-jwt-defense/)
+  >
 - [Nezha Monitoring: Path Traversal + JWT Forgery Admin Takeover (CVE-2026-53519)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/04-nezha-path-traversal-jwt/)
   >
+- [LiteLLM Privilege Escalation Defense: RBAC Route Boundary & API Key Authorization Isolation (CVE-2026-47101)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/05-litellm-privesc-defense/)
+  >
 - [LiteLLM: API Key Generation Bypass Role Restrictions + Self-Privilege Escalation (CVE-2026-47101)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/05-litellm-privesc/)
+  >
+- [NGINX rewrite Module Heap Overflow Defense: Version Upgrade, Directive Refactoring & Runtime Hardening (CVE-2026-42945)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/06-nginx-rewrite-heapoverflow-defense/)
   >
 - [NGINX rewrite Module: set Buffer Length Mismatch Heap Overflow (CVE-2026-42945)](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/06-nginx-rewrite-heapoverflow/)
   >
@@ -111,147 +189,217 @@
   >
 - [Multi-CVE Chain Playbook](https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/multi-cve-chain-playbook/)
   >
+- [AWS IAM Least Privilege and Privilege Escalation Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/aws-iam-privesc-defense/)
+  >
 - [AWS IAM Enumeration and Privilege Escalation Paths](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/aws-iam-privesc/)
+  >
+- [CI/CD Pipeline Defense: Context Injection Elimination, Runner Isolation & Artifact Signing](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/ci-cd-pipeline-defense/)
   >
 - [CI/CD Pipeline Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/ci-cd-pipeline/)
   >
+- [Container Runtime Escape Defense: Docker Socket Isolation, Capabilities Drop & LSM Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/container-runtime-escape-defense/)
+  >
 - [Container Runtime Escape Field Checks](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/container-runtime-escape/)
+  >
+- [GitHub Actions Abuse Defense: Minimal GITHUB_TOKEN, Trigger Isolation & SHA Pinning](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/github-actions-abuse-paths-defense/)
   >
 - [GitHub Actions Abuse Paths](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/github-actions-abuse-paths/)
   >
+- [Kubernetes RBAC Least Privilege Defense and High-Risk Edge Blocking](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/k8s-rbac-attack-paths-defense/)
+  >
 - [Kubernetes RBAC Attack Paths](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/k8s-rbac-attack-paths/)
+  >
+- [Kubernetes & Container Escape Defense-in-Depth: Pod Security, Control-Plane Isolation & NetworkPolicy](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/kubernetes-container-defense/)
   >
 - [Kubernetes & Container Escape](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/kubernetes-container/)
   >
+- [Serverless / Lambda Defense: Least-Privilege Execution Role, Event Validation & Isolation](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/serverless-lambda-defense/)
+  >
 - [Serverless / Lambda Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/serverless-lambda/)
+  >
+- [Terraform State and IaC Secret Defense: Encrypted Remote State, Zero-Secret Outputs & Exposure Blocking](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/terraform-state-secrets-defense/)
   >
 - [Terraform State and IaC Secret Exposure](https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/terraform-state-secrets/)
   >
+- [Valkey RESP Protocol Pre-Auth DoS Defense: Upgrade, State Reset Patch & Perimeter Access Control (CVE-2026-27623)](https://ling71671.github.io/open-reverselab/kb/ctf-website/11-dos/01-valkey-resp-dos-defense/)
+  >
 - [Valkey RESP Protocol Pre-Auth Assertion Failure DoS (CVE-2026-27623)](https://ling71671.github.io/open-reverselab/kb/ctf-website/11-dos/01-valkey-resp-dos/)
+  >
+- [Dependency Confusion & Supply Chain Defense: Scoped Registries, Lockfile Integrity & Script Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/11-supply-chain/dependency-confusion-defense/)
   >
 - [Dependency Confusion & Supply Chain Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/11-supply-chain/dependency-confusion/)
   >
+- [Payment Bypass Defense — Server-Authoritative Pricing, State Machine & Precision Controls](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-bypass-defense/)
+  >
 - [Payment Bypass — Advanced Payment Evasion Techniques](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-bypass/)
+  >
+- [Payment Callback & Async Defense — Signature Verification, Idempotency, Anti-SSRF & Causal Ordering](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-callback-async-defense/)
   >
 - [Payment Callback & Async Attack — Deep Dive into Payment Callback and Async Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-callback-async/)
   >
+- [Digital Goods & IAP Defense — Server-Side Receipt Verification, Replay Protection & Minting Guards](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-digital-goods-defense/)
+  >
 - [Digital Goods & IAP Attack Manual — iOS/Android Receipt Bypass and Virtual Currency Exploits](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-digital-goods/)
+  >
+- [Bounce Email Leak & Order IDOR Defense — Minimal NDR Payloads & Strict Ownership Authorization](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-email-bounce-idor-defense/)
   >
 - [Bounce Email Abuse + Order ID Authorization Bypass to Steal Card Keys](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-email-bounce-idor/)
   >
+- [Payment Business Logic Defense — Multi-Ledger Consistency, Injection Isolation & Closed-Loop Validation](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-logic-defense/)
+  >
 - [Payment Logic Attacks — Web CTF Payment Technique Handbook](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-logic/)
+  >
+- [PHP Payment Defense — Strict Comparisons, Safe Deserialization & BCMath Precision](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-php-defense/)
   >
 - [PHP Payment Attacks — PHP-Specific Payment Exploitation Handbook](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-php/)
   >
+- [Balance Deduction Lost Update Defense — Atomic Conditional Updates, Row Locks & Double-Entry Ledgers](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-race-lost-update-defense/)
+  >
 - [Payment Race / Lost Update — Balance Deduction Loss via Race Conditions](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-race-lost-update/)
+  >
+- [Subscription & Recurring Billing Defense — Trial Anti-Abuse, Proration Verification & Seat Binding](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-subscription-defense/)
   >
 - [Payment Subscription — Subscription & Recurring Payment Attack Handbook](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-subscription/)
   >
-- [PHP Card-Issuing / E-Commerce Platform Fingerprint Library](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/platform-fingerprints/)
-  >
-- [Ticket Rush API Reversing — State Machine, Token & Risk Control Parameters](https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/ticket-rush-api-reversing/)
-  >
-- [Signature Forgery — Complete Panoramic Handbook for Signature Forgery & Verification Bypass](https://ling71671.github.io/open-reverselab/kb/ctf-website/13-signature/00-overview/)
-  >
-- [Signature Algorithm Attacks — Algorithm Downgrade, Confusion & None Attack Deep Manual](https://ling71671.github.io/open-reverselab/kb/ctf-website/13-signature/01-algorithm/)
-  >
-- [Signature Implementation Bugs — Implementation-Level Signature Bypass Manual](https://ling71671.github.io/open-reverselab/kb/ctf-website/13-signature/02-implementation/)
-  >
-- [Key Attacks — Signature Key Attack Deep Technical Manual](https://ling71671.github.io/open-reverselab/kb/ctf-website/13-signature/03-key-attacks/)
-  >
-- [Canonicalization Attacks — Signature Canonicalization Bypass](https://ling71671.github.io/open-reverselab/kb/ctf-website/13-signature/04-canonicalization/)
-  >
-- [Hash Length Extension Attacks — Deep Technical Manual](https://ling71671.github.io/open-reverselab/kb/ctf-website/13-signature/05-length-extension/)
-  >
-- [Replay / Nonce / Timestamp — Replay Attack Deep Technical Manual](https://ling71671.github.io/open-reverselab/kb/ctf-website/13-signature/06-replay-nonce/)
+- [IDOR Defense — Broken Object Level Authorization (BOLA), Tenant Isolation & Opaque IDs](https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/01-idor-enumeration-defense/)
   >
 - [IDOR Deep Enumeration & Exploitation — Horizontal/Vertical Privilege Escalation Methodology](https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/01-idor-enumeration/)
   >
+- [Broken Access Control (BAC) Defense — Default-Deny RBAC, Anti-Method-Override & Workflow State Locking](https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/02-bac-business-logic-defense/)
+  >
 - [Broken Access Control (BAC) — Vertical Privilege Escalation & Business Logic Bypass](https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/02-bac-business-logic/)
+  >
+- [Mass Assignment Defense — Strict DTO Allowlists, Safe Binding & GraphQL Input Types](https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/01-mass-assignment-defense/)
   >
 - [Mass Assignment & Attribute Injection Deep Exploitation Handbook](https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/01-mass-assignment/)
   >
+- [Parameter Tampering & Coupon Race Defense — Contract Validation, Immutable Discount Ledgers & Anti-TOCTOU](https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/02-parameter-tampering-defense/)
+  >
 - [Parameter Tampering Full Chain — Price/Quantity/Coupon/Race Condition Deep Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/02-parameter-tampering/)
+  >
+- [Rate Limit Bypass Defense — Trusted Proxy Chains, Canonical Keys, Atomic Token Buckets & CAPTCHA Binding](https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/01-rate-limit-bypass-defense/)
   >
 - [Rate Limit Bypass — IP Rotation, Header Manipulation & Application-Layer Bypass](https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/01-rate-limit-bypass/)
   >
+- [Advanced Brute Force Defense — Anti-Spraying, Phishing-Resistant MFA, Constant-Time Auth & Hash Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/02-brute-force-tactics-defense/)
+  >
 - [Advanced Brute Force — Credential Spraying, MFA Fatigue & Hash Strategies](https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/02-brute-force-tactics/)
+  >
+- [API Discovery & Information Disclosure Defense — Spec Gating, GraphQL Introspection Hardening, Source Map Isolation & Version Governance](https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/01-api-discovery-leak-defense/)
   >
 - [API Discovery and Information Disclosure — Swagger, GraphQL, Source Maps, and Mobile Extraction](https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/01-api-discovery-leak/)
   >
+- [API Key Leakage Defense — Client-Server Key Separation, Least-Privilege Scopes, CI Secret Gates & Cloud Rule Lockdown](https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/02-api-key-leak-defense/)
+  >
 - [API Key Leakage and Exploitation — GitHub Dorking, Client-Side Key Chains, Cloud Service Abuse](https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/02-api-key-leak/)
+  >
+- [CSP Bypass Defense — Strict-Dynamic, Per-Response Nonces, Trusted Types & Scriptless Exfiltration Blocking](https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/01-csp-bypass-defense/)
   >
 - [CSP Bypass Complete Techniques](https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/01-csp-bypass/)
   >
+- [XS-Leaks Browser Side-Channel Defense — Fetch Metadata, CORP/COOP Isolation & Constant-Shape Responses](https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels-defense/)
+  >
 - [XS-Leaks Browser Side-Channel Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels/)
+  >
+- [Subdomain Takeover Defense — DNS Lifecycle Governance, Dangling Record Cleanup, Domain Claim Verification & CAA Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/01-subdomain-takeover-defense/)
   >
 - [Subdomain Takeover Deep Dive](https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/01-subdomain-takeover/)
   >
+- [Email Spoofing Defense — Strict SPF/DKIM/DMARC Alignment, Homograph Filtering & SMTP/iCal Injection Prevention](https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/02-email-spoofing-defense/)
+  >
 - [Email Spoofing and SPF / DKIM / DMARC](https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/02-email-spoofing/)
+  >
+- [OAuth 2.0 Attack Chains Defense — Mandatory PKCE S256, Exact redirect_uri Matching, State Binding & Single-Use Codes](https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/01-oauth-attack-chains-defense/)
   >
 - [OAuth 2.0 Attack Chains](https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/01-oauth-attack-chains/)
   >
+- [Session Fixation & SSO Hijacking Defense — Session Rotation, Host-Locked Cookies, JWT Revocation & Store Isolation](https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/02-session-fixation-attacks-defense/)
+  >
 - [Session Fixation and SSO Hijacking](https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/02-session-fixation-attacks/)
   >
-- [WebView Attacks Complete Techniques](https://ling71671.github.io/open-reverselab/kb/ctf-website/21-mobile-bridge/01-webview-attacks/)
-  >
-- [Cross-Platform Framework Attack Surface — Cordova / React Native / Flutter / Electron](https://ling71671.github.io/open-reverselab/kb/ctf-website/21-mobile-bridge/02-cordova-reactnative/)
+- [Application-Layer DoS Defense and Protocol Resilience Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/01-application-layer-dos-defense/)
   >
 - [Application-Layer DoS](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/01-application-layer-dos/)
   >
+- [Resource Exhaustion and Algorithm Complexity Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/02-resource-exhaustion-defense/)
+  >
 - [Resource Exhaustion & Algorithm Complexity Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/02-resource-exhaustion/)
+  >
+- [UDP Amplification and DRDoS Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/03-amplification-drdos-defense/)
   >
 - [Amplification / DRDoS Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/03-amplification-drdos/)
   >
+- [ReDoS — Regular Expression Denial of Service Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/04-redos-defense/)
+  >
 - [ReDoS — Regular Expression Denial of Service](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/04-redos/)
+  >
+- [HTTP/2 CONTINUATION Flood and H2/H3 Resilience Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/05-http2-continuation-defense/)
   >
 - [HTTP/2 CONTINUATION Flood & Advanced H2/H3 Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/05-http2-continuation/)
   >
+- [TCP Protocol Stack State Exhaustion Defense and Kernel Tuning](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/06-tcp-state-exhaustion-defense/)
+  >
 - [TCP Protocol Stack State Exhaustion](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/06-tcp-state-exhaustion/)
+  >
+- [DNS Denial of Service and Cache Poisoning Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/07-dns-dos-defense/)
   >
 - [DNS Denial of Service Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/07-dns-dos/)
   >
+- [TLS/SSL Handshake Exhaustion Defense and Cryptographic Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/08-tls-exhaustion-defense/)
+  >
 - [TLS/SSL Handshake Exhaustion](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/08-tls-exhaustion/)
+  >
+- [Cache Busting, Origin Exposure, and CDN DoS Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/09-cache-cdn-dos-defense/)
   >
 - [Cache / CDN Denial of Service](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/09-cache-cdn-dos/)
   >
+- [API Abuse Denial of Service Defense and Quota Governance](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/10-api-abuse-defense/)
+  >
 - [API Abuse Denial of Service](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/10-api-abuse/)
+  >
+- [Cloud-Native, Kubernetes, and Serverless DoS Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/11-cloud-container-dos-defense/)
   >
 - [Cloud-Native / Container Denial of Service](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/11-cloud-container-dos/)
   >
+- [SSRF-Driven Denial of Service Defense and Egress Isolation](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/12-ssrf-dos-defense/)
+  >
 - [SSRF-Driven Denial of Service](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/12-ssrf-dos/)
+  >
+- [Database Layer Denial of Service Defense and Query Resource Governance](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/13-database-dos-defense/)
   >
 - [Database Layer Denial of Service](https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/13-database-dos/)
   >
-- [Paywall Detection & Bypass Overview](https://ling71671.github.io/open-reverselab/kb/ctf-website/23-paywall-bypass/01-paywall-detection-bypass/)
-  >
-- [HTTP Header Spoofing](https://ling71671.github.io/open-reverselab/kb/ctf-website/23-paywall-bypass/02-http-header-manipulation/)
-  >
-- [Network Rule Blocking — Preventing Paywall Script Loading](https://ling71671.github.io/open-reverselab/kb/ctf-website/23-paywall-bypass/03-network-rule-blocking/)
-  >
-- [Content Extraction — JSON-LD / Next.js / archive.is](https://ling71671.github.io/open-reverselab/kb/ctf-website/23-paywall-bypass/04-content-extraction/)
-  >
-- [DOM / CSS / Storage Manipulation](https://ling71671.github.io/open-reverselab/kb/ctf-website/23-paywall-bypass/05-dom-css-manipulation/)
-  >
 - [Database Attack Surface — Overview & Decision Tree](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/00-overview/)
+  >
+- [SQL Injection Core Defense — Parameterization & Baseline Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/01-sqli-fundamentals-defense/)
   >
 - [SQL Injection Core — Fundamentals & Full Type Coverage](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/01-sqli-fundamentals/)
   >
+- [Advanced SQLi, Second-Order & OOB Exfiltration Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/02-sqli-advanced-defense/)
+  >
 - [Advanced SQLi & WAF Bypass](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/02-sqli-advanced/)
+  >
+- [NoSQL Injection & Unauthorized Access Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/03-nosql-injection-defense/)
   >
 - [NoSQL Injection Attacks](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/03-nosql-injection/)
   >
+- [Database Config Exposure Defense — Secrets & Surface Hardening](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/04-config-exposure-defense/)
+  >
 - [Database Config Exposure — Configuration & Credential Leaks](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/04-config-exposure/)
+  >
+- [Database Backup, Log & Operational Remnant Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/05-backup-log-leak-defense/)
   >
 - [Database Backup & Log Leak — Backup Files & Log Exposure](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/05-backup-log-leak/)
   >
-- [Card-Selling Platform Exploitation — Auto CDK Platform Attack Handbook](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/06-card-platform/)
+- [Leak Containment, Post-Incident Rotation & PII Tokenization Defense](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/07-data-cleaning-defense/)
   >
 - [Database Dump Cleaning — Leaked Data Cleaning Methodology](https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/07-data-cleaning/)
   >
 
-## APK Reverse — Android 逆向工程 (23 articles)
+## APK Reverse — Android 逆向工程 (36 articles)
 
+- [Smali Code Injection and DEX Tampering Defense](https://ling71671.github.io/open-reverselab/kb/apk-reverse/01-dex-java/01-smali-injection-defense/)
+  >
 - [Smali Code Injection and DEX Modification](https://ling71671.github.io/open-reverselab/kb/apk-reverse/01-dex-java/01-smali-injection/)
   >
 - [Unity IL2CPP Static Reverse Engineering and Offset Discovery](https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/01-il2cpp-offset-discovery/)
@@ -272,15 +420,27 @@
   >
 - [Custom Symmetric Encryption: RC4 and Combination Patterns](https://ling71671.github.io/open-reverselab/kb/apk-reverse/04-crypto/02-rc4-custom-crypto/)
   >
+- [Game Protocol Anti-Hook, Anti-Replay, and End-to-End Hardening](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/01-game-protocol-hook-defense/)
+  >
 - [Game Protocol Hooking and Packet Analysis](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/01-game-protocol-hook/)
+  >
+- [Online License Verification Hardening](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/02-license-verification-bypass-defense/)
   >
 - [Online License Verification Analysis and Bypass](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/02-license-verification-bypass/)
   >
+- [Multi-Layer TLS Certificate Pinning Hardening and Anti-Unpinning](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/03-tls-pinning-unpinning-defense/)
+  >
 - [TLS Pinning Location and Unpinning](https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/03-tls-pinning-unpinning/)
+  >
+- [Process Memory Read/Write Defense, Anti-Attach, and Sensitive Memory Protection](https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/01-memory-rw-hook-defense/)
   >
 - [Process Memory Read/Write Detection and Hook](https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/01-memory-rw-hook/)
   >
+- [Overlay Window and Graphics Rendering Pipeline Hook Defense](https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/02-overlay-rendering-hook-defense/)
+  >
 - [Overlay Rendering and ImGui Detection](https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/02-overlay-rendering-hook/)
+  >
+- [Touch Input Injection Defense and Synthetic Gesture Detection](https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/03-touch-input-hook-defense/)
   >
 - [Touch Input Hooking and Injection Analysis](https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/03-touch-input-hook/)
   >
@@ -294,12 +454,24 @@
   >
 - [Android Anti-Debug Detection and Bypass (VMP Scenario)](https://ling71671.github.io/open-reverselab/kb/apk-reverse/07-packer/05-vmp-anti-debug-bypass/)
   >
+- [Native SO Injection and APK Repacking Defense](https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/01-so-injection-repack-defense/)
+  >
 - [Native SO Injection and APK Repacking](https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/01-so-injection-repack/)
+  >
+- [APK Signature and Package Integrity Multi-Layer Hardening](https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/02-signature-integrity-bypass-defense/)
   >
 - [Signature and Integrity Check Bypass](https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/02-signature-integrity-bypass/)
   >
+- [Mobile WebView Bridge, Scheme, and SSL Hardening](https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/01-webview-attacks-defense/)
+  >
+- [WebView Attacks Complete Techniques](https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/01-webview-attacks/)
+  >
+- [Cross-Platform Hybrid Frameworks Hardening (Cordova / RN / Flutter / Electron)](https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/02-cordova-reactnative-defense/)
+  >
+- [Cross-Platform Framework Attack Surface — Cordova / React Native / Flutter / Electron](https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/02-cordova-reactnative/)
+  >
 
-## PE Reverse — Windows 二进制分析 (24 articles)
+## PE Reverse — Windows 二进制分析 (49 articles)
 
 - [AOB Signature Scanning](https://ling71671.github.io/open-reverselab/kb/pe-reverse/01-triage/01-aob-signature-scan/)
   >
@@ -317,19 +489,37 @@
   >
 - [Dynamic API Resolution Chain Recovery](https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/05-dynamic-api-resolution/)
   >
+- [Electron App asar Static Reverse & Deobfuscation](https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/06-electron-asar-reverse/)
+  >
+- [DLL Injection Defense-in-Depth and Detection](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/01-dll-injection-defense/)
+  >
 - [DLL Injection: Three Patterns](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/01-dll-injection/)
+  >
+- [Trampoline Inline Hook Protection and Code Integrity Detection](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/02-trampoline-detour-defense/)
   >
 - [Trampoline Hook (Function Hijacking)](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/02-trampoline-detour/)
   >
+- [Cross-Process Memory Read/Write Protection and Data Hardening](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/03-external-memory-rw-defense/)
+  >
 - [External Process Memory Read/Write](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/03-external-memory-rw/)
+  >
+- [Naked Assembly Gateway Hook Defense and Unbacked Code Detection](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/04-naked-function-hook-defense/)
   >
 - [Naked Function Hook (Inline Assembly)](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/04-naked-function-hook/)
   >
+- [Anti-Debug Hardening and Anti-Frida/ScyllaHide Bypass Detection](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/05-anti-debug-bypass-defense/)
+  >
 - [Anti-Debug Detection and Bypass](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/05-anti-debug-bypass/)
+  >
+- [Manual Map Stealth Injection Detection and Defense](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/06-manual-map-injection-defense/)
   >
 - [Manual Map DLL Injection](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/06-manual-map-injection/)
   >
+- [Direct Syscall Detection and Kernel-Side Call Stack Defense](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/07-direct-syscall-defense/)
+  >
 - [Direct Syscall: Bypassing User-Mode Hooks](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/07-direct-syscall/)
+  >
+- [Behavior Monitoring Exposure Hardening and Persistence Detection](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/08-procmon-patterns-defense/)
   >
 - [Procmon Behavior Monitoring and Filtering](https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/08-procmon-patterns/)
   >
@@ -345,30 +535,82 @@
   >
 - [YARA Rule Writing (Reverse Engineering Perspective)](https://ling71671.github.io/open-reverselab/kb/pe-reverse/07-yara-sigma/01-yara-rule-writing/)
   >
+- [Code Patching Defense and PE Section Integrity Verification](https://ling71671.github.io/open-reverselab/kb/pe-reverse/08-patch/01-code-patching-defense/)
+  >
 - [Code Patching and Byte Modification](https://ling71671.github.io/open-reverselab/kb/pe-reverse/08-patch/01-code-patching/)
   >
 - [AI-Driven Antivirus Evasion: Shellcode Processing + Loader Development](https://ling71671.github.io/open-reverselab/kb/pe-reverse/09-av-evasion/01-ai-powered-evasion/)
   >
+- [Static Detection of Evasion & Obfuscation Indicators](https://ling71671.github.io/open-reverselab/kb/pe-reverse/09-av-evasion/01-evasion-indicator-detection/)
+  >
+- [Commercial Software Licensing Defense-in-Depth Architecture](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/01-license-mechanism-classification-defense/)
+  >
+- [License Mechanism Classification and Attack Path Selection](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/01-license-mechanism-classification/)
+  >
+- [License Validation Obfuscation and Anti-Location Hardening](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/02-validation-function-location-defense/)
+  >
+- [Locating the License Validation Function](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/02-validation-function-location/)
+  >
+- [License Key Algorithm Hardening and Anti-Keygen Cryptography](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/03-key-algorithm-recovery-defense/)
+  >
+- [License Key Algorithm Recovery and Keygen Replication](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/03-key-algorithm-recovery/)
+  >
+- [Signature Chain Trust Anchor Protection and Anti-Pubkey-Swap Hardening](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/04-signature-chain-pubkey-swap-defense/)
+  >
+- [Signature Chain Validation and Public Key Swap](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/04-signature-chain-pubkey-swap/)
+  >
+- [In-Process Hook Swap, Memory Flag Tampering, and Config Forgery Defense](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/05-keygen-frida-verification-loop-defense/)
+  >
+- [Keygen Verification Loop with In-Process Frida Swap](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/05-keygen-frida-verification-loop/)
+  >
+- [Cloud License Query Surface Hardening and Anti-Trial-Reset Defense](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/06-cloud-license-frida-hook-defense/)
+  >
+- [Cloud License Identification and Frida Hook Alternatives](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/06-cloud-license-frida-hook/)
+  >
+- [Eliminating Self-Referencing Slice Vulnerabilities and Convergence Attacks](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/07-self-referencing-signature-convergence-defense/)
+  >
+- [Self-Referencing Signature Embedding and One-Shot Iterative Convergence](https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/07-self-referencing-signature-convergence/)
+  >
 
-## General — 跨领域逆向工程 (17 articles)
+## General — 跨领域逆向工程 (45 articles)
 
+- [Defense Against Linux Kernel Page-Cache In-Place Write Family](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/01-page-cache-write-family-defense/)
+  >
 - [Linux Kernel Page-Cache Write Family: Copy Fail / Dirty Frag / Fragnesia](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/01-page-cache-write-family/)
+  >
+- [Defense Against Slab Cross-Cache Free and KFENCE Exploitation](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/02-slab-cross-cache-defense/)
   >
 - [Slab Cross-Cache Free: KFENCE Exact Size Report Frees SKB Head into Wrong Cache](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/02-slab-cross-cache/)
   >
+- [Defense Against Kernel FD Theft and mm-NULL ptrace Bypass](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/03-mm-null-ptrace-bypass-defense/)
+  >
 - [Kernel FD Theft: mm-NULL ptrace Check Bypass](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/03-mm-null-ptrace-bypass/)
+  >
+- [Defense Against CIFSwitch cifs.spnego Identity Confusion and NSS Injection](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/04-cifswitch-nss-privesc-defense/)
   >
 - [CIFSwitch: cifs.spnego Identity Confusion to Root NSS Loading](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/04-cifswitch-nss-privesc/)
   >
+- [Defense Against PinTheft RDS Zerocopy and io_uring Page-Cache Poisoning](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/05-pintheft-io-uring-page-cache-defense/)
+  >
 - [RDS zcopy Double-Free + io_uring Dangling struct page: PinTheft Kernel LPE](https://ling71671.github.io/open-reverselab/kb/general/01-kernel/05-pintheft-io-uring-page-cache/)
+  >
+- [Defense Against Memory Searching and Modification](https://ling71671.github.io/open-reverselab/kb/general/cheating/01-memory-hacking-defense/)
   >
 - [Memory Searching and Modification](https://ling71671.github.io/open-reverselab/kb/general/cheating/01-memory-hacking/)
   >
+- [Defense Against Packet Interception and Replay](https://ling71671.github.io/open-reverselab/kb/general/cheating/02-packet-interception-defense/)
+  >
 - [Packet Interception and Modification](https://ling71671.github.io/open-reverselab/kb/general/cheating/02-packet-interception/)
+  >
+- [Defense Against ESP and Wallhack Rendering](https://ling71671.github.io/open-reverselab/kb/general/cheating/03-esp-wallhack-rendering-defense/)
   >
 - [ESP / Wallhack Rendering Techniques](https://ling71671.github.io/open-reverselab/kb/general/cheating/03-esp-wallhack-rendering/)
   >
+- [Defense Against Anti-Cheat System Bypass](https://ling71671.github.io/open-reverselab/kb/general/cheating/04-anti-cheat-bypass-defense/)
+  >
 - [Anti-Cheat System Bypass](https://ling71671.github.io/open-reverselab/kb/general/cheating/04-anti-cheat-bypass/)
+  >
+- [Defense Against Speedhack and Time Manipulation](https://ling71671.github.io/open-reverselab/kb/general/cheating/05-speedhack-time-manipulation-defense/)
   >
 - [Speedhack / Time Manipulation](https://ling71671.github.io/open-reverselab/kb/general/cheating/05-speedhack-time-manipulation/)
   >
@@ -378,6 +620,10 @@
   >
 - [PRNG Cracking: Recovering Internal State and Seed from Output](https://ling71671.github.io/open-reverselab/kb/general/crypto/03-prng-randomness-cracking/)
   >
+- [The RSA Attack Family: Choosing by What You Are Given](https://ling71671.github.io/open-reverselab/kb/general/crypto/04-rsa-attack-family/)
+  >
+- [Web Crypto API Abuse](https://ling71671.github.io/open-reverselab/kb/general/crypto/05-web-crypto-abuse/)
+  >
 - [First 30 Minutes Sample Triage Checklist](https://ling71671.github.io/open-reverselab/kb/general/methodology/01-reverse-checklist-first-30-min/)
   >
 - [Signal-Based Tool Selection Decision Tree](https://ling71671.github.io/open-reverselab/kb/general/methodology/02-toolchain-decision-tree/)
@@ -386,6 +632,38 @@
   >
 - [Protobuf / FlatBuffers Schema-less Reverse Engineering](https://ling71671.github.io/open-reverselab/kb/general/protocol/02-protobuf-flatbuffers-reverse/)
   >
+- [gRPC and Protobuf Attacks](https://ling71671.github.io/open-reverselab/kb/general/protocol/03-grpc-protobuf/)
+  >
+- [JS Runtime / Browser Reversing](https://ling71671.github.io/open-reverselab/kb/general/protocol/04-js-runtime-reversing/)
+  >
+- [Signature Verification Defense-in-Depth Panorama](https://ling71671.github.io/open-reverselab/kb/general/signature/00-overview-defense/)
+  >
+- [Signature Forgery — Complete Panoramic Handbook for Signature Forgery & Verification Bypass](https://ling71671.github.io/open-reverselab/kb/general/signature/00-overview/)
+  >
+- [Defense Against Signature Algorithm Downgrade and Confusion](https://ling71671.github.io/open-reverselab/kb/general/signature/01-algorithm-defense/)
+  >
+- [Signature Algorithm Attacks — Algorithm Downgrade, Confusion & None Attack Deep Manual](https://ling71671.github.io/open-reverselab/kb/general/signature/01-algorithm/)
+  >
+- [Defense Against Signature Implementation Bugs](https://ling71671.github.io/open-reverselab/kb/general/signature/02-implementation-defense/)
+  >
+- [Signature Implementation Bugs — Implementation-Level Signature Bypass Manual](https://ling71671.github.io/open-reverselab/kb/general/signature/02-implementation/)
+  >
+- [Defense Against Signature Key Attacks](https://ling71671.github.io/open-reverselab/kb/general/signature/03-key-attacks-defense/)
+  >
+- [Key Attacks — Signature Key Attack Deep Technical Manual](https://ling71671.github.io/open-reverselab/kb/general/signature/03-key-attacks/)
+  >
+- [Defense Against Signature Canonicalization Bypass](https://ling71671.github.io/open-reverselab/kb/general/signature/04-canonicalization-defense/)
+  >
+- [Canonicalization Attacks — Signature Canonicalization Bypass](https://ling71671.github.io/open-reverselab/kb/general/signature/04-canonicalization/)
+  >
+- [Defense Against Hash Length Extension Attacks](https://ling71671.github.io/open-reverselab/kb/general/signature/05-length-extension-defense/)
+  >
+- [Hash Length Extension Attacks — Deep Technical Manual](https://ling71671.github.io/open-reverselab/kb/general/signature/05-length-extension/)
+  >
+- [Defense Against Replay Attacks and Nonce/Timestamp Bypass](https://ling71671.github.io/open-reverselab/kb/general/signature/06-replay-nonce-defense/)
+  >
+- [Replay / Nonce / Timestamp — Replay Attack Deep Technical Manual](https://ling71671.github.io/open-reverselab/kb/general/signature/06-replay-nonce/)
+  >
 
 ## Windows — 系统安全专项 (1 articles)
 
@@ -393,5 +671,5 @@
   >
 
 ---
-Generated: 2026-08-09
-Total articles: 183
+Generated: 2026-11-12
+Total articles: 322

@@ -41,11 +41,11 @@ tags:
   - "overview"
 language: "zh-CN"
 last_updated: "2026-07-04"
-related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/24-database/02-sqli-advanced", "ctf-website/24-database/03-nosql-injection", "ctf-website/24-database/04-config-exposure", "ctf-website/24-database/05-backup-log-leak", "ctf-website/24-database/06-card-platform", "ctf-website/24-database/07-data-cleaning", "ctf-website/12-payment/payment-logic"]
+related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/24-database/02-sqli-advanced", "ctf-website/24-database/03-nosql-injection", "ctf-website/24-database/04-config-exposure", "ctf-website/24-database/05-backup-log-leak", "ctf-website/24-database/07-data-cleaning", "ctf-website/12-payment/payment-logic"]
 ---
 # Database Attack Surface — 数据库攻击全景与决策树
 
-> 数据库是 Web 应用的核心资产——SQL 注入、NoSQL 滥用、配置泄露、备份暴露、发卡平台 CDK 泄露。本指南提供系统化的攻击面导航与决策路径。
+> 数据库是 Web 应用的核心资产——SQL 注入、NoSQL 滥用、配置泄露、备份暴露。本指南提供系统化的攻击面导航与决策路径。
 
 ## 关键词
 
@@ -92,7 +92,6 @@ related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/
 | [03-nosql-injection.md](03-nosql-injection.md) | NoSQL 注入：MongoDB、Redis、Elasticsearch |
 | [04-config-exposure.md](04-config-exposure.md) | 数据库配置泄露与默认凭证 |
 | [05-backup-log-leak.md](05-backup-log-leak.md) | 备份/日志文件暴露 |
-| [06-card-platform.md](06-card-platform.md) | 发卡平台数据库攻击实战 |
 | [07-data-cleaning.md](07-data-cleaning.md) | dump/log/HTML/JSON 泄露数据整理与实体映射 |
 
 ## 速查决策树
@@ -107,7 +106,6 @@ related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/
 ├─ 发现 NoSQL 端点 → [03] NoSQL 注入
 ├─ 发现 .env/config.php 可读 → [04] 配置泄露
 ├─ 发现 .sql/.dump 文件 → [05] 备份暴露
-├─ 发卡/电商平台 → [06] 平台专项攻击
 └─ 混合 dump/日志/HTML 泄露 → [07] 数据整理与实体映射
 ```
 
@@ -125,7 +123,6 @@ related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/
 | Redis/ES/CouchDB 响应 | NoSQL 服务可达 | [03](03-nosql-injection.md) | key/index/db 枚举 |
 | `.env`/源码可读 | 连接字符串/凭据 | [04](04-config-exposure.md) | 登录 DB 或反推注入点 |
 | `.sql`/日志命中 | Schema/数据/SQL 模板 | [05](05-backup-log-leak.md) | dump 解析、日志反推 |
-| 发卡接口/卡密字段 | 订单/发货/支付链 | [06](06-card-platform.md) | query/order/callback |
 | 混合泄露数据 | 字段/实体/置信度 | [07](07-data-cleaning.md) | CSV/SQLite 索引 |
 
 每条路线都保留成功样本和失败样本：失败样本能告诉你卡在 HTTP parser、WAF、SQL parser、权限、文件系统还是业务逻辑。
@@ -136,15 +133,13 @@ related_articles: ["ctf-website/24-database/01-sqli-fundamentals", "ctf-website/
 
 ```mermaid
 flowchart TD
-  Signal["SQL/NoSQL/配置/备份/发卡信号"] --> Route["按证据类型路由"]
+  Signal["SQL/NoSQL/配置/备份信号"] --> Route["按证据类型路由"]
   Route --> SQLi["SQLi oracle"]
   Route --> Config["配置/连接串"]
   Route --> Dump["dump/log/source"]
-  Route --> Card["发卡接口"]
   SQLi --> Ledger["订单/支付/发货账本"]
   Config --> Ledger
   Dump --> Ledger
-  Card --> Ledger
   Ledger --> Diff["状态差分: paid/delivered/balance/card"]
   Diff --> Next["签名/回调/竞态/IDOR/数据整理"]
 ```
@@ -155,7 +150,6 @@ flowchart TD
 | NoSQL | session/cart/order/queue key | 登录态、异步发货 |
 | 配置 | DB/Redis/Payment/Storage 路由 | 直连抽样、签名密钥、对象存储 |
 | 备份/日志 | 订单图谱、回调 raw、卡密候选 | 数据整理、签名实现 |
-| 发卡平台 | `id+skey`、卡密账本、回调差分 | 数字商品、IDOR、支付绕过 |
 | 混合 dump | CSV/SQLite 索引、实体置信度 | 回填订单/商品/卡密 |
 
 ### 路由器伪代码
@@ -168,7 +162,6 @@ ROUTES = [
     ("03-nosql-injection.md", ["$ne", "$regex", "redis", "_search", "_all_dbs"]),
     ("04-config-exposure.md", [".env", "DATABASE_URL", "DB_HOST", "REDIS_URL"]),
     ("05-backup-log-leak.md", [".sql", ".dump", "general.log", ".git/HEAD"]),
-    ("06-card-platform.md", ["ajax.php?act=query", "skey", "kminfo", "CDK"]),
     ("07-data-cleaning.md", ["mixed dump", "HTML stack", "CSV", "prefix cluster"]),
 ]
 

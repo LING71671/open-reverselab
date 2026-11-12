@@ -428,7 +428,7 @@
         "refund",
         "subscription"
       ],
-      "when": "支付/订单/回调/签名/订阅/卡密任何支付类攻击面。",
+      "when": "支付/订单/回调/签名/订阅等支付类攻击面。",
       "tools": [
         "ctf.ffuf",
         "ctf.sqlmap",
