@@ -61,6 +61,10 @@ graph TD
     VMP_TRACE["VMP Trace/Recovery<br/>07-packer"]
     VMP_ANTIDBG["VMP Anti-Debug<br/>07-packer"]
 
+    %% === Layer 6.5: Hybrid Frameworks ===
+    WEBVIEW["WebView Bridge<br/>09-hybrid-frameworks"]
+    CROSS_FW["Cordova/RN/Flutter<br/>09-hybrid-frameworks"]
+
     %% === Layer 7: Patch / Repack ===
     REPACK["Repack<br/>08-patch-repack"]
     SMALI_INJECT["Smali Inject<br/>08-patch-repack"]
@@ -103,6 +107,10 @@ graph TD
     NATIVE -->|strings| STRINGS_SO
     NATIVE -->|JNI_OnLoad| JNI_REG
     JADX -->|native method| JNI_REG
+    JADX -->|addJavascriptInterface| WEBVIEW
+    APKTOOL -->|assets/www or index.android.bundle| CROSS_FW
+    WEBVIEW -->|token / deeplink hijack| DECRYPT_DATA
+    CROSS_FW -->|NativeModules / FFI| FRIDA_APK
 
     %% --- Edges: Static → Crypto ---
     CRYPTO_APK -->|Cipher.getInstance| ENC_PATTERN

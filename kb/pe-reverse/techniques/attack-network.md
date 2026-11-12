@@ -32,6 +32,7 @@ graph TD
     DISASM["Disasm/JIT<br/>03-static-analysis"]
     RECLASS["ReClass<br/>03-static-analysis"]
     API_RESOLVER["Dynamic API Resolver<br/>03-static-analysis"]
+    ELECTRON["Electron asar<br/>03-static-analysis"]
 
     %% === Layer 3: Dynamic Analysis ===
     X64DBG["x64dbg<br/>04-dynamic-analysis"]
@@ -79,6 +80,7 @@ graph TD
     LOADER["Loader Gen<br/>09-av-evasion"]
     VEHSYSCALL["VEH+Syscall<br/>09-av-evasion"]
     ANTISANDBOX["Anti-Sandbox<br/>09-av-evasion"]
+    EVASION_DETECT["Evasion Indicator (BLUE)<br/>09-av-evasion"]
 
     %% === Layer 7: Output ===
     REPORT["分析报告<br/>reports/"]
@@ -110,6 +112,8 @@ graph TD
     FUNC_MAP -->|reclass| RECLASS
     XREF -->|JIT asm| DISASM
     XREF -->|PEB/API hash| API_RESOLVER
+    SAMPLE -->|app.asar| ELECTRON
+    TRIAGE -->|entropy/syscall/VEH scan| EVASION_DETECT
 
     %% --- Edges: Static → Dynamic ---
     FUNC_MAP -->|breakpoint plan| BREAKPOINT

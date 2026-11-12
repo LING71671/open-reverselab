@@ -2,10 +2,11 @@
 
 APK/DEX/SO 逆向技术库。覆盖静态分析、Frida 动态验证、脱壳、Patch 与重打包。
 
-## 完整目录（8 类 / 23 篇）
+## 完整目录（9 类 / 36 篇）
 
-### 01-dex-java — DEX/Java（1）
+### 01-dex-java — DEX/Java（2）
 
+- [`01-dex-java/01-smali-injection-defense.md`](01-dex-java/01-smali-injection-defense.md) — Smali 代码注入与 DEX 篡改防御
 - [`01-dex-java/01-smali-injection.md`](01-dex-java/01-smali-injection.md) — Smali 代码注入与 DEX 修改
 
 ### 02-native — Native/SO（6）
@@ -26,16 +27,22 @@ APK/DEX/SO 逆向技术库。覆盖静态分析、Frida 动态验证、脱壳、
 - [`04-crypto/01-game-encryption-patterns.md`](04-crypto/01-game-encryption-patterns.md) — 游戏数据加解密识别与绕过
 - [`04-crypto/02-rc4-custom-crypto.md`](04-crypto/02-rc4-custom-crypto.md) — 自定义对称加密：RC4 与组合模式
 
-### 05-network — 网络协议（3）
+### 05-network — 网络协议（6）
 
+- [`05-network/01-game-protocol-hook-defense.md`](05-network/01-game-protocol-hook-defense.md) — 游戏协议防 Hook、抗重放与端到端加固
 - [`05-network/01-game-protocol-hook.md`](05-network/01-game-protocol-hook.md) — 游戏协议 Hook 与封包分析
+- [`05-network/02-license-verification-bypass-defense.md`](05-network/02-license-verification-bypass-defense.md) — 在线许可证与授权校验加固
 - [`05-network/02-license-verification-bypass.md`](05-network/02-license-verification-bypass.md) — 在线验证系统分析与绕过
+- [`05-network/03-tls-pinning-unpinning-defense.md`](05-network/03-tls-pinning-unpinning-defense.md) — TLS 证书固定（Pinning）多层加固与防绕过
 - [`05-network/03-tls-pinning-unpinning.md`](05-network/03-tls-pinning-unpinning.md) — TLS Pinning 定位与 Unpinning
 
-### 06-dynamic — 动态插桩（3）
+### 06-dynamic — 动态插桩（6）
 
+- [`06-dynamic/01-memory-rw-hook-defense.md`](06-dynamic/01-memory-rw-hook-defense.md) — 进程内存读写防护、反附加与敏感内存保护
 - [`06-dynamic/01-memory-rw-hook.md`](06-dynamic/01-memory-rw-hook.md) — 进程内存读写检测与 Hook
+- [`06-dynamic/02-overlay-rendering-hook-defense.md`](06-dynamic/02-overlay-rendering-hook-defense.md) — 悬浮窗覆盖与图形渲染管线劫持防御
 - [`06-dynamic/02-overlay-rendering-hook.md`](06-dynamic/02-overlay-rendering-hook.md) — Overlay 渲染与 ImGui 检测
+- [`06-dynamic/03-touch-input-hook-defense.md`](06-dynamic/03-touch-input-hook-defense.md) — 触摸输入注入防护与异常手势识别
 - [`06-dynamic/03-touch-input-hook.md`](06-dynamic/03-touch-input-hook.md) — 触摸输入 Hook 与注入分析
 
 ### 07-packer — 壳与混淆（5）
@@ -46,10 +53,19 @@ APK/DEX/SO 逆向技术库。覆盖静态分析、Frida 动态验证、脱壳、
 - [`07-packer/04-vmp-dump-trace-recovery.md`](07-packer/04-vmp-dump-trace-recovery.md) — VMP 脱壳与语义还原（Dump/Trace/Recovery）
 - [`07-packer/05-vmp-anti-debug-bypass.md`](07-packer/05-vmp-anti-debug-bypass.md) — Android 反调试检测与绕过（VMP 场景）
 
-### 08-patch-repack — Patch/重打包（2）
+### 08-patch-repack — Patch/重打包（4）
 
+- [`08-patch-repack/01-so-injection-repack-defense.md`](08-patch-repack/01-so-injection-repack-defense.md) — Native SO 注入与 APK 重打包防御
 - [`08-patch-repack/01-so-injection-repack.md`](08-patch-repack/01-so-injection-repack.md) — Native SO 注入与 APK 重打包
+- [`08-patch-repack/02-signature-integrity-bypass-defense.md`](08-patch-repack/02-signature-integrity-bypass-defense.md) — APK 签名与包体完整性多层加固
 - [`08-patch-repack/02-signature-integrity-bypass.md`](08-patch-repack/02-signature-integrity-bypass.md) — 签名与完整性检查绕过
+
+### 09-hybrid-frameworks — 跨平台/Hybrid 框架（4）
+
+- [`09-hybrid-frameworks/01-webview-attacks-defense.md`](09-hybrid-frameworks/01-webview-attacks-defense.md) — 移动 WebView 桥接、协议与证书安全加固
+- [`09-hybrid-frameworks/01-webview-attacks.md`](09-hybrid-frameworks/01-webview-attacks.md) — WebView 攻击全技术
+- [`09-hybrid-frameworks/02-cordova-reactnative-defense.md`](09-hybrid-frameworks/02-cordova-reactnative-defense.md) — 跨平台混合框架（Cordova/RN/Flutter/Electron）加固
+- [`09-hybrid-frameworks/02-cordova-reactnative.md`](09-hybrid-frameworks/02-cordova-reactnative.md) — 跨平台框架攻击面 — Cordova / React Native / Flutter / Electron
 
 ## 文档质量基线
 

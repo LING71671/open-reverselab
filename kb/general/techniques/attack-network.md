@@ -27,6 +27,8 @@ graph TD
     LCGRNG["LCG Recovery<br/>crypto"]
     MT19937["Mersenne Twister<br/>crypto"]
     NONCE_REUSE["Nonce Reuse<br/>crypto"]
+    WEB_CRYPTO["Web Crypto Abuse<br/>crypto"]
+    SIGNATURE["Signature Forgery<br/>signature"]
 
     %% === Layer 2: Protocol ===
     PROTOCOL["Protocol Reverse<br/>protocol"]
@@ -36,6 +38,7 @@ graph TD
     PROTOBUF["Protobuf<br/>protocol"]
     FLATBUFFERS["FlatBuffers<br/>protocol"]
     GRPC["gRPC<br/>protocol"]
+    JS_RUNTIME["JS Runtime Reversing<br/>protocol"]
     TLV_CODE["TLV/ASN.1<br/>protocol"]
 
     %% === Layer 3: Game Cheating ===
@@ -137,6 +140,9 @@ graph TD
     CHECKSUM -->|CRC variant| ALGO_ID
     PROTOBUF -->|encrypted field| KNOWN_ALGO
     GRPC -->|TLS payload| KNOWN_ALGO
+    JS_RUNTIME -->|SubtleCrypto / CryptoJS| WEB_CRYPTO
+    WEB_CRYPTO -->|signing primitive| SIGNATURE
+    SIGNATURE -->|alg downgrade / key leak| ALGO_REPORT
 
     %% --- Edges: Game Process → Cheating ---
     GAMEPROC -->|ReadProcessMemory| MEM_HACK
