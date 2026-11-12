@@ -9,7 +9,15 @@ ROOT = Path(__file__).resolve().parents[1]
 MCP_ROOT = ROOT / "tools" / "skills" / "mcp" / "ReverseLabToolsMCP"
 sys.path.insert(0, str(MCP_ROOT))
 
-from reverselab_mcp.tools import web_ctf  # noqa: E402
+from reverselab_mcp.tools import kb, web_ctf  # noqa: E402
+
+
+def test_web_ctf_reexports_kb_tools_for_backwards_compatibility():
+    assert web_ctf.kb_router is kb.kb_router
+    assert web_ctf.kb_read_file is kb.kb_read_file
+    assert web_ctf.kb_catalog is kb.kb_catalog
+    assert web_ctf.KB_ROOTS is kb.KB_ROOTS
+    assert "general" in kb.KB_ROOTS
 
 
 def test_split_args_preserves_quoted_url():

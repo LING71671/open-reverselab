@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Shellcode 多层加密 — XOR / RC4 / 自定义 S-Box
-输出 C 数组，可直接 #include 进 Loader。
+[Track: RED] Shellcode 多层加密 — XOR / RC4 / 自定义 S-Box
+输出 C 数组，可直接 #include 进 Loader。(Paired BLUE detector: ../detect_evasion_indicators.py)
 """
 import sys
 import os

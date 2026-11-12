@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Shellcode Patch — 同义指令替换 + 花指令注入
-破坏杀软静态特征码匹配。
+[Track: RED] Shellcode Patch — 同义指令替换 + 花指令注入
+破坏杀软静态特征码匹配。(Paired BLUE detector: ../detect_evasion_indicators.py)
 """
 import sys
 import random

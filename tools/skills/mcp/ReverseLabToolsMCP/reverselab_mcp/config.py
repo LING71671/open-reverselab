@@ -94,7 +94,7 @@ except FileNotFoundError:
 
 # Cutter / Rizin (version-flexible)
 try:
-    CUTTER_ROOT = _find_glob(TOOLS_WINDOWS_DIR / "Cutter", "Cutter-*/Cutter-*", "Cutter")
+    CUTTER_ROOT = _find_glob(TOOLS_WINDOWS_DIR / "Cutter", "Cutter-*", "Cutter")
 except FileNotFoundError:
     CUTTER_ROOT = TOOLS_WINDOWS_DIR / "Cutter" / "Cutter-placeholder"
 try:

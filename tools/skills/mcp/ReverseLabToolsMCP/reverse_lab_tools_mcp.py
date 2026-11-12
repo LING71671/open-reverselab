@@ -14,7 +14,8 @@ from typing import Any, Callable
 
 from mcp.server.fastmcp import FastMCP
 
-from reverselab_mcp.config import REVERSE_ROOT, SERVER_NAME
+from reverselab_mcp import track as track_mod
+from reverselab_mcp.config import REVERSE_ROOT, SCRIPTS_DIR, SERVER_NAME
 from reverselab_mcp.paths import resolve_file
 from reverselab_mcp.tools import (
     android_mumu,
@@ -24,6 +25,7 @@ from reverselab_mcp.tools import (
     ghidra_headless,
     ghidra_summary,
     ioc_extract,
+    kb,
     mcp_update,
     mutations,
     patch_reports,
@@ -50,6 +52,33 @@ def _safe_call(func: Callable[..., dict[str, Any]], *args: Any, **kwargs: Any) -
         return func(*args, **kwargs)
     except Exception as exc:
         return {"error": str(exc)}
+
+
+def _red_call(tool_name: str, func: Callable[..., dict[str, Any]], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    blocked = track_mod.check_red_tool_allowed(tool_name)
+    if blocked is not None:
+        return blocked
+    return _safe_call(func, *args, **kwargs)
+
+
+# ── Dual-track control & routing ──
+
+@mcp.tool()
+def get_track_status() -> dict[str, Any]:
+    """查询当前双轨模式 (blue/red/both)、来源 (runtime/env/default) 及 RED 工具门控状态。"""
+    return _safe_call(track_mod.get_track_status)
+
+
+@mcp.tool()
+def set_track(track: str) -> dict[str, Any]:
+    """切换运行轨道：blue（默认，防御与只读分析）、red（攻击/探测/patch）、both（双轨对照）。"""
+    return _safe_call(track_mod.set_track, track)
+
+
+@mcp.tool()
+def route_track(target_or_intent: str, track: str = "auto") -> dict[str, Any]:
+    """根据目标或意图路由到对应轨道 (blue/red/both)、板块、推荐工具、工作流与知识库条目。"""
+    return _safe_call(track_mod.route_track, target_or_intent, track)
 
 
 @mcp.tool()
@@ -200,7 +229,7 @@ def patch_bytes(
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """复制输入文件到 patches 后修改指定 offset 的字节；不原地修改样本。"""
-    return _safe_call(mutations.patch_bytes, path, offset, new_bytes_hex, output_path, case_name, overwrite)
+    return _red_call("patch_bytes", mutations.patch_bytes, path, offset, new_bytes_hex, output_path, case_name, overwrite)
 
 
 @mcp.tool()
@@ -220,7 +249,7 @@ def patch_pe_bytes(
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """按 PE file offset/RVA/VA 定位后 patch 副本字节；不原地修改样本。"""
-    return _safe_call(mutations.patch_pe_bytes, path, address, new_bytes_hex, address_type, output_path, case_name, overwrite)
+    return _red_call("patch_pe_bytes", mutations.patch_pe_bytes, path, address, new_bytes_hex, address_type, output_path, case_name, overwrite)
 
 
 @mcp.tool()
@@ -242,7 +271,8 @@ def patch_pattern(
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """按十六进制 pattern 定位后 patch 副本字节；pattern 支持 ?? 通配。"""
-    return _safe_call(
+    return _red_call(
+        "patch_pattern",
         mutations.patch_pattern,
         path,
         pattern,
@@ -421,7 +451,7 @@ def android_frida_run_script(
     output_path: str = "",
 ) -> dict[str, Any]:
     """对指定进程/包运行一次性 Frida JS 脚本，收集 send() 消息并导出 JSON。"""
-    return _safe_call(android_mumu.android_frida_run_script, target, script_source, serial, mode, duration_seconds, output_path)
+    return _red_call("android_frida_run_script", android_mumu.android_frida_run_script, target, script_source, serial, mode, duration_seconds, output_path)
 
 
 @mcp.tool()
@@ -736,7 +766,7 @@ def rizin_write_bytes(
     timeout: int = 30,
 ) -> dict[str, Any]:
     """使用 Rizin raw write 在 patches 副本上写入十六进制字节。"""
-    return _safe_call(rizin_write.rizin_write_bytes, path, offset, new_bytes_hex, output_path, case_name, overwrite, timeout)
+    return _red_call("rizin_write_bytes", rizin_write.rizin_write_bytes, path, offset, new_bytes_hex, output_path, case_name, overwrite, timeout)
 
 
 @mcp.tool()
@@ -766,7 +796,8 @@ def rizin_assemble_patch(
     timeout: int = 30,
 ) -> dict[str, Any]:
     """先用 rz-asm 汇编，再对 patches 副本做 patch。"""
-    return _safe_call(
+    return _red_call(
+        "rizin_assemble_patch",
         rizin_write.rizin_assemble_patch,
         path,
         offset,
@@ -1069,36 +1100,36 @@ def sample_autopilot_round(
     return _safe_call(workflow.sample_autopilot_round, manifest_path, max_actions, execute)
 
 
-# ── Web CTF tools ──
+# ── Web CTF & KB tools ──
 
 @mcp.tool()
 def http_probe(url: str, timeout: int = 15) -> dict[str, Any]:
     """对目标 URL 发起 GET 探测，收集 header/body/cookie/指纹。"""
-    return _safe_call(web_ctf.http_probe, url, timeout)
+    return _red_call("http_probe", web_ctf.http_probe, url, timeout)
 
 
 @mcp.tool()
-def kb_router(query: str, board: str = "") -> dict[str, Any]:
-    """按攻击信号搜索知识库（支持所有板块），返回匹配的技术文件和路径。board 可选: ctf-website|apk-reverse|pe-reverse，不传则全部搜索。"""
-    return _safe_call(web_ctf.kb_router, query, board)
+def kb_router(query: str, board: str = "", track: str = "") -> dict[str, Any]:
+    """按信号与轨道搜索知识库（支持 ctf-website/apk-reverse/pe-reverse/general），返回匹配技术文件与配对关系。"""
+    return _safe_call(kb.kb_router, query, board, track)
 
 
 @mcp.tool()
 def kb_read_file(technique_path: str, board: str = "") -> dict[str, Any]:
-    """读取知识库技术文件内容。自动检测板块或通过 board 参数指定。路径格式如 '02-auth/jwt/01-alg-none.md'（ctf-website）或 '04-crypto/01-game-encryption-patterns.md'（apk-reverse）或 '01-triage/01-aob-signature-scan.md'（pe-reverse）。"""
-    return _safe_call(web_ctf.kb_read_file, technique_path, board)
+    """读取知识库技术文件内容。自动检测板块或通过 board 参数指定（支持 ctf-website/apk-reverse/pe-reverse/general）。"""
+    return _safe_call(kb.kb_read_file, technique_path, board)
 
 
 @mcp.tool()
-def kb_catalog(board: str = "") -> dict[str, Any]:
-    """列出知识库所有板块、分类、条目数和文件数。board 可选: ctf-website|apk-reverse|pe-reverse，不传则列出全部板块。"""
-    return _safe_call(web_ctf.kb_catalog, board)
+def kb_catalog(board: str = "", track: str = "") -> dict[str, Any]:
+    """列出知识库所有板块、分类、条目数、文件数与轨道分布。board/track 可选。"""
+    return _safe_call(kb.kb_catalog, board, track)
 
 
 @mcp.tool()
 def ctf_new_challenge(name: str, url: str = "") -> dict[str, Any]:
     """创建新的 CTF 题目 case 目录，从模板初始化。"""
-    return _safe_call(web_ctf.ctf_new_challenge, name, url)
+    return _red_call("ctf_new_challenge", web_ctf.ctf_new_challenge, name, url)
 
 
 @mcp.tool()
@@ -1110,13 +1141,13 @@ def ctf_autopilot_round(
     timeout: int = 600,
 ) -> dict[str, Any]:
     """读取 Web CTF ai_manifest.json，执行一轮带 checkpoint 的 autopilot 计划/allowlist 动作。"""
-    return _safe_call(web_ctf.ctf_autopilot_round, manifest_path, max_actions, execute, allow_network_cve, timeout)
+    return _red_call("ctf_autopilot_round", web_ctf.ctf_autopilot_round, manifest_path, max_actions, execute, allow_network_cve, timeout)
 
 
 @mcp.tool()
 def run_ctf_tool(tool: str, args: str, timeout: int = 120) -> dict[str, Any]:
     """运行 CTF 工具。tool: sqlmap/dirsearch/jwt_tool/tplmap。args: 命令行参数。"""
-    return _safe_call(web_ctf.run_ctf_tool, tool, args, timeout)
+    return _red_call("run_ctf_tool", web_ctf.run_ctf_tool, tool, args, timeout)
 
 
 @mcp.tool()
@@ -1134,7 +1165,7 @@ def ctf_save_request(raw_request: str, case_name: str = "default", filename: str
 @mcp.tool()
 def run_sqlmap_request(request_path: str, extra_args: str = "--batch", timeout: int = 300) -> dict[str, Any]:
     """用 sqlmap -r 运行已保存的 raw HTTP request。"""
-    return _safe_call(web_ctf.run_sqlmap_request, request_path, extra_args, timeout)
+    return _red_call("run_sqlmap_request", web_ctf.run_sqlmap_request, request_path, extra_args, timeout)
 
 
 @mcp.tool()
@@ -1146,7 +1177,7 @@ def burp_status() -> dict[str, Any]:
 @mcp.tool()
 def burp_launch(extra_args: str = "", launch: bool = False) -> dict[str, Any]:
     """生成或可选启动 Burp Suite。默认 launch=False，只返回命令，不弹 GUI。"""
-    return _safe_call(web_ctf.burp_launch, extra_args, launch)
+    return _red_call("burp_launch", web_ctf.burp_launch, extra_args, launch)
 
 
 # ── Skill / project setup ──

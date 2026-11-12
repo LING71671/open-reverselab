@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Shellcode 混淆 — 伪装成 UUID / IPv4 / IPv6 / MAC 地址数组。
+[Track: RED] Shellcode 混淆 — 伪装成 UUID / IPv4 / IPv6 / MAC 地址数组。
+(Paired BLUE detector: ../detect_evasion_indicators.py)
 """
 import sys
 import uuid

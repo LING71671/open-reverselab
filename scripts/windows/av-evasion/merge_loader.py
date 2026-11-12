@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Merge Loader — 将加密 shellcode + 密钥 + 混淆数据注入 loader.c 模板，
-生成可直接编译的 C 文件。
+[Track: RED] Merge Loader — 将加密 shellcode + 密钥 + 混淆数据注入 loader.c 模板，
+生成可直接编译的 C 文件。(Paired BLUE detector: ../detect_evasion_indicators.py)
 """
 import sys
 import os

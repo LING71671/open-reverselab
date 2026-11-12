@@ -1,5 +1,5 @@
 /*
- * AI AV Evasion Loader Template
+ * [Track: RED] AI AV Evasion Loader Template (paired BLUE detector: ../detect_evasion_indicators.py)
  * 编译: x86_64-w64-mingw32-gcc -o payload.exe loader_final.c -mwindows -Os -static -s -lrpcrt4 -lws2_32 -lntdll
  */
 
