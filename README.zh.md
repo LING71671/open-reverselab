@@ -43,11 +43,11 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Bi
 
 ## 这是什么
 
-ReverseLab 是一份「观点鲜明、可直接跑」的逆向工程攻击知识库，面向逆向工程师、安全研究员、CTF 选手与 AI Agent。每篇文章的结构都是 **`场景 → 输入信号 → 方法 → 攻击链 → MCP 工具映射`**，让人或 Agent 都能从任意入口信号出发，沿着攻击链走到证据闭环。
+ReverseLab 是一份「观点鲜明、可直接跑」的 **BLUE / RED / BOTH 双轨** 逆向工程与攻防知识库，面向逆向工程师、蓝队防御者、安全研究员与 AI Agent。每项技术均采用 **1:1 攻防对位**（`场景 → 输入信号 → 方法 → 工作流 → MCP 工具映射`），默认以 **`BLUE`（静态分析、密码学、特征识别与防御加固）** 为入口，可显式切换到 **`RED`（进攻出击）** 或 **`BOTH`（紫队对照）**。
 
-- **5 大板块**，覆盖 Web、移动端、Windows、跨领域逆向。
-- **180+ 篇文章**，按攻击面而非按工具组织。
-- **100+ MCP 工具**，通过 `reverse_lab_tools` 暴露 —— curl / frida / ghidra / rizin / yara / triage / kb_router … 都能在 Claude Code、Codex 或任何 MCP 兼容的 Agent 中直接调用。
+- **5 大板块**，覆盖 Web、移动端、Windows、密码学与跨领域逆向。
+- **320+ 篇文章**，支持攻击面与 1:1 蓝队加固双向配对（`track: blue | red | both`、`defends`）。
+- **110+ MCP 工具**，通过 `reverse_lab_tools` 暴露 —— `triage_pe` / `ghidra_*` / `rizin_*` / `make_yara_stub` / `solve_crypto_from_evidence` / `kb_router` / `route_track` / `set_track` … 带 `REVERSELAB_MODE=blue|red|both` 轨道门控。
 - **目录即约定**：每个产物都有固定归宿（`samples/` / `exports/` / `patches/` / `kb/` / `reports/`）。样本丢进去，沿链走完，报告交出来。
 
 实验室是用来「跑」的，不是用来「翻」的。如果某一步不能被执行，它就不该进 KB。
@@ -76,21 +76,21 @@ ReverseLab 是一份「观点鲜明、可直接跑」的逆向工程攻击知识
 ## 知识库速览
 
 ```
-kb/                                180+ 篇文章，5 大板块
-├── ctf-website/techniques/        25 类 110 篇 —— Web 攻击全表面
-├── apk-reverse/techniques/         8 类  23 篇 —— Android 逆向
-├── pe-reverse/techniques/          9 类  24 篇 —— Windows PE / 二进制
-├── general/techniques/             5 类  17 篇 —— 密码学 · 协议 · 作弊 · IoT · SDR
+kb/                                320+ 篇文章，5 大板块（RED ↔ BLUE 1:1 对位）
+├── ctf-website/techniques/        23 类 191 篇 —— Web 攻击全表面 + 1:1 蓝队防御
+├── apk-reverse/techniques/         9 类  36 篇 —— Android 与混合框架逆向 + 1:1 蓝队防御
+├── pe-reverse/techniques/         10 类  49 篇 —— Windows PE / 二进制 + 1:1 蓝队防御
+├── general/techniques/             6 类  45 篇 —— 密码学 · 签名 · 协议 · 内核 · 1:1 蓝队防御
 └── windows/techniques/             Windows 平台专项
 ```
 
 | 板块 | 触发信号 | MCP 入口 |
 | --- | --- | --- |
-| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · CAPTCHA · Cloudflare · ReDoS · Slowloris · DoS | `http_probe`、`run_ctf_tool`、`kb_router` |
-| `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · native | `android_app_baseline`、`android_crypto_unpack_recipe`、`android_frida_*` |
-| `pe-reverse` | PE · EXE · DLL · x64dbg · Ghidra · Procmon · packer · malware | `triage_pe`、`ghidra_headless_analyze`、`make_x64dbg_breakpoint_script`、`sample_full_workup` |
-| `general` | AES · DES · RSA · protobuf · 游戏作弊 · EAC / BE / Vanguard · 固件 · JTAG · SDR | `die_scan`、`ghidra_*`、`rizin_*`、`python_re_tool_*` |
-| `misc` | MCP 配置 · skill 安装 · 环境自检 | `mcp_smoke_check`、`ai_toolcheck`、`lab_healthcheck` |
+| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · 加固自检 · DoS | `route_track`、`kb_router`、`http_probe`、`run_ctf_tool` |
+| `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · WebView · RN/Flutter | `android_app_baseline`、`android_crypto_unpack_recipe`、`android_frida_*` |
+| `pe-reverse` | PE · EXE · DLL · asar · x64dbg · Ghidra · Procmon · packer · YARA/Sigma | `triage_pe`、`ghidra_headless_analyze`、`make_yara_stub`、`sample_full_workup` |
+| `general` | AES · RSA · 签名校验 · Protobuf · gRPC · JS 运行时 · 内核 · 反作弊 | `die_scan`、`solve_crypto_from_evidence`、`ghidra_*`、`rizin_*` |
+| `misc` | 红蓝双轨门控（`BLUE`/`RED`/`BOTH`）· MCP 配置 · 环境自检 | `get_track_status`、`set_track`、`mcp_smoke_check`、`lab_healthcheck` |
 
 完整目录树见 [kb/](kb/) 目录。
 
@@ -200,7 +200,7 @@ reports/      最终报告
 scripts/      自动化脚本
 projects/     Ghidra 项目文件
 templates/    笔记 / 报告 / 规则模板 · AI 安装提示词
-kb/           可复用攻击知识库 —— 见「知识库速览」
+kb/           可复用 RED/BLUE 双轨逆向与防御知识库 —— 见「知识库速览」
 tools/        工具链（二进制、wrapper、registry、MCP）
 cases/        轻量索引 —— 不复制大文件
 ```

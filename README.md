@@ -43,11 +43,11 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Bi
 
 ## What is ReverseLab
 
-ReverseLab is an opinionated, runnable attack-knowledge base for reverse engineers, security researchers, CTF players, and AI Agents. Every article is structured as **`Scenario → Input signal → Method → Attack chain → MCP tool mapping`**, so a human or an Agent can pick up at any entry signal and walk the chain to evidence.
+ReverseLab is an opinionated, runnable **BLUE / RED / BOTH dual-track** reverse-engineering and security knowledge base for reverse engineers, blue-team defenders, security researchers, and AI Agents. Every offensive technique pairs **1:1** with a defensive hardening/detection counterpart (`Scenario → Input signal → Method → Workflow → MCP tool mapping`), defaulting to **`BLUE`** (static analysis, cryptography, detection & hardening) with explicit switching to **`RED`** (offense & dynamic exploitation) or **`BOTH`** (purple-team paired view).
 
 - **5 boards** spanning web, mobile, Windows, and cross-domain reverse work.
-- **180+ articles** organized by attack surface, not by tooling.
-- **100+ MCP tools** exposed through `reverse_lab_tools` — curl, frida, ghidra, rizin, yara, triage, kb_router, … all callable from Claude Code, Codex, or any MCP-aware Agent.
+- **320+ articles** with 1:1 offensive ↔ defensive pairing (`track: blue | red | both`, `defends`).
+- **110+ MCP tools** exposed through `reverse_lab_tools` — `triage_pe`, `ghidra_*`, `rizin_*`, `make_yara_stub`, `solve_crypto_from_evidence`, `kb_router`, `route_track`, `set_track`, … with track gating (`REVERSELAB_MODE=blue|red|both`).
 - **Directory-as-convention**: every artifact has a fixed home (`samples/`, `exports/`, `patches/`, `kb/`, `reports/`). Drop-in a sample, follow the chain, ship the report.
 
 The lab is built to be run, not browsed. If a step can't be executed, it doesn't belong in the KB.
@@ -76,21 +76,21 @@ The lab is built to be run, not browsed. If a step can't be executed, it doesn't
 ## Knowledge at a glance
 
 ```
-kb/                                180+ articles, 5 boards
-├── ctf-website/techniques/        25 categories, 110 articles — Web attack surface
-├── apk-reverse/techniques/         8 categories,  23 articles — Android reverse
-├── pe-reverse/techniques/          9 categories,  24 articles — Windows PE / binary
-├── general/techniques/             5 categories,  17 articles — Crypto · Protocol · Cheat · IoT · SDR
+kb/                                320+ articles, 5 boards (RED ↔ BLUE 1:1 paired)
+├── ctf-website/techniques/        23 categories, 191 articles — Web attack surface & 1:1 BLUE defense
+├── apk-reverse/techniques/         9 categories,  36 articles — Android & hybrid reverse + 1:1 BLUE defense
+├── pe-reverse/techniques/         10 categories,  49 articles — Windows PE / binary + 1:1 BLUE defense
+├── general/techniques/             6 categories,  45 articles — Crypto · Signature · Protocol · Kernel · 1:1 defense
 └── windows/techniques/             platform-specific PE / config topics
 ```
 
 | Board | Trigger signals | MCP entry points |
 | --- | --- | --- |
-| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · CAPTCHA · Cloudflare · ReDoS · Slowloris · DoS | `http_probe`, `run_ctf_tool`, `kb_router` |
-| `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · native | `android_app_baseline`, `android_crypto_unpack_recipe`, `android_frida_*` |
-| `pe-reverse` | PE · EXE · DLL · x64dbg · Ghidra · Procmon · packer · malware | `triage_pe`, `ghidra_headless_analyze`, `make_x64dbg_breakpoint_script`, `sample_full_workup` |
-| `general` | AES · DES · RSA · protobuf · game cheat · EAC / BE / Vanguard · firmware · JTAG · SDR | `die_scan`, `ghidra_*`, `rizin_*`, `python_re_tool_*` |
-| `misc` | MCP config · skill install · env health check | `mcp_smoke_check`, `ai_toolcheck`, `lab_healthcheck` |
+| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · Hardening · DoS | `route_track`, `kb_router`, `http_probe`, `run_ctf_tool` |
+| `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · WebView · RN/Flutter | `android_app_baseline`, `android_crypto_unpack_recipe`, `android_frida_*` |
+| `pe-reverse` | PE · EXE · DLL · asar · x64dbg · Ghidra · Procmon · packer · YARA/Sigma | `triage_pe`, `ghidra_headless_analyze`, `make_yara_stub`, `sample_full_workup` |
+| `general` | AES · RSA · Signature · Protobuf · gRPC · JS runtime · Kernel · Anti-cheat | `die_scan`, `solve_crypto_from_evidence`, `ghidra_*`, `rizin_*` |
+| `misc` | Dual-track gate (`BLUE`/`RED`/`BOTH`) · MCP config · env health check | `get_track_status`, `set_track`, `mcp_smoke_check`, `lab_healthcheck` |
 
 The complete directory tree is available under [kb/](kb/).
 
@@ -200,7 +200,7 @@ reports/      Final reports
 scripts/      Automation scripts
 projects/     Ghidra project files
 templates/    Note / report / rule templates · AI install prompts
-kb/           Reusable attack knowledge base — see "Knowledge at a glance"
+kb/           Reusable RED/BLUE dual-track knowledge base — see "Knowledge at a glance"
 tools/        Toolchain (binaries, wrappers, registry, MCP)
 cases/        Lightweight index — no large file copies
 ```

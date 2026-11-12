@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,27 @@ ROOT = Path(__file__).resolve().parents[1]
 MCP_ROOT = ROOT / "tools" / "skills" / "mcp" / "ReverseLabToolsMCP"
 if str(MCP_ROOT) not in sys.path:
     sys.path.insert(0, str(MCP_ROOT))
+
+try:
+    import mcp.server.fastmcp  # noqa: F401
+except ModuleNotFoundError:
+    class _StubFastMCP:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def tool(self, *_args, **_kwargs):
+            return lambda fn: fn
+
+        def run(self, *_args, **_kwargs):
+            return None
+
+    mcp_mod = types.ModuleType("mcp")
+    server_mod = types.ModuleType("mcp.server")
+    fastmcp_mod = types.ModuleType("mcp.server.fastmcp")
+    fastmcp_mod.FastMCP = _StubFastMCP
+    sys.modules.setdefault("mcp", mcp_mod)
+    sys.modules.setdefault("mcp.server", server_mod)
+    sys.modules.setdefault("mcp.server.fastmcp", fastmcp_mod)
 
 import reverse_lab_tools_mcp as mcp_server  # noqa: E402
 from reverselab_mcp import track as track_mod  # noqa: E402
