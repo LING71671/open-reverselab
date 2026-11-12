@@ -4,11 +4,11 @@
 
 **Open-source AI-powered reverse-engineering platform for autonomous binary analysis, built for Claude Code, Codex, OpenCode and any MCP-compatible agent.**
 
-Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Binary Analysis
+Ghidra · Frida · x64dbg · Rizin · PE · APK · Cryptography · Blue-Team Hardening · Dual-Track Analysis
 
 ---
 
-**An open-source reverse-engineering lab — executable knowledge base, 100+ MCP tools, Agent-native.**
+**An open-source reverse-engineering lab — executable 1:1 RED/BLUE knowledge base, 110+ MCP tools, Agent-native.**
 
 *From an input signal to an evidence chain, every step is runnable.*
 
@@ -24,9 +24,19 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Bi
 
 ---
 
-## :handshake: Sponsored by Sentry
+## :handshake: Sponsors
 
 <div align="center">
+
+<a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">
+  <img src="assets/sponsors/infistar-banner-en.png" width="680" alt="Infistar.cc — Unified Multi-Model API Gateway">
+</a>
+
+<br /><br />
+
+**[Infistar.cc](https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link)** provides unified multi-model API access (Claude, GPT, Gemini, Grok, DeepSeek &amp; more) — `open-reverselab` users receive **¥5 free sign-up credit** via the referral link.
+
+<br />
 
 **[Sentry](https://sentry.io)** supports `openreverselab` with a sponsored account — error monitoring and performance tracing for the lab's toolchain.
 
@@ -35,7 +45,7 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Bi
   <img src="assets/sponsors/sentry-wordmark-light.svg" width="220" alt="Sentry">
 </picture>
 
-<sub>Since Aug 2026 — see <a href="SPONSORS.md">SPONSORS.md</a> for the full sponsor list and how to become one.</sub>
+<sub>See <a href="SPONSORS.md">SPONSORS.md</a> for the full sponsor list and how to become one.</sub>
 
 </div>
 
@@ -56,10 +66,11 @@ The lab is built to be run, not browsed. If a step can't be executed, it doesn't
 
 | You are … | Start here |
 | --- | --- |
-| A **CTF player** stuck on a web/Android/PE challenge | Browse the [CTF Website](kb/ctf-website/README.md), [APK Reverse](kb/apk-reverse/README.md), or [PE Reverse](kb/pe-reverse/README.md) board |
+| A **blue-team defender** hardening services or auditing samples | Default `BLUE` track (`REVERSELAB_MODE=blue`) → `python scripts/misc/kb_router.py "<signal>" --track blue` → `triage_pe` / `make_yara_stub` |
+| A **CTF / red-team researcher** validating exploit chains | Switch to `RED` (`set_track("red")` or `--track red`) → [CTF Website](kb/ctf-website/README.md), [APK Reverse](kb/apk-reverse/README.md), or [PE Reverse](kb/pe-reverse/README.md) |
 | A **security researcher** triaging a sample | [Quick start](#quick-start) → `boards/<board>/AI-USAGE.md` → `sample_full_workup` MCP tool |
 | A **reverse engineer** who wants a workspace, not a tutorial | [Repository layout](#repository-layout) — clone and start |
-| An **AI Agent** developer wiring up reverse-engineering tools | [For AI Agents](#for-ai-agents) — context chain, MCP smoke test, env snapshot protocol |
+| An **AI Agent** developer wiring up reverse-engineering tools | [For AI Agents](#for-ai-agents) — context chain, `route_track`, MCP smoke test, env snapshot protocol |
 
 ## Quick links
 
@@ -151,7 +162,7 @@ If individual documents are flagged, handle them case-by-case.
 2. **Claude Code**: `cd <workspace>/open-reverselab`, then start your session.
 3. **Codex APP**: Open the existing `open-reverselab` folder directly (no re-clone needed).
 4. Automated AI install: send the contents of [`templates/prompts/ai-install.en.md`](templates/prompts/ai-install.en.md) to your Agent.
-5. Create a task: `python scripts/misc/new_task.py --board ctf-website --name <name>`.
+5. Create a task: `python scripts/misc/new_task.py --board windows --name <name>` (or route KB by track: `python scripts/misc/kb_router.py "<signal>" --track blue|red|both`).
 6. Verify real MCP invocation whenever switching machines or updating configs:
    ```sh
    uv run --project tools/skills/mcp/ReverseLabToolsMCP \
@@ -232,6 +243,14 @@ ReverseLab is sustained by people and organizations that fund the infrastructure
     </tr>
   </thead>
   <tbody>
+    <tr>
+      <td align="left" valign="middle">
+        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><img src="assets/sponsors/infistar-banner-en.png" width="160" alt="Infistar.cc"></a>
+      </td>
+      <td valign="middle"><strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong></td>
+      <td valign="middle">2026-11</td>
+      <td valign="middle">Unified multi-model API gateway (Claude, GPT, Gemini, Grok, DeepSeek &amp; more) · ¥5 free sign-up credit via referral link</td>
+    </tr>
     <tr>
       <td align="left" valign="middle">
         <a href="https://sentry.io"><picture>

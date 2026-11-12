@@ -17,6 +17,17 @@ Thanks to everyone who supports this project. ❤️
   <tbody>
     <tr>
       <td align="left" valign="middle">
+        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><img src="assets/sponsors/infistar-banner-en.png" width="160" alt="Infistar.cc"></a>
+      </td>
+      <td valign="middle"><strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong></td>
+      <td valign="middle">2026-11</td>
+      <td valign="middle">
+        Unified multi-model API gateway (Claude, GPT, Gemini, Grok, DeepSeek &amp; more) · ¥5 free sign-up credit.<br />
+        统一多模型 API 接入平台（Claude、GPT、Gemini、Grok、DeepSeek 等）· 专属链接注册赠 ¥5 体验额度。
+      </td>
+    </tr>
+    <tr>
+      <td align="left" valign="middle">
         <a href="https://sentry.io"><picture>
           <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
           <img src="assets/sponsors/sentry-wordmark-light.svg" width="150" alt="Sentry">

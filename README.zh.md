@@ -4,11 +4,11 @@
 
 **Open-source AI-powered reverse-engineering platform for autonomous binary analysis, built for Claude Code, Codex, OpenCode and any MCP-compatible agent.**
 
-Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Binary Analysis
+Ghidra · Frida · x64dbg · Rizin · PE · APK · 密码学 · 蓝队加固 · 红蓝双轨逆向
 
 ---
 
-**开源逆向工程实验环境 —— 可执行的知识库，100+ MCP 工具，Agent 原生。**
+**开源逆向工程实验环境 —— 可执行的 1:1 RED/BLUE 知识库，110+ MCP 工具，Agent 原生。**
 
 *从入口信号到证据闭环，每一步都能跑。*
 
@@ -24,9 +24,19 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Bi
 
 ---
 
-## :handshake: Sentry 赞助
+## :handshake: 赞助支持
 
 <div align="center">
+
+<a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">
+  <img src="assets/sponsors/infistar-banner-en.png" width="680" alt="Infistar.cc — 统一多模型 API 接入平台">
+</a>
+
+<br /><br />
+
+**[Infistar.cc](https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link)** 提供统一多模型 API 接入能力（Claude、GPT、Gemini、Grok、DeepSeek 等）—— 通过上方专属链接注册可享 **¥5 体验额度**。
+
+<br />
 
 **[Sentry](https://sentry.io)** 为 `openreverselab` 提供赞助账户 —— 行业领先的错误监控与性能追踪平台。
 
@@ -35,7 +45,7 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Malware Analysis · CTF · Bi
   <img src="assets/sponsors/sentry-wordmark-light.svg" width="220" alt="Sentry">
 </picture>
 
-<sub>自 2026 年 8 月起 —— 完整赞助名单与赞助方式见 <a href="SPONSORS.md">SPONSORS.md</a>。</sub>
+<sub>完整赞助名单与赞助方式见 <a href="SPONSORS.md">SPONSORS.md</a>。</sub>
 
 </div>
 
@@ -56,10 +66,11 @@ ReverseLab 是一份「观点鲜明、可直接跑」的 **BLUE / RED / BOTH 双
 
 | 你是 … | 从这里开始 |
 | --- | --- |
-| 在 **CTF 比赛** 中卡在 Web / Android / PE 题 | 浏览 [CTF Website](kb/ctf-website/README.md)、[APK Reverse](kb/apk-reverse/README.md)、[PE Reverse](kb/pe-reverse/README.md) 板块 |
+| 做服务加固或样本检测的 **蓝队防御者** | 默认 `BLUE` 轨道（`REVERSELAB_MODE=blue`）→ `python scripts/misc/kb_router.py "<信号>" --track blue` → `triage_pe` / `make_yara_stub` |
+| 需要验证利用链的 **CTF / 红队研究员** | 切到 `RED`（`set_track("red")` 或 `--track red`）→ 浏览 [CTF Website](kb/ctf-website/README.md)、[APK Reverse](kb/apk-reverse/README.md)、[PE Reverse](kb/pe-reverse/README.md) |
 | 拿到一个样本的 **安全研究员** | [快速开始](#快速开始) → `boards/<board>/AI-USAGE.md` → `sample_full_workup` MCP 工具 |
 | 只想要一个工作区、不想看教程的 **逆向工程师** | [仓库目录约定](#仓库目录约定) —— clone 下来直接开工 |
-| 想给逆向工具接 **AI Agent** 的开发者 | [面向 AI Agent](#面向-ai-agent) —— 上下文链、MCP 烟测、环境快照协议 |
+| 想给逆向工具接 **AI Agent** 的开发者 | [面向 AI Agent](#面向-ai-agent) —— 上下文链、`route_track`、MCP 烟测、环境快照协议 |
 
 ## 快速跳转
 
@@ -151,7 +162,7 @@ Add-MpPreference -ExclusionPath "D:\open-reverselab\tools\ctf-website\exploitdb"
 2. **Claude Code**：先 `cd <workspace>/open-reverselab`，再启动会话。
 3. **Codex APP**：直接打开现有的 `open-reverselab` 文件夹（无需重新 clone）。
 4. 想让 AI 代装：把 [`templates/prompts/ai-install.zh.md`](templates/prompts/ai-install.zh.md) 整段提示词发给 Agent。
-5. 创建任务：`python scripts/misc/new_task.py --board ctf-website --name <name>`。
+5. 创建任务：`python scripts/misc/new_task.py --board windows --name <name>`（或按轨道检索 KB：`python scripts/misc/kb_router.py "<信号>" --track blue|red|both`）。
 6. 每次换机器或重配 MCP 后，确认 MCP 真实可调用：
    ```sh
    uv run --project tools/skills/mcp/ReverseLabToolsMCP \
@@ -232,6 +243,14 @@ ReverseLab 的持续运营靠的是为基础设施、工具、审稿时间投入
     </tr>
   </thead>
   <tbody>
+    <tr>
+      <td align="left" valign="middle">
+        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><img src="assets/sponsors/infistar-banner-en.png" width="160" alt="Infistar.cc"></a>
+      </td>
+      <td valign="middle"><strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong></td>
+      <td valign="middle">2026-11</td>
+      <td valign="middle">统一多模型 API 接入平台（Claude、GPT、Gemini、Grok、DeepSeek 等）· 专属链接注册赠 ¥5 体验额度</td>
+    </tr>
     <tr>
       <td align="left" valign="middle">
         <a href="https://sentry.io"><picture>
