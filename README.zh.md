@@ -26,28 +26,36 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · 密码学 · 蓝队加固 · 
 
 ## :handshake: 赞助支持
 
-<div align="center">
+<table width="100%">
+  <tbody>
+    <tr>
+      <td width="380" align="center" valign="middle">
+        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">
+          <img src="assets/sponsors/infistar-banner-en.png" width="360" alt="Infistar.cc — 统一多模型 API 接入平台">
+        </a>
+      </td>
+      <td valign="middle">
+        <strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong><br /><br />
+        统一多模型 API 接入平台（Claude、GPT、Gemini、Grok、DeepSeek 等）—— 1,000+ 冗余路由自动容灾，100% 真实模型可验证。<br /><br />
+        <code>open-reverselab</code> 用户专属链接注册赠 <strong>¥5 体验额度</strong> → <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">立即体验 Infistar.cc</a>
+      </td>
+    </tr>
+    <tr>
+      <td width="380" align="center" valign="middle">
+        <a href="https://sentry.io"><picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
+          <img src="assets/sponsors/sentry-wordmark-light.svg" width="180" alt="Sentry">
+        </picture></a>
+      </td>
+      <td valign="middle">
+        <strong><a href="https://sentry.io">Sentry</a></strong><br /><br />
+        为 <code>openreverselab</code> 提供赞助账户 —— 行业领先的错误监控与性能追踪平台，保障自动化工具链稳定运行。
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-<a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">
-  <img src="assets/sponsors/infistar-banner-en.png" width="680" alt="Infistar.cc — 统一多模型 API 接入平台">
-</a>
-
-<br /><br />
-
-**[Infistar.cc](https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link)** 提供统一多模型 API 接入能力（Claude、GPT、Gemini、Grok、DeepSeek 等）—— 通过上方专属链接注册可享 **¥5 体验额度**。
-
-<br />
-
-**[Sentry](https://sentry.io)** 为 `openreverselab` 提供赞助账户 —— 行业领先的错误监控与性能追踪平台。
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-  <img src="assets/sponsors/sentry-wordmark-light.svg" width="220" alt="Sentry">
-</picture>
-
-<sub>完整赞助名单与赞助方式见 <a href="SPONSORS.md">SPONSORS.md</a>。</sub>
-
-</div>
+<p align="center"><sub>完整赞助名单与赞助方式见 <a href="SPONSORS.md">SPONSORS.md</a>。</sub></p>
 
 ---
 

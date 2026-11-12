@@ -26,28 +26,36 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Cryptography · Blue-Team Har
 
 ## :handshake: Sponsors
 
-<div align="center">
+<table width="100%">
+  <tbody>
+    <tr>
+      <td width="380" align="center" valign="middle">
+        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">
+          <img src="assets/sponsors/infistar-banner-en.png" width="360" alt="Infistar.cc — Unified Multi-Model API Gateway">
+        </a>
+      </td>
+      <td valign="middle">
+        <strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong><br /><br />
+        Unified multi-model API gateway (Claude, GPT, Gemini, Grok, DeepSeek &amp; more) — 1,000+ redundant routes with auto failover.<br /><br />
+        <code>open-reverselab</code> users receive <strong>¥5 free sign-up credit</strong> → <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Try Infistar.cc</a>
+      </td>
+    </tr>
+    <tr>
+      <td width="380" align="center" valign="middle">
+        <a href="https://sentry.io"><picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
+          <img src="assets/sponsors/sentry-wordmark-light.svg" width="180" alt="Sentry">
+        </picture></a>
+      </td>
+      <td valign="middle">
+        <strong><a href="https://sentry.io">Sentry</a></strong><br /><br />
+        Sponsored account — error monitoring and performance tracing for <code>openreverselab</code>'s automated toolchains.
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-<a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">
-  <img src="assets/sponsors/infistar-banner-en.png" width="680" alt="Infistar.cc — Unified Multi-Model API Gateway">
-</a>
-
-<br /><br />
-
-**[Infistar.cc](https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link)** provides unified multi-model API access (Claude, GPT, Gemini, Grok, DeepSeek &amp; more) — `open-reverselab` users receive **¥5 free sign-up credit** via the referral link.
-
-<br />
-
-**[Sentry](https://sentry.io)** supports `openreverselab` with a sponsored account — error monitoring and performance tracing for the lab's toolchain.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-  <img src="assets/sponsors/sentry-wordmark-light.svg" width="220" alt="Sentry">
-</picture>
-
-<sub>See <a href="SPONSORS.md">SPONSORS.md</a> for the full sponsor list and how to become one.</sub>
-
-</div>
+<p align="center"><sub>See <a href="SPONSORS.md">SPONSORS.md</a> for the full sponsor list and how to become one.</sub></p>
 
 ---
 
