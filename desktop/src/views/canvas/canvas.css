@@ -1,0 +1,26 @@
+.workflow-canvas { position: relative; width: 100%; height: 100%; }
+.workflow-canvas .canvas-toolbar { top: 16px; right: 18px; align-items: center; }
+.workflow-canvas .canvas-toolbar .icon-button { width: 36px; height: 36px; }
+.canvas-zoom { position: absolute; bottom: 18px; left: 18px; display: flex; padding: 3px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-canvas); }
+.canvas-zoom .icon-button { width: 34px; height: 34px; }
+.workflow-canvas .harness-node { width: 300px; padding: 0; overflow: hidden; box-shadow: none; cursor: grab; transition: border-color 180ms, background-color 180ms; animation: canvas-node-enter 180ms ease-out; }
+.workflow-canvas .harness-node-summary { display: block; width: 100%; text-align: left; padding: 16px 18px; cursor: inherit; }
+.workflow-canvas .react-flow__node.dragging .harness-node { cursor: grabbing; }
+.harness-node-summary:hover { background: var(--bg-elevated); }
+.node-expand-icon { display: block; margin: 8px auto -6px; color: var(--text-muted); }
+.workflow-canvas .harness-node header { font-size: 13px; margin-bottom: 10px; }
+.workflow-canvas .harness-node h3 { font-size: 16px; line-height: 1.5; font-weight: 550; }
+.workflow-canvas .harness-node p { font-size: 14px; line-height: 1.65; }
+.harness-node-detail { border-top: 1px solid var(--border-subtle); padding: 14px 18px 16px; max-height: 250px; overflow-y: auto; user-select: text; cursor: auto; }
+.workflow-canvas .harness-node-detail p { display: block; white-space: pre-wrap; }
+.harness-node-detail .text-button { margin: 12px 0 -5px -9px; font-size: 13px; }
+.node-evidence-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.harness-node[data-status="running"] header > span:last-child { color: var(--blue); }
+.harness-node[data-status="failed"] header > span:last-child { color: var(--red); }
+.workflow-canvas .react-flow__minimap { border: 1px solid var(--border-subtle); border-radius: 6px; overflow: hidden; background: var(--bg-elevated); }
+/* Fade the content once; node geometry and edge anchors stay in React Flow coordinates. */
+@keyframes canvas-node-enter { from { opacity: .45; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .workflow-canvas .harness-node { animation: none; transition: none; }
+  .workflow-canvas .react-flow__edge.animated path { animation: none; }
+}
