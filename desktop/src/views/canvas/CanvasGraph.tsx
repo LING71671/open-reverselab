@@ -4,7 +4,7 @@ import { Focus, Scan, Maximize2, Minimize2, Plus, Minus, Map as MapIcon } from "
 import { HarnessNode, type HarnessNodeData } from "./nodes/HarnessNode";
 import type { GraphStep } from "../../core";
 import { reconcileNodes, planNodeMotion, applyNodeMotion, type Point } from "./nodeMotion";
-import { layoutGraph, parentIds, edgePorts } from "./graphLayout";
+import { layoutGraph, expandLayout, parentIds, edgePorts } from "./graphLayout";
 import "./canvas.css";
 interface CanvasGraphProps { active: boolean; fullscreen?: boolean; onToggleFullscreen?: () => void; steps: GraphStep[]; selectedStep: GraphStep | null; onSelectStep: (step: GraphStep) => void }
 const nodeTypes = { harnessNode: HarnessNode };
@@ -15,7 +15,9 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   const [following, setFollowing] = useState(true);
   const [showMap, setShowMap] = useState(true);
   const [expanded, setExpanded] = useState(new Set<string>());
-  const toggleExpanded = useCallback((id: string) => setExpanded(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; }), []);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  const [expansionAnchor, setExpansionAnchor] = useState<{ id: string; x: number; y: number } | null>(null);
   const selectRef = useRef(onSelectStep);
   selectRef.current = onSelectStep;
   const selectStep = useCallback((step: GraphStep) => selectRef.current(step), []);
@@ -23,19 +25,22 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   const movedNodes = useRef(new Set<string>());
   const canvas = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 800 });
-  const [measured, setMeasured] = useState(new Map<string, number>());
+  const [measured, setMeasured] = useState({ collapsed: new Map<string, number>(), expanded: new Map<string, number>() });
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<HarnessNodeData>>([]);
   const handleNodesChange = useCallback((changes: NodeChange<Node<HarnessNodeData>>[]) => {
     onNodesChange(changes);
     const dimensions = changes.filter(change => change.type === "dimensions" && change.dimensions);
     if (dimensions.length) setMeasured(previous => {
-      const next = new Map(previous);
-      let changed = false;
+      const next = { ...previous };
       for (const change of dimensions) if (change.type === "dimensions" && change.dimensions) {
         const height = Math.ceil(change.dimensions.height);
-        if (next.get(change.id) !== height) { next.set(change.id, height); changed = true; }
+        const kind = expandedRef.current.has(change.id) ? "expanded" : "collapsed";
+        if (next[kind].get(change.id) !== height) {
+          if (next[kind] === previous[kind]) next[kind] = new Map(previous[kind]);
+          next[kind].set(change.id, height);
+        }
       }
-      return changed ? next : previous;
+      return next.collapsed !== previous.collapsed || next.expanded !== previous.expanded ? next : previous;
     });
   }, [onNodesChange]);
   useEffect(() => {
@@ -49,14 +54,21 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   }, []);
   const currentNodes = useRef(nodes);
   currentNodes.current = nodes;
+  const toggleExpanded = useCallback((id: string) => {
+    const node = currentNodes.current.find(node => node.id === id);
+    if (node) setExpansionAnchor({ id, ...node.position });
+    setFollowing(false);
+    setExpanded(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }, []);
   const topologyKey = JSON.stringify(steps.map(step => [step.id, parentIds(step)]));
   const topology = useMemo(() => (JSON.parse(topologyKey) as [string, string[]][]).map(([id, parentIds]) => ({ id, parentId: null, parentIds })), [topologyKey]);
-  // Streamed text and status do not change geometry. Only topology, measured
-  // dimensions, expansion and the canvas size need another placement pass.
+  // Expansion must never compete for another global layout. Keep the compact
+  // geometry separate from detail sizes, then make room around the clicked card.
+  const basePositions = useMemo(() => layoutGraph(topology, canvasSize, measured.collapsed), [topology, canvasSize, measured.collapsed]);
   const positions = useMemo(() => {
-    const heights = new Map(topology.map(step => [step.id, measured.get(step.id) || (expanded.has(step.id) ? 410 : 174)]));
-    return layoutGraph(topology, canvasSize, heights);
-  }, [topology, canvasSize, measured, expanded]);
+    const heights = new Map(topology.map(step => [step.id, (expanded.has(step.id) ? measured.expanded.get(step.id) : undefined) || measured.collapsed.get(step.id) || 174]));
+    return expandLayout(basePositions, heights, expansionAnchor);
+  }, [topology, basePositions, measured, expanded, expansionAnchor]);
   const { layout, edges } = useMemo(() => {
     const layout: Node<HarnessNodeData>[] = [];
     const edges: Edge[] = [];

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { GraphStep } from "../src/core/contracts/graph.ts";
-import { CARD_WIDTH, edgePorts, layoutGraph, parentIds, type LayoutPoint } from "../src/views/canvas/graphLayout.ts";
+import { CARD_WIDTH, edgePorts, expandLayout, layoutGraph, parentIds, type LayoutPoint } from "../src/views/canvas/graphLayout.ts";
 
 const step = (id: string, parents: string[] = []): GraphStep => ({
   id, parentId: parents[0] || null, parentIds: parents, agentId: "analysis",
@@ -78,4 +78,46 @@ test("edge anchors follow lateral and vertical card separation", () => {
   assert.deepEqual(edgePorts(source, { ...source, x: 400 }), { source: "right", target: "left" });
   assert.deepEqual(edgePorts(source, { ...source, x: 80, y: 230 }), { source: "bottom", target: "top" });
   assert.deepEqual(edgePorts(source, { ...source, x: 80, y: -230 }), { source: "top", target: "bottom" });
+});
+
+test("expanding details anchors the clicked card and only pushes intersecting neighbors", () => {
+  const base = new Map<string, LayoutPoint>([
+    ["above", { x: 0, y: -230, rank: 0, height: 174 }],
+    ["clicked", { x: 80, y: 0, rank: 1, height: 174 }],
+    ["below", { x: 160, y: 230, rank: 2, height: 174 }],
+    ["far", { x: 1000, y: 230, rank: 3, height: 174 }],
+  ]);
+  const snapshot = structuredClone(base);
+  const anchor = { id: "clicked", x: 80, y: 0 };
+  const expanded = expandLayout(base, new Map([["clicked", 420]]), anchor);
+  assert.equal(expanded.get("clicked")!.y, anchor.y);
+  assert.equal(expanded.get("clicked")!.x, anchor.x);
+  assert.deepEqual(expanded.get("above"), base.get("above"));
+  assert.deepEqual(expanded.get("far"), base.get("far"));
+  assert.ok(expanded.get("below")!.y > base.get("below")!.y);
+  for (const [id, point] of expanded) assert.equal(point.x, base.get(id)!.x);
+  noOverlap(expanded);
+  assert.deepEqual(expandLayout(base, new Map(), anchor), base, "collapse restores surrounding cards without moving the anchor");
+  assert.deepEqual(base, snapshot, "detail layout must not mutate the compact layout");
+});
+
+test("multiple expanded cards and later measurements retain the latest clicked position", () => {
+  const base = layoutGraph(chain(38), { width: 1000, height: 800 });
+  const first = { id: "s12", ...base.get("s12")! };
+  const heights = new Map([[first.id, 430]]);
+  const expanded = expandLayout(base, heights, first);
+  const second = { id: "s13", ...expanded.get("s13")! };
+  heights.set(second.id, 410);
+  const again = expandLayout(base, heights, second);
+  assert.equal(again.get(second.id)!.x, second.x);
+  assert.equal(again.get(second.id)!.y, second.y);
+  noOverlap(again);
+  heights.set(second.id, 486);
+  const measured = expandLayout(base, heights, second);
+  assert.equal(measured.get(second.id)!.y, second.y);
+  noOverlap(measured);
+  heights.delete(second.id);
+  const collapsed = expandLayout(base, heights, second);
+  assert.equal(collapsed.get(second.id)!.y, second.y);
+  noOverlap(collapsed);
 });

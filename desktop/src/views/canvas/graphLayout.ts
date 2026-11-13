@@ -86,6 +86,31 @@ function placeCards(ordered: LayoutStep[], ranks: Map<string, number>, heightOf:
   return { positions, height: bottom - top };
 }
 
+/** Keep the clicked card in place; only displace cards colliding with its new size. */
+export function expandLayout(base: ReadonlyMap<string, LayoutPoint>, heights: ReadonlyMap<string, number>, anchor?: { id: string; x: number; y: number } | null): Map<string, LayoutPoint> {
+  const positions = new Map([...base].map(([id, point]) => [id, { ...point, height: heights.get(id) ?? point.height }]));
+  const anchored = anchor && positions.get(anchor.id);
+  if (anchored && anchor) { anchored.x = anchor.x; anchored.y = anchor.y; }
+  const placed: LayoutPoint[] = anchored ? [anchored] : [];
+  const other = [...positions].filter(([id]) => id !== anchor?.id);
+  const above = anchored ? other.filter(([, p]) => p.y < anchored.y).sort((a, b) => b[1].y - a[1].y) : [];
+  const below = other.filter(([, p]) => !anchored || p.y >= anchored.y).sort((a, b) => a[1].y - b[1].y);
+  const place = (point: LayoutPoint, direction: -1 | 1) => {
+    const neighbors = placed.filter(p => point.x < p.x + CARD_WIDTH + NODE_GAP && point.x + CARD_WIDTH + NODE_GAP > p.x);
+    let collisions = neighbors.filter(p => point.y < p.y + p.height + NODE_GAP - .01 && point.y + point.height + NODE_GAP > p.y + .01);
+    while (collisions.length) {
+      point.y = direction < 0
+        ? Math.min(...collisions.map(p => p.y - point.height - NODE_GAP))
+        : Math.max(...collisions.map(p => p.y + p.height + NODE_GAP));
+      collisions = neighbors.filter(p => point.y < p.y + p.height + NODE_GAP - .01 && point.y + point.height + NODE_GAP > p.y + .01);
+    }
+    placed.push(point);
+  };
+  for (const [, point] of above) place(point, -1);
+  for (const [, point] of below) place(point, 1);
+  return positions;
+}
+
 export function edgePorts(source: LayoutPoint, target: LayoutPoint): { source: PortSide; target: PortSide } {
   if (Math.abs(target.x - source.x) >= CARD_WIDTH + 24) return source.x <= target.x ? { source: "right", target: "left" } : { source: "left", target: "right" };
   return source.y <= target.y ? { source: "bottom", target: "top" } : { source: "top", target: "bottom" };
