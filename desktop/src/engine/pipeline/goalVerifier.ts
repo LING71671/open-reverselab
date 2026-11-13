@@ -15,7 +15,7 @@ export function parseAcceptancePlan(content: string, ctx: PipelineContext): Acce
   try {
     const plan = raw ? JSON.parse(raw) : structuredPlanCandidates(content).find(plan => Array.isArray(plan?.checks));
     if (!plan || typeof plan !== "object") return undefined;
-    if (!Array.isArray(plan.checks) || !plan.checks.length || plan.checks.length > 8) return undefined;
+    if (!Array.isArray(plan.checks) || !plan.checks.length) return undefined;
     if (!plan.checks.every((check: any) => typeof check.id === "string" && check.id && typeof check.criterion === "string" && check.criterion && typeof check.expected === "string" && check.expected)) return undefined;
     if (new Set(plan.checks.map((check: any) => check.id)).size !== plan.checks.length) return undefined;
     if (typeof plan.title === "string" && plan.title.trim() && [...plan.title.trim()].length <= 48 && !/[\r\n]/.test(plan.title)) ctx.state.suggestedTitle = plan.title.trim();
@@ -70,9 +70,9 @@ export async function verifyGoalWithModel(
   let response;
   try {
     response = await llmService.complete(messages, {
-      maxTokens: Math.min(2048, remaining - inputEstimate),
+      maxTokens: Number.isFinite(remaining) ? remaining - inputEstimate : undefined,
       temperature: 0,
-      timeoutMs: Math.min(30000, Math.max(1, ctx.budget.monotonicDeadline - performance.now())),
+      timeoutMs: Number.isFinite(ctx.budget.monotonicDeadline) ? Math.max(1, ctx.budget.monotonicDeadline - performance.now()) : undefined,
       signal: ctx.signal,
       provider: ctx.state.modelSnapshot?.provider,
       model: ctx.state.modelSnapshot?.model,

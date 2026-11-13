@@ -51,7 +51,7 @@ export class LlmStreamStage implements PipelineStage {
       ctx.state.tokenBudgetExhausted = true;
       throw new Error("剩余额度不足以发送本轮上下文");
     }
-    const outputLimit = Math.min(8192, remaining - inputEstimate);
+    const outputLimit = Number.isFinite(remaining) ? remaining - inputEstimate : undefined;
     const previousUsage = ctx.budget.tokensUsed;
     let chargedInput = false;
     let actualUsage = false;

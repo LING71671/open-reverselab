@@ -41,9 +41,10 @@ const { TargetDiscoveryStage } = await load("engine/pipeline/stages/TargetDiscov
 const { parseActionPlan, executeActionPlan } = await load("engine/pipeline/actionPlan.ts");
 const { runBothTracks } = await load("engine/tracks/both.ts");
 const { StaticTriageStage } = await load("engine/pipeline/stages/StaticTriageStage.ts");
+const { LlmStreamStage } = await load("engine/pipeline/stages/LlmStreamStage.ts");
 const { HealthFault } = await load("core/contracts/health.ts");
 const { presentAgentContent } = await load("views/chat/agentContent.ts");
-const { buildAnalysisMessages } = await load("engine/pipeline/analysisPrompt.ts");
+const { buildAnalysisMessages, estimateMessageTokens } = await load("engine/pipeline/analysisPrompt.ts");
 after(async () => { await rm(temporary, { recursive: true, force: true }); });
 
 const item = (track, name, related = []) => ({ id: name, board: "pe-reverse", title: name, category: "memory", signals: ["hook"], mcp_tools: [], path: `kb/pe-reverse/${name}.md`, track, related_paths: related });
@@ -473,6 +474,126 @@ test("valid plans tolerate JSON or omitted fences without relaxing their schema"
   }
   assert.equal(parseAcceptancePlan('{"checks":[]}', ctx), undefined);
   assert.equal(parseAcceptancePlan('null', ctx), undefined);
+});
+
+test("acceptance plans retain every criterion beyond eight checks", () => {
+  const checks = Array.from({ length: 32 }, (_, index) => ({ id: `C${index + 1}`, criterion: `Inspect record ${index}`, expected: `Observed record ${index}` }));
+  assert.deepEqual(parseAcceptancePlan(JSON.stringify({ checks }), context()).checks, checks);
+});
+
+const modelSnapshot = { provider: { id: "fixture", name: "Fixture", baseUrl: "https://model.example.test/v1", apiKey: "" }, model: "fixture" };
+const modelRequest = (input, init) => input instanceof Request ? input : new Request(input, init);
+
+test("completion requests omit implicit output limits and timers", async (t) => {
+  const timers = [];
+  t.mock.method(globalThis, "setTimeout", (...args) => { timers.push(args); return 0; });
+  const responseText = "observed ".repeat(5000);
+  t.mock.method(globalThis, "fetch", async (input, init) => {
+    const request = modelRequest(input, init);
+    const body = await request.json();
+    assert.equal(Object.hasOwn(body, "max_tokens"), false);
+    assert.equal(request.signal.aborted, false);
+    return Response.json({ choices: [{ message: { content: responseText } }], usage: { total_tokens: 15000 } });
+  });
+  for (const options of [{}, { maxTokens: Infinity, timeoutMs: Infinity }]) {
+    const result = await llmService.complete([{ role: "user", content: "inspect" }], { ...modelSnapshot, ...options });
+    assert.equal(result.content, responseText);
+    assert.equal(result.usage.totalTokens, 15000);
+  }
+  assert.equal(timers.length, 0);
+});
+
+test("completion requests honor explicit budgets without timer overflow", async (t) => {
+  let now = 0;
+  const timers = [];
+  const cleared = [];
+  t.mock.method(performance, "now", () => now);
+  t.mock.method(globalThis, "setTimeout", (callback, delay) => {
+    const timer = { callback, delay };
+    timers.push(timer);
+    return timer;
+  });
+  t.mock.method(globalThis, "clearTimeout", timer => cleared.push(timer));
+  let ready;
+  const started = new Promise(resolve => { ready = resolve; });
+  let requestSignal;
+  t.mock.method(globalThis, "fetch", async (input, init) => {
+    const request = modelRequest(input, init);
+    assert.equal((await request.json()).max_tokens, 12000);
+    requestSignal = request.signal;
+    ready();
+    return new Promise((_, reject) => request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true }));
+  });
+  const timeoutMs = 2147483647 + 60000;
+  const running = llmService.complete([{ role: "user", content: "inspect" }], { ...modelSnapshot, maxTokens: 12000, timeoutMs });
+  const rejected = assert.rejects(running, { name: "TimeoutError" });
+  await started;
+  assert.equal(timers[0].delay, 2147483647);
+  now = 2147483647;
+  timers[0].callback();
+  assert.equal(requestSignal.aborted, false);
+  assert.equal(timers[1].delay, 60000);
+  now = timeoutMs;
+  timers[1].callback();
+  await rejected;
+  assert.ok(cleared.includes(timers[1]));
+});
+
+test("unbounded completion remains manually cancellable", async (t) => {
+  const controller = new AbortController();
+  let ready;
+  const started = new Promise(resolve => { ready = resolve; });
+  t.mock.method(globalThis, "fetch", async (input, init) => {
+    const request = modelRequest(input, init);
+    ready();
+    return new Promise((_, reject) => request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true }));
+  });
+  const running = llmService.complete([{ role: "user", content: "inspect" }], { ...modelSnapshot, signal: controller.signal });
+  const rejected = assert.rejects(running, { name: "AbortError" });
+  await started;
+  controller.abort();
+  await rejected;
+});
+
+test("planning streams send only the user's token budget and preserve long output", async (t) => {
+  const text = "observed ".repeat(5000);
+  for (const maxTokens of [Infinity, 50000]) {
+    const ctx = context({ state: { modelSnapshot } });
+    ctx.budget.maxTokens = maxTokens;
+    ctx.budget.tokensUsed = 50;
+    const expected = Number.isFinite(maxTokens) ? maxTokens - 50 - estimateMessageTokens(buildAnalysisMessages(ctx)) : undefined;
+    t.mock.method(globalThis, "fetch", async (input, init) => {
+      const body = await modelRequest(input, init).json();
+      assert.equal(body.max_tokens, expected);
+      assert.equal(Object.hasOwn(body, "max_tokens"), Number.isFinite(maxTokens));
+      const content = JSON.stringify({ choices: [{ delta: { content: text } }] });
+      const usage = JSON.stringify({ usage: { total_tokens: 15000 } });
+      return new Response(`data: ${content}\n\ndata: ${usage}\n\ndata: [DONE]\n\n`);
+    });
+    await new LlmStreamStage().execute(ctx, {});
+    assert.equal(ctx.state.fullContent, text);
+    assert.equal(ctx.budget.tokensUsed, 15050);
+    assert.equal(ctx.budget.usageEstimated, false);
+  }
+});
+
+test("independent verification uses remaining user budgets with no implicit limits", async (t) => {
+  for (const bounded of [false, true]) {
+    const ctx = context({ state: { modelSnapshot } });
+    ctx.state.acceptancePlan = { target: ctx.target, objective: ctx.prompt, checks: [{ id: "C1", criterion: "read", expected: "observation" }] };
+    ctx.budget.maxTokens = bounded ? 50000 : Infinity;
+    ctx.budget.monotonicDeadline = bounded ? performance.now() + 120000 : Infinity;
+    ctx.budget.tokensUsed = 50;
+    t.mock.method(llmService, "complete", async (messages, options) => {
+      assert.equal(options.maxTokens, bounded ? 50000 - 50 - estimateMessageTokens(messages) : undefined);
+      if (bounded) assert.ok(options.timeoutMs > 110000 && options.timeoutMs <= 120000);
+      else assert.equal(options.timeoutMs, undefined);
+      return { content: JSON.stringify({ status: "verified", checks: [{ id: "C1", passed: true, evidenceRef: "execution.stdout", evidenceQuote: "observation" }] }), usage: { totalTokens: 100 } };
+    });
+    const result = { success: true, stdout: "observation", stderr: "" };
+    assert.equal((await verifyGoalWithModel(ctx, result, "read_target()", verifyTargetEvidence(ctx, result), {})).goalVerified, true);
+    assert.equal(ctx.budget.tokensUsed, 150);
+  }
 });
 
 test("no additional KB matches still allows repairing a failed observation", async () => {

@@ -272,9 +272,17 @@ export class LlmService {
     const url = this.resolveUrl("/chat/completions", active?.baseUrl);
     const key = options?.provider ? active?.apiKey || "" : active?.apiKey || this.getApiKey();
 
-    const timeoutMs = options?.timeoutMs ?? 30000;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (options?.timeoutMs !== undefined && Number.isFinite(options.timeoutMs)) {
+      const deadline = performance.now() + Math.max(0, options.timeoutMs);
+      const checkDeadline = () => {
+        const remaining = deadline - performance.now();
+        if (remaining <= 0) controller.abort(new DOMException("Model request deadline exceeded", "TimeoutError"));
+        else timer = setTimeout(checkDeadline, Math.min(remaining, 2147483647));
+      };
+      checkDeadline();
+    }
 
     const abortHandler = () => controller.abort();
     if (options?.signal) {
@@ -293,7 +301,7 @@ export class LlmService {
           model,
           messages,
           temperature: options?.temperature ?? 0.3,
-          max_tokens: options?.maxTokens ?? 2048,
+          ...(options?.maxTokens !== undefined && Number.isFinite(options.maxTokens) ? { max_tokens: options.maxTokens } : {}),
         }),
         signal: controller.signal,
       });
