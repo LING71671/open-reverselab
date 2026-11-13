@@ -15,6 +15,7 @@ export interface RunBudget {
 export interface AcceptancePlan {
   target: string;
   objective: string;
+  scope?: "goal" | "red" | "blue";
   checks: Array<{ id: string; criterion: string; expected: string }>;
 }
 

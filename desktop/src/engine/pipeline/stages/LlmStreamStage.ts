@@ -45,6 +45,7 @@ export class LlmStreamStage implements PipelineStage {
     const cleanBase = baseUrl.replace(/\/+$/, "");
     const messagesPayload = buildAnalysisMessages(ctx);
     const inputEstimate = estimateMessageTokens(messagesPayload);
+    if (ctx.state.refreshTokenBudget) ctx.budget.maxTokens = ctx.state.refreshTokenBudget();
     const remaining = Math.floor(ctx.budget.maxTokens - ctx.budget.tokensUsed);
     if (remaining <= inputEstimate + 32) {
       ctx.state.tokenBudgetExhausted = true;

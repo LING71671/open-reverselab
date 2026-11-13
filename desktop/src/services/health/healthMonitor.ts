@@ -17,6 +17,7 @@ const RULES: Record<HealthCode, FailureRule> = {
   TOOL_MISSING: { layer: "tool", severity: "error", retryable: false, recovery: "configure", reason: "工具未安装" },
   TOOL_TIMEOUT: { layer: "tool", severity: "warning", retryable: true, recovery: "alternate", reason: "工具执行超时" },
   TOOL_FAILED: { layer: "tool", severity: "error", retryable: false, recovery: "alternate", reason: "工具执行失败" },
+  TOOL_UNAVAILABLE: { layer: "tool", severity: "error", retryable: true, recovery: "configure", reason: "执行服务不可用" },
   EVIDENCE_INVALID: { layer: "agent", severity: "warning", retryable: false, recovery: "alternate", reason: "证据未通过验证" },
   LOOP_DETECTED: { layer: "agent", severity: "warning", retryable: false, recovery: "alternate", reason: "检测到重复执行" },
   BUDGET_TIME: { layer: "goal", severity: "warning", retryable: false, recovery: "stop", reason: "时间预算已耗尽" },

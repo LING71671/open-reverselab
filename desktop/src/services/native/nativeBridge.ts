@@ -4,6 +4,7 @@
  * and with Vite system middleware in browser dev mode.
  */
 import type { SecurityTrack } from "../../core/contracts/track";
+import { HealthFault } from "../../core/contracts/health";
 
 async function tryTauriInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T | null> {
   if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
@@ -158,15 +159,12 @@ export class NativeBridge {
           executionTimeMs: data.executionTimeMs || data.durationMs,
         };
       }
-    } catch {
-      // offline fallback
+      throw new HealthFault("TOOL_UNAVAILABLE", `Python execution service returned HTTP ${res.status}`);
+    } catch (error) {
+      if (options.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      if (error instanceof HealthFault) throw error;
+      throw new HealthFault("TOOL_UNAVAILABLE", `Python execution service unavailable: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    return {
-      success: false,
-      stdout: "",
-      stderr: "Execution service unavailable",
-    };
   }
 
   /**

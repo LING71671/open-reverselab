@@ -38,13 +38,308 @@ const { verifyTargetEvidence } = await load("engine/tracks/evidence.ts");
 const { ForensicsDeliverablesStage } = await load("engine/pipeline/stages/ForensicsDeliverablesStage.ts");
 const { KbRoutingStage } = await load("engine/pipeline/stages/KbRoutingStage.ts");
 const { TargetDiscoveryStage } = await load("engine/pipeline/stages/TargetDiscoveryStage.ts");
+const { parseActionPlan, executeActionPlan } = await load("engine/pipeline/actionPlan.ts");
+const { runBothTracks } = await load("engine/tracks/both.ts");
 const { StaticTriageStage } = await load("engine/pipeline/stages/StaticTriageStage.ts");
+const { HealthFault } = await load("core/contracts/health.ts");
+const { presentAgentContent } = await load("views/chat/agentContent.ts");
+const { buildAnalysisMessages } = await load("engine/pipeline/analysisPrompt.ts");
 after(async () => { await rm(temporary, { recursive: true, force: true }); });
 
 const item = (track, name, related = []) => ({ id: name, board: "pe-reverse", title: name, category: "memory", signals: ["hook"], mcp_tools: [], path: `kb/pe-reverse/${name}.md`, track, related_paths: related });
 const catalog = [item("red", "hook", ["kb/pe-reverse/hook-defense.md"]), item("blue", "hook-defense", ["kb/pe-reverse/hook.md"]), item("both", "shared")];
 const context = (extra = {}) => ({ sessionId: "test", target: "fixture.bin", prompt: "inspect hook", track: "blue", history: [], diagnostics: {}, state: {}, budget: { maxTokens: 20000, maxDurationMs: 10000, startedAt: Date.now(), deadline: Date.now() + 10000, monotonicDeadline: performance.now() + 10000, tokensUsed: 0, attempts: 1, usageEstimated: false }, ...extra });
 const stage = (id, execute) => ({ id, name: id, description: id, category: "custom", enabled: true, execute });
+
+test("streaming protocol stays in details while prose and branch headings remain readable", () => {
+  const plan = JSON.stringify({ hypothesis: "核对真实请求记录", checks: [{ id: "C1" }] });
+  const action = JSON.stringify({ actions: [{ script: 'print({"text": "} \\\" {"})' }] });
+  const raw = `## red\n${plan}${action}\n已发现请求差异。\n## blue\n正在检查防守记录。\n\`\`\`python\nprint('private script')\n\`\`\``;
+  const shown = presentAgentContent(raw);
+  assert.match(shown.prose, /red[\s\S]*核查计划：核对真实请求记录[\s\S]*已发现请求差异[\s\S]*blue[\s\S]*正在检查/);
+  assert.doesNotMatch(shown.prose, /checks|actions|script|print\(/);
+  assert.equal(shown.details.length, 3);
+  assert.match(shown.details[1].content, /print/);
+  for (const partial of ['{"actions":[{"script":"', '```action-plan\n{"actions":[', '```python\nprint(']) {
+    assert.equal(presentAgentContent(`已读取目标。\n${partial}`).prose, "已读取目标。");
+  }
+  assert.equal(presentAgentContent("普通正文与 `API` 名称。").prose, "普通正文与 `API` 名称。");
+});
+
+test("receipt and timing changes cannot replay the same action, but changed observations can", async () => {
+  let calls = 0, revision = 1, observed = "first";
+  const ctx = context({ state: {
+    executeAction: async () => { calls++; return { success: true, stdout: "observed", stderr: "" }; },
+    readPeerEvidence: () => ({ parentIds: [`peer-${revision}`], messages: [{ id: `receipt-${revision}`, goalId: "test", from: "red", to: "blue", type: "evidence", payload: {
+      content: JSON.stringify({ title: `label-${revision}`, output: { success: true, stdout: JSON.stringify({ value: observed, timestamp: 123 }), stderr: "", executionTimeMs: revision } }), evidenceRefs: [{ id: `peer-${revision}`, nodeId: `peer-${revision}` }],
+    } }] }),
+  } });
+  const actions = [{ id: "read", title: "read", script: "read_target()", dependsOn: [] }];
+  assert.equal((await executeActionPlan(actions, ctx, {})).success, true);
+  revision++;
+  assert.equal((await executeActionPlan(actions, ctx, {})).success, false);
+  assert.equal(calls, 1);
+  observed = "changed";
+  assert.equal((await executeActionPlan(actions, ctx, {})).success, true);
+  assert.equal(calls, 2);
+});
+
+test("action evidence quotes use decoded stdout and require the exact source", async () => {
+  const original = llmService.complete;
+  const ctx = context();
+  ctx.state.acceptancePlan = { target: ctx.target, objective: ctx.prompt, checks: [{ id: "C1", criterion: "request observed", expected: "denied" }] };
+  ctx.state.executionEvidence = { "actions.read.stdout": '{"request":"r-1","result":"denied"}', "actions.other.stdout": "unrelated" };
+  const output = { success: true, stdout: JSON.stringify(ctx.state.executionEvidence), stderr: "" };
+  let ref = "actions.read.stdout", quote = '"result":"denied"';
+  try {
+    llmService.complete = async messages => {
+      const payload = JSON.parse(messages[1].content);
+      assert.equal(payload.evidence["actions.read.stdout"], ctx.state.executionEvidence["actions.read.stdout"]);
+      return { content: JSON.stringify({ status: "verified", checks: [{ id: "C1", passed: true, evidenceRef: ref, evidenceQuote: quote }] }), usage: { totalTokens: 100 } };
+    };
+    const verify = () => verifyGoalWithModel(ctx, output, "read_target()", verifyTargetEvidence(ctx, output), {});
+    assert.equal((await verify()).goalVerified, true);
+    ref = "actions.other.stdout";
+    assert.equal((await verify()).goalVerified, false);
+    ref = "actions.read.stdout"; quote = '"result":"allowed"';
+    assert.equal((await verify()).goalVerified, false);
+  } finally { llmService.complete = original; }
+});
+
+test("an unavailable executor stops at the failed round without model replanning", async () => {
+  const original = { execPython: nativeBridge.execPython, saveReport: nativeBridge.saveReport };
+  let calls = 0;
+  try {
+    nativeBridge.execPython = async () => { calls++; throw new HealthFault("TOOL_UNAVAILABLE", "Execution service unavailable (HTTP 503)"); };
+    nativeBridge.saveReport = async () => ({ status: "saved" });
+    const pipeline = new HarnessPipeline([stage("kb-routing", async ctx => {
+      ctx.state.acceptancePlan = { target: ctx.target, objective: ctx.prompt, checks: [{ id: "C1", criterion: "read", expected: "data" }] };
+      ctx.state.fullContent = '```action-plan\n' + JSON.stringify({ actions: [{ id: "read", title: "read", script: "read_target()", dependsOn: [] }, { id: "next", title: "next", script: "check()", dependsOn: ["read"] }] }) + '\n```';
+    }), new ForensicsDeliverablesStage()]);
+    const result = await pipeline.run("fixture.bin", "inspect", [], {}, undefined, "tool-unavailable", "blue");
+    assert.equal(result.runProgress.status, "blocked");
+    assert.equal(result.budget.attempts, 1);
+    assert.equal(calls, 1);
+    assert.match(result.runProgress.reason, /503/);
+    assert.equal(result.state.actionExecutions[1].status, "cancelled");
+  } finally { Object.assign(nativeBridge, original); }
+});
+
+test("both scopes branch checks but requires an independent whole-objective verdict", async () => {
+  const original = llmService.complete;
+  let globalPass = false, requests = 0;
+  const runBranch = async (track, budget, _callbacks, state) => {
+    const ctx = context({ track, target: "fixture.bin", prompt: "review attack and defense", state,
+      runProgress: { status: "completed", tokensUsed: 10, attempts: 1 },
+      deliverables: { script: "read_target()", executionOutput: { success: true, stdout: `${track} observation`, stderr: "" } },
+    });
+    ctx.budget.tokensUsed = 10;
+    ctx.state.acceptancePlan = parseAcceptancePlan(JSON.stringify({ checks: [{ id: "C1", criterion: `${track} requirement`, expected: "observation" }] }), ctx);
+    assert.equal(ctx.state.acceptancePlan.scope, track);
+    assert.match(buildAnalysisMessages(ctx)[0].content, /当前是 both/);
+    assert.ok(budget.maxTokens < 10000);
+    return ctx;
+  };
+  try {
+    llmService.complete = async messages => {
+      requests++;
+      const payload = JSON.parse(messages[1].content);
+      assert.equal(payload.objective, "review attack and defense");
+      assert.equal(payload.plan.scope, "goal");
+      assert.deepEqual(payload.plan.checks.map(check => check.id), ["red.C1", "blue.C1"]);
+      return { content: JSON.stringify({ status: globalPass ? "verified" : "continue", reason: globalPass ? "all observed" : "missing original requirement",
+        checks: ["red", "blue"].map(track => ({ id: `${track}.C1`, passed: true, evidenceRef: `${track}.execution.stdout`, evidenceQuote: `${track} observation` })) }), usage: { totalTokens: 80 } };
+    };
+    const run = () => runBothTracks("fixture.bin", "review attack and defense", { maxTokens: 20000 }, {}, undefined, runBranch, "combined");
+    assert.equal((await run()).runProgress.status, "blocked");
+    globalPass = true;
+    const passed = await run();
+    assert.equal(passed.runProgress.status, "completed");
+    assert.equal(passed.budget.tokensUsed, 100);
+    assert.equal(requests, 2);
+  } finally { llmService.complete = original; }
+});
+
+test("a goal adjustment during combined verification cannot publish stale success", async () => {
+  const original = llmService.complete;
+  let yielding = false;
+  try {
+    llmService.complete = async () => {
+      yielding = true;
+      return { content: JSON.stringify({ status: "verified", checks: ["red", "blue"].map(track => ({ id: `${track}.C1`, passed: true, evidenceRef: `${track}.execution.stdout`, evidenceQuote: "observation" })) }), usage: { totalTokens: 30 } };
+    };
+    const result = await runBothTracks("fixture.bin", "inspect", {}, { shouldYield: () => yielding }, undefined, async (track, _budget, _callbacks, state) => {
+      const ctx = context({ track, state, runProgress: { status: "completed" }, deliverables: { script: "read_target()", executionOutput: { success: true, stdout: "observation", stderr: "" } } });
+      ctx.prompt = "inspect";
+      ctx.state.acceptancePlan = { target: ctx.target, objective: ctx.prompt, scope: track, checks: [{ id: "C1", criterion: "check", expected: "data" }] };
+      return ctx;
+    }, "adjust-combined");
+    assert.equal(result.runProgress.status, "running");
+    assert.equal(result.state.routeVerified, false);
+    assert.equal(result.deliverables.goalVerification.status, "in_progress");
+  } finally { llmService.complete = original; }
+});
+
+test("combined branches release unused model allowance after a peer settles", async () => {
+  const limits = [];
+  const result = await runBothTracks("fixture.bin", "inspect", { maxTokens: 30000 }, {}, undefined, async (track, budget, _callbacks, state) => {
+    if (track === "blue") {
+      limits.push(state.refreshTokenBudget());
+      await new Promise(resolve => setImmediate(resolve));
+      limits.push(state.refreshTokenBudget());
+    }
+    const ctx = context({ track, state, runProgress: { status: "blocked", reason: "fixture" } });
+    ctx.budget.tokensUsed = 100;
+    return ctx;
+  }, "transfer-budget");
+  assert.deepEqual(limits, [10904, 21708]);
+  assert.equal(result.budget.tokensUsed, 200);
+});
+
+test("verification programs keep real input bindings without repeating Python-escaped data", async () => {
+  const messages = [{ id: "receipt", goalId: "test", from: "red", to: "blue", type: "evidence", payload: { content: 'observed "quote"' } }];
+  const ctx = context({ state: {
+    readPeerEvidence: () => ({ messages, parentIds: [] }),
+    executeAction: async () => ({ success: true, stdout: "actual output", stderr: "" }),
+  } });
+  await executeActionPlan(["a", "b"].map(id => ({ id, title: id, dependsOn: [], script: "read_target()" + id })), ctx, {});
+  const { actions, bindings } = ctx.state.verificationProgram;
+  assert.equal(actions.a.script, "read_target()a");
+  assert.equal(actions.a.bindings.REVERSELAB_PEER_EVIDENCE, actions.b.bindings.REVERSELAB_PEER_EVIDENCE);
+  assert.deepEqual(bindings[actions.a.bindings.REVERSELAB_PEER_EVIDENCE], messages);
+  assert.equal(Object.keys(bindings).length, 2);
+  assert.match(ctx.state.executedPlanScript, /json.*loads/);
+});
+
+test("browser executor distinguishes service failure, script failure and cancellation", async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response("unavailable", { status: 503 });
+    await assert.rejects(nativeBridge.execPython("read_target()"), error => error.code === "TOOL_UNAVAILABLE" && /503/.test(error.message));
+    globalThis.fetch = async () => Response.json({ success: false, stdout: "", stderr: "ModuleNotFoundError" });
+    assert.equal((await nativeBridge.execPython("read_target()")).stderr, "ModuleNotFoundError");
+    const controller = new AbortController();
+    globalThis.fetch = async () => { controller.abort(); throw new Error("cancelled"); };
+    await assert.rejects(nativeBridge.execPython("read_target()", { signal: controller.signal }), error => error.name === "AbortError");
+  } finally { globalThis.fetch = original; }
+});
+
+test("action plans reject cycles, missing dependencies and duplicate IDs before execution", () => {
+  const content = actions => "```action-plan\n" + JSON.stringify({ actions }) + "\n```";
+  const action = (id, dependsOn = []) => ({ id, dependsOn, title: id, script: "print(1)" });
+  assert.equal(parseActionPlan("```python\nprint(1)\n```"), undefined);
+  assert.throws(() => parseActionPlan("```action-plan\n{"));
+  assert.throws(() => parseActionPlan(content([action("a", ["b"]), action("b", ["a"])])));
+  assert.throws(() => parseActionPlan(content([action("a", ["missing"])])));
+  assert.throws(() => parseActionPlan(content([action("a"), action("a")])));
+  assert.deepEqual(parseActionPlan(content([action("a"), action("b"), action("join", ["a", "b"])]))[2].dependsOn, ["a", "b"]);
+});
+
+test("acceptance and action plans tolerate adjacent JSON while braces in scripts remain data", () => {
+  const plan = { title: "检查组合限制", checks: [{ id: "C1", criterion: "inspect policy", expected: "actual output" }] };
+  const actions = { actions: [{ id: "inspect", title: "inspect", dependsOn: [], script: 'print({"text": "} \\\" {"})' }] };
+  const content = JSON.stringify(plan) + JSON.stringify(actions);
+  const ctx = context();
+  assert.equal(parseAcceptancePlan(content, ctx).checks[0].id, "C1");
+  assert.deepEqual(parseActionPlan(content), actions.actions);
+  assert.equal(parseAcceptancePlan(content, ctx).objective, ctx.prompt);
+  assert.throws(() => parseActionPlan(JSON.stringify(plan) + JSON.stringify({ actions: [{ ...actions.actions[0], dependsOn: ["missing"] }] })));
+});
+
+test("action network runs independent observations together and gives a join both actual outputs", async () => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const started = [];
+  const nodes = new Map();
+  const ctx = context({ state: { executeAction: async (_fingerprint, script) => {
+    const id = script.split("\n").at(-1);
+    started.push(id);
+    if (id !== "join") {
+      if (started.length === 2) release();
+      await gate;
+    } else {
+      const encoded = script.split("\n")[0].slice('REVERSELAB_INPUTS = __import__("json").loads('.length, -1);
+      const inputs = JSON.parse(JSON.parse(encoded));
+      assert.equal(inputs.a.stdout, "observed-a");
+      assert.equal(inputs.b.stdout, "observed-b");
+    }
+    return { success: true, stdout: `observed-${id}`, stderr: "" };
+  } } });
+  const actions = ["a", "b", "join"].map(id => ({ id, title: id, dependsOn: id === "join" ? ["a", "b"] : [], script: id }));
+  const result = await executeActionPlan(actions, ctx, { onStepNode: node => nodes.set(node.id, node) });
+  assert.equal(result.success, true);
+  assert.deepEqual(started, ["a", "b", "join"]);
+  assert.deepEqual(nodes.get("test:1:action:join").parentIds, ["test:1:action:a", "test:1:action:b"]);
+  assert.equal(ctx.state.actionExecutions.length, 3);
+});
+
+test("failed action skips dependent work while unrelated evidence is retained", async () => {
+  const calls = [];
+  const ctx = context({ state: { executeAction: async (_id, script) => {
+    const id = script.split("\n").at(-1); calls.push(id);
+    return { success: id !== "broken", stdout: id === "broken" ? "" : "actual evidence", stderr: id === "broken" ? "missing dependency" : "" };
+  } } });
+  const result = await executeActionPlan([
+    { id: "broken", title: "broken", dependsOn: [], script: "broken" },
+    { id: "other", title: "other", dependsOn: [], script: "other" },
+    { id: "dependent", title: "dependent", dependsOn: ["broken"], script: "dependent" },
+  ], ctx, {});
+  assert.equal(result.success, false);
+  assert.deepEqual(calls.sort(), ["broken", "other"]);
+  assert.match(result.stdout, /actual evidence/);
+  assert.equal(ctx.state.actionExecutions.find(action => action.id === "dependent").status, "cancelled");
+});
+
+test("a goal adjustment stops queued actions and preserves completed evidence", async () => {
+  let yielding = false;
+  const calls = [];
+  const ctx = context({ state: { executeAction: async (_id, script) => {
+    calls.push(script); yielding = true;
+    return { success: true, stdout: "first observation", stderr: "" };
+  } } });
+  const result = await executeActionPlan([
+    { id: "first", title: "first", dependsOn: [], script: "first" },
+    { id: "later", title: "later", dependsOn: ["first"], script: "later" },
+  ], ctx, { shouldYield: () => yielding });
+  assert.equal(calls.length, 1);
+  assert.equal(result.success, false);
+  assert.match(result.stdout, /first observation/);
+});
+
+test("both passes real action evidence across tracks and records reciprocal graph dependencies", async () => {
+  const oldExec = nativeBridge.execPython;
+  let blueObserved, redObserved;
+  const blueGate = new Promise(resolve => { blueObserved = resolve; });
+  const redGate = new Promise(resolve => { redObserved = resolve; });
+  const received = {};
+  const graph = new Map();
+  try {
+    nativeBridge.execPython = async script => {
+      const id = script.split("\n").at(-1);
+      if (id === "red-first") await blueGate;
+      if (id === "blue-first") blueObserved();
+      if (id === "red-check") redObserved();
+      if (id === "blue-wait") await redGate;
+      const encoded = script.split("\n")[1].slice('REVERSELAB_PEER_EVIDENCE = __import__("json").loads('.length, -1);
+      received[id] = JSON.parse(JSON.parse(encoded));
+      return { success: true, stdout: `actual-${id}`, stderr: "" };
+    };
+    await runBothTracks("fixture.bin", "cross-check", {}, { onStepNode: node => graph.set(node.id, node) }, undefined,
+      async (track, _budget, callbacks, state, signal) => {
+        const names = track === "red" ? ["red-first", "red-check"] : ["blue-first", "blue-wait", "blue-check"];
+        const ctx = context({ sessionId: track, track, signal, state });
+        const actions = names.map((id, index) => ({ id, title: id, script: id, dependsOn: index ? [names[index - 1]] : [] }));
+        await executeActionPlan(actions, ctx, callbacks);
+        ctx.runProgress = { status: "blocked", reason: "Requires independent verification", tokensUsed: 0, attempts: 1, elapsedMs: 1 };
+        return ctx;
+      }, "cross-goal");
+    assert.ok(received["red-check"].some(message => message.from === "blue" && message.payload.content.includes("actual-blue-first")));
+    assert.ok(received["blue-check"].some(message => message.from === "red"));
+    assert.ok(graph.get("red:red:1:action:red-check").parentIds.some(id => id.startsWith("blue:")));
+    assert.ok(graph.get("blue:blue:1:action:blue-check").parentIds.some(id => id.startsWith("red:")));
+    assert.equal(graph.get("branch:join").status, "failed");
+  } finally { nativeBridge.execPython = oldExec; }
+});
 
 test("an adjustment yields at a stage boundary without verifying the stale objective", async () => {
   let pending = false;

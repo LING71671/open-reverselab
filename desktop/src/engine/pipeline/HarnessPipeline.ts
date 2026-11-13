@@ -211,7 +211,8 @@ export class HarnessPipeline {
         const stageFailure = (stage.category === "forensics" ? ctx.state.routeBlocked : stageDiagnostic?.status === "fail" || stageDiagnostic?.status === "warn")
           ? classifyFailure(stageDiagnostic?.error || stageDiagnostic?.summary || ctx.state.blockedReason, layer, { code: stage.category === "forensics" ? "EVIDENCE_INVALID" : undefined }) : undefined;
         health(layer, stageFailure ? "degraded" : "healthy", stageNodeId, stageFailure);
-        callbacks.onStepNode?.({ id: stageNodeId, parentId: parentStep, agentId: stage.id, title: stage.name, status: ctx.diagnostics[stage.id]?.status === "fail" ? "failed" : "done", detail: ctx.diagnostics[stage.id]?.summary || stage.name, timestamp: Date.now(), evidence: ctx.diagnostics[stage.id]?.evidence });
+        const verificationParents: string[] | undefined = stage.id === "forensics-deliverables" ? ctx.state.verificationParentIds : undefined;
+        callbacks.onStepNode?.({ id: stageNodeId, parentId: verificationParents?.[0] || parentStep, parentIds: verificationParents, agentId: stage.id, title: stage.name, status: ctx.diagnostics[stage.id]?.status === "fail" ? "failed" : "done", detail: ctx.diagnostics[stage.id]?.summary || stage.name, timestamp: Date.now(), evidence: ctx.diagnostics[stage.id]?.evidence });
         ctx.state.lastStepId = stageNodeId;
         progress("running");
         if (yieldForAdjustment()) break;
@@ -247,8 +248,8 @@ export class HarnessPipeline {
             break;
           }
           if (repeats > 0) health("agent", "degraded", routeId, classifyFailure(reason, "agent", { code: "LOOP_DETECTED" }));
-          if (sameRouteFailure || kbStageIndex < 0) {
-            progress("blocked", sameRouteFailure ? `停止重复失败：${reason}` : "已尝试可用路线，未获得可验证结果");
+          if (ctx.state.globalBlocker || sameRouteFailure || kbStageIndex < 0) {
+            progress("blocked", ctx.state.globalBlocker ? reason : sameRouteFailure ? `停止重复失败：${reason}` : "已尝试可用路线，未获得可验证结果");
             break;
           }
           ctx.state.routeBlocked = false;

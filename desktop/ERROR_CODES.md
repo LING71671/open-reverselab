@@ -19,6 +19,7 @@
 | TOOL_MISSING | tool | 执行依赖缺失 | 检查工具配置 |
 | TOOL_TIMEOUT | tool | 工具执行超时 | 缩小范围或换路线 |
 | TOOL_FAILED | tool | 工具实际执行失败 | 换路线 |
+| TOOL_UNAVAILABLE | tool | 执行服务无法连接或拒绝请求 | 保留结果，恢复服务后重试 |
 | EVIDENCE_INVALID | agent | 证据不足或不满足验收 | 补充独立观察 |
 | LOOP_DETECTED | agent | 重复动作或无进展循环 | 剪除重复路线 |
 | BUDGET_TIME | goal | 时间上限已到 | 停止并保留记录 |

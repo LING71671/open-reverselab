@@ -2,6 +2,7 @@ export type AgentMessageType = "evidence" | "question" | "answer" | "blocked" | 
 
 export interface AgentEvidenceReference {
   readonly id: string;
+  readonly nodeId?: string;
   readonly path?: string;
   readonly summary?: string;
 }
@@ -130,11 +131,12 @@ export class AgentMessageBus {
     }
     const evidenceRefs = message.payload.evidenceRefs?.map((reference) => {
       requireId(reference.id, "evidence ID");
-      if ((reference.path !== undefined && typeof reference.path !== "string") ||
+      if ((reference.nodeId !== undefined && typeof reference.nodeId !== "string") ||
+          (reference.path !== undefined && typeof reference.path !== "string") ||
           (reference.summary !== undefined && typeof reference.summary !== "string")) {
         throw new Error("Evidence references must contain string paths and summaries");
       }
-      return Object.freeze({ id: reference.id, path: reference.path, summary: reference.summary });
+      return Object.freeze({ id: reference.id, nodeId: reference.nodeId, path: reference.path, summary: reference.summary });
     });
     const accepted: AgentMessage = Object.freeze({
       id: message.id,

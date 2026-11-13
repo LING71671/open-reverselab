@@ -2,6 +2,8 @@ import type { PipelineContext, PipelineCallbacks, RunBudget, RunProgress } from 
 import { DagScheduler, type DagNode } from "../runtime/dagScheduler";
 import { AgentMessageBus } from "../runtime/agentMessages";
 import { nativeBridge, type PythonExecResult } from "../../services/native/nativeBridge";
+import { verifyBothGoal } from "./verifyBothGoal";
+import { isHashObjective } from "./evidence";
 
 type BranchRunner = (track: "red" | "blue", budget: RunBudget, callbacks: PipelineCallbacks, state: Record<string, any>, signal: AbortSignal) => Promise<PipelineContext>;
 
@@ -16,6 +18,8 @@ export async function runBothTracks(
   goalId: string,
 ): Promise<PipelineContext> {
   const started = performance.now();
+  const verificationReserve = budget.maxTokens === undefined || isHashObjective(objective) ? 0 : Math.min(8192, Math.floor(budget.maxTokens / 3));
+  const branchTokens = budget.maxTokens === undefined ? undefined : budget.maxTokens - verificationReserve;
   const results: Partial<Record<"red" | "blue", PipelineContext>> = {};
   const texts = { red: "", blue: "" };
   const lastStepIds: Partial<Record<"red" | "blue", string>> = {};
@@ -37,8 +41,8 @@ export async function runBothTracks(
     return sharedExecutions.get(fingerprint)!;
   };
   let messageSequence = 0;
-  const notifyPeer = (from: "red" | "blue", type: "evidence" | "blocked" | "result", content: string, paths: string[] = []) => {
-    const message = { id: `${goalId}:message-${++messageSequence}`, goalId, from, to: from === "red" ? "blue" : "red", type, payload: { content, evidenceRefs: paths.map((path) => ({ id: path, path })) } };
+  const notifyPeer = (from: "red" | "blue", type: "evidence" | "blocked" | "result", content: string, paths: string[] = [], nodeId?: string) => {
+    const message = { id: `${goalId}:message-${++messageSequence}`, goalId, from, to: from === "red" ? "blue" : "red", type, payload: { content, evidenceRefs: [...paths.map((path) => ({ id: path, path })), ...(nodeId ? [{ id: nodeId, nodeId }] : [])] } };
     bus.dispatch(message);
     callbacks.onToolCall?.({ id: message.id, tool: "agent_message", title: `${message.from} → ${message.to}`, status: "done", detail: content, output: message });
   };
@@ -47,14 +51,15 @@ export async function runBothTracks(
     run: async ({ signal: branchSignal }) => {
       const branchBudget = {
         maxDurationMs: budget.maxDurationMs === undefined ? undefined : Math.max(1, budget.maxDurationMs - (performance.now() - started)),
-        maxTokens: budget.maxTokens === undefined ? undefined : index === 0 ? Math.floor(budget.maxTokens / 2) : budget.maxTokens - Math.floor(budget.maxTokens / 2),
+        maxTokens: branchTokens === undefined ? undefined : index === 0 ? Math.floor(branchTokens / 2) : branchTokens - Math.floor(branchTokens / 2),
       };
       const branchCallbacks: PipelineCallbacks = {
         ...callbacks,
         onToken: (text) => { texts[track] = text; callbacks.onToken?.(content()); },
         onStepNode: (step) => {
           lastStepIds[track] = `${track}:${step.id}`;
-          callbacks.onStepNode?.({ ...step, id: `${track}:${step.id}`, parentId: step.parentId ? `${track}:${step.parentId}` : `branch:${track}`, parentIds: step.parentIds?.map((id: string) => `${track}:${id}`), title: `${track} · ${step.title}` });
+          const parents = [...new Set<string>([...(step.parentIds || (step.parentId ? [step.parentId] : [])).map((id: string) => `${track}:${id}`), ...(step.evidenceParentIds || [])])];
+          callbacks.onStepNode?.({ ...step, id: `${track}:${step.id}`, parentId: parents[0] || `branch:${track}`, parentIds: parents.length ? parents : [`branch:${track}`], evidenceParentIds: undefined, title: `${track} · ${step.title}` });
           callbacks.onStepNode?.({ id: "branch:join", parentId: joinParents()[0], parentIds: joinParents(), agentId: "coordinator", title: "both", status: "pending", detail: "等待 red 与 blue 汇合", timestamp: Date.now() });
         },
         onToolCall: (tool) => {
@@ -64,7 +69,9 @@ export async function runBothTracks(
         },
         onDeliverables: (deliverables) => {
           callbacks.onDeliverables?.(deliverables);
-          if (deliverables.executionOutput) notifyPeer(track, "evidence", JSON.stringify({ execution: deliverables.executionOutput, verification: deliverables.goalVerification }).slice(0, 12000));
+          // Action-level observations are already published; do not feed a
+          // verifier timestamp or aggregate envelope back as new evidence.
+          if (deliverables.executionOutput && !deliverables.script?.startsWith("# Action:")) notifyPeer(track, "evidence", JSON.stringify({ execution: deliverables.executionOutput }), [], lastStepIds[track]);
         },
         onDiagnosticUpdate: (diagnostic) => callbacks.onDiagnosticUpdate?.({ ...diagnostic, stageId: `${track}:${diagnostic.stageId}`, stageName: `${track} · ${diagnostic.stageName}` }),
         onHealthEvent: (event) => callbacks.onHealthEvent?.({ ...event, goalId, branchId: track }),
@@ -75,7 +82,18 @@ export async function runBothTracks(
       };
       results[track] = await runBranch(track, branchBudget, branchCallbacks, {
         executeAction,
+        verificationScope: track,
+        refreshTokenBudget: () => {
+          if (branchTokens === undefined) return Infinity;
+          const peer = results[track === "red" ? "blue" : "red"];
+          return peer ? Math.max(0, branchTokens - peer.budget.tokensUsed) : branchBudget.maxTokens!;
+        },
         readPeerMessages: () => bus.readInbox(track),
+        readPeerEvidence: () => {
+          const messages = bus.readInbox(track).filter(message => message.type === "evidence").slice(-8);
+          return { messages, parentIds: [...new Set(messages.flatMap(message => message.payload.evidenceRefs?.flatMap(ref => ref.nodeId ? [ref.nodeId] : []) || []))] };
+        },
+        publishEvidence: (nodeId: string, title: string, output: unknown) => notifyPeer(track, "evidence", JSON.stringify({ title, output }), [], `${track}:${nodeId}`),
         notifyPeer: (reason: string) => notifyPeer(track, "blocked", reason),
       }, branchSignal);
       texts[track] = results[track]?.state.fullContent || "";
@@ -98,14 +116,17 @@ export async function runBothTracks(
   await scheduler.run();
   const last = results.blue || results.red;
   if (!last) throw new Error(signal?.aborted ? "任务已停止" : "both 预算不足");
+  const scopedComplete = results.red?.runProgress?.status === "completed" && results.blue?.runProgress?.status === "completed";
+  const combined = scopedComplete && !signal?.aborted && !callbacks.shouldYield?.() && performance.now() - started < (budget.maxDurationMs ?? Infinity)
+    ? await verifyBothGoal(results as Record<"red" | "blue", PipelineContext>, target, objective, budget, started, goalId, signal, callbacks) : undefined;
   const elapsedMs = Math.round(performance.now() - started);
-  const tokensUsed = sumUsage();
+  const tokensUsed = combined?.context.budget.tokensUsed ?? sumUsage();
   const yielding = !!callbacks.shouldYield?.();
-  const completed = !yielding && results.red?.runProgress?.status === "completed" && results.blue?.runProgress?.status === "completed";
+  const completed = !yielding && !signal?.aborted && elapsedMs < (budget.maxDurationMs ?? Infinity) && tokensUsed <= (budget.maxTokens ?? Infinity) && !!combined?.verification.goalVerified;
   const status: RunProgress["status"] = signal?.aborted ? "cancelled" : yielding ? "running" : completed ? "completed"
-    : elapsedMs >= (budget.maxDurationMs ?? Infinity) || tokensUsed >= (budget.maxTokens ?? Infinity) ? "exhausted" : "blocked";
-  const reason = yielding ? "正在应用补充要求" : completed ? "red 和 blue 均完成独立目标核验"
-    : (["red", "blue"] as const).map((track) => `${track}: ${results[track]?.runProgress?.reason || "未运行"}`).join("；");
+    : elapsedMs >= (budget.maxDurationMs ?? Infinity) || tokensUsed >= (budget.maxTokens ?? Infinity) || combined?.context.state.tokenBudgetExhausted || Object.values(results).some(ctx => ctx.runProgress?.status === "exhausted") ? "exhausted" : "blocked";
+  const reason = signal?.aborted ? "用户已停止运行" : yielding ? "正在应用补充要求" : completed ? "red、blue 分别通过核验，完整目标已核验"
+    : combined?.verification.reason || (["red", "blue"] as const).map((track) => `${track}: ${results[track]?.runProgress?.reason || "未运行"}`).join("；");
   const checkpoint = {
     target,
     objective,
@@ -114,7 +135,7 @@ export async function runBothTracks(
     actionFingerprints: [...new Set(Object.values(results).flatMap((ctx) => ctx.state.executedActionFingerprints || []))] as string[],
     blockedReasons: Object.values(results).flatMap((ctx) => (ctx.state.routeHistory || []).map((route: { reason: string }) => route.reason)),
   };
-  const runProgress: RunProgress = { ...budget, status, reason, elapsedMs, tokensUsed, attempts: sumAttempts(), usageEstimated: Object.values(results).some((ctx) => ctx.budget.usageEstimated), checkpoint };
+  const runProgress: RunProgress = { ...budget, status, reason, elapsedMs, tokensUsed, attempts: sumAttempts(), usageEstimated: combined?.context.budget.usageEstimated ?? Object.values(results).some((ctx) => ctx.budget.usageEstimated), checkpoint };
   callbacks.onRunProgress?.(runProgress);
   if (!yielding) callbacks.onHealthEvent?.({ eventId: `${goalId}:both-final`, goalId, layer: "goal", nodeId: "join", status: completed ? "healthy" : signal?.aborted ? "cancelled" : "degraded", timestamp: Date.now(), reason });
   callbacks.onStepNode?.({ id: "branch:join", parentId: joinParents()[0], parentIds: joinParents(), agentId: "coordinator", title: "both", status: yielding ? "pending" : completed ? "done" : "failed", detail: reason, timestamp: Date.now(), evidence: { status, tokensUsed, branches: Object.fromEntries(Object.entries(results).map(([track, ctx]) => [track, ctx.runProgress])) } });
@@ -125,11 +146,11 @@ export async function runBothTracks(
     goalVerification: {
       objective,
       status: completed ? "verified" as const : "in_progress" as const,
-      passRate: `${Number(results.red?.state.routeVerified) + Number(results.blue?.state.routeVerified)}/2 branches`,
-      assertions: Object.entries(results).flatMap(([track, ctx]) => (ctx.deliverables?.goalVerification?.assertions || []).map((assertion) => ({ ...assertion, name: `${track}: ${assertion.name}` }))),
+      passRate: combined?.verification.goal?.passRate || `${Number(results.red?.state.routeVerified) + Number(results.blue?.state.routeVerified)}/2 branches`,
+      assertions: combined?.verification.goal?.assertions || Object.entries(results).flatMap(([track, ctx]) => (ctx.deliverables?.goalVerification?.assertions || []).map((assertion) => ({ ...assertion, name: `${track}: ${assertion.name}` }))),
       timestamp: Date.now(),
     },
   };
   if (!yielding) callbacks.onDeliverables?.(deliverables);
-  return { ...last, track: "both", runProgress, deliverables, budget: { ...last.budget, ...budget, tokensUsed, attempts: sumAttempts() }, state: { branches: results, messages: bus.readHistory(), fullContent: content(), routeVerified: completed } };
+  return { ...last, track: "both", runProgress, deliverables, budget: { ...last.budget, ...budget, tokensUsed, attempts: sumAttempts() }, state: { branches: results, messages: bus.readHistory(), fullContent: content(), routeVerified: completed, combinedVerification: combined?.verification } };
 }

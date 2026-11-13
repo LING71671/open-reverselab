@@ -3,6 +3,9 @@ import { nativeBridge, type PythonExecResult } from "../../../services/native/na
 import { trackPolicies } from "../../tracks";
 import { parseAcceptancePlan, verifyGoalWithModel } from "../goalVerifier";
 import { classifyFailure } from "../../../services/health/healthMonitor";
+import { parseActionPlan, executeActionPlan, type AnalysisAction } from "../actionPlan";
+import { fingerprint, observationIdentity } from "../observationIdentity";
+import { HealthFault } from "../../../core/contracts/health";
 
 export function normalizeFailure(value: string): string {
   return value.toLowerCase().replace(/0x[\da-f]+/g, "<address>")
@@ -20,7 +23,10 @@ export class ForensicsDeliverablesStage implements PipelineStage {
   async execute(ctx: PipelineContext, callbacks: PipelineCallbacks): Promise<void> {
     const startTime = Date.now();
     const fullContent: string = ctx.state.fullContent || "";
-    const script = fullContent.match(/```python\s*([\s\S]*?)\s*```/i)?.[1]?.trim() || "";
+    let script = fullContent.match(/```python\s*([\s\S]*?)\s*```/i)?.[1]?.trim() || "";
+    let actions: AnalysisAction[] | undefined;
+    let planError = "";
+    try { actions = parseActionPlan(fullContent); } catch (error) { planError = error instanceof Error ? error.message : String(error); }
     const parsedPlan = parseAcceptancePlan(fullContent, ctx);
     ctx.state.acceptancePlan ||= parsedPlan;
     const canonicalScript = script.split("\n").map((line) => line.trimEnd()).filter((line) => line.trim() && !line.trim().startsWith("#")).join("\n");
@@ -28,8 +34,18 @@ export class ForensicsDeliverablesStage implements PipelineStage {
     const fingerprintBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${ctx.target}\n${canonicalScript}`));
     const actionFingerprint = [...new Uint8Array(fingerprintBytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
     let executionOutput: PythonExecResult | undefined;
-    let blockedReason = "";
-    if (!ctx.state.builtinHash && !ctx.state.acceptancePlan) blockedReason = "执行前缺少与原目标绑定的验收条件";
+    let blockedReason = planError;
+    ctx.state.verificationParentIds = undefined;
+    ctx.state.executionEvidence = undefined;
+    ctx.state.actionObservationIdentity = undefined;
+    ctx.state.verificationProgram = undefined;
+    if (planError) { /* Reject invalid dependencies before starting any action. */ }
+    else if (!ctx.state.builtinHash && !ctx.state.acceptancePlan) blockedReason = "执行前缺少与原目标绑定的验收条件";
+    else if (actions) {
+      executionOutput = await executeActionPlan(actions, ctx, callbacks);
+      script = ctx.state.executedPlanScript;
+      if (!executionOutput.success) blockedReason = executionOutput.stderr || "部分观察动作未完成";
+    }
     else if (!script) blockedReason = "模型未提供可执行的取证脚本";
     else if (executedScripts.includes(canonicalScript)) blockedReason = "已阻止重复执行相同脚本";
     else if (ctx.signal?.aborted || performance.now() >= ctx.budget.monotonicDeadline) blockedReason = "执行前时间预算已耗尽或任务已取消";
@@ -47,11 +63,16 @@ export class ForensicsDeliverablesStage implements PipelineStage {
         if (!output.success) blockedReason = output.stderr || "取证脚本执行失败";
         else if (!output.stdout.trim()) blockedReason = "取证脚本未返回可核查输出";
       } catch (error) {
+        if (error instanceof HealthFault && error.code === "TOOL_UNAVAILABLE") ctx.state.globalBlocker = true;
         blockedReason = error instanceof Error ? error.message : String(error);
         executionOutput = { success: false, stdout: "", stderr: blockedReason };
       }
       callbacks.onToolCall?.({ id: actionFingerprint, tool: "python", title: "执行观察", status: executionOutput?.success ? "done" : "failed", detail: blockedReason, output: executionOutput, durationMs: Date.now() - startTime });
       callbacks.onHealthEvent?.({ eventId: `${ctx.sessionId}:exec-end:${ctx.budget.attempts}`, goalId: ctx.sessionId, layer: "tool", status: executionOutput?.success ? "healthy" : "failed", timestamp: Date.now(), branchId: ctx.track, nodeId: actionFingerprint, ...(executionOutput?.success ? {} : classifyFailure(blockedReason, "tool")) });
+    }
+    if (callbacks.shouldYield?.()) {
+      ctx.state.lastExecutionOutput = executionOutput;
+      return;
     }
     if (ctx.track === "both") throw new Error("both must verify each branch independently");
     let verification = trackPolicies[ctx.track].verify(ctx, executionOutput);
@@ -65,9 +86,8 @@ export class ForensicsDeliverablesStage implements PipelineStage {
     ctx.state.routeVerified = verification.goalVerified;
     ctx.state.blockedReason = blockedReason;
     ctx.state.failureFingerprint = normalizeFailure(blockedReason);
-    const observation = executionOutput?.success ? executionOutput.stdout.trim() : normalizeFailure(executionOutput?.stderr || blockedReason);
-    const observationDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(observation));
-    ctx.state.evidenceFingerprint = [...new Uint8Array(observationDigest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    const observation = executionOutput?.success ? ctx.state.actionObservationIdentity || observationIdentity(executionOutput) : normalizeFailure(executionOutput?.stderr || blockedReason);
+    ctx.state.evidenceFingerprint = await fingerprint(observation);
     ctx.state.lastExecutionOutput = executionOutput;
 
     const deliverables: Deliverables = {
