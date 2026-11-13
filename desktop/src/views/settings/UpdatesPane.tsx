@@ -3,6 +3,8 @@ import { ArrowDownToLine, Loader2, RefreshCw } from "lucide-react";
 import { isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { updateService } from "../../services/updates/updateService";
+import type { UpdateChannel } from "../../services/updates/updateController";
+import { Select } from "../controls/Select";
 import { getWorkloadCount, subscribeWorkload } from "../../services/goals/workspaceRuntime";
 import "./updates.css";
 
@@ -26,13 +28,15 @@ export function UpdatesPane() {
   const busy = ["checking", "downloading", "installing"].includes(phase);
   const percentage = progress.total ? Math.min(100, Math.round(progress.downloaded / progress.total * 100)) : undefined;
   const openRelease = () => {
-    const url = `https://github.com/LING71671/open-reverselab/releases/${release ? `tag/v${encodeURIComponent(release.version)}` : "latest"}`;
+    if (!release) return;
+    const url = release.url;
     if (isTauri()) void openUrl(url); else window.open(url, "_blank", "noopener,noreferrer");
   };
-  const status = phase === "checking" ? "正在检查更新" : phase === "current" ? "已是最新版本" : phase === "downloading" ? "正在下载更新" : phase === "ready" ? "更新已下载，签名验证通过" : phase === "installing" ? "正在保存工作区并启动安装" : release ? `新版本 ${release.version}` : "";
+  const status = phase === "checking" ? "正在检查更新" : phase === "current" ? "当前渠道没有更新的版本" : phase === "unpublished" ? "当前渠道尚未发布可安装更新" : phase === "downloading" ? "正在下载更新" : phase === "ready" ? "更新已下载，签名验证通过" : phase === "installing" ? "正在保存工作区并启动安装" : release ? `新版本 ${release.version}` : "";
   return <section className="updates-pane" id="settings-updates" role="tabpanel" aria-labelledby="settings-tab-updates">
     <div className="update-version"><div><h3>Open ReverseLab <span>{info.version}</span></h3><p>{info.mode === "installed" ? "Windows 安装版" : info.mode === "portable" ? "Windows 便携版" : info.mode === "browser" ? "浏览器预览" : info.mode === "development" ? "开发构建" : "源码构建"}</p></div><button type="button" className="secondary-button" onClick={() => void updateService.check()} disabled={busy || phase === "ready" || info.mode === "browser"}>{phase === "checking" ? <Loader2 size={14} className="loading-spinner" /> : <RefreshCw size={14} />}检查更新</button></div>
     {info.mode === "browser" && <p className="update-hint">请在桌面应用中检查和安装更新。</p>}
+    <div className="update-channel"><label htmlFor="update-channel">更新渠道</label><Select id="update-channel" label="更新渠道" value={preferences.channel} onChange={value => updateService.setChannel(value as UpdateChannel)} disabled={busy} options={[{ value: "stable", label: "稳定版" }, { value: "beta", label: "测试版" }]} /><p className="update-hint">{preferences.channel === "beta" ? "接收测试版与正式版更新。" : "仅接收正式发布的稳定版。"}</p></div>
     <label className="update-automatic"><input type="checkbox" checked={preferences.automatic} onChange={event => updateService.setAutomatic(event.target.checked)} disabled={phase === "installing"} /><span>自动检查更新<small>每天检查一次，下载和安装由你决定。</small></span></label>
     {status && <p className="update-status" role="status">{busy && <Loader2 size={15} className="loading-spinner" />}{status}</p>}
     {phase === "downloading" && <div className="update-progress"><progress aria-label="更新下载进度" value={percentage} max={100} /><span>{size(progress.downloaded)}{progress.total ? ` / ${size(progress.total)} · ${percentage}%` : ""}</span></div>}

@@ -1,88 +1,108 @@
-# 应用更新
+# Application updates
 
-设置 → 应用更新显示当前版本、版本说明和更新进度。启动 20 秒后检查稳定版，后续最多每天检查一次；可关闭自动检查。手动检查始终可用，跳过某个版本只隐藏该版本的提醒。后台检查不会下载、安装或停止 Goal。
+[简体中文](UPDATES.zh-CN.md)
 
-## 安装流程
+**Settings → Application updates** shows the current version, update channel, release notes, and download progress. Automatic checks start 20 seconds after launch and run at most once a day. They can be disabled. Manual checks are available in the desktop app; skipping a version hides its notification. Background checks never download, install, or stop Goals.
 
-Windows x64 安装版使用 Tauri 官方 updater：
+## Update channels
 
-1. 从本仓库 GitHub Releases 的 `latest.json` 读取最新稳定版。
-2. 用户点击下载后获取 NSIS 安装包，显示实际接收字节数；服务未提供总长度时显示已下载大小。
-3. Tauri 使用应用内置的公开密钥验证 Minisign 签名，同时验证签名绑定的版本。验证失败的包不能进入安装状态。
-4. 用户点击“安装并重新打开”后，检查所有已打开工作区的运行和排队 Goal，等待工作区保存完成，再检查一次任务状态。
-5. 原生侧确认没有 Python 执行，锁住新执行并启动安装程序。安装器关闭当前应用、替换程序与随包资源，然后重新打开应用。
+- **Stable** accepts public production releases, excluding both GitHub prereleases and versions with a SemVer prerelease identifier.
+- **Beta** accepts public prereleases and production releases. Prerelease builds such as `2.0.0-beta.1` initially select this channel; production builds select Stable. An explicit choice is retained.
+- Both channels compare SemVer precedence and only offer higher versions. A beta can advance to the corresponding production version. Switching to Stable never installs an older version.
 
-更新不会自动停止任务。可以在任务运行时下载，安装按钮须等待所有任务结束。默认工作区、模型设置和更新偏好位于程序目录外，升级保留这些数据。不要把自定义工作区放在安装程序管理的 `runtime/` 目录内。
+Discovery uses the public GitHub Releases API without account credentials and selects an uploaded `latest.json` asset. Draft releases are excluded. The manifest endpoint, release page, and installer come from the actual release record. A channel without an update manifest shows that no installable update has been published and creates no release link. Network failures remain errors. A published version that does not exceed the installed build reports no newer version in the selected channel.
 
-便携版和源码构建可以检查版本、阅读版本说明；升级通过发布页下载新包完成。只有通过 NSIS 安装、包含 `runtime/kb/`、`runtime/scripts/` 和 `uninstall.exe` 的 Windows x64 版本开放应用内安装。浏览器开发预览会明确显示不支持安装。
+Changing channels clears the selected release, skipped version, check time, and downloaded-ready state. Check and download again before installation. Channel selection is locked during checks, downloads, and installation. Update requests use the system network and proxy, independently of the model and target-access proxy pools.
 
-## 模块职责
+## Installation
 
-| 模块 | 职责 |
+The Windows x64 installer edition uses the official Tauri updater:
+
+1. Read the selected release's actual `latest.json` asset. Its version must match the release tag, and its installer must be an uploaded asset of that release.
+2. Download the NSIS installer only after the user requests it. Progress uses received bytes; if the server omits the total, show the downloaded size.
+3. Verify the Minisign signature with the application's embedded public key, including its signed version. A failed signature cannot advance to installation.
+4. When the user selects **Install and reopen**, check running and queued Goals across all opened workspaces, wait for workspace persistence, and check the workload again.
+5. The native layer checks for Python execution and active network requests, blocks new execution, and starts the installer. The installer closes the app, replaces its files and bundled resources, and reopens it.
+
+Downloading can proceed while Goals run. Installation waits for all work to finish. Default workspace data, model settings, and update preferences live outside the program directory and survive upgrades. Keep custom workspaces outside the installer-managed `runtime/` directory.
+
+Portable packages and source builds can check versions and read release notes; upgrade them manually from the release page. In-app installation is enabled only for Windows x64 NSIS installations containing `runtime/kb/`, `runtime/scripts/`, and `uninstall.exe`. Browser preview explicitly disables checks and installation.
+
+## Responsibilities and states
+
+| Module | Responsibility |
 | --- | --- |
-| `src/services/updates/updateController.ts` | 与平台无关的状态机、检查频率、跳过版本、用户操作与安装前保存 |
-| `src/services/updates/updateService.ts` | Tauri IPC 适配器与跨工作区任务保护 |
-| `src/views/settings/UpdatesPane.tsx` | 更新操作、状态、进度和错误详情 |
-| `src-tauri/src/updates.rs` | HTTPS 更新请求、包来源限制、下载和签名验证、安装锁 |
-| `src/services/goals/workspaceRuntime.ts` | 所有加载中和已打开工作区的保存及运行状态 |
+| `src/services/updates/updateController.ts` | Platform-independent state machine, channel preferences, check interval, skipped versions, and persistence before installation |
+| `src/services/updates/updateService.ts` | Tauri IPC and cross-workspace workload protection |
+| `src/views/settings/UpdatesPane.tsx` | Channel selection, actions, progress, status, and error details |
+| `src-tauri/src/updates.rs` | Public release discovery, HTTPS manifest retrieval, version and asset validation, download, signature verification, and installation lock |
+| `src/services/goals/workspaceRuntime.ts` | Saving and workload tracking for loaded and opening workspaces |
 
-状态依次为 `idle → checking → available → downloading → ready → installing`；没有新版时为 `current`。检查失败进入 `error`；下载失败回到 `available`，保存失败保持 `ready`。关闭设置不会取消下载，也不会丢失下载状态。下载包暂存在应用进程内存，退出后需重新下载。当前使用一个稳定版渠道，不做增量更新。
+The normal sequence is `idle → checking → available → downloading → ready → installing`. No higher version produces `current`; no published installation manifest produces `unpublished`. Check failures enter `error`; download failures return to `available`. Workspace save failures retain `ready`. Installer launch or temporary-file failures require a fresh download. Navigation away from settings does not cancel downloads or discard state. Downloaded bytes remain in process memory and must be downloaded again after exiting. Updates are full packages.
 
-更新诊断独立于单个 Goal 的健康事件，显示在“应用更新”的错误详情中；当前错误也会显示在健康监控页。它不把网络失败伪装为“已是最新版本”。应用使用单实例运行，第二次启动会聚焦已有窗口。
+Update diagnostics are independent of individual Goal health events and appear in the update panel's error details. Current errors also appear in health monitoring. Network failures never report that the app is current. The application uses a single instance; another launch focuses the existing window.
 
-| 错误码 | 含义与恢复 |
+| Error code | Meaning and recovery |
 | --- | --- |
-| `UPDATE_NETWORK` | 更新服务或网络不可达；检查网络后重试 |
-| `UPDATE_MANIFEST` | 发布信息无效、平台缺失或下载地址不属于官方仓库；维护者修复发布资产后重试 |
-| `UPDATE_SIGNATURE` | 包签名、签名版本或公开密钥不匹配；重新检查并下载正确资产 |
-| `UPDATE_DOWNLOAD` | 下载失败；重新下载 |
-| `UPDATE_INSTALL` | 安装器未能启动；重新下载或手动运行官方安装包 |
-| `UPDATE_STORAGE` | 工作区保存或本地临时文件操作失败；检查目录权限和可用空间 |
-| `UPDATE_TASKS_ACTIVE` | 仍有运行或排队任务；等待所有工作区任务结束 |
-| `UPDATE_BUSY` | 另一个更新操作正在执行；等待当前操作结束 |
-| `UPDATE_UNSUPPORTED` | 当前运行方式不能应用内安装；使用发布页安装包 |
-| `UPDATE_NOT_READY` | 尚未下载并验证包；先下载 |
+| `UPDATE_NETWORK` | Release service or network unavailable; check connectivity and retry |
+| `UPDATE_MANIFEST` | Invalid release metadata, missing platform, version mismatch, or an installer outside the selected official release; retry after the release assets are corrected |
+| `UPDATE_SIGNATURE` | Package signature, signed version, or public key mismatch; check again and download the correct package |
+| `UPDATE_DOWNLOAD` | Download failed; retry the download |
+| `UPDATE_INSTALL` | Installer could not start; download again or manually run the official installer |
+| `UPDATE_STORAGE` | Workspace persistence or temporary-file failure; check permissions and free space |
+| `UPDATE_TASKS_ACTIVE` | Running or queued work remains; wait for all workspaces to finish |
+| `UPDATE_BUSY` | Another update operation is running; wait for it to finish |
+| `UPDATE_UNSUPPORTED` | This execution mode cannot install in-app; use the release package |
+| `UPDATE_NOT_READY` | No verified package is ready; download first |
 
-## 发布合同
+## Release contract
 
-`package.json`、Cargo 包及 lockfile、`tauri.conf.json` 的版本必须一致。Windows 发布同时提供安装包、安装包 `.sig`、`latest.json` 和 SHA256 校验值；可继续附带便携 ZIP。
+Keep `package.json`, the Cargo package and lockfile, and `tauri.conf.json` aligned. Windows releases provide an installer, its `.sig`, `latest.json`, and SHA256 checksums. A portable ZIP can also be included.
 
-安装包包含 `src-tauri/release-resources/`，映射到安装目录的 `runtime/`。该暂存目录已忽略，不得提交。应从最终发布 commit 的 `git archive` 构建允许公开的资源，至少包含完整 `kb/` 与 `scripts/` 及它们引用的根配置、板块文档和工具索引；不直接递归打包开发工作区。外部逆向工具、Python 和私人数据不在资源包内。
+The installer bundles `src-tauri/release-resources/` as `runtime/`. This ignored staging directory must not be committed. Build it from the final release commit's `git archive`, including complete `kb/` and `scripts/` trees and their referenced root configuration, board documentation, and tool indexes. Do not recursively package a development workspace. External analysis tools, Python, and private data are not bundled.
 
-签名私钥只保存在维护者本机或 CI secret，公开密钥写入 `plugins.updater.pubkey`。构建进程的 `TAURI_SIGNING_PRIVATE_KEY` 环境变量指向本机私钥文件，`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 提供私钥密码；无密码时为空。随后运行：
+Keep the signing private key on the maintainer's machine or in CI secrets. Put the public key in `plugins.updater.pubkey`. Set `TAURI_SIGNING_PRIVATE_KEY` to the local private-key file and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` to its password, or an empty value for an unencrypted key. Then build:
 
 ```powershell
 pnpm tauri build --bundles nsis --config src-tauri/tauri.release.conf.json
 ```
 
-Tauri CLI 2.12+ 的 `build` 会把应用版本绑定到签名。手动签名必须传 `--app-version <version>`，本应用启用了 `requireSignedVersion`。应备份私钥；丢失私钥后，已安装版本无法验证新密钥签发的更新。更新签名与 Windows Authenticode 代码签名是两套机制。
+Tauri CLI 2.12+ binds the application version when signing during `build`. Manual signing requires `--app-version <version>` because this application enables `requireSignedVersion`. Back up the private key: installed clients cannot verify updates signed by a replacement key. Updater signatures and Windows Authenticode signatures serve separate purposes.
 
-`latest.json` 示例中的 `signature` 必须替换为本次 `.sig` 文件的完整内容：
+Replace the signature placeholder below with the complete contents of the generated `.sig` file:
 
 ```json
 {
   "version": "2.0.0",
-  "notes": "本次发布的版本说明",
+  "notes": "Release notes for this version",
   "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "url": "https://github.com/LING71671/open-reverselab/releases/download/v2.0.0/ReverseLab-v2.0.0-windows-x64-setup.exe",
-      "signature": "<本次安装包的签名内容>"
+      "signature": "<complete installer signature>"
     }
   }
 }
 ```
 
-先完整上传并核对这些资产，再将 Release 设为最新稳定版。不要只改 JSON 的版本号并复用旧包或旧签名。
+Upload and verify all assets before publishing. Production releases use a production tag and stable release status; test releases use a tag such as `v2.0.0-beta.1` and GitHub's prerelease flag. Both channels use the `latest.json` attached to their selected release. Existing stable clients using `releases/latest/download/latest.json` still depend on GitHub's latest production release. A draft or a tag without a Release does not make an update available. Never reuse an old package or signature under a different JSON version.
 
-## 验证
+## Verification
 
 ```sh
 pnpm build
 node --experimental-strip-types --test tests/updateController.test.ts
-cargo test --manifest-path src-tauri/Cargo.toml --lib updates::tests
+cargo test --locked --manifest-path src-tauri/Cargo.toml --lib updates::tests
 ```
 
-状态机测试覆盖检查频率、跳过版本、并发点击、下载失败与签名失败、所有工作区任务保护、保存失败和安装前二次检查。发布验收还需在隔离的 Windows 安装目录检查安装资源、实际更新请求和下一版本的升级流程。首个支持 updater 的版本无法通过旧版本中不存在的更新模块升级。
+State-machine and native selection tests cover channel migration, draft filtering, version ordering, missing releases, download and signature failures, concurrent actions, workload guards, persistence failures, and the final pre-install check. They use synthetic release records and mock adapters.
 
-实现依据：[Tauri updater](https://v2.tauri.app/plugin/updater/)。
+Run actual public metadata discovery separately:
+
+```sh
+cargo test --locked --manifest-path src-tauri/Cargo.toml --lib updates::tests::public_release_discovery -- --ignored --nocapture
+```
+
+This check only reads the public API. It does not download or install an executable. Full upgrade acceptance still requires an isolated Windows installation, a real signed package, and an upgrade to the next version. A release that predates the updater cannot acquire it through an update mechanism it does not contain.
+
+Implementation reference: [Tauri updater](https://v2.tauri.app/plugin/updater/).

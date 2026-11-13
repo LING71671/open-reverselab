@@ -7,6 +7,8 @@
 .update-version h3 span { margin-left: 5px; font-size: 14px; font-weight: 400; color: var(--text-secondary); }
 .update-version p, .update-hint, .update-last-check { color: var(--text-secondary); font-size: 12px; }
 .update-automatic { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.update-channel { display: grid; grid-template-columns: minmax(0, 280px); gap: 7px; }
+.update-channel label { font-size: 13px; }
 .update-automatic input { width: 15px; height: 15px; margin-top: 4px; accent-color: var(--text-primary); }
 .update-automatic small { display: block; color: var(--text-secondary); font-size: 12px; margin-top: 3px; }
 .update-status { display: flex; align-items: center; gap: 8px; }
