@@ -1,9 +1,10 @@
 import { useMemo, useEffect, useLayoutEffect, useCallback, useRef, useState } from "react";
-import { ReactFlow, Background, MiniMap, useReactFlow, ReactFlowProvider, BackgroundVariant, useNodesState, useNodesInitialized, type Node, type Edge } from "@xyflow/react";
+import { ReactFlow, Background, MiniMap, useReactFlow, ReactFlowProvider, BackgroundVariant, useNodesState, useNodesInitialized, type Node, type Edge, type NodeChange } from "@xyflow/react";
 import { Focus, Scan, Maximize2, Minimize2, Plus, Minus, Map as MapIcon } from "lucide-react";
 import { HarnessNode, type HarnessNodeData } from "./nodes/HarnessNode";
 import type { GraphStep } from "../../core";
 import { reconcileNodes, planNodeMotion, applyNodeMotion, type Point } from "./nodeMotion";
+import { layoutGraph, parentIds, edgePorts } from "./graphLayout";
 import "./canvas.css";
 interface CanvasGraphProps { active: boolean; fullscreen?: boolean; onToggleFullscreen?: () => void; steps: GraphStep[]; selectedStep: GraphStep | null; onSelectStep: (step: GraphStep) => void }
 const nodeTypes = { harnessNode: HarnessNode };
@@ -20,42 +21,57 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   const selectStep = useCallback((step: GraphStep) => selectRef.current(step), []);
   const fullscreenButton = useRef<HTMLButtonElement>(null);
   const movedNodes = useRef(new Set<string>());
+  const canvas = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 800 });
+  const [measured, setMeasured] = useState(new Map<string, number>());
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<HarnessNodeData>>([]);
+  const handleNodesChange = useCallback((changes: NodeChange<Node<HarnessNodeData>>[]) => {
+    onNodesChange(changes);
+    const dimensions = changes.filter(change => change.type === "dimensions" && change.dimensions);
+    if (dimensions.length) setMeasured(previous => {
+      const next = new Map(previous);
+      let changed = false;
+      for (const change of dimensions) if (change.type === "dimensions" && change.dimensions) {
+        const height = Math.ceil(change.dimensions.height);
+        if (next.get(change.id) !== height) { next.set(change.id, height); changed = true; }
+      }
+      return changed ? next : previous;
+    });
+  }, [onNodesChange]);
+  useEffect(() => {
+    if (!canvas.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setCanvasSize(previous => previous.width === Math.round(width) && previous.height === Math.round(height) ? previous : { width: Math.round(width), height: Math.round(height) });
+    });
+    observer.observe(canvas.current);
+    return () => observer.disconnect();
+  }, []);
   const currentNodes = useRef(nodes);
   currentNodes.current = nodes;
+  const topologyKey = JSON.stringify(steps.map(step => [step.id, parentIds(step)]));
+  const topology = useMemo(() => (JSON.parse(topologyKey) as [string, string[]][]).map(([id, parentIds]) => ({ id, parentId: null, parentIds })), [topologyKey]);
+  // Streamed text and status do not change geometry. Only topology, measured
+  // dimensions, expansion and the canvas size need another placement pass.
+  const positions = useMemo(() => {
+    const heights = new Map(topology.map(step => [step.id, measured.get(step.id) || (expanded.has(step.id) ? 410 : 174)]));
+    return layoutGraph(topology, canvasSize, heights);
+  }, [topology, canvasSize, measured, expanded]);
   const { layout, edges } = useMemo(() => {
-    const positions = new Map<string, { x: number; y: number }>();
-    const occupied = new Map<number, Array<{ y: number; height: number }>>();
     const layout: Node<HarnessNodeData>[] = [];
     const edges: Edge[] = [];
     const byId = new Map(steps.map(step => [step.id, step]));
-    const ordered: GraphStep[] = [];
-    const visited = new Set<string>();
-    const visit = (step: GraphStep) => {
-      if (visited.has(step.id)) return;
-      visited.add(step.id);
-      for (const id of step.parentIds?.length ? step.parentIds : step.parentId ? [step.parentId] : []) {
-        const parent = byId.get(id);
-        if (parent) visit(parent);
-      }
-      ordered.push(step);
-    };
-    steps.forEach(visit);
-    for (const step of ordered) {
-      const parents = step.parentIds?.length ? step.parentIds : step.parentId ? [step.parentId] : [];
-      const parentPositions = parents.map(id => positions.get(id)).filter((p): p is { x: number; y: number } => !!p);
-      const x = parentPositions.length ? Math.max(...parentPositions.map(p => p.x)) + 400 : 0;
-      let y = parentPositions.length ? parentPositions.reduce((sum, p) => sum + p.y, 0) / parentPositions.length : 0;
-      const lanes = occupied.get(x) || [];
-      const height = expanded.has(step.id) ? 410 : 170;
-      let overlap = lanes.find(lane => y < lane.y + lane.height + 40 && y + height + 40 > lane.y);
-      while (overlap) { y = overlap.y + overlap.height + 40; overlap = lanes.find(lane => y < lane.y + lane.height + 40 && y + height + 40 > lane.y); }
-      occupied.set(x, [...lanes, { y, height }]); positions.set(step.id, { x, y });
+    for (const step of steps) {
+      const parents = parentIds(step);
+      const { x, y } = positions.get(step.id)!;
       layout.push({ id: step.id, type: "harnessNode", position: { x, y }, data: { step, isSelected: selectedStep?.id === step.id, expanded: expanded.has(step.id), onToggle: toggleExpanded, onSelect: selectStep } });
-      for (const parent of parents) if (byId.has(parent)) edges.push({ id: `${parent}->${step.id}`, source: parent, target: step.id, type: "default", animated: active && step.status === "running", label: parents.length > 1 ? "汇合" : undefined, style: { stroke: step.status === "failed" ? "var(--red)" : step.status === "running" ? "var(--blue)" : "var(--border-hover)", strokeDasharray: "5 5" }, labelStyle: { fill: "var(--text-secondary)", fontSize: 13 }, labelBgStyle: { fill: "var(--bg-canvas)" } });
+      for (const parent of parents) if (byId.has(parent)) {
+        const ports = edgePorts(positions.get(parent)!, positions.get(step.id)!);
+        edges.push({ id: `${parent}->${step.id}`, source: parent, target: step.id, sourceHandle: `out-${ports.source}`, targetHandle: `in-${ports.target}`, type: "default", animated: active && step.status === "running", label: parents.length > 1 ? "汇合" : undefined, style: { stroke: step.status === "failed" ? "var(--red)" : step.status === "running" ? "var(--blue)" : "var(--border-hover)", strokeDasharray: "5 5" }, labelStyle: { fill: "var(--text-secondary)", fontSize: 13 }, labelBgStyle: { fill: "var(--bg-canvas)" } });
+      }
     }
     return { layout, edges };
-  }, [active, steps, selectedStep?.id, selectStep, toggleExpanded, expanded]);
+  }, [active, steps, selectedStep?.id, selectStep, toggleExpanded, expanded, positions]);
   useLayoutEffect(() => {
     setNodes(previous => reconcileNodes(previous, layout));
   }, [layout, setNodes]);
@@ -65,7 +81,7 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
     const targets = new Map<string, Point>((JSON.parse(positionKey) as [string, number, number][]).map(([id, x, y]) => [id, { x, y }]));
     const motion = planNodeMotion(currentNodes.current, targets, movedNodes.current);
     if (!motion.size) return;
-    const ms = active ? motionDuration() : 0;
+    const ms = motionDuration();
     if (!ms) { setNodes(previous => applyNodeMotion(previous, motion, 1, movedNodes.current)); return; }
     let frame = 0;
     const start = performance.now();
@@ -76,7 +92,7 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [active, positionKey, setNodes]);
+  }, [positionKey, setNodes]);
   useEffect(() => { if (fullscreen) fullscreenButton.current?.focus(); }, [fullscreen]);
   const running = steps.filter(step => step.status === "running" && (step.parentId || step.parentIds?.length)).slice(-2);
   const joined = steps.find(step => step.agentId === "coordinator" && step.status !== "pending" && step.status !== "running");
@@ -90,8 +106,8 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
     return () => clearTimeout(timer);
   }, [active, initialized, focusKey, following, fullscreen, fitView]);
   const fit = () => { setFollowing(false); void fitView({ padding: .22, maxZoom: 1, duration: motionDuration() }); };
-  return <div className="workflow-canvas" aria-label="流程画板">
-    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} nodesConnectable={false} nodeDragThreshold={4} minZoom={.15} maxZoom={2} onNodeDragStart={(_event, node) => { movedNodes.current.add(node.id); setFollowing(false); }} onMoveStart={event => { if (event) setFollowing(false); }}>
+  return <div ref={canvas} className="workflow-canvas" aria-label="流程画板">
+    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={handleNodesChange} nodesConnectable={false} nodeDragThreshold={4} minZoom={.15} maxZoom={2} onNodeDragStart={(_event, node) => { movedNodes.current.add(node.id); setFollowing(false); }} onMoveStart={event => { if (event) setFollowing(false); }}>
       <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--border-subtle)" />
       {steps.length > 4 && showMap && <MiniMap pannable zoomable nodeColor="var(--border-hover)" maskColor="color-mix(in srgb, var(--bg-canvas) 75%, transparent)" ariaLabel="流程概览" onClick={() => setFollowing(false)} />}
     </ReactFlow>
