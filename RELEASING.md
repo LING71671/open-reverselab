@@ -41,7 +41,7 @@ pnpm tauri build --config src-tauri/tauri.release.conf.json --bundles nsis
 python scripts/misc/package_desktop_release.py package --installer <NSIS-EXE> --notes <release-notes.md>
 ```
 
-dist/release/ 输出统一命名的安装包、签名、便携 ZIP、latest.json 与 SHA256SUMS。打包器要求工作树干净、暂存 runtime 与 HEAD/版本一致，并拒绝早于 runtime 的构建。发布前在临时目录解压便携 ZIP，检查 kb/scripts 与桌面启动。
+dist/release/ 输出统一命名的安装包、签名、便携 ZIP、latest.json 与 SHA256SUMS。打包器要求工作树干净，使用 7-Zip 读取安装包内的 RELEASE.json，核对 runtime 与 HEAD/版本一致，并检查源码和签名时间。发布前在临时目录解压便携 ZIP，检查 kb/scripts 与桌面启动。
 
 ## 发布
 

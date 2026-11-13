@@ -72,10 +72,20 @@ def package(installer: Path, notes: Path) -> None:
     signature = Path(str(installer) + '.sig')
     if not binary.is_file() or not installer.is_file() or not signature.is_file():
         raise SystemExit('Build the signed NSIS installer before packaging.')
-    if binary.stat().st_mtime < (STAGE / 'RELEASE.json').stat().st_mtime:
-        raise SystemExit('Binary predates staged resources. Rebuild before packaging.')
-    if installer.stat().st_mtime < binary.stat().st_mtime or signature.stat().st_mtime < installer.stat().st_mtime:
+    source_extensions = {'.ts', '.tsx', '.rs', '.css', '.html', '.json', '.toml', '.lock', '.svg', '.png', '.ico'}
+    sources = [ROOT / name for name in git('ls-files', 'desktop').decode().splitlines()]
+    if any(path.suffix in source_extensions and path.stat().st_mtime > binary.stat().st_mtime for path in sources):
+        raise SystemExit('Desktop source is newer than the binary. Rebuild before packaging.')
+    # Tauri restores the original binary after patching an installer-specific copy,
+    # so desktop.exe can legitimately have a later mtime than the installer.
+    if installer.stat().st_mtime < (STAGE / 'RELEASE.json').stat().st_mtime or signature.stat().st_mtime < installer.stat().st_mtime:
         raise SystemExit('Installer or signature predates its input. Rebuild and sign together.')
+    extractor = shutil.which('7z') or shutil.which('7zz')
+    if not extractor:
+        raise SystemExit('7-Zip is required to verify the installer runtime manifest.')
+    bundled_manifest = json.loads(subprocess.check_output([extractor, 'e', '-so', str(installer), 'runtime/RELEASE.json']))
+    if bundled_manifest != manifest:
+        raise SystemExit('Installer runtime manifest does not match the staged release.')
     signed_text = base64.b64decode(signature.read_text(encoding='utf-8').strip()).decode('utf-8')
     comments = [line.removeprefix('trusted comment: ') for line in signed_text.splitlines() if line.startswith('trusted comment: ')]
     if len(comments) != 1 or f'version:{release_version}' not in comments[0].split('\t'):
