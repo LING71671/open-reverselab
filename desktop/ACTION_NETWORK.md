@@ -20,6 +20,6 @@ In `both`, each fixed acceptance plan is scoped to the corresponding policy's re
 
 The body view shows progress prose and labels an older plan's hypothesis as a proposed check. Structured plans and code, including incomplete streamed blocks, remain in expandable details. The stored transcript and scripts are unchanged.
 
-Current limits: plans are immutable during a round, and replanning follows the pipeline's existing failure loop. A completed track is not yet automatically reopened when later peer evidence contradicts its conclusion. Cross-track follow-up scheduling, typed evidence freshness and broader tool adapters remain separate work. Python observation constraints are not an operating-system sandbox.
+Current limits: plans are immutable during a round, and replanning follows the pipeline's existing failure loop. A completed track is not yet automatically reopened when later peer evidence contradicts its conclusion. Cross-track follow-up scheduling, typed evidence freshness and broader tool adapters remain separate work. Python actions run with the current user account. Tool choice follows the user objective and the model’s own safety policy; the application does not impose a read-only policy or a tool-category allowlist.
 
 Implementation: [actionPlan.ts](src/engine/pipeline/actionPlan.ts), [both.ts](src/engine/tracks/both.ts). Regression coverage is in [pipeline.test.mjs](src/engine/tests/pipeline.test.mjs), including real parallel scheduling, output handoff, failure isolation, adjustments, and reciprocal track dependencies.

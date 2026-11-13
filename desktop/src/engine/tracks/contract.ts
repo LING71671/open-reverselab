@@ -13,7 +13,6 @@ export interface TrackVerification {
 export interface TrackPolicy {
   readonly track: "red" | "blue";
   readonly objective: string;
-  readonly allowedActions: readonly string[];
   instructions(ctx: PipelineContext): string;
   verify(ctx: PipelineContext, result?: PythonExecResult): TrackVerification;
 }

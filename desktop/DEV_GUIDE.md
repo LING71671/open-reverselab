@@ -23,7 +23,7 @@ Browser preview and native desktop use the same workspace and KB Python services
 6. Extend the fixed acceptance criteria and independent verifier. A successful process exit alone must not complete the Goal.
 7. Update the relevant Markdown contract and test an actual failure, cancellation or isolation case for the new capability.
 
-Current built-in adapters support Python observations and target triage. KB MCP tool names are references, not automatically registered executable adapters. Adding debugger/device/hardening execution requires the corresponding adapter.
+Current built-in adapters support Python execution and target triage. Python scripts can invoke installed libraries and CLI tools with the current user account; the model selects actions using the user objective and its own safety policy. KB MCP tool names are references, not automatically registered executable adapters. Adding debugger/device/hardening execution requires the corresponding adapter.
 
 ## Verification commands
 
