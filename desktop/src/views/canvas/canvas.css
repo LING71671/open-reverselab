@@ -1,4 +1,10 @@
-.workflow-canvas { position: relative; width: 100%; height: 100%; }
+.workflow-canvas { position: relative; width: 100%; height: 100%; cursor: default; }
+/* Keep every empty canvas layer consistent, including composited hit surfaces. */
+.workflow-canvas .react-flow,
+.workflow-canvas .react-flow__renderer,
+.workflow-canvas .react-flow__pane,
+.workflow-canvas .react-flow__background { cursor: inherit; }
+.workflow-canvas:has(.react-flow__pane.dragging) { cursor: grabbing; }
 .workflow-canvas .canvas-toolbar { top: 16px; right: 18px; align-items: center; }
 .workflow-canvas .canvas-toolbar .icon-button { width: 36px; height: 36px; }
 .canvas-zoom { position: absolute; bottom: 18px; left: 18px; display: flex; padding: 3px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-canvas); }
