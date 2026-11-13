@@ -15,9 +15,9 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-原生桌面使用 `pnpm tauri dev`。Python 3.10+ 需要能通过 `python` 调用；原生构建还需要 Rust 和 [Tauri 平台工具链](https://v2.tauri.app/start/prerequisites/)，Windows 运行时需要 WebView2。分析工具单独安装。浏览器预览通过本机开发服务读写工作区、执行 Python；原生代理路由、进程监测与应用内安装需要桌面应用。
+原生桌面使用 `pnpm tauri dev`。Python 3.11+ 需要能通过 `python` 调用；原生构建还需要 Rust 和 [Tauri 平台工具链](https://v2.tauri.app/start/prerequisites/)，Windows 运行时需要 WebView2。分析工具单独安装。浏览器预览通过本机开发服务读写工作区、执行 Python；原生代理路由、进程监测与应用内安装需要桌面应用。
 
-可用 `REVERSELAB_ROOT` 指向包含知识库和脚本的仓库。构建与检查命令见[开发指南](DEV_GUIDE.md)。
+可用 `REVERSELAB_ROOT` 指向包含知识库和脚本的仓库。构建与检查命令见[开发指南](DEV_GUIDE.zh-CN.md)。
 
 ## 创建 Goal
 
@@ -50,11 +50,11 @@ pnpm dev
 
 - [代理池](NETWORK.zh-CN.md)：独立配置模型请求与 Python 目标访问，支持命名节点、认证、连接测试和模型请求的失败切换。
 - [诊断](DIAGNOSTICS.zh-CN.md)：可选的后台性能异常提醒，以及可选的 Sentry 错误和耗时上报，两项默认关闭。
-- [应用更新](UPDATES.md)：检查版本、查看下载进度及签名验证结果；支持应用内升级的安装版需等待所有已打开工作区的运行与排队任务结束后安装。
+- [应用更新](UPDATES.zh-CN.md)：检查版本、查看下载进度及签名验证结果；支持应用内升级的安装版需等待所有已打开工作区的运行与排队任务结束后安装。
 
 ## 工作区与数据
 
-Goal、报告、脚本和导入的样本保存在工作区的 `.reverselab/` 中。迁移工作区或升级安装版前备份该目录，并将工作区与程序文件分开存放。恢复历史不会重新启动已中断的外部进程，也不会重定位绝对目标路径。存储规则见[工作区说明](WORKSPACES.md)。
+Goal、报告、脚本和导入的样本保存在工作区的 `.reverselab/` 中。迁移工作区或升级安装版前备份该目录，并将工作区与程序文件分开存放。恢复历史不会重新启动已中断的外部进程，也不会重定位绝对目标路径。存储规则见[工作区说明](WORKSPACES.zh-CN.md)。
 
 API Key 和代理凭据保存在本机 WebView 存储中，尚未接入系统密钥库。模型辅助任务会把任务上下文与所选证据发送给配置的端点，Python 动作使用当前用户权限。草稿与阅读位置在本次工作区会话的页面切换间保留。
 
@@ -64,7 +64,7 @@ Open ReverseLab 用于合法授权范围内的分析，请阅读[免责声明](.
 
 ## 工程文档
 
-- [架构](ARCHITECTURE.md)与 [Agent 运行规则](AGENT_SYSTEM.md)
-- [健康事件与错误分类](ERROR_CODES.md)
-- [界面设计](DESIGN_BRIEF.md)与[开发检查](DEV_GUIDE.md)
+- [架构](ARCHITECTURE.zh-CN.md)与 [Agent 运行规则](AGENT_SYSTEM.zh-CN.md)
+- [健康事件与错误分类](ERROR_CODES.zh-CN.md)
+- [界面设计](DESIGN_BRIEF.md)与[开发检查](DEV_GUIDE.zh-CN.md)
 - [打包与发布检查](../RELEASING.md)

@@ -15,7 +15,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-For the native desktop app, use `pnpm tauri dev`. Python 3.10+ must be available as `python`. Native builds also need Rust and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/), including WebView2 on Windows. Install analysis tools separately. Browser preview uses local development services for workspace and Python operations; native proxy routing, process monitoring, and update installation require the desktop app.
+For the native desktop app, use `pnpm tauri dev`. Python 3.11+ must be available as `python`. Native builds also need Rust and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/), including WebView2 on Windows. Install analysis tools separately. Browser preview uses local development services for workspace and Python operations; native proxy routing, process monitoring, and update installation require the desktop app.
 
 `REVERSELAB_ROOT` can point to the repository containing the knowledge base and scripts. See the [development guide](DEV_GUIDE.md) for build and verification commands.
 

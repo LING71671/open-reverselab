@@ -1,45 +1,58 @@
-# 健康监控与错误码
+# Health events and error codes
 
-运行事件统一使用 [HealthEvent](src/core/contracts/health.ts)，由 [HealthMonitor](src/services/health/healthMonitor.ts) 汇总。界面按 Goal、Agent、模型、知识库、工具、存储六层展示；没有真实观测的层为 `unknown`。
+[简体中文](ERROR_CODES.zh-CN.md) · [Agent runtime](AGENT_SYSTEM.md)
 
-事件携带 `eventId`、`goalId`、`layer`、`status`、时间，以及可选 branch/agent/node/correlation、耗时、错误码、恢复建议和原始细节。同一 Goal 只接收自己的事件，历史最多保留 256 条。快照聚合保留窗口各 trace 的最新状态；一条分支成功不会覆盖另一条分支的失败。
+Execution emits [HealthEvent](src/core/contracts/health.ts) records, aggregated by [HealthMonitor](src/services/health/healthMonitor.ts). The view groups observations into Goal, Agent, model, knowledge, tool, and storage layers. A layer without observations remains `unknown`.
 
-## 错误码
+Events contain `eventId`, `goalId`, `layer`, `status`, and a timestamp. Optional fields identify a branch, agent, node, or correlation, and record duration, error code, recovery advice, and details. Each monitor accepts events for its own Goal. Its default retained history is 256 events, configurable through `maxHistory`; total observation counts remain separate from the retained window.
 
-| code | 层 | 含义 | 默认建议 |
+Snapshots combine the latest event of each branch/agent/node trace within the retained window. A recovered trace does not hide another trace's failure. If a layer has no remaining events in that window, the snapshot uses its last recorded event.
+
+## Error codes
+
+| Code | Layer | Meaning | Recovery advice |
 | --- | --- | --- | --- |
-| INPUT_INVALID | goal | 输入不满足执行条件 | 调整输入 |
-| MODEL_AUTH | model | 模型认证或授权失败 | 检查配置 |
-| MODEL_QUOTA | model | 账户额度不足 | 检查额度 |
-| MODEL_RATE_LIMIT | model | 请求限流 | 有界重试 |
-| MODEL_TIMEOUT | model | 模型响应超时 | 有界重试 |
-| MODEL_UNAVAILABLE | model | 模型或网络不可用 | 备用服务或路线 |
-| PROXY_CONFIG | model / tool | 代理配置无效 | 修改代理池配置 |
-| PROXY_CONNECT | model / tool | 连接代理失败 | 切换节点 |
-| PROXY_AUTH | model / tool | 代理认证失败 | 修改节点账号密码 |
-| PROXY_UNAVAILABLE | model / tool | 没有可用的启用节点 | 检查节点或等待冷却结束 |
-| NETWORK_TIMEOUT | model / tool | 网络请求超时 | 检查连接后重试 |
-| NETWORK_FAILED | model / tool | 已开始的网络请求中断 | 检查结果，避免自动重发 |
-| KB_UNAVAILABLE | kb | 知识库服务不可用 | 检查知识库配置 |
-| KB_DOC_MISSING | kb | 索引对应文档缺失 | 选择其他文档 |
-| TOOL_MISSING | tool | 执行依赖缺失 | 检查工具配置 |
-| TOOL_TIMEOUT | tool | 工具执行超时 | 缩小范围或换路线 |
-| TOOL_FAILED | tool | 工具实际执行失败 | 换路线 |
-| TOOL_UNAVAILABLE | tool | 执行服务无法连接或拒绝请求 | 保留结果，恢复服务后重试 |
-| EVIDENCE_INVALID | agent | 证据不足或不满足验收 | 补充独立观察 |
-| LOOP_DETECTED | agent | 重复动作或无进展循环 | 剪除重复路线 |
-| BUDGET_TIME | goal | 时间上限已到 | 停止并保留记录 |
-| BUDGET_TOKENS | goal | Token 上限已到 | 停止并保留记录 |
-| USER_CANCELLED | goal | 用户停止 | 取消执行 |
-| STORAGE_FAILED | storage | 报告或任务记录保存失败 | 检查磁盘或权限 |
-| UNKNOWN | 原始层 | 未分类错误 | 查看原始细节 |
+| INPUT_INVALID | goal | Input does not meet execution requirements | Revise the input |
+| MODEL_AUTH | model | Model authentication or access failed | Check provider configuration |
+| MODEL_QUOTA | model | Account quota is exhausted | Check account balance or quota |
+| MODEL_RATE_LIMIT | model | Provider rate limit reached | Retry after the rate limit clears |
+| MODEL_TIMEOUT | model | Model response timed out | Check the connection and retry |
+| MODEL_UNAVAILABLE | model | Model or its connection is unavailable | Use another service or route |
+| PROXY_CONFIG | model / tool | Proxy configuration is invalid | Correct the proxy pool configuration |
+| PROXY_CONNECT | model / tool | Connection to the proxy failed | Select another node |
+| PROXY_AUTH | model / tool | Proxy authentication failed | Correct the node credentials |
+| PROXY_UNAVAILABLE | model / tool | No enabled proxy node is available | Check nodes or wait for cooldown |
+| NETWORK_TIMEOUT | model / tool | Network request timed out | Check the connection and retry |
+| NETWORK_FAILED | model / tool | An established request was interrupted | Inspect the result before resending |
+| KB_UNAVAILABLE | kb | Knowledge service is unavailable | Check the knowledge configuration |
+| KB_DOC_MISSING | kb | An indexed document is missing | Select another reference |
+| TOOL_MISSING | tool | An execution dependency is missing | Check local tool configuration |
+| TOOL_TIMEOUT | tool | Tool execution timed out | Reconsider the budget or route |
+| TOOL_FAILED | tool | Tool execution failed | Try another route |
+| TOOL_UNAVAILABLE | tool | Execution service cannot be reached or refuses the request | Restore the service before retrying |
+| EVIDENCE_INVALID | agent | Evidence is insufficient or fails acceptance checks | Collect further independent observations |
+| LOOP_DETECTED | agent | An action or unchanged failure is repeating | Choose a different route |
+| BUDGET_TIME | goal | A configured time budget is exhausted | Stop and retain records |
+| BUDGET_TOKENS | goal | A configured token budget is exhausted | Stop and retain records |
+| USER_CANCELLED | goal | The user stopped execution | Cancel execution |
+| STORAGE_FAILED | storage | Report or Goal persistence failed | Check the disk and permissions |
+| UNKNOWN | Original layer | Failure has not been classified | Inspect the details |
 
-`retryable` 与 `recovery` 是调度建议，不代表已经执行了重试。401/403 与账户额度不足不作为普通限流持续重试。原始调用可抛出带明确 code 的 HealthFault，分类器再处理 HTTP 状态与已知错误文本。
+`retryable` and `recovery` describe scheduling advice; they do not record an executed retry. Recovery values are `retry`, `alternate`, `configure`, `revise`, `stop`, and `inspect`. Authentication failures and exhausted account quota are not classified as retryable rate limits.
 
-## 状态与结果
+Sources can raise `HealthFault` with an explicit code. Classification prefers an explicit code, then uses HTTP status and known error text. Proxy and network codes retain the originating layer. Goal budgets are optional; the presence of a budget error code does not imply a default limit.
 
-`running` 是已开始的观测，`healthy` 是成功结果，`degraded/failed` 保留阻塞与错误，`cancelled` 对应取消。工具执行成功、证据被接受、用户 Goal 完成分别记录。
+## Status and results
 
-模型阶段、知识库读取、Python 执行、报告写入和 Goal 停止原因都有对应事件。本机工具“检测”实际调用 Python 检查运行时、模块和 PATH，不使用固定的工具数量或预设“已就绪”。工作区快照异步写入失败单独显示在健康视图，内存中的任务可以继续查看。
+| Status | Meaning |
+| --- | --- |
+| `unknown` | No observation is available; this is a snapshot state |
+| `running` | The observed operation has started |
+| `healthy` | The observed operation succeeded |
+| `degraded` | The observation reports a warning or impediment |
+| `failed` | The observation reports a failure |
+| `cancelled` | The observed operation was cancelled |
 
-进程恢复时，历史健康事件表示上一次运行的观测，不代表当前外部服务仍然可用。当前没有守护进程式的周期健康探针；页面显示事件与用户发起的本机检测。
+Tool execution, evidence acceptance, and Goal completion are recorded separately. Model stages, knowledge reads, Python execution, report writes, and Goal stop reasons emit their own events. Local tool detection invokes Python to inspect the runtime, modules, and PATH. Asynchronous workspace persistence failures appear separately in the health view; in-memory records remain available.
+
+Restored events describe the earlier run. The health monitor does not periodically probe external service readiness. Optional native performance sampling and Sentry reporting have their own switches and lifecycle, described in [DIAGNOSTICS.md](DIAGNOSTICS.md). Storage and recovery behavior is described in [WORKSPACES.md](WORKSPACES.md).
