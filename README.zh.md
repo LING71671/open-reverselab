@@ -1,59 +1,62 @@
+<div align="center">
+
 # Open-ReverseLab
 
-ReverseLab 提供桌面工作区、红蓝知识库和 MCP 工具，用于围绕目标开展分析。可以在桌面端运行与查看 Goal，也可以将仓库接入 Claude Code、Codex、OpenCode 等 MCP 客户端。
+**面向目标的 AI 逆向分析工作台**
 
-[English](README.md) · **简体中文**
+桌面工作区 · red / blue / both · 并行 Goal · 知识库 · MCP
 
-[下载 v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) · [桌面端说明](desktop/README.zh-CN.md) · [知识库](kb/README.md) · [文档站](https://ling71671.github.io/open-reverselab/)
+<p><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
+<p><a href="#从源码运行桌面端"><strong>构建桌面预览版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="kb/README.md">知识库</a></p>
+
+[![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
+[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
 
-## :handshake: 赞助支持
+</div>
+
+## 赞助支持
 
 <table width="100%">
-  <tbody>
-    <tr>
-      <td width="380" align="center" valign="middle">
-        <a href="https://sentry.io"><picture>
-          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-          <img src="assets/sponsors/sentry-wordmark-light.svg" width="180" alt="Sentry">
-        </picture></a>
-      </td>
-      <td valign="middle">
-        <strong><a href="https://sentry.io">Sentry</a></strong><br /><br />
-        为 <code>openreverselab</code> 提供赞助账户 —— 行业领先的错误监控与性能追踪平台，保障自动化工具链稳定运行。
-      </td>
-    </tr>
-  </tbody>
+  <tr>
+    <td width="46%" align="center" valign="middle"><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><img src="assets/sponsors/infistar-banner-zh.png" width="420" alt="Infistar.cc — 统一多模型 API 接入"></a></td>
+    <td valign="middle"><p><strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong></p><p>Claude、GPT、Gemini、Grok、DeepSeek，一个 Key，低至官方 0.1 折，省 99%。100% 官方纯血模型，每个模型都能验真，上千线路安全冗余自动切换，200+ 模型覆盖 16 个品牌。用多模型 API 驱动 AI 逆向分析和 MCP 工作流。</p><p><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><strong>专属链接注册赠 ¥5 体验额度</strong></a></p></td>
+  </tr>
+  <tr>
+    <td align="center" valign="middle"><a href="https://sentry.io"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg"><img src="assets/sponsors/sentry-wordmark-light.svg" width="150" alt="Sentry"></picture></a></td>
+    <td valign="middle"><p><strong><a href="https://sentry.io">Sentry</a></strong></p><p>提供赞助账户，支持项目工具链的错误监控与性能追踪。</p></td>
+  </tr>
 </table>
 
-<p align="center"><sub>完整赞助名单与赞助方式见 <a href="SPONSORS.md">SPONSORS.md</a>。</sub></p>
-
----
+<p align="center"><sub>完整赞助名单与合作方式见 <a href="SPONSORS_zh.md">赞助说明</a></sub></p>
 
 ## 桌面端
 
 在左上角选择 `red / blue / both`，选好工作区，填写文件、目录或 URL 目标和任务内容。实时流程画板展示执行分支，执行记录、日志、报告和健康监控保留结论所依据的证据。
 
-![ReverseLab 桌面端知识库阅读界面](assets/desktop/knowledge-light.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/desktop/knowledge-dark.png">
+  <img src="assets/desktop/knowledge-light.png" alt="ReverseLab 桌面端 both 模式下的知识库阅读界面" width="1280">
+</picture>
 
 - **策略独立。** red 与 blue 分别维护分析策略，both 并行运行两个分支并汇总各自结果。
 - **多任务并行。** 每个工作区默认同时运行两个 Goal。切换页面、任务或工作区不会改变后台任务的输出归属。
 - **工作区管理。** 首次启动创建默认工作区，也可新建或打开其他目录。导入样本时保留原件，另建工作副本。
-- **目标与运行限制。** 时间和 Token 上限可选，默认每个 Goal 为 10 分钟、32,000 tokens。失败路线和重复动作反馈给规划器，目标是否完成由独立核验决定。
+- **目标控制。** 默认不设时间或 Token 上限，可按需填写，也可停止运行或中途补充要求。执行历史保留核验结果与失败尝试。
 - **知识库与操作体验。** 支持 defense 文档、关联阅读、深浅主题；页面切换时保留未提交草稿、阅读位置和筛选条件。
 
-### 下载与启动
+### 预览状态与启动
 
-1. 从 [Release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) 下载并运行 `ReverseLab-v2.0.0-windows-x64-setup.exe`。
-2. 安装 Python 3.10 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
-3. 启动 ReverseLab。安装包包含知识库和项目脚本；个人工作区请放在安装目录之外。
-4. 在设置中配置兼容 OpenAI chat-completions 的 API 地址和模型，再填写目标和任务内容。SHA256 核验可直接在本地运行，无需模型。
+桌面端正在准备 `v2.0.0-beta.1`，安装包尚未发布。当前可从[源码构建](#从源码运行桌面端)体验预览版，后续下载以 [Releases](https://github.com/LING71671/open-reverselab/releases) 中的实际发布为准。
 
-设置中可检查版本、查看发布说明并下载签名更新。便携 ZIP 可检查版本，通过安装包迁移；使用便携版时完整解压并保留 `ReverseLab.exe` 旁的 `kb/` 和 `scripts/`。详见[应用更新](desktop/UPDATES.md)。
+1. 安装 Python 3.10 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
+2. 从仓库构建并启动 ReverseLab，个人工作区放在源码与安装目录之外。
+3. 在设置中配置兼容 OpenAI chat-completions 的 API 地址和模型，再填写目标和任务内容。SHA256 核验可直接在本地运行，无需模型。
 
-发布包包含 Windows x64 程序和对应版本的项目源码、脚本、知识库。Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可继续使用源码形式的 CLI/MCP 工作流；本版本未提供这两个平台的桌面二进制。
+桌面端以 Windows x64 为打包目标，Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可使用源码形式的 CLI/MCP 工作流，暂未提供桌面安装包。安装版的更新机制见[应用更新](desktop/UPDATES.md)。
+
+分支协作与完成核验仍在验证中。使用结果前应查看对应证据，尝试新任务时建议设置运行限制。
 
 桌面端当前直接执行有界 Python 观察脚本。知识库中的 MCP 工具名不会自动成为调试器、设备或加固执行适配器。工作区文件保存在本地，模型辅助任务会把任务上下文和所选证据发送到配置的模型端点；Python 动作继承当前用户权限。配置、数据流向和能力范围见[桌面端说明](desktop/README.zh-CN.md)。
 
@@ -126,36 +129,6 @@ pnpm tauri build --no-bundle
 ## 参与贡献与发布
 
 请阅读[贡献指南](.github/CONTRIBUTING.md)、[安全策略](SECURITY.md)与[公开边界](PUBLICATION.md)。提交通用实现和合成示例，真实目标、样本、凭据和案例证据留在本地。提交前运行 `python scripts/misc/public_release_check.py` 及所改模块的检查。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
-
-## 赞助方
-
-ReverseLab 的持续运营靠的是为基础设施、工具、审稿时间投入资源的人与组织。
-
-<table width="100%">
-  <thead>
-    <tr>
-      <th width="180" align="left">Logo</th>
-      <th align="left">赞助方 / Sponsor</th>
-      <th width="110" align="left">时间 / Since</th>
-      <th align="left">支持内容 / Support</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="left" valign="middle">
-        <a href="https://sentry.io"><picture>
-          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-          <img src="assets/sponsors/sentry-wordmark-light.svg" width="150" alt="Sentry">
-        </picture></a>
-      </td>
-      <td valign="middle"><strong><a href="https://sentry.io">Sentry</a></strong></td>
-      <td valign="middle">2026-08</td>
-      <td valign="middle">赞助账户 —— 错误监控与性能追踪平台（error monitoring &amp; performance tracing）</td>
-    </tr>
-  </tbody>
-</table>
-
-**想成为赞助方？** 见 [SPONSORS.md](SPONSORS.md)，或邮件联系 **belloshehubz@gmail.com** —— 无论大小，每一位赞助者都会被列出，并注明所提供支持。
 
 ---
 

@@ -1,71 +1,62 @@
+<div align="center">
+
 # Open-ReverseLab
 
-ReverseLab combines a desktop workspace, a red/blue security knowledge base, and MCP tools for target-based analysis. Use the desktop to run and inspect Goals, or connect the repository to Claude Code, Codex, OpenCode, and other MCP clients.
+**An AI workspace for target-based reverse engineering**
 
-**English** · [简体中文](README.zh.md)
+Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · MCP
 
-[Download v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) · [Desktop guide](desktop/README.md) · [Knowledge base](kb/README.md) · [Documentation](https://ling71671.github.io/open-reverselab/)
+<p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
 
-[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
+<p><a href="#build-the-desktop"><strong>Build the desktop preview</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="kb/README.md">Knowledge base</a></p>
+
+[![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
+[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
 
-## :handshake: Sponsors
+</div>
+
+## Sponsors
 
 <table width="100%">
-  <tbody>
-    <tr>
-      <td width="380" align="center" valign="middle">
-        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">
-          <img src="assets/sponsors/infistar-banner-en.png" width="360" alt="Infistar.cc — Unified Multi-Model API Gateway">
-        </a>
-      </td>
-      <td valign="middle">
-        <strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong><br /><br />
-        Unified multi-model API gateway (Claude, GPT, Gemini, Grok, DeepSeek &amp; more) — 1,000+ redundant routes with auto failover.<br /><br />
-        <code>open-reverselab</code> users receive <strong>¥5 free sign-up credit</strong> → <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Try Infistar.cc</a>
-      </td>
-    </tr>
-    <tr>
-      <td width="380" align="center" valign="middle">
-        <a href="https://sentry.io"><picture>
-          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-          <img src="assets/sponsors/sentry-wordmark-light.svg" width="180" alt="Sentry">
-        </picture></a>
-      </td>
-      <td valign="middle">
-        <strong><a href="https://sentry.io">Sentry</a></strong><br /><br />
-        Sponsored account — error monitoring and performance tracing for <code>openreverselab</code>'s automated toolchains.
-      </td>
-    </tr>
-  </tbody>
+  <tr>
+    <td width="46%" align="center" valign="middle"><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><img src="assets/sponsors/infistar-banner-en.png" width="420" alt="Infistar.cc — Multi-model API gateway"></a></td>
+    <td valign="middle"><p><strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong></p><p>Claude, GPT, Gemini, Grok and DeepSeek with one key, up to 99% off official prices. 100% genuine models, every model verifiable, with 1,000+ redundant routes and automatic failover. Access 200+ models from 16 brands for AI reverse engineering and MCP workflows.</p><p><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><strong>Sign up for CNY 5 in free credit</strong></a></p></td>
+  </tr>
+  <tr>
+    <td align="center" valign="middle"><a href="https://sentry.io"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg"><img src="assets/sponsors/sentry-wordmark-light.svg" width="150" alt="Sentry"></picture></a></td>
+    <td valign="middle"><p><strong><a href="https://sentry.io">Sentry</a></strong></p><p>Sponsored account for error monitoring and performance tracing across the project toolchain.</p></td>
+  </tr>
 </table>
 
-<p align="center"><sub>See <a href="SPONSORS.md">SPONSORS.md</a> for the full sponsor list and how to become one.</sub></p>
-
----
+<p align="center"><sub>Sponsor details and ways to support the project: <a href="SPONSORS.md">SPONSORS.md</a></sub></p>
 
 ## Desktop
 
 Select `red / blue / both` in the upper-left corner, choose a workspace, and enter a file, directory, or URL target with a Goal. The live canvas shows execution branches; activity, logs, reports, and health views retain the evidence behind the result.
 
-![ReverseLab Desktop knowledge reader](assets/desktop/knowledge-light.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/desktop/knowledge-dark.png">
+  <img src="assets/desktop/knowledge-light.png" alt="ReverseLab Desktop knowledge reader in both mode" width="1280">
+</picture>
 
 - **Independent strategies.** `red` and `blue` use separate analysis policies. `both` runs the branches in parallel and joins their results.
 - **Concurrent Goals.** Each workspace runs up to two Goals at once by default. Switching views, tasks, or workspaces does not redirect a running task's output.
 - **Managed workspaces.** First launch creates a default workspace. Open or create others, import samples, and keep original and working copies separate.
-- **Bounded execution.** Optional limits default to 10 minutes and 32,000 tokens per Goal. Failed routes and repeated actions feed back into planning; independent verification decides whether the target objective was met.
+- **Goal control.** Goals have no time or token limit by default. Set either limit when needed, stop a run, or add instructions while it is running. Verification results and failed attempts remain in the execution history.
 - **Knowledge and usability.** Browse defense articles and paired references, switch light/dark themes, and retain unsent drafts, reading positions, and filters during navigation.
 
-### Download and start
+### Preview status and setup
 
-1. Download and run `ReverseLab-v2.0.0-windows-x64-setup.exe` from the [release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0).
-2. Install Python 3.10 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
-3. Launch ReverseLab. The installer includes its knowledge base and scripts; keep personal workspaces outside the installation directory.
-4. Open Settings and configure an OpenAI-compatible chat-completions endpoint and model, then enter a target and objective. SHA256 verification can run locally without a model.
+The desktop is being prepared for `v2.0.0-beta.1`; its installer has not been published. Use the [source build](#build-the-desktop) to try the current preview. Published downloads will be listed on [Releases](https://github.com/LING71671/open-reverselab/releases).
 
-Settings includes version checks, release notes and signed updates for installed builds. Portable ZIP users can check versions and migrate using the installer; extract the full ZIP with `kb/` and `scripts/` beside `ReverseLab.exe`. See [application updates](desktop/UPDATES.md).
+1. Install Python 3.10 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
+2. Build and launch ReverseLab from the repository. Keep personal workspaces outside the source and installation directories.
+3. Open Settings and configure an OpenAI-compatible chat-completions endpoint and model, then enter a target and objective. SHA256 verification can run locally without a model.
 
-The release includes a Windows x64 application and the corresponding project source, scripts, and KB. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux retain the source-based CLI/MCP workflow; this release does not include native desktop builds for those platforms.
+Windows x64 is the desktop packaging target. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux support the source-based CLI/MCP workflow; native desktop packages for those platforms are not currently provided. See [application updates](desktop/UPDATES.md) for the installed-build update mechanism.
+
+Cross-branch coordination and completion checks are still under validation. Review the recorded evidence before relying on a result, and set a run limit when trying unfamiliar tasks.
 
 The desktop currently executes bounded Python observations. MCP tool references in KB articles do not automatically become desktop adapters for debuggers, devices, or hardening tools. Workspace files stay on disk, while model-assisted runs send task context and selected evidence to the endpoint you configure. Python actions run with the current user's permissions. See the [desktop guide](desktop/README.md) for configuration, data handling, and limits.
 
@@ -138,44 +129,6 @@ Desktop data defaults to `~/.open-reverselab/workspaces/Default`. The host envir
 ## Contributing and publication
 
 Read [Contributing](.github/CONTRIBUTING.md), [Security](SECURITY.md), and [Publication](PUBLICATION.md). Publish general implementations and synthetic examples; keep real targets, samples, credentials, and case evidence private. Before submitting, run `python scripts/misc/public_release_check.py` and the checks relevant to the changed module. Release history is in [CHANGELOG.md](CHANGELOG.md).
-
-## Sponsors
-
-ReverseLab is sustained by people and organizations that fund the infrastructure, tooling, and review time.
-
-<table width="100%">
-  <thead>
-    <tr>
-      <th width="180" align="left">Logo</th>
-      <th align="left">Sponsor / 赞助方</th>
-      <th width="110" align="left">Since / 时间</th>
-      <th align="left">Support / 支持内容</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="left" valign="middle">
-        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><img src="assets/sponsors/infistar-banner-en.png" width="160" alt="Infistar.cc"></a>
-      </td>
-      <td valign="middle"><strong><a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link">Infistar.cc</a></strong></td>
-      <td valign="middle">2026-11</td>
-      <td valign="middle">Unified multi-model API gateway (Claude, GPT, Gemini, Grok, DeepSeek &amp; more) · ¥5 free sign-up credit via referral link</td>
-    </tr>
-    <tr>
-      <td align="left" valign="middle">
-        <a href="https://sentry.io"><picture>
-          <source media="(prefers-color-scheme: dark)" srcset="assets/sponsors/sentry-wordmark-dark.svg">
-          <img src="assets/sponsors/sentry-wordmark-light.svg" width="150" alt="Sentry">
-        </picture></a>
-      </td>
-      <td valign="middle"><strong><a href="https://sentry.io">Sentry</a></strong></td>
-      <td valign="middle">2026-08</td>
-      <td valign="middle">Sponsored account — error monitoring &amp; performance tracing platform（错误监控与性能追踪平台）</td>
-    </tr>
-  </tbody>
-</table>
-
-**Want to sponsor?** See [SPONSORS.md](SPONSORS.md) or email **belloshehubz@gmail.com** — we list every sponsor, big or small, with the support they provide.
 
 ---
 
