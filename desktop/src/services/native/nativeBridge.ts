@@ -5,6 +5,7 @@
  */
 import type { SecurityTrack } from "../../core/contracts/track";
 import { HealthFault } from "../../core/contracts/health";
+import { executionTimeout, type ExecutionOptions } from "../../core/contracts/execution";
 import { proxyPool, nativeRoute, usesNativeNetwork } from "../network/networkService";
 
 function toolRoute() {
@@ -19,6 +20,23 @@ async function tryTauriInvoke<T>(cmd: string, args?: Record<string, any>): Promi
     return await invoke<T>(cmd, args);
   }
   return null;
+}
+
+async function tryTauriExecution<T>(cmd: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T | null> {
+  if (typeof window === "undefined" || !(window as any).__TAURI_INTERNALS__) return null;
+  const { invoke, Channel } = await import("@tauri-apps/api/core");
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  const cancel = () => { void invoke("cancel_python_execution", { executionId: args.executionId }).catch(() => {}); };
+  const onStarted = new Channel<{ kind: "started" }>();
+  // Cancellation may arrive before Rust registers the execution. Reassert it
+  // once the registration is acknowledged, including before the worker starts.
+  onStarted.onmessage = () => { if (signal?.aborted) cancel(); };
+  signal?.addEventListener("abort", cancel, { once: true });
+  try {
+    const result = await invoke<T>(cmd, { ...args, onStarted });
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    return result;
+  } finally { signal?.removeEventListener("abort", cancel); }
 }
 
 export interface KbTechnique {
@@ -96,15 +114,11 @@ export class NativeBridge {
   /**
    * Run deep static triage on target file or directory
    */
-  public async triage(target: string, options: { timeoutMs?: number; signal?: AbortSignal; executionId?: string } = {}): Promise<TriageResult> {
+  public async triage(target: string, options: ExecutionOptions = {}): Promise<TriageResult> {
     if (options.signal?.aborted) throw new DOMException("Aborted", "AbortError");
     const executionId = options.executionId || crypto.randomUUID();
-    const timeoutMs = Math.max(1, Math.min(15000, Math.floor(options.timeoutMs || 15000)));
-    const cancel = () => { void tryTauriInvoke("cancel_python_execution", { executionId }).catch(() => {}); };
-    options.signal?.addEventListener("abort", cancel, { once: true });
-    let tauriRes;
-    try { tauriRes = await tryTauriInvoke<TriageResult>("triage_target", { target, timeoutMs, executionId, route: toolRoute() }); }
-    finally { options.signal?.removeEventListener("abort", cancel); }
+    const timeoutMs = executionTimeout(options.timeoutMs);
+    const tauriRes = await tryTauriExecution<TriageResult>("triage_target", { target, timeoutMs, executionId, route: toolRoute() }, options.signal);
     if (tauriRes) {
       if (tauriRes.error) throw new Error(tauriRes.error);
       return tauriRes;
@@ -125,6 +139,7 @@ export class NativeBridge {
       }
       throw new Error(`Triage service returned HTTP ${res.status}`);
     } catch (error) {
+      if (options.signal?.aborted) throw new DOMException("Aborted", "AbortError");
       throw new Error(`Target triage unavailable: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -132,15 +147,11 @@ export class NativeBridge {
   /**
    * Execute real Python script against target binary in host environment
    */
-  public async execPython(script: string, options: { timeoutMs?: number; executionId?: string; signal?: AbortSignal } = {}): Promise<PythonExecResult> {
+  public async execPython(script: string, options: ExecutionOptions = {}): Promise<PythonExecResult> {
     if (options.signal?.aborted) throw new DOMException("Aborted", "AbortError");
     const executionId = options.executionId || crypto.randomUUID();
-    const timeoutMs = Math.max(1, Math.min(60000, Math.floor(options.timeoutMs || 15000)));
-    const cancel = () => { void tryTauriInvoke("cancel_python_execution", { executionId }).catch(() => {}); };
-    options.signal?.addEventListener("abort", cancel, { once: true });
-    let tauriRes;
-    try { tauriRes = await tryTauriInvoke<any>("run_python_code", { code: script, timeoutMs, executionId, route: toolRoute() }); }
-    finally { options.signal?.removeEventListener("abort", cancel); }
+    const timeoutMs = executionTimeout(options.timeoutMs);
+    const tauriRes = await tryTauriExecution<any>("run_python_code", { code: script, timeoutMs, executionId, route: toolRoute() }, options.signal);
     if (tauriRes) {
       return {
         success: tauriRes.success,

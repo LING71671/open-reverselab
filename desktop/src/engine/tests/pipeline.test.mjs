@@ -14,7 +14,8 @@ async function compile(file) {
   if (compiled.has(file)) return compiled.get(file);
   const output = path.join(temporary, path.relative(root, file).replace(/\.ts$/, ".mjs"));
   compiled.set(file, output);
-  let code = ts.transpileModule(await readFile(file, "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText.replaceAll("import.meta.env", "{}");
+  let code = ts.transpileModule(await readFile(file, "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText.replaceAll("import.meta.env", "{}")
+    .replaceAll('"@tauri-apps/api/core"', JSON.stringify(import.meta.resolve("@tauri-apps/api/core")));
   for (const match of [...code.matchAll(/(?:from\s*|import\s*)["'](\.[^"']+)["']/g)]) {
     const location = path.resolve(path.dirname(file), match[1]);
     let dependency = location.endsWith(".ts") ? location : `${location}.ts`;
@@ -483,6 +484,68 @@ test("acceptance plans retain every criterion beyond eight checks", () => {
 
 const modelSnapshot = { provider: { id: "fixture", name: "Fixture", baseUrl: "https://model.example.test/v1", apiKey: "" }, model: "fixture" };
 const modelRequest = (input, init) => input instanceof Request ? input : new Request(input, init);
+
+test("native bridge omits implicit execution deadlines and preserves larger explicit budgets", async (t) => {
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async (_, init) => {
+    requests.push(JSON.parse(init.body));
+    return Response.json({ success: true, stdout: "observed", stderr: "", fileType: "Generic Binary" });
+  });
+  for (const timeoutMs of [undefined, Infinity, 120000, 0.5]) {
+    await nativeBridge.execPython("print('observed')", { timeoutMs });
+    await nativeBridge.triage("fixture.txt", { timeoutMs });
+  }
+  assert.deepEqual(requests.map(request => request.timeoutMs), [undefined, undefined, undefined, undefined, 120000, 120000, 1, 1]);
+  for (const timeoutMs of [0, -1]) {
+    await assert.rejects(nativeBridge.execPython("print('too late')", { timeoutMs }), { name: "TimeoutError" });
+    await assert.rejects(nativeBridge.triage("fixture.txt", { timeoutMs }), { name: "TimeoutError" });
+  }
+  assert.equal(requests.length, 8);
+});
+
+test("native cancellation is reasserted after execution registration", async (t) => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const controller = new AbortController();
+  let acknowledge, finish;
+  const cancellations = [];
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { __TAURI_INTERNALS__: {
+    transformCallback: () => 1, unregisterCallback() {},
+    invoke(command, args) {
+      if (command === "cancel_python_execution") { cancellations.push(args.executionId); return Promise.resolve(false); }
+      assert.equal(command, "run_python_code");
+      assert.equal(args.timeoutMs, undefined);
+      acknowledge = () => args.onStarted.onmessage({ kind: "started" });
+      return new Promise(resolve => { finish = resolve; });
+    },
+  } } });
+  try {
+    const running = nativeBridge.execPython("print('observed')", { executionId: "cancel-registration-fixture", signal: controller.signal });
+    const rejected = assert.rejects(running, { name: "AbortError" });
+    while (!acknowledge) await new Promise(resolve => setImmediate(resolve));
+    controller.abort(); acknowledge();
+    finish({ success: false, stdout: "", stderr: "cancelled" });
+    await rejected;
+    assert.deepEqual(cancellations, ["cancel-registration-fixture", "cancel-registration-fixture"]);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "window", previous); else delete globalThis.window;
+  }
+});
+
+test("both shared actions inherit only the remaining explicit Goal duration", async (t) => {
+  const timeouts = [];
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
+  t.mock.method(nativeBridge, "execPython", async (_, options) => { timeouts.push(options.timeoutMs); return { success: true, stdout: "observed", stderr: "" }; });
+  for (const budget of [{}, { maxDurationMs: 120000 }]) {
+    now = 0;
+    await runBothTracks("fixture.txt", "inspect observations", budget, {}, undefined, async (track, branchBudget, _, state) => {
+      now = 7500;
+      await state.executeAction(track, "print('observed')");
+      return context({ track, budget: { ...branchBudget, tokensUsed: 0, attempts: 1 }, state: {}, runProgress: { status: "blocked", reason: "Fixture completed" } });
+    }, "execution-budget-fixture");
+  }
+  assert.deepEqual(timeouts, [undefined, undefined, 112500, 112500]);
+});
 
 test("completion requests omit implicit output limits and timers", async (t) => {
   const timers = [];

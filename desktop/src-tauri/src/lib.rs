@@ -127,14 +127,14 @@ fn get_env_snapshot() -> Result<Value, String> {
 }
 
 #[tauri::command]
-async fn triage_target(target: String, timeout_ms: Option<u64>, execution_id: Option<String>, route: Option<network::Route>) -> Result<Value, String> {
+async fn triage_target(target: String, timeout_ms: Option<u64>, execution_id: Option<String>, route: Option<network::Route>, on_started: tauri::ipc::Channel<Value>) -> Result<Value, String> {
     let repo_root = get_repo_root()?;
     let script_path = repo_root.join("scripts").join("misc").join("triage_target.py");
     if !script_path.is_file() { return Err("Triage script not found".into()); }
     let script_json = serde_json::to_string(&script_path.to_string_lossy()).map_err(|e| e.to_string())?;
     let target_json = serde_json::to_string(&target).map_err(|e| e.to_string())?;
     let code = format!("import runpy, sys\nsys.argv = [{}, {}]\nrunpy.run_path({}, run_name='__main__')", script_json, target_json, script_json);
-    let output = run_python_code(code, timeout_ms, execution_id, route).await?;
+    let output = run_python_code(code, timeout_ms, execution_id, route, on_started).await?;
     if output["success"].as_bool() != Some(true) { return Err(output["stderr"].as_str().unwrap_or("Triage failed").to_string()); }
     serde_json::from_str(output["stdout"].as_str().unwrap_or("")).map_err(|e| format!("Invalid triage output: {}", e))
 }
@@ -205,7 +205,7 @@ fn cancel_python_execution(execution_id: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Option<String>, route: Option<network::Route>) -> Result<Value, String> {
+async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Option<String>, route: Option<network::Route>, on_started: tauri::ipc::Channel<Value>) -> Result<Value, String> {
     let repo_root = get_repo_root()?;
     let execution_id = execution_id.unwrap_or_else(|| format!("python-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos()));
     let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -215,7 +215,13 @@ async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Op
         if executions.contains_key(&execution_id) { return Err("Execution is already running".into()); }
         executions.insert(execution_id.clone(), cancelled.clone());
     }
+    if on_started.send(json!({ "kind": "started" })).is_err() {
+        cancelled.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
     let result = tauri::async_runtime::spawn_blocking(move || -> Result<Value, String> {
+        if cancelled.load(std::sync::atomic::Ordering::SeqCst) || timeout_ms == Some(0) {
+            return Ok(json!({ "success": false, "stdout": "", "stderr": "Execution cancelled or time budget exhausted", "execution_time_ms": 0, "stopped": true }));
+        }
         let run_id = format!("reverselab-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos());
         let script_path = std::env::temp_dir().join(format!("{}.py", run_id));
         let stdout_path = std::env::temp_dir().join(format!("{}.stdout", run_id));
@@ -232,16 +238,22 @@ async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Op
                 .stderr(fs::File::create(&stderr_path).map_err(|e| e.to_string())?);
             #[cfg(target_os = "windows")]
             cmd.creation_flags(CREATE_NO_WINDOW);
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::CommandExt;
+                cmd.process_group(0);
+            }
             let start = std::time::Instant::now();
             let mut child = cmd.spawn().map_err(|e| e.to_string())?;
-            let limit = std::time::Duration::from_millis(timeout_ms.unwrap_or(15000).clamp(1, 60000));
             let mut stopped = false;
             let status = loop {
                 if let Some(status) = child.try_wait().map_err(|e| e.to_string())? { break status; }
-                if cancelled.load(std::sync::atomic::Ordering::SeqCst) || start.elapsed() >= limit {
+                if cancelled.load(std::sync::atomic::Ordering::SeqCst) || execution_expired(timeout_ms, start.elapsed()) {
                     stopped = true;
                     #[cfg(target_os = "windows")]
                     { let _ = Command::new("taskkill").args(["/PID", &child.id().to_string(), "/T", "/F"]).creation_flags(CREATE_NO_WINDOW).output(); }
+                    #[cfg(unix)]
+                    { let _ = Command::new("kill").args(["-KILL", "--", &format!("-{}", child.id())]).output(); }
                     let _ = child.kill();
                     break child.wait().map_err(|e| e.to_string())?;
                 }
@@ -250,7 +262,7 @@ async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Op
             let read_output = |path: &Path| -> String {
                 use std::io::Read;
                 let mut bytes = Vec::new();
-                if let Ok(file) = fs::File::open(path) { let _ = file.take(4 * 1024 * 1024).read_to_end(&mut bytes); }
+                if let Ok(mut file) = fs::File::open(path) { let _ = file.read_to_end(&mut bytes); }
                 let mut text = String::from_utf8_lossy(&bytes).to_string();
                 if let Some(route) = &route {
                     for secret in [&route.username, &route.password].into_iter().flatten().filter(|secret| !secret.is_empty()) {
@@ -270,6 +282,87 @@ async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Op
     }).await.map_err(|e| e.to_string());
     if let Ok(mut executions) = EXECUTIONS.get_or_init(Default::default).lock() { executions.remove(&execution_id); }
     result?
+}
+
+fn execution_expired(timeout_ms: Option<u64>, elapsed: std::time::Duration) -> bool {
+    timeout_ms.is_some_and(|limit| elapsed >= std::time::Duration::from_millis(limit))
+}
+
+#[cfg(test)]
+mod execution_tests {
+    use super::*;
+    use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+    fn channel() -> tauri::ipc::Channel<Value> { tauri::ipc::Channel::new(|_| Ok(())) }
+
+    struct RunningFixture { id: String, path: PathBuf }
+    impl Drop for RunningFixture {
+        fn drop(&mut self) {
+            let _ = cancel_python_execution(self.id.clone());
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+
+    #[test]
+    fn only_an_explicit_execution_budget_expires() {
+        for elapsed in [Duration::ZERO, Duration::from_secs(61), Duration::from_secs(86400)] {
+            assert!(!execution_expired(None, elapsed));
+        }
+        assert!(!execution_expired(Some(120000), Duration::from_secs(61)));
+        assert!(execution_expired(Some(120000), Duration::from_secs(120)));
+        assert!(execution_expired(Some(0), Duration::ZERO));
+        assert!(!execution_expired(Some(u64::MAX), Duration::from_secs(86400)));
+    }
+
+    #[tokio::test]
+    async fn real_python_uses_optional_deadlines_and_preserves_full_output() {
+        let complete = run_python_code("print('observed')".into(), None, None, None, channel()).await.unwrap();
+        assert_eq!(complete["success"], true);
+        assert_eq!(complete["stdout"].as_str().unwrap().trim_end(), "observed");
+        let bounded = run_python_code("import time\ntime.sleep(60)".into(), Some(100), None, None, channel()).await.unwrap();
+        assert_eq!(bounded["success"], false);
+        assert_eq!(bounded["stopped"], true);
+        assert!(bounded["stderr"].as_str().unwrap().contains("time budget exhausted"));
+        let expired = run_python_code("raise RuntimeError('must not execute')".into(), Some(0), None, None, channel()).await.unwrap();
+        assert_eq!(expired["execution_time_ms"], 0);
+        assert!(!expired["stderr"].as_str().unwrap().contains("RuntimeError"));
+        let full = run_python_code("print('x' * (4 * 1024 * 1024 + 1), end='')".into(), None, None, None, channel()).await.unwrap();
+        assert_eq!(full["success"], true);
+        assert_eq!(full["stdout"].as_str().unwrap().len(), 4 * 1024 * 1024 + 1);
+    }
+
+    #[tokio::test]
+    async fn manual_stop_terminates_a_real_python_process_tree() {
+        let id = format!("execution-fixture-{}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos());
+        let fixture = RunningFixture { path: std::env::temp_dir().join(format!("{id}.json")), id: id.clone() };
+        let code = format!(
+            "import json, os, subprocess, sys, time\nchild = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\nwith open({}, 'w') as output: json.dump([os.getpid(), child.pid], output)\ntime.sleep(60)",
+            serde_json::to_string(&fixture.path.to_string_lossy()).unwrap(),
+        );
+        let running = tokio::spawn(run_python_code(code, None, Some(id.clone()), None, channel()));
+        let started = Instant::now();
+        let pids: Vec<u32> = loop {
+            if let Ok(contents) = fs::read(&fixture.path) {
+                if let Ok(pids) = serde_json::from_slice(&contents) { break pids; }
+            }
+            assert!(started.elapsed() < Duration::from_secs(10), "Python process tree did not start");
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        };
+        assert!(cancel_python_execution(id.clone()).unwrap());
+        let result = running.await.unwrap().unwrap();
+        assert_eq!(result["success"], false);
+        assert_eq!(result["stopped"], true);
+        assert!(!EXECUTIONS.get().unwrap().lock().unwrap().contains_key(&id));
+        let stopped = Instant::now();
+        let mut system = sysinfo::System::new();
+        loop {
+            let pids: Vec<_> = pids.iter().map(|pid| sysinfo::Pid::from_u32(*pid)).collect();
+            system.refresh_processes_specifics(sysinfo::ProcessesToUpdate::Some(&pids), true, sysinfo::ProcessRefreshKind::nothing());
+            if pids.iter().all(|pid| system.process(*pid).is_none()) { break; }
+            assert!(stopped.elapsed() < Duration::from_secs(5), "A cancelled Python descendant is still running");
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    }
 }
 
 #[tauri::command]

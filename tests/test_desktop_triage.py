@@ -54,3 +54,26 @@ def test_plain_zip_is_not_reported_as_android_package(tmp_path):
     result = triage.triage_target(str(target))
     assert result["fileType"] == "ZIP Archive"
     assert result["board"] == "general"
+
+
+def test_web_triage_leaves_the_deadline_to_the_execution_runner(monkeypatch):
+    class Response:
+        status = 200
+        headers = {"Content-Type": "text/plain"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    observed = []
+
+    def urlopen(request, *, timeout):
+        observed.append(timeout)
+        return Response()
+
+    monkeypatch.setattr(triage.urllib.request, "urlopen", urlopen)
+    result = triage.triage_target("https://fixture.example.test/")
+    assert result["httpStatus"] == 200
+    assert observed == [None]

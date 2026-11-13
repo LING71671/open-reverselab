@@ -6,9 +6,52 @@ import process from "node:process";
 import { execFile } from "node:child_process";
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { executionTimeout } from "./src/core/contracts/execution.ts";
 
 const host = process.env.TAURI_DEV_HOST;
 const repoRoot = resolve(import.meta.dirname, "..");
+
+function executePython(args: string[], timeoutMs: number | undefined, res: import("node:http").ServerResponse, complete: (result: { success: boolean; stdout: string; stderr: string; durationMs: number; executionTimeMs: number }) => void) {
+  const limit = executionTimeout(timeoutMs);
+  const start = performance.now();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+  let finished = false;
+  let termination: Promise<void> | undefined;
+  const child = execFile("python", args, {
+    cwd: repoRoot, maxBuffer: Infinity, windowsHide: true, detached: process.platform !== "win32",
+    env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+  }, async (err, stdout, stderr) => {
+    finished = true;
+    if (timer !== undefined) clearTimeout(timer);
+    await termination;
+    if (res.destroyed) return;
+    const durationMs = Math.round(performance.now() - start);
+    complete({ success: !err && !stopped, stdout: stdout || "", stderr: stopped ? `${stderr || ""}\nExecution cancelled or time budget exhausted` : stderr || err?.message || "", durationMs, executionTimeMs: durationMs });
+  });
+  const terminate = () => {
+    if (stopped || finished) return;
+    stopped = true;
+    if (timer !== undefined) clearTimeout(timer);
+    if (process.platform === "win32" && child.pid) {
+      termination = new Promise(resolve => {
+        execFile("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true }, () => { child.kill(); resolve(); });
+      });
+    } else {
+      try { if (child.pid) process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
+    }
+  };
+  if (limit !== undefined) {
+    const checkDeadline = () => {
+      if (finished || stopped) return;
+      const remaining = limit - (performance.now() - start);
+      if (remaining <= 0) terminate();
+      else timer = setTimeout(checkDeadline, Math.min(remaining, 2147483647));
+    };
+    checkDeadline();
+  }
+  res.on("close", () => { if (!res.writableEnded) terminate(); });
+}
 
 function reverseLabNativePlugin(): Plugin {
   return {
@@ -70,22 +113,19 @@ function reverseLabNativePlugin(): Plugin {
         req.on("end", () => {
           try {
             const { target, timeoutMs } = JSON.parse(body || "{}");
+            if (typeof target !== "string" || !target.trim()) throw new Error("A target is required");
             const script = resolve(repoRoot, "scripts/misc/triage_target.py");
-            const child = execFile(
-              "python",
-              [script, target || "target.bin"],
-              { cwd: repoRoot, timeout: Math.max(1, Math.min(15000, Number.isFinite(timeoutMs) ? Math.floor(timeoutMs) : 15000)), windowsHide: true },
-              (err, stdout, stderr) => {
+            executePython([script, target], timeoutMs, res,
+              ({ success, stdout, stderr }) => {
                 res.setHeader("Content-Type", "application/json");
-                if (err) {
+                if (!success) {
                   res.statusCode = 500;
-                  res.end(JSON.stringify({ error: stderr || err.message }));
+                  res.end(JSON.stringify({ error: stderr }));
                 } else {
                   res.end(stdout);
                 }
               }
             );
-            res.on("close", () => { if (!res.writableEnded) child.kill(); });
           } catch (e: any) {
             res.statusCode = 400;
             res.end(JSON.stringify({ error: e.message }));
@@ -136,38 +176,10 @@ print(json.dumps(results))
           try {
             const { script, timeoutMs } = JSON.parse(body || "{}");
             if (typeof script !== "string" || !script.trim()) throw new Error("A Python script is required");
-            const start = Date.now();
-            const limit = Math.max(1, Math.min(60000, Number.isFinite(timeoutMs) ? Math.floor(timeoutMs) : 15000));
-            let timer: ReturnType<typeof setTimeout> | undefined;
-            let stopped = false;
-            const child = execFile(
-              "python",
-              ["-c", script],
-              { cwd: repoRoot, maxBuffer: 4 * 1024 * 1024, windowsHide: true, env: { ...process.env, PYTHONIOENCODING: "utf-8" } },
-              (err, stdout, stderr) => {
-                if (timer) clearTimeout(timer);
-                if (res.destroyed) return;
-                res.setHeader("Content-Type", "application/json");
-                res.end(
-                  JSON.stringify({
-                    success: !err && !stopped,
-                    stdout: stdout || "",
-                    stderr: stopped ? `${stderr || ""}\nExecution cancelled or time budget exhausted` : stderr || (err ? err.message : ""),
-                    durationMs: Date.now() - start,
-                    executionTimeMs: Date.now() - start,
-                  })
-                );
-              }
-            );
-            const terminate = () => {
-              if (child.exitCode !== null || child.killed) return;
-              stopped = true;
-              if (process.platform === "win32" && child.pid) {
-                execFile("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true }, () => child.kill());
-              } else child.kill("SIGKILL");
-            };
-            timer = setTimeout(terminate, limit);
-            res.on("close", () => { if (!res.writableEnded) terminate(); });
+            executePython(["-c", script], timeoutMs, res, result => {
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify(result));
+            });
           } catch (e: any) {
             res.statusCode = 400;
             res.end(JSON.stringify({ error: e.message }));

@@ -34,7 +34,7 @@ export async function runBothTracks(
     if (!sharedExecutions.has(fingerprint)) {
       sharedExecutions.set(fingerprint, nativeBridge.execPython(script, {
         executionId: `${goalId}:${fingerprint}`,
-        timeoutMs: Math.min(60000, Math.max(1, (budget.maxDurationMs ?? Infinity) - (performance.now() - started))),
+        timeoutMs: budget.maxDurationMs === undefined ? undefined : budget.maxDurationMs - (performance.now() - started),
         signal,
       }));
     }

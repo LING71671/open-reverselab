@@ -191,7 +191,9 @@ def triage_web(url: str) -> dict[str, Any]:
     }
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "ReverseLab/0.1.0 (Security Scanner)"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        # The execution runner enforces the optional Goal deadline and cancels
+        # the process tree. A second socket timeout would shorten that budget.
+        with urllib.request.urlopen(req, timeout=None) as resp:
             res["httpStatus"] = resp.status
             res["headers"] = {k: v for k, v in resp.headers.items() if k.lower() in ("server", "content-type", "x-powered-by", "set-cookie")}
     except Exception as e:
