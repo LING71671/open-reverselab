@@ -2,6 +2,8 @@
 
 # Open-ReverseLab
 
+<img src="assets/social-preview-v2.png" width="960" alt="ReverseLab — AI reverse engineering workspace">
+
 **面向目标的 AI 逆向分析工作台**
 
 桌面工作区 · red / blue / both · 并行 Goal · 知识库 · MCP

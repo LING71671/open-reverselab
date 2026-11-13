@@ -2,6 +2,8 @@
 
 # Open-ReverseLab
 
+<img src="assets/social-preview-v2.png" width="960" alt="ReverseLab — AI reverse engineering workspace">
+
 **An AI workspace for target-based reverse engineering**
 
 Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · MCP
