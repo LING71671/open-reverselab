@@ -5,6 +5,13 @@
  */
 import type { SecurityTrack } from "../../core/contracts/track";
 import { HealthFault } from "../../core/contracts/health";
+import { proxyPool, nativeRoute, usesNativeNetwork } from "../network/networkService";
+
+function toolRoute() {
+  const route = proxyPool.routes("tools")[0];
+  if (!usesNativeNetwork() && route.mode !== "system") throw new Error("PROXY_CONFIG: 指定 Python 代理需要桌面应用");
+  return nativeRoute(route);
+}
 
 async function tryTauriInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T | null> {
   if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
@@ -96,7 +103,7 @@ export class NativeBridge {
     const cancel = () => { void tryTauriInvoke("cancel_python_execution", { executionId }).catch(() => {}); };
     options.signal?.addEventListener("abort", cancel, { once: true });
     let tauriRes;
-    try { tauriRes = await tryTauriInvoke<TriageResult>("triage_target", { target, timeoutMs, executionId }); }
+    try { tauriRes = await tryTauriInvoke<TriageResult>("triage_target", { target, timeoutMs, executionId, route: toolRoute() }); }
     finally { options.signal?.removeEventListener("abort", cancel); }
     if (tauriRes) {
       if (tauriRes.error) throw new Error(tauriRes.error);
@@ -132,7 +139,7 @@ export class NativeBridge {
     const cancel = () => { void tryTauriInvoke("cancel_python_execution", { executionId }).catch(() => {}); };
     options.signal?.addEventListener("abort", cancel, { once: true });
     let tauriRes;
-    try { tauriRes = await tryTauriInvoke<any>("run_python_code", { code: script, timeoutMs, executionId }); }
+    try { tauriRes = await tryTauriInvoke<any>("run_python_code", { code: script, timeoutMs, executionId, route: toolRoute() }); }
     finally { options.signal?.removeEventListener("abort", cancel); }
     if (tauriRes) {
       return {

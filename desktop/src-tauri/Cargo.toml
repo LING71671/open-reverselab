@@ -26,6 +26,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-updater = "2"
 tauri-plugin-single-instance = "2"
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "system-proxy", "socks", "stream"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+tokio = { version = "1", features = ["macros", "time", "sync"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

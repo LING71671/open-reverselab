@@ -75,5 +75,5 @@ jobs:
       - name: Goal, pipeline and runtime tests
         working-directory: desktop
         run: |
-          node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs
+          node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs tests/networkTransport.test.mjs
           node --experimental-strip-types --test tests/*.test.ts

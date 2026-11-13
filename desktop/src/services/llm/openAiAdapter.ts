@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { llmService } from "./llmService";
+import { modelFetch, usesNativeNetwork } from "../network/networkService";
 
 export function getAiModel() {
   const provider = llmService.getActiveProvider();
@@ -9,7 +10,7 @@ export function getAiModel() {
 
   // Use Vite proxy in local dev to bypass CORS preflight if needed
   if (
-    import.meta.env.DEV &&
+    import.meta.env.DEV && !usesNativeNetwork() &&
     (baseUrl.includes("tokenrhythm.studio") || baseUrl.startsWith("/api/llm"))
   ) {
     baseUrl = `${window.location.origin}/api/llm/v1`;
@@ -18,6 +19,7 @@ export function getAiModel() {
   const cleanBase = baseUrl.replace(/\/+$/, "");
 
   const openai = createOpenAI({
+    fetch: modelFetch,
     baseURL: cleanBase,
     apiKey: apiKey,
   });

@@ -95,6 +95,7 @@ pub async fn update_install(state: State<'_, UpdateState>) -> Result<(), UpdateE
         let executions = crate::EXECUTIONS.get_or_init(Default::default).lock().map_err(|_| fault("UPDATE_BUSY", "Execution state unavailable"))?;
         if !executions.is_empty() { return Err(fault("UPDATE_TASKS_ACTIVE", "Python work is still running")); }
         if INSTALLING.swap(true, Ordering::SeqCst) { return Err(fault("UPDATE_BUSY", "Installation is already starting")); }
+        if crate::network::has_active_requests() { INSTALLING.store(false, Ordering::SeqCst); return Err(fault("UPDATE_TASKS_ACTIVE", "Network requests are still running")); }
     }
     let bytes = slot.bytes.take().unwrap();
     let outcome = tauri::async_runtime::spawn_blocking(move || update.install(bytes)).await;

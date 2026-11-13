@@ -14,6 +14,12 @@
 | MODEL_RATE_LIMIT | model | 请求限流 | 有界重试 |
 | MODEL_TIMEOUT | model | 模型响应超时 | 有界重试 |
 | MODEL_UNAVAILABLE | model | 模型或网络不可用 | 备用服务或路线 |
+| PROXY_CONFIG | model / tool | 代理配置无效 | 修改代理池配置 |
+| PROXY_CONNECT | model / tool | 连接代理失败 | 切换节点 |
+| PROXY_AUTH | model / tool | 代理认证失败 | 修改节点账号密码 |
+| PROXY_UNAVAILABLE | model / tool | 没有可用的启用节点 | 检查节点或等待冷却结束 |
+| NETWORK_TIMEOUT | model / tool | 网络请求超时 | 检查连接后重试 |
+| NETWORK_FAILED | model / tool | 已开始的网络请求中断 | 检查结果，避免自动重发 |
 | KB_UNAVAILABLE | kb | 知识库服务不可用 | 检查知识库配置 |
 | KB_DOC_MISSING | kb | 索引对应文档缺失 | 选择其他文档 |
 | TOOL_MISSING | tool | 执行依赖缺失 | 检查工具配置 |

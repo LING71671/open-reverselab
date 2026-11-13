@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::Manager;
 mod updates;
+mod network;
 
 static RESOURCE_ROOT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
@@ -125,14 +126,14 @@ fn get_env_snapshot() -> Result<Value, String> {
 }
 
 #[tauri::command]
-async fn triage_target(target: String, timeout_ms: Option<u64>, execution_id: Option<String>) -> Result<Value, String> {
+async fn triage_target(target: String, timeout_ms: Option<u64>, execution_id: Option<String>, route: Option<network::Route>) -> Result<Value, String> {
     let repo_root = get_repo_root()?;
     let script_path = repo_root.join("scripts").join("misc").join("triage_target.py");
     if !script_path.is_file() { return Err("Triage script not found".into()); }
     let script_json = serde_json::to_string(&script_path.to_string_lossy()).map_err(|e| e.to_string())?;
     let target_json = serde_json::to_string(&target).map_err(|e| e.to_string())?;
     let code = format!("import runpy, sys\nsys.argv = [{}, {}]\nrunpy.run_path({}, run_name='__main__')", script_json, target_json, script_json);
-    let output = run_python_code(code, timeout_ms, execution_id).await?;
+    let output = run_python_code(code, timeout_ms, execution_id, route).await?;
     if output["success"].as_bool() != Some(true) { return Err(output["stderr"].as_str().unwrap_or("Triage failed").to_string()); }
     serde_json::from_str(output["stdout"].as_str().unwrap_or("")).map_err(|e| format!("Invalid triage output: {}", e))
 }
@@ -203,7 +204,7 @@ fn cancel_python_execution(execution_id: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Option<String>) -> Result<Value, String> {
+async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Option<String>, route: Option<network::Route>) -> Result<Value, String> {
     let repo_root = get_repo_root()?;
     let execution_id = execution_id.unwrap_or_else(|| format!("python-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos()));
     let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -219,8 +220,11 @@ async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Op
         let stdout_path = std::env::temp_dir().join(format!("{}.stdout", run_id));
         let stderr_path = std::env::temp_dir().join(format!("{}.stderr", run_id));
         let outcome = (|| -> Result<Value, String> {
-            fs::write(&script_path, code).map_err(|e| e.to_string())?;
             let mut cmd = Command::new("python");
+            let prelude = if let Some(route) = &route { network::configure_python(&mut cmd, route)? } else { String::new() };
+            // Keep proxy credentials out of the temporary source file.
+            let code = if prelude.is_empty() { code } else { format!("{}\nexec(compile({}, '<goal>', 'exec'))", prelude, serde_json::to_string(&code).map_err(|e| e.to_string())?) };
+            fs::write(&script_path, code).map_err(|e| e.to_string())?;
             cmd.arg(&script_path).current_dir(repo_root)
                 .env("PYTHONIOENCODING", "utf-8")
                 .stdout(fs::File::create(&stdout_path).map_err(|e| e.to_string())?)
@@ -246,7 +250,15 @@ async fn run_python_code(code: String, timeout_ms: Option<u64>, execution_id: Op
                 use std::io::Read;
                 let mut bytes = Vec::new();
                 if let Ok(file) = fs::File::open(path) { let _ = file.take(4 * 1024 * 1024).read_to_end(&mut bytes); }
-                String::from_utf8_lossy(&bytes).to_string()
+                let mut text = String::from_utf8_lossy(&bytes).to_string();
+                if let Some(route) = &route {
+                    for secret in [&route.username, &route.password].into_iter().flatten().filter(|secret| !secret.is_empty()) {
+                        text = text.replace(secret.as_str(), "[redacted]");
+                        let encoded: String = reqwest::Url::parse("http://localhost").ok().and_then(|mut url| { url.set_password(Some(secret)).ok()?; Some(url.password()?.to_string()) }).unwrap_or_default();
+                        if !encoded.is_empty() { text = text.replace(&encoded, "[redacted]"); }
+                    }
+                }
+                text
             };
             let mut stderr = read_output(&stderr_path);
             if stopped { stderr.push_str("\nExecution cancelled or time budget exhausted"); }
@@ -344,6 +356,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            network::network_request,
+            network::network_cancel,
+            network::network_probe,
             updates::update_installation_info,
             updates::update_check,
             updates::update_download,

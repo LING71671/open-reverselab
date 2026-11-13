@@ -1,5 +1,6 @@
 import { PipelineStage, PipelineContext, PipelineCallbacks, StageDiagnostic } from "../../../core";
 import { llmService } from "../../../services/llm/llmService";
+import { modelFetch, usesNativeNetwork } from "../../../services/network/networkService";
 import { buildAnalysisMessages, estimateMessageTokens } from "../analysisPrompt";
 import { parseAcceptancePlan } from "../goalVerifier";
 
@@ -36,7 +37,7 @@ export class LlmStreamStage implements PipelineStage {
 
     // In dev mode, route through Vite proxy to avoid CORS preflight issues
     if (
-      import.meta.env.DEV &&
+      import.meta.env.DEV && !usesNativeNetwork() &&
       (baseUrl.includes("tokenrhythm.studio") || baseUrl.startsWith("/api/llm"))
     ) {
       baseUrl = `/api/llm/v1`;
@@ -66,7 +67,7 @@ export class LlmStreamStage implements PipelineStage {
       chargedInput = true;
       ctx.budget.tokensUsed = previousUsage + inputEstimate;
       ctx.budget.usageEstimated = true;
-      const res = await fetch(url, {
+      const res = await modelFetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

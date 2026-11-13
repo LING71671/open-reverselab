@@ -25,6 +25,12 @@ const RULES: Record<HealthCode, FailureRule> = {
   USER_CANCELLED: { layer: "goal", severity: "info", retryable: false, recovery: "stop", reason: "运行已停止" },
   STORAGE_FAILED: { layer: "storage", severity: "error", retryable: false, recovery: "configure", reason: "结果保存失败" },
   UNKNOWN: { severity: "error", retryable: false, recovery: "inspect", reason: "发生未知错误" },
+  PROXY_CONFIG: { severity: "error", retryable: false, recovery: "configure", reason: "代理配置无效" },
+  PROXY_CONNECT: { severity: "warning", retryable: true, recovery: "alternate", reason: "无法连接代理" },
+  PROXY_AUTH: { severity: "error", retryable: false, recovery: "configure", reason: "代理认证失败" },
+  PROXY_UNAVAILABLE: { severity: "warning", retryable: true, recovery: "configure", reason: "代理池暂无可用节点" },
+  NETWORK_TIMEOUT: { severity: "warning", retryable: true, recovery: "retry", reason: "网络请求超时" },
+  NETWORK_FAILED: { severity: "error", retryable: false, recovery: "inspect", reason: "网络请求中断" },
 };
 const knownCodes = new Set<string>(HEALTH_CODES);
 const recordOf = (value: unknown): Record<string, unknown> =>
@@ -49,6 +55,7 @@ function inferCode(error: unknown, layer: HealthLayer, details: FailureDetails):
     typeof error === "string" ? error : "", source.name, source.message, source.code,
     nested.message, nested.code, data.message, data.code, body.message, body.code, details.detail,
   ].map(stringOf).join(" ").toLowerCase();
+  for (const code of HEALTH_CODES) { if (/^(PROXY_|NETWORK_)/.test(code) && text.includes(code.toLowerCase())) return code; }
 
   if (/token (?:budget|limit).*(?:exhausted|exceeded)|token.*预算.*(?:耗尽|用尽)/i.test(text)) return "BUDGET_TOKENS";
   if (/time budget.*(?:exhausted|exceeded)|时间预算.*(?:耗尽|用尽)/.test(text)) return "BUDGET_TIME";

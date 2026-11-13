@@ -1,3 +1,5 @@
+import { modelFetch, usesNativeNetwork } from "../network/networkService";
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -195,7 +197,7 @@ export class LlmService {
         headers["Authorization"] = `Bearer ${key}`;
       }
 
-      const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+      const res = await modelFetch(url, { headers, signal: AbortSignal.timeout(10000) });
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.data) ? data.data.map((m: any) => m.id) : [];
@@ -210,7 +212,7 @@ export class LlmService {
   private resolveUrl(path: string, customBase?: string): string {
     const base = customBase || this.getBaseUrl();
     if (
-      import.meta.env.DEV &&
+      import.meta.env.DEV && !usesNativeNetwork() &&
       (base.includes("tokenrhythm.studio") || base.startsWith("/api/llm"))
     ) {
       return `/api/llm/v1${path}`;
@@ -225,7 +227,7 @@ export class LlmService {
       const active = this.getActiveProvider();
       const url = this.resolveUrl("/chat/completions", active?.baseUrl);
       const key = active?.apiKey || this.getApiKey();
-      const res = await fetch(url, {
+      const res = await modelFetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -291,7 +293,7 @@ export class LlmService {
     }
 
     try {
-      const res = await fetch(url, {
+      const res = await modelFetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
