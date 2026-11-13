@@ -130,11 +130,11 @@ def run_harness(
 
     # Stage 3: KB Routing
     print("[-] Stage 3: Routing Attack Network & Knowledge Base...")
-    kb_path = ROOT / "kb" / board / "techniques" / "attack-network.md"
+    kb_path = ROOT / "kb" / "red" / board / "techniques" / "attack-network.md"
     kb_summary = ""
     if kb_path.exists():
         kb_summary = kb_path.read_text(encoding="utf-8")[:1200]
-        print(f"    [+] Loaded Attack Network: kb/{board}/techniques/attack-network.md ({len(kb_summary)} bytes)")
+        print(f"    [+] Loaded Attack Network: kb/red/{board}/techniques/attack-network.md ({len(kb_summary)} bytes)")
 
     # Stage 4: LLM Reasoning & Forensics Code Generation
     print(f"[-] Stage 4: Querying LLM Engine ({model})...")

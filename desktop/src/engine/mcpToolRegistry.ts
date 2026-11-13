@@ -31,7 +31,7 @@ export const mcpTools = {
     parameters: z.object({
       path: z
         .string()
-        .describe("Relative path in kb, e.g. kb/pe-reverse/techniques/attack-network.md"),
+        .describe("Relative path in kb, e.g. kb/red/pe-reverse/techniques/attack-network.md"),
     }),
     execute: async ({ path }) => {
       const content = await nativeBridge.readKb(path);

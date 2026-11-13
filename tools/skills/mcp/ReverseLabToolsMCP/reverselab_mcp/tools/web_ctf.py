@@ -17,10 +17,11 @@ from pathlib import Path
 
 from ..config import REVERSE_ROOT, SCRIPTS_DIR, TOOLS_DIR
 from ..paths import ensure_under
-from .kb import KB_ROOTS, kb_catalog, kb_read_file, kb_router
+from .kb import KB_ROOTS, kb_catalog, kb_read_file, kb_router, layout as kb_layout
 
-KB_INDEX = REVERSE_ROOT / "kb" / "ctf-website" / "techniques" / "kb-index.json"
-TECHNIQUES_DIR = REVERSE_ROOT / "kb" / "ctf-website" / "techniques"
+KB_INDEX = kb_layout.index_path("ctf-website", REVERSE_ROOT)
+# Catalog file references are now repository-relative across red/blue/shared.
+TECHNIQUES_DIR = REVERSE_ROOT
 KB_ROUTER = SCRIPTS_DIR / "ctf-website" / "kb_router.py"
 CTF_AUTOPILOT = SCRIPTS_DIR / "ctf-website" / "ctf_autopilot.py"
 CTF_TOOLS_DIR = REVERSE_ROOT / "tools" / "ctf-website"

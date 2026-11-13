@@ -1,4 +1,4 @@
 {
-  "kb/windows/techniques/techniques/README.html": "kb/windows/techniques/README.html",
-  "kb/windows/techniques/attack-network.html": "kb/windows/techniques/README.html"
+  "kb/windows/techniques/techniques/README.html": "kb/shared/windows/techniques/README.html",
+  "kb/windows/techniques/attack-network.html": "kb/shared/windows/techniques/README.html"
 }

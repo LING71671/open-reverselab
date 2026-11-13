@@ -10,12 +10,10 @@ from collections import Counter
 from pathlib import Path
 
 
-ROOTS = (
-    Path("kb/ctf-website/techniques"),
-    Path("kb/apk-reverse/techniques"),
-    Path("kb/pe-reverse/techniques"),
-    Path("kb/general/techniques"),
-)
+ROOTS = tuple(Path("kb") / layer / board / "techniques"
+              for layer in ("red", "blue", "shared")
+              for board in ("ctf-website", "apk-reverse", "pe-reverse", "general"))
+
 FLOW_RE = re.compile(r"^#{2,3}\s+.*(?:攻击链|攻击网|分析链|调用链|工作流|流程|管线|attack chain|workflow)", re.I | re.M)
 EVIDENCE_RE = re.compile(r"^#{2,3}\s+.*(?:证据|验证|确认标准|判定标准|evidence)", re.I | re.M)
 MCP_RE = re.compile(r"^#{2,3}\s+.*MCP\s*工具映射", re.I | re.M)
@@ -51,7 +49,7 @@ def technique_files() -> list[Path]:
         if root.exists():
             files.extend(
                 p for p in root.rglob("*.md")
-                if p.name.lower() != "readme.md" and p.name != "attack-network.md"
+                if p.name.lower() != "readme.md" and p.name not in ("attack-network.md", "defense-network.md")
             )
     return sorted(files)
 

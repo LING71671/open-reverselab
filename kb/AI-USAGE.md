@@ -23,4 +23,6 @@
 
 ## 轨道与关联
 
-使用 `track: red | blue | both`；共享技术标为 `both`。防御文档用 `defends` 指向对应技术路径，并同步领域 `kb-index.json` 中的分类。保留领域目录，通过元数据解耦红蓝视图，不复制成两套知识库。更新索引后检查桌面关联阅读与 `kb_router --track` 的结果。
+使用 `track: red | blue | both`；共享技术标为 `both`。防御文档用 `defends` 指向对应技术路径，并同步领域 `kb-index.json` 中的分类。技术文档放在 `kb/red/<领域>/`、`kb/blue/<领域>/`，共享方法放在 `kb/shared/<领域>/`。统一索引位于 `kb/catalog/<领域>.json`，文件路径以仓库根目录为基准。更新索引后检查桌面关联阅读与 `kb_router --track` 的结果。
+
+red 与 blue 使用独立文件，攻击方法与 `*-defense.md` 分别维护完整操作路径；通过关联链接交换线索。red 从本领域 `attack-network.md` 进入，blue 从 `defense-network.md` 进入；both 的每个分支沿自己的入口检索和执行。

@@ -15,7 +15,7 @@ def test_kb_router_prioritizes_jwt_signal():
 
     assert results
     assert results[0]["id"] == "jwt"
-    assert "02-auth/jwt/00-overview.md" in results[0]["files"]
+    assert "kb/red/ctf-website/techniques/02-auth/jwt/00-overview.md" in results[0]["files"]
 
 
 def test_kb_router_results_reference_existing_files():
@@ -23,9 +23,8 @@ def test_kb_router_results_reference_existing_files():
     results = kb_router.search("sql injection", entries, track="both")
 
     assert results
-    techniques_dir = Path(kb_router.TECHNIQUES_DIR)
     for rel_path in results[0]["files"]:
-        assert (techniques_dir / rel_path).is_file()
+        assert (Path(kb_router.ROOT) / rel_path).is_file()
 
 
 def test_misc_kb_router_supports_all_four_boards():

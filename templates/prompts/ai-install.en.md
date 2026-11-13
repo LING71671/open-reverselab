@@ -78,7 +78,7 @@ Safety and public-repository boundary:
           - macOS / Linux (x64dbg-family tools unavailable; use alternatives):
             Dynamic debugging: GDB (Linux) / LLDB (macOS), or rizin (cross-platform)
             Anti-debug bypass: Frida (cross-platform; the Frida scripts in
-              kb/pe-reverse/techniques/04-dynamic-analysis/05-anti-debug-bypass.md apply too)
+              kb/red/pe-reverse/techniques/04-dynamic-analysis/05-anti-debug-bypass.md apply too)
             Static devirt: prefer NoVmpy (pip install --user novmpy, cross-platform);
               NoVmp can be built on Linux with CMake (vcpkg dependencies, complex, optional)
        c. Android group (.so emulation trace / dump triage):
@@ -103,17 +103,17 @@ Safety and public-repository boundary:
            - Form C: Android with a VMProtect-protected .so → PE group approach (ARM64
              adaptation) + Android group
            - Identification references:
-               kb/pe-reverse/techniques/05-crypto-unpack/02-vmp-virtualization-analysis.md
-               kb/apk-reverse/techniques/07-packer/03-vmp-dex2c-detection.md
+               kb/shared/pe-reverse/techniques/05-crypto-unpack/02-vmp-virtualization-analysis.md
+               kb/shared/apk-reverse/techniques/07-packer/03-vmp-dex2c-detection.md
        5.3 Install the matching group for the form → verify each → report per the checklist
            below
    (Both [A] and [B]) After installing, report each item as a checklist: tool name → install
    method → verification command and its output (or the failure reason and fix), and record
    version, install path, and verification results in notes/ for later analysis.
    Full analysis flows: see the knowledge base articles
-       kb/pe-reverse/techniques/05-crypto-unpack/03-vmp-devirtualization-toolchain.md
-       kb/apk-reverse/techniques/07-packer/04-vmp-dump-trace-recovery.md
-       kb/apk-reverse/techniques/07-packer/05-vmp-anti-debug-bypass.md
+       kb/shared/pe-reverse/techniques/05-crypto-unpack/03-vmp-devirtualization-toolchain.md
+       kb/shared/apk-reverse/techniques/07-packer/04-vmp-dump-trace-recovery.md
+       kb/shared/apk-reverse/techniques/07-packer/05-vmp-anti-debug-bypass.md
 
 Execute step by step and summarize each result in a short checklist. If something fails, explain the cause and fix, then continue with any safe remaining checks.
 ```

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitepress'
-import { sidebar } from './sidebar'
-import { stableDocumentLinks } from '../scripts/links.mjs'
+import { sidebar, knowledgeNav } from './sidebar'
+import { stableDocumentLinks, legacyRedirect, loadLegacyRoutes } from '../scripts/links.mjs'
 import { fileURLToPath } from 'node:url'
 
 /**
@@ -10,15 +10,20 @@ import { fileURLToPath } from 'node:url'
  * re-prefixed with /en/ so they resolve to the site/en/kb/** stubs, which
  * @include the original Chinese KB files.
  */
-function toEnSidebar(zh: Record<string, unknown>): Record<string, unknown> {
+function toEnNavigation<T>(zh: T): T {
   const translateText = (text: string): string => {
     const fixed: Record<string, string> = {
       '板块总览': 'Overview',
+      '知识库总览': 'Knowledge overview',
+      '策略总览': 'Track overview',
+      '分类索引': 'Category index',
+      '共享方法': 'Shared',
       '攻击网': 'Attack Network',
+      '防御网': 'Defense Network',
       '板块文章': 'Articles',
       '技术索引': 'Technique index',
     }
-    return (fixed[text] ?? text).replace(/（/g, '(').replace(/）/g, ')')
+    return (fixed[text] ?? text).replace(/^共享方法(?= \/)/, 'Shared').replace(/（/g, '(').replace(/）/g, ')')
   }
 
   const fix = (node: unknown): unknown => {
@@ -34,26 +39,24 @@ function toEnSidebar(zh: Record<string, unknown>): Record<string, unknown> {
     }
     return node
   }
-  return fix(zh) as Record<string, unknown>
+  return fix(zh) as T
 }
 
-const enSidebar = toEnSidebar(sidebar)
+const enSidebar = toEnNavigation(sidebar)
 
 // Deployment is GitHub Pages (project pages), so every absolute asset URL and
 // canonical link must be prefixed with the repository base path.
 const base = process.env.VITEPRESS_BASE || '/'
 const siteUrl = (process.env.VITEPRESS_SITE_URL || 'https://ling71671.github.io/open-reverselab').replace(/\/$/, '')
 const socialPreview = `${siteUrl}/assets/social-preview-v2.png`
+const legacyRoutes = loadLegacyRoutes()
 
 const zhThemeConfig = {
   nav: [
     { text: '桌面端', link: '/desktop' },
     { text: '知识库', items: [
-      { text: 'Web / CTF', link: '/kb/ctf-website/README' },
-      { text: 'Android / APK', link: '/kb/apk-reverse/README' },
-      { text: 'Windows / PE', link: '/kb/pe-reverse/README' },
-      { text: 'General', link: '/kb/general/README' },
-      { text: 'Windows', link: '/kb/windows/README' },
+      { text: '知识库总览', link: '/kb/README' },
+      ...knowledgeNav,
     ] },
     { text: '工具', link: '/mcp-tools' },
     { text: 'FAQ', link: '/faq' },
@@ -89,11 +92,8 @@ const enThemeConfig = {
   nav: [
     { text: 'Desktop', link: '/en/desktop' },
     { text: 'Knowledge', items: [
-      { text: 'Web / CTF', link: '/en/kb/ctf-website/README' },
-      { text: 'Android / APK', link: '/en/kb/apk-reverse/README' },
-      { text: 'Windows / PE', link: '/en/kb/pe-reverse/README' },
-      { text: 'General', link: '/en/kb/general/README' },
-      { text: 'Windows', link: '/en/kb/windows/README' },
+      { text: 'Knowledge overview', link: '/en/kb/README' },
+      ...toEnNavigation(knowledgeNav),
     ] },
     { text: 'Tools', link: '/en/mcp-tools' },
     { text: 'FAQ', link: '/en/faq' },
@@ -254,12 +254,30 @@ export default defineConfig({
   sitemap: {
     // Relative page and language URLs must retain the GitHub Pages project path.
     hostname: `${siteUrl}/`,
-    transformItems: items => items.filter(item => item.url !== '404.html'),
+    transformItems: items => items.filter(item => item.url !== '404.html' && !legacyRoutes[item.url.replace(/^en\//, '')]),
   },
 
   vite: {
-    // site/kb is a junction to ../kb; keep module paths inside site/ so
-    // Vite does not treat them as external files.
+    plugins: [{
+      name: 'knowledge-legacy-routes',
+      configureServer(server) {
+        server.middlewares.use((request, response, next) => {
+          const destination = legacyRedirect(request.url || '/', base)
+          if (!destination) return next()
+          response.writeHead(302, { Location: destination })
+          response.end()
+        })
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((request, response, next) => {
+          const destination = legacyRedirect(request.url || '/', base)
+          if (!destination) return next()
+          response.writeHead(302, { Location: destination })
+          response.end()
+        })
+      },
+    }],
+    // Keep all copied page imports within the site tree.
     resolve: {
       symlinks: false,
     },

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -11,6 +12,8 @@ from .. import track as track_mod
 from ..config import REVERSE_ROOT
 from ..paths import ensure_under
 
+# Keep the legacy anchors available to callers importing KB_ROOTS. Actual files
+# may now live in any of the red/blue/shared technique directories.
 KB_ROOTS: dict[str, Path] = {
     "ctf-website": REVERSE_ROOT / "kb" / "ctf-website" / "techniques",
     "apk-reverse": REVERSE_ROOT / "kb" / "apk-reverse" / "techniques",
@@ -18,12 +21,64 @@ KB_ROOTS: dict[str, Path] = {
     "general": REVERSE_ROOT / "kb" / "general" / "techniques",
 }
 
+_LAYOUT_SPEC = importlib.util.spec_from_file_location(
+    "reverselab_kb_layout", REVERSE_ROOT / "scripts" / "misc" / "kb_layout.py"
+)
+assert _LAYOUT_SPEC and _LAYOUT_SPEC.loader
+layout = importlib.util.module_from_spec(_LAYOUT_SPEC)
+_LAYOUT_SPEC.loader.exec_module(layout)
+
 SCORE_SIGNAL = 10
 SCORE_SIGNAL_EXACT = 30
 SCORE_ID = 5
 SCORE_FILE = 3
 
 _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---", re.S)
+
+
+def _technique_roots(board: str) -> list[Path]:
+    roots = layout.technique_dirs(board, REVERSE_ROOT)
+    legacy = KB_ROOTS[board]
+    return roots if legacy in roots else [*roots, legacy]
+
+
+def _resolve_technique_file(filename: str, board: str) -> Path:
+    """Resolve new, legacy and technique-relative paths within one board."""
+    normalized = filename.replace("\\", "/")
+    raw = Path(normalized)
+    if not raw.is_absolute():
+        raw = REVERSE_ROOT / raw if normalized.startswith("kb/") else KB_ROOTS[board] / raw
+    # Validate before alias translation, then validate its destination as well.
+    # This also prevents symlinks and aliases from escaping the board roots.
+    raw = ensure_under(raw, _technique_roots(board), "technique path")
+    relative = raw.relative_to(REVERSE_ROOT.resolve()).as_posix()
+    resolved = layout.resolve_file(relative, board, REVERSE_ROOT)
+    resolved = ensure_under(resolved, _technique_roots(board), "technique path")
+    if resolved.is_file():
+        return resolved
+
+    legacy = KB_ROOTS[board].resolve()
+    if raw.is_relative_to(legacy):
+        technique_relative = raw.relative_to(legacy)
+        for root in layout.technique_dirs(board, REVERSE_ROOT):
+            candidate = ensure_under(root / technique_relative, [root], "technique path")
+            if candidate.is_file():
+                return candidate
+    return resolved
+
+
+def _category_for_file(filename: str) -> str:
+    normalized = filename.replace("\\", "/")
+    parts = layout.document_parts(normalized)
+    relative = parts[1] if parts else normalized
+    return relative.split("/")[0]
+
+
+def _resolve_index_file(filename: str, board: str) -> Path:
+    # A board catalog may intentionally link a technique in another board.
+    parts = layout.document_parts(filename.replace("\\", "/"))
+    file_board = parts[0] if parts and parts[0] in KB_ROOTS else board
+    return _resolve_technique_file(filename, file_board)
 
 
 def _as_list(value: Any) -> list[str]:
@@ -74,7 +129,7 @@ def _score_entry(query_lower: str, entry: dict[str, Any]) -> int:
 
 def _build_pair_map(
     entries: list[dict[str, Any]],
-    techniques_dir: Path,
+    board: str,
 ) -> dict[str, list[dict[str, Any]]]:
     """Build bidirectional offense <-> defense pair map keyed by entry id."""
     by_id: dict[str, dict[str, Any]] = {
@@ -97,7 +152,7 @@ def _build_pair_map(
                 "track": _entry_track(target),
                 "relation": relation,
                 "files": [
-                    (techniques_dir / f).as_posix() for f in target.get("files", [])
+                    _resolve_index_file(f, board).as_posix() for f in target.get("files", [])
                 ],
             }
         )
@@ -126,8 +181,7 @@ def _build_pair_map(
 
 def _search_kb(query: str, board: str, active_track: str) -> list[dict[str, Any]]:
     """Search a single KB board's index and return scored, track-filtered results."""
-    techniques_dir = KB_ROOTS[board]
-    index_path = techniques_dir / "kb-index.json"
+    index_path = layout.index_path(board, REVERSE_ROOT)
     if not index_path.exists():
         return []
 
@@ -139,7 +193,7 @@ def _search_kb(query: str, board: str, active_track: str) -> list[dict[str, Any]
     if not query_lower:
         return []
 
-    pair_map = _build_pair_map(entries, techniques_dir)
+    pair_map = _build_pair_map(entries, board)
     results: list[dict[str, Any]] = []
 
     for entry in entries:
@@ -160,14 +214,14 @@ def _search_kb(query: str, board: str, active_track: str) -> list[dict[str, Any]
             "score": score,
             "signals": entry.get("signals", [])[:8],
             "files": [
-                (techniques_dir / f).as_posix() for f in entry.get("files", [])
+                _resolve_index_file(f, board).as_posix() for f in entry.get("files", [])
             ],
         }
         if "defends" in entry:
             item["defends"] = entry["defends"]
         if "defense_files" in entry:
             item["defense_files"] = [
-                (techniques_dir / df).as_posix() for df in _as_list(entry["defense_files"])
+                _resolve_index_file(df, board).as_posix() for df in _as_list(entry["defense_files"])
             ]
 
         paired = pair_map.get(eid, [])
@@ -260,14 +314,6 @@ def kb_router(query: str, board: str = "", track: str = "") -> dict[str, Any]:
     return payload
 
 
-def _normalize_technique_path(technique_path: str, board: str) -> str:
-    norm = technique_path.replace("\\", "/")
-    prefix = f"kb/{board}/techniques/"
-    if norm.startswith(prefix):
-        return norm[len(prefix):]
-    return technique_path
-
-
 def _parse_frontmatter_track(content: str) -> dict[str, str]:
     match = _FRONTMATTER_RE.match(content.lstrip())
     if not match:
@@ -288,26 +334,20 @@ def kb_read_file(technique_path: str, board: str = "") -> dict[str, Any]:
 
     支持板块：ctf-website / apk-reverse / pe-reverse / general。
     """
+    normalized = technique_path.replace("\\", "/")
+    if Path(normalized).is_absolute():
+        roots = [root for b in KB_ROOTS for root in _technique_roots(b)]
+        absolute = ensure_under(Path(normalized), roots, "technique path")
+        normalized = absolute.relative_to(REVERSE_ROOT.resolve()).as_posix()
+    parts = layout.document_parts(normalized)
+    if not board and parts:
+        board = parts[0]
     if not board:
-        for b, root in KB_ROOTS.items():
-            rel_path = _normalize_technique_path(technique_path, b)
-            candidate = (root / rel_path).resolve()
-            try:
-                ensure_under(candidate, [root], "technique path")
-                if candidate.exists() and candidate.is_file():
-                    board = b
-                    technique_path = rel_path
-                    break
-            except ValueError:
-                continue
-        else:
-            for b, root in KB_ROOTS.items():
-                rel_path = _normalize_technique_path(technique_path, b)
-                candidate = root / rel_path
-                if candidate.exists() and candidate.is_file():
-                    board = b
-                    technique_path = rel_path
-                    break
+        for candidate_board in KB_ROOTS:
+            candidate = _resolve_technique_file(normalized, candidate_board)
+            if candidate.is_file():
+                board = candidate_board
+                break
 
     if not board or board not in KB_ROOTS:
         return {
@@ -315,12 +355,7 @@ def kb_read_file(technique_path: str, board: str = "") -> dict[str, Any]:
             f"Specify board: {', '.join(KB_ROOTS.keys())}"
         }
 
-    rel_path = _normalize_technique_path(technique_path, board)
-    resolved = (KB_ROOTS[board] / rel_path).resolve()
-    try:
-        ensure_under(resolved, [KB_ROOTS[board]], "technique path")
-    except ValueError as e:
-        return {"error": str(e)}
+    resolved = _resolve_technique_file(normalized, board)
 
     if not resolved.exists():
         return {"error": f"file not found: {resolved}"}
@@ -331,14 +366,16 @@ def kb_read_file(technique_path: str, board: str = "") -> dict[str, Any]:
     meta = _parse_frontmatter_track(content)
     result: dict[str, Any] = {
         "board": board,
-        "path": str(resolved.relative_to(REVERSE_ROOT)),
+        "path": resolved.relative_to(REVERSE_ROOT.resolve()).as_posix(),
         "size": len(content),
         "lines": content.count("\n"),
         "content": content[:16384],
         "truncated": len(content) > 16384,
     }
-    if meta.get("track"):
-        result["track"] = meta["track"]
+    resolved_parts = layout.document_parts(result["path"])
+    document_track = meta.get("track") or (resolved_parts[2] if resolved_parts else "")
+    if document_track:
+        result["track"] = document_track
     if meta.get("defends"):
         result["defends"] = meta["defends"]
     return result
@@ -365,9 +402,9 @@ def kb_catalog(board: str = "", track: str = "") -> dict[str, Any]:
     all_catalogs: dict[str, Any] = {}
 
     for b in boards:
-        index_path = KB_ROOTS[b] / "kb-index.json"
+        index_path = layout.index_path(b, REVERSE_ROOT)
         if not index_path.exists():
-            all_catalogs[b] = {"error": "kb-index.json not found"}
+            all_catalogs[b] = {"error": "KB catalog not found"}
             continue
 
         with open(index_path, encoding="utf-8") as f:
@@ -385,15 +422,21 @@ def kb_catalog(board: str = "", track: str = "") -> dict[str, Any]:
         categories: dict[str, dict[str, Any]] = {}
         for entry in filtered_entries:
             for f_path in entry.get("files", []):
-                cat = f_path.split("/")[0]
+                cat = _category_for_file(f_path)
                 categories.setdefault(cat, {"files": set(), "entry_ids": []})
                 categories[cat]["files"].add(f_path)
                 if entry["id"] not in categories[cat]["entry_ids"]:
                     categories[cat]["entry_ids"].append(entry["id"])
 
+        technique_dirs = layout.technique_dirs(b, REVERSE_ROOT)
         all_catalogs[b] = {
             "version": data.get("version", ""),
-            "techniques_dir": str(KB_ROOTS[b].relative_to(REVERSE_ROOT)),
+            "techniques_dir": (
+                technique_dirs[0].relative_to(REVERSE_ROOT).as_posix()
+                if len(technique_dirs) == 1 else "kb"
+            ),
+            "techniques_dirs": [path.relative_to(REVERSE_ROOT).as_posix() for path in technique_dirs],
+            "index_path": index_path.relative_to(REVERSE_ROOT).as_posix(),
             "total_entries": len(filtered_entries),
             "total_files": sum(len(e.get("files", [])) for e in filtered_entries),
             "track_counts": track_counts,

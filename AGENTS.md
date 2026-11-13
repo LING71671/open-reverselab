@@ -26,7 +26,7 @@
 
 做 Web/CTF 目标分析时，**必须先查知识库再动手**：
 
-1. **读攻击网** — `kb/ctf-website/techniques/attack-network.md`，了解所有攻击路径和分叉
+1. **按策略读网络图** — red 读 `kb/red/ctf-website/techniques/attack-network.md`，blue 读 `kb/blue/ctf-website/techniques/defense-network.md`；both 的两方分别沿自己的网络图选择路径。
 2. **按信号查技术文件** — 每发现一个信号（JWT、SQLi、SSRF...）立即调用 MCP `kb_router` 或:
    ```bash
    python scripts/ctf-website/kb_router.py "发现的信号描述"
@@ -60,7 +60,7 @@
 
 分析 Android APK/DEX 时，**必须先查知识库再动手**：
 
-1. **读攻击网** — `kb/apk-reverse/techniques/attack-network.md`，了解 APK 逆向的全部分析路径和交叉连接
+1. **按策略读网络图** — red 读 `kb/red/apk-reverse/techniques/attack-network.md`，blue 读 `kb/blue/apk-reverse/techniques/defense-network.md`；both 的两方分别沿自己的网络图选择路径。
 2. **按信号查技术文件** — 每发现一个信号（加密、混淆、壳、native、网络协议...）立即调用 MCP `kb_router` 搜索，board 指定 `apk-reverse`：
    ```
    MCP: kb_router(query="加密", board="apk-reverse")
@@ -73,7 +73,7 @@
 
 分析 Windows PE/二进制时，**必须先查知识库再动手**：
 
-1. **读攻击网** — `kb/pe-reverse/techniques/attack-network.md`，了解 PE 分析的全部路径（triage→static→dynamic→crypto→IOC→YARA→patch→免杀）
+1. **按策略读网络图** — red 读 `kb/red/pe-reverse/techniques/attack-network.md`，blue 读 `kb/blue/pe-reverse/techniques/defense-network.md`；both 的两方分别沿自己的网络图选择路径。
 2. **按信号查技术文件** — 每发现一个信号（壳、反调试、加密、注入、AOB...）立即调用 MCP `kb_router` 搜索，board 指定 `pe-reverse`：
    ```
    MCP: kb_router(query="脱壳", board="pe-reverse")
@@ -86,7 +86,7 @@
 
 分析密码算法/协议/游戏作弊/固件/硬件/无线电/AI 安全时，**必须先查知识库再动手**：
 
-1. **读攻击网** — `kb/general/techniques/attack-network.md`，了解跨领域分析的全部路径和交叉连接
+1. **按策略读网络图** — red 读 `kb/red/general/techniques/attack-network.md`，blue 读 `kb/blue/general/techniques/defense-network.md`；both 的两方分别沿自己的网络图选择路径。
 2. **按信号查技术文件** — 每发现一个信号（加密算法、协议格式、PRNG、反作弊...）立即调用 MCP `kb_router` 搜索，board 指定 `general`：
    ```
    MCP: kb_router(query="PRNG", board="general")

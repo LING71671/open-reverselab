@@ -18,4 +18,4 @@
 
 ## 在知识库中的引用
 
-PE 知识库 `kb/pe-reverse/techniques/03-static-analysis/01-struct-reconstruction.md` 描述了结构体重建的方法，ReClass 是运行时验证的重要辅助工具。
+PE 知识库 `kb/shared/pe-reverse/techniques/03-static-analysis/01-struct-reconstruction.md` 描述了结构体重建的方法，ReClass 是运行时验证的重要辅助工具。

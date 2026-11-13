@@ -137,7 +137,7 @@ def main(argv: list[str]) -> int:
         ],
         "next_actions": [
             "Run ctf_toolcheck and note missing tools.",
-            "Follow kb/ctf-website/checklists/web-ctf-first-30-min.md.",
+            "Follow kb/shared/ctf-website/checklists/web-ctf-first-30-min.md.",
             "If JS-heavy, use JSHook to capture fetch/XHR/WebSocket/crypto.",
             "If product/version is fingerprinted, write cases/<case>/fingerprints.json and run fingerprint_cve_pipeline.py for CVE graph/chain candidates.",
         ],

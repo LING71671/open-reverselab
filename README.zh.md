@@ -65,10 +65,10 @@
 
 | 领域 | 知识入口 | 工具示例 |
 | --- | --- | --- |
-| Web / CTF | [Web 知识库](kb/ctf-website/README.md) | `kb_router`、`http_probe`、`run_ctf_tool` |
-| Android / APK | [APK 知识库](kb/apk-reverse/README.md) | `android_app_baseline`、`android_crypto_unpack_recipe` |
-| Windows / PE | [PE 知识库](kb/pe-reverse/README.md) | `triage_pe`、`ghidra_headless_analyze`、`sample_full_workup` |
-| 通用 | [跨领域知识库](kb/general/README.md) | `solve_crypto_from_evidence`、`rizin_*` |
+| Web / CTF | [Web 知识库](kb/shared/ctf-website/README.md) | `kb_router`、`http_probe`、`run_ctf_tool` |
+| Android / APK | [APK 知识库](kb/shared/apk-reverse/README.md) | `android_app_baseline`、`android_crypto_unpack_recipe` |
+| Windows / PE | [PE 知识库](kb/shared/pe-reverse/README.md) | `triage_pe`、`ghidra_headless_analyze`、`sample_full_workup` |
+| 通用 | [跨领域知识库](kb/shared/general/README.md) | `solve_crypto_from_evidence`、`rizin_*` |
 
 CLI/MCP 默认使用 `blue`，可通过 `REVERSELAB_MODE`、`--track` 或 MCP 轨道工具显式切换。桌面端的模式属于各自 Goal，不会改写其他客户端的环境变量。
 

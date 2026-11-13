@@ -47,18 +47,15 @@ EXPECTED_FILES = [
 def check_frontmatter() -> list[str]:
     """检查所有 KB 文章的 frontmatter 完整性。"""
     failures = []
-    boards_dirs = [
-        ROOT / "kb/ctf-website/techniques",
-        ROOT / "kb/apk-reverse/techniques",
-        ROOT / "kb/pe-reverse/techniques",
-        ROOT / "kb/general/techniques",
-        ROOT / "kb/windows/techniques",
-    ]
+    boards_dirs = [ROOT / "kb" / layer / board / "techniques"
+                   for layer in ("red", "blue", "shared")
+                   for board in ("ctf-website", "apk-reverse", "pe-reverse", "general", "windows")]
+
     for board_dir in boards_dirs:
         if not board_dir.exists():
             continue
         for path in board_dir.rglob("*.md"):
-            if path.name.lower() == "readme.md" or path.name == "attack-network.md":
+            if path.name.lower() == "readme.md" or path.name in ("attack-network.md", "defense-network.md"):
                 continue
             text = path.read_text(encoding="utf-8", errors="replace")
             if not text.lstrip().startswith("---"):

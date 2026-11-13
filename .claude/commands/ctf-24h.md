@@ -47,7 +47,7 @@ python3 scripts/misc/setup_unattended_ctf_runner.py --overwrite
 2. 先读：
    - `AI-USAGE.md`
    - `boards/ctf-website/AI-USAGE.md`
-   - `kb/ctf-website/techniques/attack-network.md`
+   - `kb/red/ctf-website/techniques/attack-network.md`
 3. 初始化 case（如不存在）：
    ```bash
    python3 scripts/ctf-website/ctf_intake.py "$CASE_NAME" --url "$TARGET" --root .

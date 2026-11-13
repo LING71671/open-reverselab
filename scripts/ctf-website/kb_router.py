@@ -16,8 +16,6 @@ from typing import Any
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
-KB_INDEX = os.path.join(ROOT, "kb", "ctf-website", "techniques", "kb-index.json")
-TECHNIQUES_DIR = os.path.join(ROOT, "kb", "ctf-website", "techniques")
 
 _MISC_ROUTER_PATH = Path(ROOT) / "scripts" / "misc" / "kb_router.py"
 _SPEC = importlib.util.spec_from_file_location("reverselab_misc_kb_router", _MISC_ROUTER_PATH)

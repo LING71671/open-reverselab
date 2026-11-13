@@ -93,15 +93,15 @@
            - 形态 A：PE 虚拟化（VMP 2.x/3.x x64）→ 只装 PE 组
            - 形态 B：Android 商业 dex2c/VMP 壳 → 只装 Android 组
            - 形态 C：Android 下 VMProtect 保护的 so → PE 组思路（ARM64 适配）+ Android 组
-           - 判定依据：kb/pe-reverse/techniques/05-crypto-unpack/02-vmp-virtualization-analysis.md
-                       kb/apk-reverse/techniques/07-packer/03-vmp-dex2c-detection.md
+           - 判定依据：kb/shared/pe-reverse/techniques/05-crypto-unpack/02-vmp-virtualization-analysis.md
+                       kb/shared/apk-reverse/techniques/07-packer/03-vmp-dex2c-detection.md
        5.3 按形态安装对应组 → 逐项验证 → 按下文汇报清单汇报
    （[A][B] 均适用）安装完成后按清单汇报每一项：工具名 → 安装方式 → 验证命令及输出
    （或失败原因与修复建议），并把版本、安装路径、验证结果记录到 notes/ 供后续分析引用。
    完整分析流程参考知识库条目：
-       kb/pe-reverse/techniques/05-crypto-unpack/03-vmp-devirtualization-toolchain.md
-       kb/apk-reverse/techniques/07-packer/04-vmp-dump-trace-recovery.md
-       kb/apk-reverse/techniques/07-packer/05-vmp-anti-debug-bypass.md
+       kb/shared/pe-reverse/techniques/05-crypto-unpack/03-vmp-devirtualization-toolchain.md
+       kb/shared/apk-reverse/techniques/07-packer/04-vmp-dump-trace-recovery.md
+       kb/shared/apk-reverse/techniques/07-packer/05-vmp-anti-debug-bypass.md
 
 请按步骤执行，并把每一步的结果用简短清单汇报给我。遇到失败时，先给出原因和修复建议，再继续能继续的部分。
 ```

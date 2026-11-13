@@ -83,7 +83,7 @@ def read_document(relative_path: str, repo_root: Path = ROOT) -> str:
         or any(part in ("", ".", "..") for part in parts)
     ):
         raise ValueError("Expected a canonical kb/.../*.md path")
-    path = _canonical_doc(repo_root, repo_root.joinpath(*parts))
+    path = _canonical_doc(repo_root, repo_root / router.layout.canonical_path(relative_path, repo_root))
     return path.read_text(encoding="utf-8-sig")
 
 
@@ -97,8 +97,7 @@ def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str,
     documents: dict[str, Path] = {}
 
     for board in router.BOARDS:
-        tech_dir = repo_root / "kb" / board / "techniques"
-        index_path = tech_dir / "kb-index.json"
+        index_path = router.layout.index_path(board, repo_root)
         if not index_path.is_file():
             continue
         index = json.loads(index_path.read_text(encoding="utf-8-sig"))
@@ -110,18 +109,17 @@ def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str,
                 try:
                     # Index references can cross boards; normalize these trusted
                     # references while keeping public reader input traversal-free.
-                    path = _canonical_doc(repo_root, tech_dir / filename)
+                    path = _canonical_doc(repo_root, router.layout.resolve_file(filename, board, repo_root))
                 except (OSError, ValueError):
                     continue
                 relative = path.relative_to(repo_root).as_posix()
-                parts = relative.split("/")
-                if len(parts) < 4 or parts[2] != "techniques":
+                if not router.layout.document_parts(relative):
                     continue
                 documents[relative] = path
                 owners[relative].append(entry)
                 if relative not in entry_paths:
                     entry_paths.append(relative)
-        for path in tech_dir.rglob("*.md"):
+        for path in (path for folder in router.layout.technique_dirs(board, repo_root) for path in folder.rglob("*.md")):
             if path.name == "README.md":
                 continue
             try:
@@ -129,21 +127,19 @@ def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str,
             except (OSError, ValueError):
                 continue
             relative = path.relative_to(repo_root).as_posix()
-            parts = relative.split("/")
-            if len(parts) >= 4 and parts[2] == "techniques":
+            if router.layout.document_parts(relative):
                 documents[relative] = path
 
     pair_map = router._build_pair_map(entries)
     items: dict[str, dict[str, Any]] = {}
     for relative, path in sorted(documents.items()):
-        parts = relative.split("/")
-        board = parts[1]
+        board, technique, folder_track = router.layout.document_parts(relative)
         content = path.read_text(encoding="utf-8-sig")
         metadata = _frontmatter(content)
         # The owning board is authoritative when another index cross-references it.
         indexed = [entry for entry in owners[relative] if entry["_board"] == board] or owners[relative]
         tracks = {router.entry_track(entry) for entry in indexed}
-        article_track = next(iter(tracks)) if len(tracks) == 1 else "both"
+        article_track = folder_track or (next(iter(tracks)) if len(tracks) == 1 else "both")
         heading = re.search(r"^#\s+(.+)$", content, flags=re.MULTILINE)
         title = str(metadata.get("title") or (heading.group(1).strip() if heading else path.stem))
         signals = list(dict.fromkeys(signal for entry in indexed for signal in _strings(entry.get("signals"))))
@@ -154,10 +150,10 @@ def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str,
             for pair in pair_map.get(key, []):
                 related.extend(paths_by_entry.get((pair["board"], pair["id"]), []))
         items[relative] = {
-            "id": f"{board}:{'/'.join(parts[3:])[:-3]}",
+            "id": f"{board}:{technique[:-3]}",
             "board": board,
             "title": title,
-            "category": str(metadata.get("category") or (parts[3] if len(parts) > 4 else "general")),
+            "category": str(metadata.get("category") or (technique.split('/')[0] if '/' in technique else "general")),
             "signals": signals if indexed else _strings(metadata.get("signals")),
             "mcp_tools": mcp_tools or _strings(metadata.get("mcp_tools")),
             "path": relative,
@@ -166,7 +162,7 @@ def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str,
         }
 
     for relative, item in items.items():
-        counterpart = relative[:-11] + ".md" if relative.endswith("-defense.md") else relative[:-3] + "-defense.md"
+        counterpart = (relative[:-11] + ".md").replace("kb/blue/", "kb/red/", 1) if relative.endswith("-defense.md") else (relative[:-3] + "-defense.md").replace("kb/red/", "kb/blue/", 1)
         # Multi-document index groups (e.g. JWT) link to the exact sibling article
         # when present, instead of presenting every article in the paired group.
         if counterpart in items:

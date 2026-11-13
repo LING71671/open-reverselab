@@ -87,4 +87,4 @@
 
 ### 知识库
 
-PE 逆向知识库位于 `kb/pe-reverse/`，当前覆盖 5 个分类 9 篇技术文件（每篇含可运行 C++/Frida 代码）。详见 `kb/pe-reverse/techniques/README.md`。
+PE 逆向知识库位于 `kb/pe-reverse/`，当前覆盖 5 个分类 9 篇技术文件（每篇含可运行 C++/Frida 代码）。详见 `kb/shared/pe-reverse/techniques/README.md`。

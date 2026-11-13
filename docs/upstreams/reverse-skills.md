@@ -18,7 +18,7 @@ The upstream README states MIT, but the reviewed repository tree does not contai
 |---|---|---|
 | `rev-frida` loader-aware instrumentation | Android native Frida templates and JNI tracing guidance | `android_frida_template_library`, `android_frida_render_template`, `android_frida_run_script`, `android_crypto_unpack_recipe` |
 | `rev-symbol` function-name inference | Ghidra summary evidence plus conservative Function Map suggestions | `ghidra_headless_analyze`, `ghidra_summary_functions`, `ghidra_summary_function_detail`, `ghidra_summary_call_focus`, generated analysis notes |
-| `rev-struct` layout inference | Existing PE struct/ReClass techniques plus a symbol/field evidence ledger | `kb/pe-reverse/techniques/03-static-analysis/01-struct-reconstruction.md`, `04-reclass-reconstruction.md` |
+| `rev-struct` layout inference | Existing PE struct/ReClass techniques plus a symbol/field evidence ledger | `kb/shared/pe-reverse/techniques/03-static-analysis/01-struct-reconstruction.md`, `04-reclass-reconstruction.md` |
 
 ## Tool baseline
 

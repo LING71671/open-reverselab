@@ -12,12 +12,17 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+_SPEC = importlib.util.spec_from_file_location("kb_layout", Path(__file__).with_name("kb_layout.py"))
+assert _SPEC and _SPEC.loader
+layout = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(layout)
 BOARDS: tuple[str, ...] = ("general", "pe-reverse", "apk-reverse", "ctf-website")
 VALID_TRACKS: tuple[str, ...] = ("blue", "red", "both")
 DEFAULT_TRACK = "blue"
@@ -30,7 +35,7 @@ SCORE_FILE = 3
 
 
 def index_path_for(board: str) -> Path:
-    return ROOT / "kb" / board / "techniques" / "kb-index.json"
+    return layout.index_path(board, ROOT)
 
 
 def resolve_track(track: str = "") -> str:
@@ -239,18 +244,17 @@ def main(argv: list[str] | None = None, default_board: str = "all") -> int:
     for i, entry in enumerate(results[:10], 1):
         board = entry.get("_board", "general")
         e_track = entry.get("_track", entry_track(entry))
-        tech_dir = ROOT / "kb" / board / "techniques"
         print(
             f"  {i}. [{board}:{entry.get('id', '')}] track={e_track} "
             f"score={entry.get('_score', 0)} priority={entry.get('priority', 0)}"
         )
         print(f"     Signals: {', '.join(entry.get('signals', [])[:5])}")
         for f in entry.get("files", []):
-            full = tech_dir / f
+            full = layout.resolve_file(f, board, ROOT)
             exists = "✓" if full.is_file() else "✗"
-            print(f"     {exists} kb/{board}/techniques/{f}")
+            print(f"     {exists} {full.relative_to(ROOT).as_posix()}")
         for paired in entry.get("_paired", []):
-            p_files = ", ".join(f"kb/{board}/techniques/{pf}" for pf in paired.get("files", []))
+            p_files = ", ".join(layout.resolve_file(pf, paired['board'], ROOT).relative_to(ROOT).as_posix() for pf in paired.get("files", []))
             print(f"     ⇄ {paired['relation']}: [{paired['id']}] ({paired['track']}) -> {p_files}")
         print()
     return 0

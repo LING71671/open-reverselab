@@ -105,14 +105,14 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       title: "攻击网拓扑路由匹配",
       status: "running",
       detail: `检索 ${state.board} 知识库与攻击链路...`,
-      kbRef: `kb/${state.board}/techniques/attack-network.md`,
+      kbRef: `kb/red/${state.board}/techniques/attack-network.md`,
       timestamp: Date.now(),
     };
     emit(step);
 
     let kbFound = false;
     try {
-      const doc = await nativeBridge.readKb(`kb/${state.board}/techniques/attack-network.md`);
+      const doc = await nativeBridge.readKb(`kb/red/${state.board}/techniques/attack-network.md`);
       if (doc) {
         kbFound = true;
       }
@@ -126,7 +126,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
       ...step,
       status: "done",
       detail: `已对齐 ${state.board} 攻击链路与技术规则${kbFound ? " (本地知识库命中)" : ""}`,
-      evidence: { board: state.board, kbPath: `kb/${state.board}/techniques/attack-network.md`, verified: kbFound },
+      evidence: { board: state.board, kbPath: `kb/red/${state.board}/techniques/attack-network.md`, verified: kbFound },
     };
     emit(doneStep);
 
@@ -273,7 +273,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
         agentId: "web-fingerprint-recon",
         title: "Web 服务端指纹与认证标头探测",
         detail: `端点响应状态: HTTP ${triage.httpStatus || 200} · 探测安全标头与服务指纹`,
-        kbRef: "kb/ctf-website/techniques/attack-network.md",
+        kbRef: "kb/red/ctf-website/techniques/attack-network.md",
         evidence: {
           httpStatus: triage.httpStatus || 200,
           headers: triage.headers || {},
@@ -284,7 +284,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
         agentId: "api-endpoint-audit",
         title: "接口路由与认证机制安全审计",
         detail: "审计路由特征与鉴权标头，定位可利用安全边界与配置缺陷",
-        kbRef: "kb/ctf-website/techniques/02-auth/jwt/00-overview.md",
+        kbRef: "kb/red/ctf-website/techniques/02-auth/jwt/00-overview.md",
         evidence: {
           status: "Audited",
           authScheme: "Bearer / Session",
@@ -296,7 +296,7 @@ export function createHarnessEngine(onEvent?: EventCallback, signal?: AbortSigna
         agentId: "binary-header-triage",
         title: "文件格式标头与哈希指纹校验",
         detail: `校验目标物理结构与完整性指纹: ${triage.fileType || "二进制文件"}`,
-        kbRef: "kb/general/techniques/attack-network.md",
+        kbRef: "kb/red/general/techniques/attack-network.md",
         evidence: {
           sha256: triage.sha256 || "N/A",
           sizeBytes: triage.sizeBytes || "N/A",
@@ -392,7 +392,7 @@ else:
       title: "AI 逆向意图解析与拓扑编排",
       status: "running",
       detail: `正在解析意图 "${state.wish || "自主逆向分析与脚本复现"}" 并规划任务拓扑...`,
-      kbRef: `kb/${state.board}/techniques/attack-network.md`,
+      kbRef: `kb/red/${state.board}/techniques/attack-network.md`,
       timestamp: Date.now(),
     };
     emit(plannerStep);
@@ -620,7 +620,7 @@ print(apis[:8])
       detail: executionOutput?.stdout
         ? `${plan.summary} (真机测试验证耗时 ${executionOutput.executionTimeMs}ms)`
         : plan.summary,
-      kbRef: `kb/${state.board}/techniques/attack-network.md`,
+      kbRef: `kb/red/${state.board}/techniques/attack-network.md`,
       evidence: {
         algorithm: "Analysis-Synthesized",
         key: plan.key,

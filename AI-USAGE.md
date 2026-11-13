@@ -16,10 +16,10 @@ env.md 后再继续。env.md 是本机级快照、跨项目共享，只写本机
 |---|---|---|---|
 | 桌面 UI / Goal / 工作区 / Agent 调度 | `desktop/README.zh-CN.md` | `desktop/src/`, `scripts/misc/desktop_*.py` | `desktop/ARCHITECTURE.md`, `desktop/AGENT_SYSTEM.md` |
 | 官网 / 文档 / 发布 | `site/README.md`, `RELEASING.md` | `site/`, `.github/workflows/` | `PRODUCT.md`, `DESIGN.md` |
-| Web / Website CTF / CVE 链 | `boards/ctf-website/README.md` | `tools/ctf-website/` | `kb/ctf-website/README.md` |
+| Web / Website CTF / CVE 链 | `boards/ctf-website/README.md` | `tools/ctf-website/` | `kb/shared/ctf-website/README.md` |
 | Android / APK / DEX / Frida | `boards/android/README.md` | `tools/android/` | `templates/notes/android-apk-analysis.md` |
 | Windows / PE / crackme / malware triage | `boards/windows/README.md` | `tools/windows/`, `tools/common/` | `templates/notes/windows-pe-analysis.md` |
-| General / crypto / protocol / firmware / IoT / radio / AI | `boards/general/README.md` | `tools/general/` | `kb/general/README.md` |
+| General / crypto / protocol / firmware / IoT / radio / AI | `boards/general/README.md` | `tools/general/` | `kb/shared/general/README.md` |
 | MCP / skills / lab health / automation | `boards/misc/README.md` | `tools/skills/README.md` | `reports/misc/`, `scripts/misc/` |
 | 跨板块综合案件 | `cases/README.md` | 链接各板块 tools/scripts | `templates/cases/` |
 
@@ -29,7 +29,7 @@ env.md 后再继续。env.md 是本机级快照、跨项目共享，只写本机
 
 1. **识别板块**：Web/Android/Windows/Misc；不确定时从 `boards/README.md` 选择最接近的入口。
 2. **生成任务上下文**：运行 `python scripts/misc/ai_context.py "<task>" --save`。
-3. **查知识库路由**：对有明确信号的 Web 目标，运行 `python scripts/ctf-website/kb_router.py "<信号>"`。
+3. **查知识库路由**：先按策略读取所属领域的 `attack-network.md`（red）或 `defense-network.md`（blue），再运行 `python scripts/misc/kb_router.py "<信号>" --track red` 或 `--track blue`；both 分支分别检索并关联证据。
 4. **建立或更新 case**：复杂任务在 `cases/<case>/` 维护轻量索引。
 5. **读取本地说明**：先看目标目录的 `README.md` / `AI-USAGE.md`。
 6. **工具路由**：先运行 `python scripts/misc/ai_tool.py plan "<task>"`，再按 ID 调用工具。

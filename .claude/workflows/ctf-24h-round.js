@@ -76,7 +76,7 @@ const checkpoint = await agent(
 
 1. 读取 \`AI-USAGE.md\`
 2. 读取 \`boards/ctf-website/AI-USAGE.md\`
-3. 读取 \`kb/ctf-website/techniques/attack-network.md\`
+3. 读取 \`kb/red/ctf-website/techniques/attack-network.md\`
 
 ## 初始化 / 恢复
 

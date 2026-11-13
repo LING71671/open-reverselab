@@ -18,13 +18,9 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BOARDS = {
-    "ctf-website": ROOT / "kb/ctf-website/techniques",
-    "apk-reverse": ROOT / "kb/apk-reverse/techniques",
-    "pe-reverse": ROOT / "kb/pe-reverse/techniques",
-    "general": ROOT / "kb/general/techniques",
-    "windows": ROOT / "kb/windows/techniques",
-}
+BOARDS = ("ctf-website", "apk-reverse", "pe-reverse", "general", "windows")
+LAYERS = ("red", "blue", "shared")
+
 
 REQUIRED_FIELDS = [
     "id", "title", "title_en", "summary", "summary_en",
@@ -35,11 +31,12 @@ REQUIRED_FIELDS = [
 
 def technique_files() -> list[tuple[str, Path]]:
     result = []
-    for board, root in BOARDS.items():
+    for layer, board in ((layer, board) for layer in LAYERS for board in BOARDS):
+        root = ROOT / "kb" / layer / board / "techniques"
         if not root.exists():
             continue
         for p in root.rglob("*.md"):
-            if p.name.lower() == "readme.md" or p.name == "attack-network.md":
+            if p.name.lower() == "readme.md" or p.name in ("attack-network.md", "defense-network.md"):
                 continue
             result.append((board, p))
     return sorted(result, key=lambda x: str(x[1]))
@@ -91,7 +88,7 @@ def infer_frontmatter(board: str, path: Path) -> dict:
     first_para = " ".join(first_para_lines)[:300]
 
     # 从路径推断 category
-    rel = path.relative_to(BOARDS[board])
+    rel = Path(*path.parts[path.parts.index("techniques") + 1:])
     parts = rel.parts
     category = parts[0] if parts else ""
 
@@ -266,7 +263,7 @@ def main() -> int:
     if args.board:
         files = [(b, p) for b, p in files if b == args.board]
     if args.file:
-        files = [(b, p) for b, p in files if args.file in str(p.relative_to(BOARDS[b]))]
+        files = [(b, p) for b, p in files if args.file in p.as_posix()]
 
     count = 0
     for board, path in files:

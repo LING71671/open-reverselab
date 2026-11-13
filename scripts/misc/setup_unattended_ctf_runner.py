@@ -26,7 +26,7 @@ CODEX_PROMPT = """# CTF Optimized Agent Prompt
 - 24h Web CTF 使用 `/loop + ctf-24h-round + ai_manifest.json` 模式。
 - 单轮任务必须有界执行，输出 `STATUS: CONTINUE|DONE|EXHAUSTED`。
 - `cases/<case>/ai_manifest.json` 是恢复点；中断后读取它继续，不从头开始。
-- 每发现信号先读 `kb/ctf-website/techniques/attack-network.md`，再用
+- 每发现信号先读 `kb/red/ctf-website/techniques/attack-network.md`，再用
   `scripts/ctf-website/kb_router.py "<signal>"` 路由技术文档。
 - 非 Python allowlist 动作标记为 `agent_required`，由下一轮 Agent 自动处理，不交给人。
 

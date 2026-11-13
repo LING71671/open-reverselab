@@ -109,8 +109,10 @@ def test_route_track_infers_board_and_respects_active_track():
 
 
 def test_kb_router_supports_general_board_and_track_filtering(tmp_path, monkeypatch):
-    gen_dir = tmp_path / "general" / "techniques"
-    gen_dir.mkdir(parents=True)
+    catalog_dir = tmp_path / "kb" / "catalog"
+    catalog_dir.mkdir(parents=True)
+    for layer in ("red", "blue", "shared"):
+        (tmp_path / "kb" / layer / "general" / "techniques").mkdir(parents=True)
     index_data = {
         "version": "1.1",
         "entries": [
@@ -118,7 +120,7 @@ def test_kb_router_supports_general_board_and_track_filtering(tmp_path, monkeypa
                 "id": "rsa-attack",
                 "track": "red",
                 "signals": ["rsa", "wiener"],
-                "files": ["crypto/04-rsa-attack-family.md"],
+                "files": ["kb/red/general/techniques/crypto/04-rsa-attack-family.md"],
                 "priority": 10,
             },
             {
@@ -126,20 +128,21 @@ def test_kb_router_supports_general_board_and_track_filtering(tmp_path, monkeypa
                 "track": "blue",
                 "defends": "rsa-attack",
                 "signals": ["rsa", "oaep"],
-                "files": ["crypto/04-rsa-attack-family-defense.md"],
+                "files": ["kb/blue/general/techniques/crypto/04-rsa-attack-family-defense.md"],
                 "priority": 10,
             },
             {
                 "id": "crypto-id",
                 "track": "both",
                 "signals": ["rsa", "aes", "cipher"],
-                "files": ["crypto/01-algorithm-identification.md"],
+                "files": ["kb/shared/general/techniques/crypto/01-algorithm-identification.md"],
                 "priority": 9,
             },
         ],
     }
-    (gen_dir / "kb-index.json").write_text(json.dumps(index_data), encoding="utf-8")
-    monkeypatch.setitem(kb.KB_ROOTS, "general", gen_dir)
+    (catalog_dir / "general.json").write_text(json.dumps(index_data), encoding="utf-8")
+    monkeypatch.setattr(kb, "REVERSE_ROOT", tmp_path)
+    monkeypatch.setitem(kb.KB_ROOTS, "general", tmp_path / "kb/general/techniques")
 
     blue = kb.kb_router("rsa", board="general", track="blue")
     assert blue["track"] == "blue"

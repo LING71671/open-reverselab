@@ -103,4 +103,4 @@
 
 ### 知识库
 
-APK 逆向知识库位于 `kb/apk-reverse/`，8 个分类 23 篇技术文件。先调用 `kb_router(board="apk-reverse")` 按信号定位文章，再使用对应 MCP 工具，并将运行时证据保存到 `exports/android/`、分析笔记保存到 `notes/android/`。详见 `kb/apk-reverse/README.md`。
+APK 逆向知识库位于 `kb/apk-reverse/`，8 个分类 23 篇技术文件。先调用 `kb_router(board="apk-reverse")` 按信号定位文章，再使用对应 MCP 工具，并将运行时证据保存到 `exports/android/`、分析笔记保存到 `notes/android/`。详见 `kb/shared/apk-reverse/README.md`。

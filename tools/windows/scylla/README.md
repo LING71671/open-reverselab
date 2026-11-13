@@ -23,4 +23,4 @@ IAT 修复与进程 dump 工具。
 
 ## 在知识库中的引用
 
-PE 知识库 `kb/pe-reverse/techniques/05-crypto-unpack/01-pe-unpack-dump.md` 描述了 Scylla dump + IAT 修复的完整流程。
+PE 知识库 `kb/shared/pe-reverse/techniques/05-crypto-unpack/01-pe-unpack-dump.md` 描述了 Scylla dump + IAT 修复的完整流程。

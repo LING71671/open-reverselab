@@ -1,32 +1,28 @@
 # 知识库
 
-这里保存可复用的分析、检测和防御方法。单个目标的日志、样本和报告保存在私有工作区，写作约定见 [AI-USAGE.md](AI-USAGE.md)。
+技术文档按策略和领域组织，red 与 blue 分别维护完整操作流程，通用方法只保留一份。
 
-| 领域 | 内容 |
-| --- | --- |
-| [Web / CTF](ctf-website/README.md) | Web 攻击面、认证、数据库、协议、CVE 与对应防御 |
-| [Android / APK](apk-reverse/README.md) | DEX、Native、混合框架、动态分析与加固验证 |
-| [Windows / PE](pe-reverse/README.md) | PE、静态／动态分析、检测、逆向与防御 |
-| [General](general/README.md) | 密码学、签名、协议、固件、内核与跨领域分析 |
-| [Windows 专项](windows/README.md) | 平台配置等专项参考 |
+- [Red](red/README.md)：攻击网、分析路径与复现方法。
+- [Blue](blue/README.md)：防御网、检测、控制措施与验证。
+- [共享方法](shared/README.md)：两边都会使用的识别、调试、算法和协议方法。
 
-## red / blue / both
+`both` 分别检索 red、blue 与共享文档，通过关联链接交换证据，不复制第三套技术文档。
 
-文档按 `track` 分类；`both` 表示共享知识。防御文档通过 `defends` 关联攻击文档，桌面端将这些关系展示为“关联文档”。保留领域目录，不建立两套重复的根目录。实际配对由索引决定，不要求所有共享或专项文档都有一对一对应项。
+| 领域 | red | blue | 共享 |
+| --- | --- | --- | --- |
+| Web / CTF | [Red](red/ctf-website/README.md) | [Blue](blue/ctf-website/README.md) | [共享方法](shared/ctf-website/README.md) |
+| Android / APK | [Red](red/apk-reverse/README.md) | [Blue](blue/apk-reverse/README.md) | [共享方法](shared/apk-reverse/README.md) |
+| Windows / PE | [Red](red/pe-reverse/README.md) | [Blue](blue/pe-reverse/README.md) | [共享方法](shared/pe-reverse/README.md) |
+| General | [Red](red/general/README.md) | [Blue](blue/general/README.md) | [共享方法](shared/general/README.md) |
+| Windows 专项 | [Red](red/windows/README.md) | — | [共享方法](shared/windows/README.md) |
+
+## 检索与维护
 
 ```sh
 python scripts/misc/kb_router.py "JWT" --track blue
 python scripts/misc/desktop_kb.py list --track both
 ```
 
-前者面向信号检索，后者输出桌面使用的完整目录。桌面分类与命令行工具门控分别使用自身运行上下文。
+`catalog/<领域>.json` 维护信号、轨道、工具和配对关系，`files` 使用仓库相对路径。文档仍通过 `defends` / `defended_by` 关联。`path-aliases.json` 将旧路径映射到当前文档，供桌面、MCP 和官网保留历史链接。
 
-## 更新后检查
-
-```sh
-python scripts/misc/kb_doc_audit.py
-python scripts/misc/add_frontmatter.py --verify
-python scripts/misc/generate_llms_txt.py --check
-```
-
-文章、索引和衍生文档的具体维护方式见 [贡献指南](../.github/CONTRIBUTING.md)。
+写作约定见 [AI-USAGE.md](AI-USAGE.md)，贡献方式见 [贡献指南](../.github/CONTRIBUTING.md)。

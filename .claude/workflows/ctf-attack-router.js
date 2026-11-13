@@ -64,7 +64,7 @@ ${allowedWorkerIds.map(id => `- ${id}`).join('\n')}
 
 ## 规则
 
-1. 先读 \`kb/ctf-website/techniques/attack-network.md\`。
+1. 先读 \`kb/red/ctf-website/techniques/attack-network.md\`。
 2. 为每个信号运行 \`python3 scripts/ctf-website/kb_router.py "<signal>"\`。
 3. 本轮 worker 数量参数：${maxWorkflows || 'all allowed workers'}；优先能通向 Credential/DB/Admin/RCE/Flag 的路径。
 4. 输出 JSON，routes 数组只使用允许的 worker id：

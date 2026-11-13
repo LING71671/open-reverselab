@@ -65,10 +65,10 @@ The knowledge base covers Web/CTF, Android/APK, Windows/PE, and general topics s
 
 | Area | Knowledge entry | Tool examples |
 | --- | --- | --- |
-| Web / CTF | [Web knowledge](kb/ctf-website/README.md) | `kb_router`, `http_probe`, `run_ctf_tool` |
-| Android / APK | [APK knowledge](kb/apk-reverse/README.md) | `android_app_baseline`, `android_crypto_unpack_recipe` |
-| Windows / PE | [PE knowledge](kb/pe-reverse/README.md) | `triage_pe`, `ghidra_headless_analyze`, `sample_full_workup` |
-| General | [Cross-domain knowledge](kb/general/README.md) | `solve_crypto_from_evidence`, `rizin_*` |
+| Web / CTF | [Web knowledge](kb/shared/ctf-website/README.md) | `kb_router`, `http_probe`, `run_ctf_tool` |
+| Android / APK | [APK knowledge](kb/shared/apk-reverse/README.md) | `android_app_baseline`, `android_crypto_unpack_recipe` |
+| Windows / PE | [PE knowledge](kb/shared/pe-reverse/README.md) | `triage_pe`, `ghidra_headless_analyze`, `sample_full_workup` |
+| General | [Cross-domain knowledge](kb/shared/general/README.md) | `solve_crypto_from_evidence`, `rizin_*` |
 
 CLI/MCP track selection defaults to `blue`; select `red` or `both` explicitly through `REVERSELAB_MODE`, `--track`, or the MCP track tools. Desktop selection is scoped to its Goals and does not rewrite another client's environment.
 

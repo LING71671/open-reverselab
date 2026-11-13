@@ -2,8 +2,8 @@
 """
 Generate VitePress sidebar + board data for the ReverseLab site.
 
-Scans kb/<board>/techniques/<category>/*.md and emits:
-  site/.vitepress/sidebar.ts      - sidebar tree per board (grouped by category)
+Scans kb/<track>/<board>/**/*.md and emits:
+  site/.vitepress/sidebar.ts      - navigation by track, board and category
   site/.vitepress/boards.json     - board metadata (name, counts, blurb, hue)
 
 Run from the repository root:  python scripts/misc/gen_vitepress_sidebar.py
@@ -56,6 +56,7 @@ BOARDS: dict[str, dict] = {
 
 CATEGORY_RE = re.compile(r"^(\d{2})-(.+)$")
 FILE_RE = re.compile(r"^(\d{2})-?(.+)?\.md$")
+TRACKS = {"red": "Red", "blue": "Blue", "shared": "共享方法"}
 
 
 def title_of(path: Path) -> str:
@@ -80,56 +81,79 @@ def sort_key(name: str) -> tuple[int, str]:
     return (10_000, name)
 
 
+def document_item(md: Path, text: str | None = None) -> dict:
+    return {"text": text or title_of(md), "link": "/kb/" + md.relative_to(KB).with_suffix("").as_posix()}
+
+
+def build_navigation() -> list[dict]:
+    """Only publish domains that have a landing page in that track."""
+    groups = []
+    for track, title in TRACKS.items():
+        landing = KB / track / "README.md"
+        if not landing.is_file():
+            continue
+        items = [document_item(landing, "策略总览")]
+        for board, meta in BOARDS.items():
+            board_landing = KB / track / board / "README.md"
+            if board_landing.is_file():
+                items.append(document_item(board_landing, meta["name"]))
+        groups.append({"text": title, "items": items})
+    return groups
+
+
+def article_groups(directory: Path) -> list[dict]:
+    groups = []
+    if not directory.is_dir():
+        return groups
+    for category in sorted(directory.iterdir(), key=lambda p: p.name):
+        if not category.is_dir():
+            continue
+        articles = [md for md in sorted(category.rglob("*.md"), key=lambda p: (p.parent.as_posix(), sort_key(p.name))) if md.name != "README.md"]
+        items = [document_item(md) for md in articles]
+        if (category / "README.md").is_file():
+            items.insert(0, document_item(category / "README.md", "分类索引"))
+        if items:
+            match = CATEGORY_RE.match(category.name)
+            label = match.group(2) if match else category.name
+            groups.append({"text": f"{label}（{len(articles)}）", "collapsed": True, "items": items})
+    return groups
+
+
 def build_sidebar() -> dict[str, list]:
-    """Return { board: [ { text, link, collapsed, items } ] }."""
-    sidebar: dict[str, list] = {}
-    for board, meta in BOARDS.items():
-        techniques = KB / board / "techniques"
-        groups: list[dict] = []
-        bare_articles: list[dict] = []
-        if techniques.is_dir():
-            for cat in sorted(techniques.iterdir(), key=lambda p: p.name):
-                if not cat.is_dir():
-                    continue
-                cat_m = CATEGORY_RE.match(cat.name)
-                items = []
-                for md in sorted(cat.glob("*.md"), key=lambda p: sort_key(p.name)):
-                    rel = f"/kb/{board}/techniques/{cat.name}/{md.name}"
-                    items.append({"text": title_of(md), "link": rel})
-                if not items:
-                    continue
-                label = cat_m.group(2) if cat_m else cat.name
-                groups.append(
-                    {
-                        "text": f"{label}（{len(items)}）",
-                        "collapsed": True,
-                        "items": items,
-                    }
-                )
-            # Articles sitting directly under techniques/ (no category dir),
-            # e.g. kb/windows/techniques/*.md. README/attack-network are
-            # landing pages, not articles.
-            for md in sorted(techniques.glob("*.md"), key=lambda p: sort_key(p.name)):
-                if md.stem in {"README", "attack-network"}:
-                    continue
-                bare_articles.append(
-                    {
-                        "text": title_of(md),
-                        "link": f"/kb/{board}/techniques/{md.name}",
-                    }
-                )
-        # Board README as the board landing page
-        landing = f"/kb/{board}/README"
-        root_items = [
-            {"text": "板块总览", "link": landing},
-        ]
-        if (techniques / "attack-network.md").is_file():
-            root_items.append({"text": "攻击网", "link": f"/kb/{board}/techniques/attack-network"})
-        elif (techniques / "README.md").is_file():
-            root_items.append({"text": "技术索引", "link": f"/kb/{board}/techniques/README"})
-        if bare_articles:
-            root_items.append({"text": "板块文章", "items": bare_articles})
-        sidebar[f"/kb/{board}/"] = [{"text": meta["name"], "items": root_items}, *groups]
+    navigation = build_navigation()
+    overview = {"text": "知识库总览", "link": "/kb/README"}
+    sidebar = {"/kb/": [overview, *navigation]}
+    for track, title in TRACKS.items():
+        track_nav = next((group for group in navigation if group["text"] == title), None)
+        if not track_nav:
+            continue
+        sidebar[f"/kb/{track}/"] = [overview, *navigation]
+        for board, meta in BOARDS.items():
+            directory = KB / track / board
+            landing = directory / "README.md"
+            if not landing.is_file():
+                continue
+            techniques = directory / "techniques"
+            items = [document_item(landing, "板块总览")]
+            for filename, label in (("attack-network", "攻击网"), ("defense-network", "防御网"), ("README", "技术索引")):
+                md = techniques / f"{filename}.md"
+                if md.is_file():
+                    items.append(document_item(md, label))
+            for md in sorted(directory.glob("*.md"), key=lambda p: sort_key(p.name)):
+                if md.name != "README.md":
+                    items.append(document_item(md))
+            bare = [document_item(md) for md in sorted(techniques.glob("*.md"), key=lambda p: sort_key(p.name)) if md.stem not in {"README", "attack-network", "defense-network"}]
+            if bare:
+                items.append({"text": "板块文章", "items": bare})
+            # Shared checklists, methodology and reference directories are also browsable.
+            extra_groups = [group for group in article_groups(directory) if not group["text"].startswith("techniques（")]
+            sidebar[f"/kb/{track}/{board}/"] = [
+                overview,
+                {**track_nav, "collapsed": True},
+                {"text": f"{title} / {meta['name']}", "items": items},
+                *article_groups(techniques),
+                *extra_groups,
+            ]
     return sidebar
 
 
@@ -137,21 +161,13 @@ def board_counts() -> dict:
     """{ board: { articles, categories, total } } with real numbers."""
     out = {}
     for board in BOARDS:
-        techniques = KB / board / "techniques"
-        articles = 0
-        categories = 0
-        if techniques.is_dir():
-            for cat in techniques.iterdir():
-                if cat.is_dir():
-                    n = len(list(cat.glob("*.md")))
-                    if n:
-                        categories += 1
-                        articles += n
-            # bare articles under techniques/ root
-            for md in techniques.glob("*.md"):
-                if md.stem not in {"README", "attack-network"}:
-                    articles += 1
-        out[board] = {"articles": articles, "categories": categories}
+        tracks = {}
+        for track in TRACKS:
+            techniques = KB / track / board / "techniques"
+            articles = [md for md in techniques.rglob("*.md") if md.stem not in {"README", "attack-network", "defense-network"}]
+            categories = {md.relative_to(techniques).parts[0] for md in articles if md.parent != techniques}
+            tracks[track] = {"articles": len(articles), "categories": len(categories)}
+        out[board] = {"articles": sum(item["articles"] for item in tracks.values()), "categories": sum(item["categories"] for item in tracks.values()), "tracks": tracks}
     return out
 
 
@@ -183,6 +199,7 @@ def main() -> None:
 
     ts_lines = ["// Auto-generated by scripts/misc/gen_vitepress_sidebar.py. Do not edit.", "// Regenerate with: python scripts/misc/gen_vitepress_sidebar.py", ""]
     ts_lines.append("export const sidebar: Record<string, any> = " + json.dumps(sidebar, ensure_ascii=False, indent=2) + ";")
+    ts_lines.append("export const knowledgeNav = " + json.dumps(build_navigation(), ensure_ascii=False, indent=2) + ";")
     (OUT_DIR / "sidebar.ts").write_text("\n".join(ts_lines) + "\n", encoding="utf-8")
 
     counts = board_counts()

@@ -6,3 +6,5 @@ node_modules/
 .vitepress/mcp-tools.json
 kb
 en/kb
+public/llms.txt
+public/llms-full.txt

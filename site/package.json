@@ -6,8 +6,8 @@
   "type": "module",
   "description": "Open ReverseLab VitePress documentation site",
   "scripts": {
-    "dev": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && vitepress dev .",
-    "build": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && vitepress build . && node scripts/verify-links.mjs",
+    "dev": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && python ../scripts/misc/generate_llms_txt.py --output public && vitepress dev .",
+    "build": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && python ../scripts/misc/generate_llms_txt.py --output public && node --max-old-space-size=6144 node_modules/vitepress/bin/vitepress.js build . && node scripts/verify-links.mjs",
     "preview": "vitepress preview .",
     "test": "node --test scripts/links.test.mjs"
   },

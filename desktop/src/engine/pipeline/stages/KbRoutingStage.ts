@@ -80,7 +80,7 @@ export class KbRoutingStage implements PipelineStage {
     const references = documents.slice(-4);
     const content = references.map((doc) => doc.content).join("\n\n");
     const matchedTechniques = references.map((doc) => doc.path);
-    const kbPath = `kb/${board || "general"}/techniques/kb-index.json`;
+    const kbPath = `kb/catalog/${board || "general"}.json`;
     ctx.kbRouting = {
       board: board || "general",
       track: ctx.track,

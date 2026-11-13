@@ -1,10 +1,10 @@
 # Windows AV Evasion Reference Scripts [Track: RED]
 
-本目录收录对应攻击面文档 `kb/pe-reverse/techniques/09-av-evasion/01-ai-powered-evasion.md` 的 **RED** 轨参考模板，仅供受控隔离实验室用于检测规则校准与对等验证。
+本目录收录对应攻击面文档 `kb/red/pe-reverse/techniques/09-av-evasion/01-ai-powered-evasion.md` 的 **RED** 轨参考模板，仅供受控隔离实验室用于检测规则校准与对等验证。
 
 - **Track**: `RED`
 - **Paired BLUE Detector**: [`../detect_evasion_indicators.py`](../detect_evasion_indicators.py)
-- **Paired BLUE KB**: `kb/pe-reverse/techniques/09-av-evasion/01-evasion-indicator-detection.md`
+- **Paired BLUE KB**: `kb/blue/pe-reverse/techniques/09-av-evasion/01-evasion-indicator-detection.md`
 
 ## 文件清单
 

@@ -51,4 +51,4 @@ kb/general/
 ## 参考
 
 - AI 操作指南：[AI-USAGE.md](AI-USAGE.md)
-- 知识库入口：`kb/general/README.md`
+- 知识库入口：`kb/shared/general/README.md`

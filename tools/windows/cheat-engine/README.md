@@ -20,4 +20,4 @@
 
 ## 在知识库中的引用
 
-PE 知识库 `kb/pe-reverse/techniques/README.md` 工具映射表提到 Cheat Engine 作为内存扫描/修改的辅助工具。
+PE 知识库 `kb/shared/pe-reverse/techniques/README.md` 工具映射表提到 Cheat Engine 作为内存扫描/修改的辅助工具。
