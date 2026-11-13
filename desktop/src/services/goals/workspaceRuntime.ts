@@ -36,7 +36,7 @@ export function loadWorkspaceRuntime(workspace: Workspace): Promise<WorkspaceRun
         return writes;
       },
       removeItem: () => {},
-    }, 2);
+    });
     const runtime = { workspace, manager, waitForWrites: () => writes };
     runtimes.set(key, runtime);
     manager.subscribe(() => workloadListeners.forEach(listener => listener()));

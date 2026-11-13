@@ -15,7 +15,7 @@ Configure an OpenAI-compatible chat-completions endpoint and model in Settings. 
 ## Behavior
 
 - Switch `red / blue / both` at the upper left. `both` starts isolated red and blue branches and joins their results.
-- Enter a file, directory, or URL target and an objective. Optional limits default to 10 minutes and 32,000 tokens per Goal. The default queue runs two Goals per workspace.
+- Enter a file, directory, or URL target and an objective. Goals have no time or token limit by default. Set either limit only when needed. Goals and ready actions have no default concurrency limit.
 - Switch workspaces or inspect another Goal while execution continues. Each runner retains its original workspace.
 - Browse the actual knowledge index, including defense articles and paired references. Shared articles appear in both tracks.
 - Inspect workflow nodes, execution history, tool output, verification, reports, and health events. Unobserved services remain unknown.

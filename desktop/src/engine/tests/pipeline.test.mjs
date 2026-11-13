@@ -273,6 +273,42 @@ test("action network runs independent observations together and gives a join bot
   assert.equal(ctx.state.actionExecutions.length, 3);
 });
 
+test("plans beyond six actions start every independent observation before joining", async () => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  let ready;
+  const allStarted = new Promise(resolve => { ready = resolve; });
+  const ids = Array.from({ length: 16 }, (_, index) => `observe-${index}`);
+  const started = [];
+  let joined = false;
+  const ctx = context({ state: { executeAction: async (_fingerprint, script) => {
+    const id = script.split("\n").at(-1);
+    started.push(id);
+    if (id === "join") {
+      joined = true;
+      const encoded = script.split("\n")[0].slice('REVERSELAB_INPUTS = __import__("json").loads('.length, -1);
+      const inputs = JSON.parse(JSON.parse(encoded));
+      assert.deepEqual(Object.keys(inputs), ids);
+      assert.ok(ids.every(parent => inputs[parent].stdout === `observed:${parent}`));
+    } else {
+      if (started.length === ids.length) ready();
+      await gate;
+    }
+    return { success: true, stdout: `observed:${id}`, stderr: "", executionTimeMs: 1 };
+  } } });
+  const actions = parseActionPlan(JSON.stringify({ actions: [...ids, "join"].map(id => ({ id, title: id, dependsOn: id === "join" ? ids : [], script: id })) }));
+  const running = executeActionPlan(actions, ctx, {});
+  let timeout;
+  try {
+    await Promise.race([allStarted, new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("Independent actions were queued behind a fixed limit")), 2000); })]);
+    assert.deepEqual(new Set(started), new Set(ids));
+    assert.equal(joined, false);
+  } finally { clearTimeout(timeout); release(); await running; }
+  assert.equal((await running).success, true);
+  assert.equal(joined, true);
+  assert.equal(ctx.state.actionExecutions.length, 17);
+});
+
 test("failed action skips dependent work while unrelated evidence is retained", async () => {
   const calls = [];
   const ctx = context({ state: { executeAction: async (_id, script) => {

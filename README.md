@@ -40,7 +40,7 @@ Select `red / blue / both` in the upper-left corner, choose a workspace, and ent
 <img src="assets/desktop/knowledge-light.png" alt="Open ReverseLab Desktop knowledge reader in both mode" width="1280">
 
 - **Independent strategies.** `red` and `blue` use separate analysis policies. `both` runs the branches in parallel and joins their results.
-- **Concurrent Goals.** Each workspace runs up to two Goals at once by default. Switching views, tasks, or workspaces does not redirect a running task's output.
+- **Concurrent Goals.** Goals and ready actions run concurrently without an application-level count limit. Switching views, tasks, or workspaces does not redirect a running task's output.
 - **Managed workspaces.** First launch creates a default workspace. Open or create others, import samples, and keep original and working copies separate.
 - **Goal control.** Goals have no time or token limit by default. Set either limit when needed, stop a run, or add instructions while it is running. Verification results and failed attempts remain in the execution history.
 - **Knowledge and usability.** Browse defense articles and paired references, switch light/dark themes, and retain unsent drafts, reading positions, and filters during navigation.

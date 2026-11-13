@@ -23,7 +23,7 @@ export function parseActionPlan(content: string): AnalysisAction[] | undefined {
     if (value === undefined) return undefined;
   }
   else try { value = JSON.parse(fence[1]); } catch { throw new Error("动作计划不是有效 JSON"); }
-  if (!Array.isArray(value?.actions) || value.actions.length < 1 || value.actions.length > 6) throw new Error("每轮动作计划需包含 1–6 个动作");
+  if (!Array.isArray(value?.actions) || value.actions.length < 1) throw new Error("动作计划需包含至少一个动作");
   const actions: AnalysisAction[] = value.actions.map((action: any) => {
     if (!action || typeof action.id !== "string" || !/^[a-zA-Z][\w-]{0,47}$/.test(action.id) || typeof action.title !== "string" || !action.title.trim() ||
         typeof action.script !== "string" || !action.script.trim() || action.script.length > 60000 ||
@@ -97,7 +97,6 @@ export async function executeActionPlan(actions: AnalysisAction[], ctx: Pipeline
       return output;
     },
   })), {
-    concurrency: 2,
     signal: ctx.signal,
     onNodeUpdate: node => {
       const action = actions.find(item => item.id === node.id)!;

@@ -133,7 +133,33 @@ test("steering cannot reset an exhausted quota", async () => {
   manager.flush();
 });
 
-test("two goals run simultaneously, the third queues, and each callback updates only its own goal", async () => {
+test("default scheduling starts every goal and isolates cancellation and output", async () => {
+  const gate = deferred();
+  const tasks = new Map();
+  const manager = new GoalManager(async (request, callbacks, signal) => {
+    tasks.set(request.id, { callbacks, signal });
+    await gate.promise;
+    callbacks.onToken(`result:${request.target}`);
+    callbacks.onRunProgress(progress());
+  }, storage());
+  const ids = Array.from({ length: 32 }, (_, index) => manager.submit(`fixture-${index}.bin`, "inspect", index % 2 ? "blue" : "red"));
+  try {
+    assert.equal(tasks.size, ids.length);
+    assert.ok(manager.getSnapshot().sessions.every(item => item.status === "running"));
+    manager.cancel(ids[0]);
+    assert.equal(tasks.get(ids[0]).signal.aborted, true);
+    assert.ok(ids.slice(1).every(id => !tasks.get(id).signal.aborted));
+  } finally { gate.resolve(); await tick(); manager.flush(); }
+  assert.equal(session(manager, ids[0]).status, "cancelled");
+  assert.equal(manager.getSnapshot().records[ids[0]].messages.at(-1).content, "");
+  for (const [index, id] of ids.entries()) {
+    if (!index) continue;
+    assert.equal(session(manager, id).status, "completed");
+    assert.equal(manager.getSnapshot().records[id].messages.at(-1).content, `result:fixture-${index}.bin`);
+  }
+});
+
+test("an explicit two-goal limit queues the third and keeps callbacks isolated", async () => {
   const tasks = new Map();
   let active = 0;
   let maximum = 0;

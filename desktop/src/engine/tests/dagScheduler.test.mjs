@@ -13,6 +13,29 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test("default scheduling starts all ready nodes before any finishes and joins their outputs", async () => {
+  const gate = deferred();
+  const started = [];
+  const ids = Array.from({ length: 64 }, (_, index) => `node-${index}`);
+  let joined = false;
+  const scheduler = new DagScheduler([
+    ...ids.map(id => ({ id, run: async () => { started.push(id); await gate.promise; return id; } })),
+    { id: "join", parentIds: ids, run: async ({ parentResults }) => {
+      joined = true;
+      assert.deepEqual([...parentResults.values()].map(result => result.value), ids);
+      return "joined";
+    } },
+  ]);
+  const running = scheduler.run();
+  try {
+    await tick();
+    assert.deepEqual(started, ids);
+    assert.equal(joined, false);
+  } finally { gate.resolve(); }
+  assert.equal((await running).status, "succeeded");
+  assert.equal(joined, true);
+});
+
 test("independent nodes execute concurrently up to the configured limit", async () => {
   const gates = Array.from({ length: 5 }, deferred);
   const started = [];

@@ -31,6 +31,7 @@ export interface DagNode<T> {
 }
 
 export interface DagSchedulerOptions<T> {
+  /** Omit to start all ready nodes; dependencies and resource locks still apply. */
   readonly concurrency?: number;
   readonly signal?: AbortSignal;
   readonly onNodeUpdate?: (result: DagNodeResult<T>) => void;
@@ -93,7 +94,7 @@ export class DagScheduler<T> {
   private readonly controllers = new Map<string, AbortController>();
   private readonly resourcePool: DagResourcePool;
   private readonly observerErrors: unknown[] = [];
-  private readonly concurrency: number;
+  private readonly concurrency?: number;
   private readonly options: DagSchedulerOptions<T>;
   private active = 0;
   private pumpScheduled = false;
@@ -107,8 +108,8 @@ export class DagScheduler<T> {
   constructor(nodes: readonly DagNode<T>[], options: DagSchedulerOptions<T> = {}) {
     this.options = { ...options };
     this.resourcePool = options.resourcePool ?? new DagResourcePool();
-    this.concurrency = options.concurrency ?? 2;
-    if (!Number.isInteger(this.concurrency) || this.concurrency < 1) {
+    this.concurrency = options.concurrency;
+    if (this.concurrency !== undefined && (!Number.isInteger(this.concurrency) || this.concurrency < 1)) {
       throw new Error("DAG concurrency must be a positive integer");
     }
     for (const node of nodes) {
@@ -258,7 +259,7 @@ export class DagScheduler<T> {
           dependencyCancelled = true;
           continue;
         }
-        if (this.active >= this.concurrency) continue;
+        if (this.active >= (this.concurrency ?? Infinity)) continue;
         this.start(node);
       }
     } while (dependencyCancelled);

@@ -34,8 +34,9 @@ export class GoalManager {
   private started = new Map<string, number>();
   private saveTimer?: ReturnType<typeof setTimeout>;
   private saveRevision = 0;
-  constructor(private runner: GoalRunner, private storage?: GoalStorage, private concurrency = 2) {
-    if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error("Invalid goal concurrency");
+  /** Omit concurrency to start every submitted Goal without an application limit. */
+  constructor(private runner: GoalRunner, private storage?: GoalStorage, private concurrency?: number) {
+    if (concurrency !== undefined && (!Number.isInteger(concurrency) || concurrency < 1)) throw new Error("Invalid goal concurrency");
     try {
       const data = JSON.parse(storage?.getItem("reverselab_goals_v2") || "null") as GoalSnapshot | null;
       if (data && Array.isArray(data.sessions) && data.records) {
@@ -144,7 +145,7 @@ export class GoalManager {
     this.flush();
   }
   private pump() {
-    while (this.controllers.size < this.concurrency && this.queue.length) {
+    while (this.controllers.size < (this.concurrency ?? Infinity) && this.queue.length) {
       const request = this.queue.shift()!;
       const controller = new AbortController();
       this.controllers.set(request.id, controller);

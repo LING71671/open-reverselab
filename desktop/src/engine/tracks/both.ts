@@ -109,7 +109,6 @@ export async function runBothTracks(
     return results.blue || results.red;
   } });
   const scheduler = new DagScheduler(nodes, {
-    concurrency: 2,
     signal,
     onNodeUpdate: (node) => callbacks.onStepNode?.({ id: `branch:${node.id}`, parentId: node.parentIds.length ? `branch:${node.parentIds[0]}` : null, parentIds: node.parentIds.map((id) => `branch:${id}`), agentId: node.id === "join" ? "coordinator" : node.id, title: node.id, status: node.status === "succeeded" ? node.value?.runProgress?.status === "completed" ? "done" : "failed" : node.status === "failed" || node.status === "cancelled" ? "failed" : node.status === "running" ? "running" : "pending", detail: node.value?.runProgress?.reason || node.status, timestamp: Date.now(), evidence: { status: node.status, error: node.error ? String(node.error) : undefined } }),
   });

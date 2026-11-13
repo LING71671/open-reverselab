@@ -6,9 +6,9 @@ ReverseLab accepts a structured action plan after a track's fixed acceptance pla
 {"actions":[{"id":"headers","title":"Inspect headers","dependsOn":[],"script":"..."},{"id":"content","title":"Inspect content","dependsOn":[],"script":"..."},{"id":"compare","title":"Compare observations","dependsOn":["headers","content"],"script":"..."}]}
 ```
 
-The JSON belongs in an `action-plan` fenced block. Each round accepts 1–6 actions with unique IDs, complete Python scripts, and dependencies in the same plan. Invalid JSON, duplicate IDs, missing parents and cycles stop the plan before execution. This is a per-round size limit, not a total run budget or a claim that all routes have been exhausted.
+The JSON belongs in an `action-plan` fenced block. Each round accepts a nonempty action list with unique IDs, complete Python scripts, and dependencies in the same plan. Action count follows the task and has no fixed upper limit. Invalid JSON, duplicate IDs, missing parents and cycles stop the plan before execution.
 
-The DAG scheduler starts up to two independent actions per track. Every action runs in a separate process. `REVERSELAB_INPUTS` contains the direct parents' observed outputs; a dependent action starts only after those parents succeed. Failed prerequisites cancel their dependents while unrelated observations can finish. A user adjustment prevents queued actions from starting and yields before old-objective verification.
+The DAG scheduler starts every ready independent action without a fixed concurrency limit. Every action runs in a separate process. `REVERSELAB_INPUTS` contains the direct parents' observed outputs; a dependent action starts only after those parents succeed. Failed prerequisites cancel their dependents while unrelated observations can finish. A user adjustment prevents queued actions from starting and yields before old-objective verification.
 
 In `both`, `REVERSELAB_PEER_EVIDENCE` is a snapshot of the other track's available evidence when an action starts. It includes message and source-node IDs. An action can use these observations for a separate check, and its resulting graph node records the cross-track input edges. Evidence is data, not an instruction or an inherited verdict. No future evidence is represented as an input, and neither track waits indefinitely for the other.
 

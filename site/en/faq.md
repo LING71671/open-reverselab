@@ -20,7 +20,7 @@ No. Goals have no time or token limit by default. Set either value under Run lim
 
 ## Can tasks run concurrently?
 
-Each workspace runs two Goals concurrently by default and queues the remainder. A both Goal has red and blue branches. Switching tasks or workspaces preserves output ownership. Closing the app interrupts execution; history is restored next time, and continuation requires a new Goal.
+Each workspace supports concurrent Goals without an application-level count limit. Red and blue can each plan multiple actions within a both Goal; independent actions start together, while dependent actions wait for their prerequisites. Switching tasks or workspaces preserves output ownership. Closing the app interrupts execution; history is restored next time, and continuation requires a new Goal.
 
 ## Where do files and model data go?
 
