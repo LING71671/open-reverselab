@@ -88,20 +88,36 @@ export async function verifyGoalWithModel(
   let verdict: any;
   try { verdict = JSON.parse(response.content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()); }
   catch { verdict = { status: "continue", reason: "独立核验器未返回有效判定", checks: [] }; }
+  if (!verdict || typeof verdict !== "object" || Array.isArray(verdict)) {
+    verdict = { status: "continue", reason: "独立核验器未返回有效判定", checks: [] };
+  }
   const checks: any[] = Array.isArray(verdict.checks) ? verdict.checks : [];
   const expectedIds = new Set(plan.checks.map((check) => check.id));
   const exactCheckSet = checks.length === plan.checks.length &&
     new Set(checks.map((check) => check?.id)).size === expectedIds.size &&
     checks.every((check) => expectedIds.has(check?.id));
+  const validationIssues: string[] = [];
+  if (!exactCheckSet) validationIssues.push(`核验项必须与固定计划一一对应：${[...expectedIds].join("、")}`);
+  if (verdict.status !== "verified" && verdict.status !== "continue") validationIssues.push("核验状态无效");
   const assertions = plan.checks.map((criterion) => {
     const check = checks.find((item) => item?.id === criterion.id);
     const source = typeof check?.evidenceRef === "string" && Object.prototype.hasOwnProperty.call(evidence, check.evidenceRef) ? evidence[check.evidenceRef] : undefined;
     const quoted = typeof check?.evidenceQuote === "string" && check.evidenceQuote.trim().length > 0 && source?.includes(check.evidenceQuote);
-    return { name: criterion.criterion, expected: criterion.expected, actual: typeof check?.observed === "string" ? check.observed : "Missing evidence", passed: check?.passed === true && !!quoted };
+    const issue = !check ? "缺少该项核验结果" : check.passed === true
+      ? source === undefined ? "证据引用不存在于本轮输出"
+        : typeof check.evidenceQuote !== "string" || !check.evidenceQuote.trim() ? "缺少证据原文"
+          : !quoted ? "引用文字未出现在指定输出中" : undefined
+      : verdict.status === "verified" ? "该验收条件未通过" : undefined;
+    if (issue) validationIssues.push(`${criterion.id}：${issue}`);
+    return { name: criterion.criterion, expected: criterion.expected, actual: issue || (typeof check?.observed === "string" ? check.observed : "Missing evidence"), passed: check?.passed === true && !!quoted };
   });
   const goalVerified = exactCheckSet && verdict.status === "verified" && assertions.every((assertion) => assertion.passed);
-  const reason = typeof verdict.reason === "string" ? verdict.reason : "需要不同观察补充目标证据";
-  ctx.state.nextHypothesis = typeof verdict.nextHypothesis === "string" ? verdict.nextHypothesis : undefined;
+  const reason = validationIssues.length
+    ? `核验未通过：${validationIssues.join("；")}`
+    : typeof verdict.reason === "string" ? verdict.reason : "需要不同观察补充目标证据";
+  ctx.state.nextHypothesis = validationIssues.length
+    ? `沿用原验收条件，核对已有输出的来源与原文；确有证据缺失时补充观察。${reason}`
+    : typeof verdict.nextHypothesis === "string" ? verdict.nextHypothesis : undefined;
   ctx.state.verificationMethod = "model_assessed";
   callbacks.onToolCall?.({ id: toolId, tool: "goal_verifier", title: `${ctx.track} · Goal verification`, status: "done", detail: reason, output: { method: "model_assessed", goalVerified, assertions } });
   return {

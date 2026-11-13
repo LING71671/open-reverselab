@@ -95,14 +95,40 @@ test("action evidence quotes use decoded stdout and require the exact source", a
     llmService.complete = async messages => {
       const payload = JSON.parse(messages[1].content);
       assert.equal(payload.evidence["actions.read.stdout"], ctx.state.executionEvidence["actions.read.stdout"]);
-      return { content: JSON.stringify({ status: "verified", checks: [{ id: "C1", passed: true, evidenceRef: ref, evidenceQuote: quote }] }), usage: { totalTokens: 100 } };
+      return { content: JSON.stringify({ status: "verified", reason: "All checks passed", nextHypothesis: "Finished", checks: [{ id: "C1", passed: true, evidenceRef: ref, evidenceQuote: quote }] }), usage: { totalTokens: 100 } };
     };
     const verify = () => verifyGoalWithModel(ctx, output, "read_target()", verifyTargetEvidence(ctx, output), {});
     assert.equal((await verify()).goalVerified, true);
     ref = "actions.other.stdout";
-    assert.equal((await verify()).goalVerified, false);
+    const wrongSource = await verify();
+    assert.equal(wrongSource.goalVerified, false);
+    assert.match(wrongSource.reason, /C1：引用文字未出现在指定输出中/);
+    assert.doesNotMatch(wrongSource.reason, /All checks passed/);
+    assert.match(buildAnalysisMessages(ctx).at(-1).content, /引用文字未出现在指定输出中/);
+    assert.doesNotMatch(ctx.state.nextHypothesis, /Finished/);
     ref = "actions.read.stdout"; quote = '"result":"allowed"';
     assert.equal((await verify()).goalVerified, false);
+    ref = "missing";
+    assert.match((await verify()).reason, /C1：证据引用不存在/);
+    ref = "actions.read.stdout"; quote = "";
+    assert.match((await verify()).reason, /C1：缺少证据原文/);
+  } finally { llmService.complete = original; }
+});
+
+test("malformed verifier results explain the fixed checks that still need evidence", async () => {
+  const original = llmService.complete;
+  const ctx = context();
+  ctx.state.acceptancePlan = { target: ctx.target, objective: ctx.prompt, checks: [{ id: "C1", criterion: "read", expected: "observation" }] };
+  const output = { success: true, stdout: "observation", stderr: "" };
+  try {
+    for (const content of ["null", "[]", JSON.stringify({ status: "verified", reason: "All checks passed", checks: [{ id: "extra", passed: true }] })]) {
+      llmService.complete = async () => ({ content, usage: { totalTokens: 100 } });
+      const result = await verifyGoalWithModel(ctx, output, "read_target()", verifyTargetEvidence(ctx, output), {});
+      assert.equal(result.goalVerified, false);
+      assert.match(result.reason, /固定计划一一对应：C1/);
+      assert.match(result.goal.assertions[0].actual, /缺少该项核验结果/);
+      assert.match(ctx.state.nextHypothesis, /沿用原验收条件/);
+    }
   } finally { llmService.complete = original; }
 });
 
