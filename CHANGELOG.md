@@ -2,7 +2,13 @@
 
 All notable changes to the open-reverseLab project will be documented in this file.
 
-## [2.0.0] - 2026-11-13
+## Unreleased
+
+### Changed
+
+- Project-owned code is now licensed under Apache-2.0. Third-party components retain their original licenses; previously published versions keep their original terms.
+
+## [2.0.0] - 2026-11-13 (withdrawn)
 
 ### Added
 

@@ -77,7 +77,7 @@ const zhThemeConfig = {
   lightModeSwitchTitle: '切换到浅色模式',
   darkModeSwitchTitle: '切换到深色模式',
   footer: {
-    message: `GPL-3.0 · 仅供授权环境下的学习与防御性研究使用 · <a href="${base}disclaimer">免责声明</a>`,
+    message: `Apache-2.0 · 仅供授权环境下的学习与防御性研究使用 · <a href="${base}disclaimer">免责声明</a>`,
     copyright: '© 2026 ReverseLab',
   },
 }
@@ -117,7 +117,7 @@ const enThemeConfig = {
   lightModeSwitchTitle: 'Switch to light theme',
   darkModeSwitchTitle: 'Switch to dark theme',
   footer: {
-    message: `GPL-3.0 · For authorized learning and defensive research only · <a href="${base}en/disclaimer">Disclaimer</a>`,
+    message: `Apache-2.0 · For authorized learning and defensive research only · <a href="${base}en/disclaimer">Disclaimer</a>`,
     copyright: '© 2026 ReverseLab',
   },
 }

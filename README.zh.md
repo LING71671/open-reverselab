@@ -7,7 +7,7 @@ ReverseLab 提供桌面工作区、红蓝知识库和 MCP 工具，用于围绕�
 [下载 v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) · [桌面端说明](desktop/README.zh-CN.md) · [知识库](kb/README.md) · [文档站](https://ling71671.github.io/open-reverselab/)
 
 [![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
-[![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
 
 ## :handshake: 赞助支持
 
@@ -183,4 +183,4 @@ ReverseLab 的持续运营靠的是为基础设施、工具、审稿时间投入
 
 ## 许可协议
 
-**GPL-3.0-only。** 详见 [LICENSE](LICENSE)。贡献即表示你同意你的贡献以相同条款授权。
+**Apache-2.0。** 详见 [LICENSE](LICENSE)。贡献即表示你同意你的贡献以相同条款授权。

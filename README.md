@@ -7,7 +7,7 @@ ReverseLab combines a desktop workspace, a red/blue security knowledge base, and
 [Download v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) · [Desktop guide](desktop/README.md) · [Knowledge base](kb/README.md) · [Documentation](https://ling71671.github.io/open-reverselab/)
 
 [![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
-[![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
 
 ## :handshake: Sponsors
 
@@ -203,4 +203,4 @@ By accessing or using this project, you agree to be bound by the full disclaimer
 
 ## License
 
-**GPL-3.0-only.** See [LICENSE](LICENSE). By contributing, you agree your contributions are licensed under the same terms.
+**Apache-2.0.** See [LICENSE](LICENSE). By contributing, you agree your contributions are licensed under the same terms.

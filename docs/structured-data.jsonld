@@ -9,7 +9,7 @@
       "url": "https://github.com/LING71671/open-reverselab",
       "codeRepository": "https://github.com/LING71671/open-reverselab",
       "programmingLanguage": ["Python", "JavaScript", "PowerShell", "C++"],
-      "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
       "applicationCategory": "SecurityApplication",
       "operatingSystem": ["Windows", "Linux", "Android"],
       "keywords": [
