@@ -10,7 +10,7 @@ Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · M
 
 <p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
 
-<p><a href="#build-the-desktop"><strong>Build the desktop preview</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="kb/README.md">Knowledge base</a></p>
+<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1"><strong>Download Windows beta</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="kb/README.md">Knowledge base</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -39,25 +39,23 @@ Select `red / blue / both` in the upper-left corner, choose a workspace, and ent
 
 <img src="assets/desktop/knowledge-light.png" alt="Open ReverseLab Desktop knowledge reader in both mode" width="1280">
 
-- **Independent strategies.** `red` and `blue` use separate analysis policies. `both` runs the branches in parallel and joins their results.
+- **Independent strategies.** `red` and `blue` use separate analysis policies. `both` lets each strategy plan multiple actions, exchange evidence during execution, and independently check their results before combined verification.
 - **Concurrent Goals.** Goals and ready actions run concurrently without an application-level count limit. Switching views, tasks, or workspaces does not redirect a running task's output.
 - **Managed workspaces.** First launch creates a default workspace. Open or create others, import samples, and keep original and working copies separate.
 - **Goal control.** Goals have no time or token limit by default. Set either limit when needed, stop a run, or add instructions while it is running. Verification results and failed attempts remain in the execution history.
 - **Knowledge and usability.** Browse defense articles and paired references, switch light/dark themes, and retain unsent drafts, reading positions, and filters during navigation.
 
-### Preview status and setup
+### Download and setup
 
-The desktop is being prepared for `v2.0.0-beta.1`; its installer has not been published. Use the [source build](#build-the-desktop) to try the current preview. Published downloads will be listed on [Releases](https://github.com/LING71671/open-reverselab/releases).
+[v2.0.0-beta.1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) includes a Windows x64 installer and portable ZIP, with signature files and SHA256 checksums. You can also [build from source](#build-the-desktop).
 
-1. Install Python 3.10 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
-2. Build and launch Open ReverseLab from the repository. Keep personal workspaces outside the source and installation directories.
+1. Install Python 3.11 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
+2. Run the installer, or extract the complete portable ZIP and launch `OpenReverseLab.exe`. Keep personal workspaces outside the source and installation directories.
 3. Open Settings and configure an OpenAI-compatible chat-completions endpoint and model, then enter a target and objective. SHA256 verification can run locally without a model.
 
-Windows x64 is the desktop packaging target. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux support the source-based CLI/MCP workflow; native desktop packages for those platforms are not currently provided. See [application updates](desktop/UPDATES.md) for the installed-build update mechanism.
+Windows x64 is the desktop packaging target. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux support the source-based CLI/MCP workflow; native desktop packages for those platforms are not currently provided. The installed edition offers Beta and Stable update channels; beta builds select Beta initially. See [application updates](desktop/UPDATES.md).
 
-Cross-branch coordination and completion checks are still under validation. Review the recorded evidence before relying on a result, and set a run limit when trying unfamiliar tasks.
-
-The desktop currently executes bounded Python observations. MCP tool references in KB articles do not automatically become desktop adapters for debuggers, devices, or hardening tools. Workspace files stay on disk, while model-assisted runs send task context and selected evidence to the endpoint you configure. Python actions run with the current user's permissions. See the [desktop guide](desktop/README.md) for configuration, data handling, and limits.
+The desktop executes target triage and Python actions without a default tool time limit. MCP tool references in KB articles do not automatically become desktop adapters for debuggers, devices, or hardening tools. Workspace files stay on disk, while model-assisted runs send task context and selected evidence to the endpoint you configure. Python actions run with the current user's permissions. See the [desktop guide](desktop/README.md) for configuration, data handling, and limits.
 
 ## Knowledge base and MCP
 

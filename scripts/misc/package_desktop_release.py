@@ -91,16 +91,16 @@ def package(installer: Path, notes: Path) -> None:
     if len(comments) != 1 or f'version:{release_version}' not in comments[0].split('\t'):
         raise SystemExit('Installer signature does not bind the release version.')
     OUTPUT.mkdir(parents=True, exist_ok=True)
-    filename = f'ReverseLab-v{release_version}-windows-x64-setup.exe'
+    filename = f'OpenReverseLab-v{release_version}-windows-x64-setup.exe'
     shutil.copy2(installer, OUTPUT / filename)
     shutil.copy2(signature, OUTPUT / (filename + '.sig'))
-    portable = OUTPUT / f'ReverseLab-v{release_version}-windows-x64.zip'
-    prefix = f'ReverseLab-{release_version}/'
+    portable = OUTPUT / f'OpenReverseLab-v{release_version}-windows-x64.zip'
+    prefix = f'OpenReverseLab-{release_version}/'
     with source_archive() as source, zipfile.ZipFile(portable, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as dest:
         for entry in source.infolist():
             if not entry.is_dir():
                 dest.writestr(prefix + entry.filename, source.read(entry))
-        dest.write(binary, prefix + 'ReverseLab.exe')
+        dest.write(binary, prefix + 'OpenReverseLab.exe')
         dest.write(STAGE / 'RELEASE.json', prefix + 'RELEASE.json')
     latest = {
         'version': release_version,

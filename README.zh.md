@@ -10,7 +10,7 @@
 
 <p><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-<p><a href="#从源码运行桌面端"><strong>构建桌面预览版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="kb/README.md">知识库</a></p>
+<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1"><strong>下载 Windows 测试版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="kb/README.md">知识库</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -39,25 +39,23 @@
 
 <img src="assets/desktop/knowledge-light.png" alt="Open ReverseLab 桌面端 both 模式下的知识库阅读界面" width="1280">
 
-- **策略独立。** red 与 blue 分别维护分析策略，both 并行运行两个分支并汇总各自结果。
+- **策略独立。** red 与 blue 分别维护分析策略，both 中两方均可规划多个动作，在执行中交换证据，各自核验后再核验完整目标。
 - **多任务并行。** Goal 与就绪动作支持并行，应用不设置数量上限。切换页面、任务或工作区不会改变后台任务的输出归属。
 - **工作区管理。** 首次启动创建默认工作区，也可新建或打开其他目录。导入样本时保留原件，另建工作副本。
 - **目标控制。** 默认不设时间或 Token 上限，可按需填写，也可停止运行或中途补充要求。执行历史保留核验结果与失败尝试。
 - **知识库与操作体验。** 支持 defense 文档、关联阅读、深浅主题；页面切换时保留未提交草稿、阅读位置和筛选条件。
 
-### 预览状态与启动
+### 下载与启动
 
-桌面端正在准备 `v2.0.0-beta.1`，安装包尚未发布。当前可从[源码构建](#从源码运行桌面端)体验预览版，后续下载以 [Releases](https://github.com/LING71671/open-reverselab/releases) 中的实际发布为准。
+[v2.0.0-beta.1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) 提供 Windows x64 安装包、便携 ZIP、签名文件与 SHA256 校验值，也可[从源码构建](#从源码运行桌面端)。
 
-1. 安装 Python 3.10 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
-2. 从仓库构建并启动 Open ReverseLab，个人工作区放在源码与安装目录之外。
+1. 安装 Python 3.11 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
+2. 运行安装包，或完整解压便携 ZIP 后启动 `OpenReverseLab.exe`。个人工作区放在源码与安装目录之外。
 3. 在设置中配置兼容 OpenAI chat-completions 的 API 地址和模型，再填写目标和任务内容。SHA256 核验可直接在本地运行，无需模型。
 
-桌面端以 Windows x64 为打包目标，Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可使用源码形式的 CLI/MCP 工作流，暂未提供桌面安装包。安装版的更新机制见[应用更新](desktop/UPDATES.md)。
+桌面端以 Windows x64 为打包目标，Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可使用源码形式的 CLI/MCP 工作流，暂未提供桌面安装包。安装版提供“测试版”和“稳定版”更新渠道，beta 构建初始选择测试版渠道，详见[应用更新](desktop/UPDATES.zh-CN.md)。
 
-分支协作与完成核验仍在验证中。使用结果前应查看对应证据，尝试新任务时建议设置运行限制。
-
-桌面端当前直接执行有界 Python 观察脚本。知识库中的 MCP 工具名不会自动成为调试器、设备或加固执行适配器。工作区文件保存在本地，模型辅助任务会把任务上下文和所选证据发送到配置的模型端点；Python 动作继承当前用户权限。配置、数据流向和能力范围见[桌面端说明](desktop/README.zh-CN.md)。
+桌面端执行目标初筛与 Python 动作，默认不设工具时限。知识库中的 MCP 工具名不会自动成为调试器、设备或加固执行适配器。工作区文件保存在本地，模型辅助任务会把任务上下文和所选证据发送到配置的模型端点；Python 动作继承当前用户权限。配置、数据流向和能力范围见[桌面端说明](desktop/README.zh-CN.md)。
 
 ## 知识库与 MCP
 
@@ -109,7 +107,7 @@ pnpm tauri dev
 pnpm tauri build --no-bundle
 ```
 
-`pnpm dev` 启动浏览器预览。详见[开发指南](desktop/DEV_GUIDE.md)、[架构图](desktop/ARCHITECTURE.md)、[Agent 契约](desktop/AGENT_SYSTEM.md)、[错误码](desktop/ERROR_CODES.md)和[发布说明](RELEASING.md)。
+`pnpm dev` 启动浏览器预览。详见[开发指南](desktop/DEV_GUIDE.zh-CN.md)、[架构图](desktop/ARCHITECTURE.zh-CN.md)、[Agent 契约](desktop/AGENT_SYSTEM.zh-CN.md)、[错误码](desktop/ERROR_CODES.zh-CN.md)和[发布说明](RELEASING.zh-CN.md)。
 
 ## 数据与目录
 
@@ -123,11 +121,11 @@ pnpm tauri build --no-bundle
 | 所选工作区的 `.reverselab/` | 桌面样本原件／副本、Goal、输出与报告 |
 | 仓库内 `cases/`、`samples/`、`notes/`、`exports/`、`reports/` | CLI 本地分析产物，不进入公开发布 |
 
-桌面默认数据目录为 `~/.open-reverselab/workspaces/Default`。本机环境快照另存于 `~/.open-reverselab/env/env.md`；二者都不能提交到公共仓库。备份与迁移见[工作区文档](desktop/WORKSPACES.md)。
+桌面默认数据目录为 `~/.open-reverselab/workspaces/Default`。本机环境快照另存于 `~/.open-reverselab/env/env.md`；二者都不能提交到公共仓库。备份与迁移见[工作区文档](desktop/WORKSPACES.zh-CN.md)。
 
 ## 参与贡献与发布
 
-请阅读[贡献指南](.github/CONTRIBUTING.md)、[安全策略](SECURITY.md)与[公开边界](PUBLICATION.md)。提交通用实现和合成示例，真实目标、样本、凭据和案例证据留在本地。提交前运行 `python scripts/misc/public_release_check.py` 及所改模块的检查。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
+请阅读[贡献指南](.github/CONTRIBUTING.md)、[安全策略](SECURITY.md)与[公开边界](PUBLICATION.md)。提交通用实现和合成示例，真实目标、样本、凭据和案例证据留在本地。提交前运行 `python scripts/misc/public_release_check.py` 及所改模块的检查。版本历史见 [CHANGELOG.md](CHANGELOG.zh-CN.md)。
 
 ---
 

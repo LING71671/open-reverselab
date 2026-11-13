@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ReverseLab",
+  "productName": "Open ReverseLab",
   "version": "2.0.0-beta.1",
   "identifier": "com.reverselab.desktop",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "ReverseLab",
+        "title": "Open ReverseLab",
         "width": 1280,
         "height": 840,
         "decorations": false,

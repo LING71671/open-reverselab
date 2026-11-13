@@ -6,13 +6,13 @@
 
 ## 从哪里下载桌面端？
 
-桌面端正在准备 `v2.0.0-beta.1`，安装包尚未发布。当前按[源码构建说明](./desktop.md#从源码运行)体验预览版；可下载版本统一查看 [Releases](https://github.com/LING71671/open-reverselab/releases)。
+[v2.0.0-beta.1 发布页](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) 提供 Windows x64 安装包与便携 ZIP，安装与配置见[桌面指南](./desktop.md)。也可[从源码运行](./desktop.md#从源码运行)。
 
 macOS/Linux 可使用仓库的 CLI/MCP 工作流，目前没有这两个平台的桌面二进制。完整说明见 [桌面端指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.zh-CN.md)。
 
 ## red、blue、both 有什么区别？
 
-red 与 blue 使用独立分析策略。both 并行运行两个分支，并保留各自结果后合流。知识库的 `both` 文档代表共享知识；攻击与防御文章通过关联路径连接。桌面选择不会改写外部 MCP 客户端的模式。
+red 与 blue 使用独立分析策略。both 中两方可各自规划多个动作，执行中交换证据，各自核验后再核验完整目标。知识库的 `both` 文档代表共享知识；攻击与防御文章通过关联路径连接。桌面选择不会改写外部 MCP 客户端的模式。
 
 ## 必须设置预算吗？
 
@@ -28,7 +28,7 @@ red 与 blue 使用独立分析策略。both 并行运行两个分支，并保�
 
 ## 桌面端会自动调用所有 MCP 工具吗？
 
-当前桌面适配器执行有界 Python 观察脚本；知识文档列出的工具需要相应适配器与本机安装。外部 Codex、Claude Code 等客户端可以通过 `reverse_lab_tools` 调用 MCP 工具。Python 动作继承当前用户权限，应用未提供操作系统级沙箱。
+当前桌面适配器执行目标初筛与 Python 动作，默认不设工具时限；知识文档列出的工具需要相应适配器与本机安装。外部 Codex、Claude Code 等客户端可以通过 `reverse_lab_tools` 调用 MCP 工具。Python 动作继承当前用户权限，应用未提供操作系统级沙箱。
 
 ## 如何验证安装和参与贡献？
 

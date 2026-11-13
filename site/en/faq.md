@@ -6,13 +6,13 @@ A desktop workspace, a red/blue knowledge base, and CLI/MCP tools for external A
 
 ## Where do I download the desktop?
 
-The desktop is being prepared for `v2.0.0-beta.1`; its installer has not been published. Follow [Run from source](./desktop.md#run-from-source) to try the preview. Available downloads are listed on [Releases](https://github.com/LING71671/open-reverselab/releases).
+The [v2.0.0-beta.1 release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) provides a Windows x64 installer and portable ZIP. See [desktop installation](./desktop.md) for setup, or [run from source](./desktop.md#run-from-source).
 
 macOS/Linux retain the CLI/MCP workflow; native desktop packages for them are not currently provided. See the [desktop guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.md).
 
 ## What do red, blue, and both mean?
 
-Red and blue use independent strategies. Both runs two parallel branches and joins their results. In the KB, `both` marks shared documents; attack and defense articles link through relationship metadata. Desktop selection does not change an external MCP client's mode.
+Red and blue use independent strategies. Both lets each strategy plan multiple actions, exchange evidence during execution, and assess its own responsibilities before combined verification. In the KB, `both` marks shared documents; attack and defense articles link through relationship metadata. Desktop selection does not change an external MCP client's mode.
 
 ## Do I need to set a budget?
 
@@ -28,7 +28,7 @@ The default workspace is `~/.open-reverselab/workspaces/Default`, or you can cho
 
 ## Does the desktop call every MCP tool automatically?
 
-Its current adapter runs bounded Python observations. Tools named in KB articles require corresponding adapters and local installation. External AI clients can call the MCP server separately. Python actions run with the user's permissions; the application does not provide an operating-system sandbox.
+Its current adapters run target triage and Python actions without a default tool time limit. Tools named in KB articles require corresponding adapters and local installation. External AI clients can call the MCP server separately. Python actions run with the user's permissions; the application does not provide an operating-system sandbox.
 
 ## How do I check installation and contribute?
 

@@ -19,7 +19,7 @@ const knowledgeTracks = [
 const tracks = computed(() => ({
   red: en.value ? 'Investigate attack paths and validate hypotheses against an authorized target. Keep evidence from each attempt.' : '围绕授权目标寻找分析路径，验证假设，保留每次尝试的证据。',
   blue: en.value ? 'Follow defense guidance to examine behavior, assess controls and produce detection or remediation evidence.' : '结合防御知识检查行为与控制措施，形成检测、加固和修复验证证据。',
-  both: en.value ? 'Run red and blue branches independently, then bring their evidence into a shared result.' : 'red 与 blue 分支独立推进，完成后汇入同一份结果。',
+  both: en.value ? 'Let red and blue plan concurrent actions, exchange evidence, and verify the combined result.' : 'red 与 blue 分别规划并行动作，交换证据，核验完整目标。',
 }))
 const command = computed(() => `git clone ${repo}.git\ncd open-reverselab\n${platform.value === 'windows' ? '.\\scripts\\misc\\bootstrap.ps1' : 'bash ./scripts/misc/bootstrap.sh'}\n${platform.value === 'windows' ? 'python' : 'python3'} scripts/misc/lab_healthcheck.py`)
 async function copyCommand() {
@@ -31,7 +31,7 @@ async function copyCommand() {
   <div class="rl-home">
     <section id="desktop" class="rl-intro">
       <div><h1>{{ en ? 'An AI workbench for reverse engineering.' : 'AI 逆向分析工作台' }}</h1><p>{{ en ? 'Give Open ReverseLab a target and a Goal. Follow parallel analysis, inspect the evidence and keep the results in your workspace.' : '给出目标和 Goal，查看并行分析过程，在工作区中收纳样本、证据与报告。' }}</p></div>
-      <div class="rl-download"><a class="rl-button" :href="local('/desktop')">{{ en ? 'Build the desktop preview' : '构建桌面预览版' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a><span>{{ en ? 'Source preview · Windows x64' : '源码预览 · Windows x64' }}</span><a class="rl-text-link" :href="`${repo}/releases`">{{ en ? 'Published releases' : '已发布版本' }}</a></div>
+      <div class="rl-download"><a class="rl-button" :href="`${repo}/releases/tag/v2.0.0-beta.1`">{{ en ? 'Download Windows beta' : '下载 Windows 测试版' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a><span>v2.0.0-beta.1 · Windows x64</span><a class="rl-text-link" :href="local('/desktop')">{{ en ? 'Installation guide' : '安装说明' }}</a></div>
     </section>
     <figure class="rl-product">
       <a :href="withBase('/assets/desktop/knowledge-light.png')" :aria-label="en ? 'View full desktop screenshot' : '查看桌面端完整截图'"><img :src="withBase('/assets/desktop/knowledge-light.png')" :alt="en ? 'Open ReverseLab desktop, showing paired red and blue JWT knowledge articles' : 'Open ReverseLab 桌面端，展示配对的 red 与 blue JWT 知识文档'" width="2560" height="1440" fetchpriority="high" /></a>
