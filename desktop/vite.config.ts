@@ -16,6 +16,7 @@ function reverseLabNativePlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use("/api/workspace", (req, res, next) => {
         if (req.method !== "POST") return next();
+        req.setEncoding("utf8");
         let body = "";
         req.on("data", chunk => { body += chunk; if (body.length > 32 * 1024 * 1024) req.destroy(); });
         req.on("end", () => {
@@ -63,6 +64,7 @@ function reverseLabNativePlugin(): Plugin {
       // 1. Live Triage endpoint: POST /api/system/triage
       server.middlewares.use("/api/system/triage", (req, res, next) => {
         if (req.method !== "POST") return next();
+        req.setEncoding("utf8");
         let body = "";
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
@@ -127,6 +129,7 @@ print(json.dumps(results))
       // 3. Real Script Execution endpoint: POST /api/system/exec-python
       server.middlewares.use("/api/system/exec-python", (req, res, next) => {
         if (req.method !== "POST") return next();
+        req.setEncoding("utf8");
         let body = "";
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
@@ -194,6 +197,7 @@ print(json.dumps(results))
       // 5. Real Report & Script saving: POST /api/system/save-report
       server.middlewares.use("/api/system/save-report", (req, res, next) => {
         if (req.method !== "POST") return next();
+        req.setEncoding("utf8");
         let body = "";
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
@@ -240,6 +244,7 @@ print(json.dumps(results))
       // 6. Autonomous Headless Harness Execution endpoint: POST /api/harness/run
       server.middlewares.use("/api/harness/run", (req, res, next) => {
         if (req.method !== "POST") return next();
+        req.setEncoding("utf8");
         let body = "";
         req.on("data", (chunk) => (body += chunk));
         req.on("end", () => {
