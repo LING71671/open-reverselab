@@ -31,7 +31,7 @@ From `desktop`:
 
 ```sh
 pnpm build
-node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs tests/networkTransport.test.mjs
+node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs tests/*.test.mjs
 node --experimental-strip-types --test tests/*.test.ts
 cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --locked --manifest-path src-tauri/Cargo.toml --lib

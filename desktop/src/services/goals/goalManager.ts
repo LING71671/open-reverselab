@@ -27,6 +27,7 @@ const uniqueId = () => `goal-${Date.now()}-${Math.random().toString(36).slice(2,
 export class GoalManager {
   private snapshot: GoalSnapshot = { sessions: [], records: {} };
   private listeners = new Set<() => void>();
+  private healthListeners = new Set<(event: HealthEvent) => void>();
   private queue: GoalRequest[] = [];
   private controllers = new Map<string, AbortController>();
   private requests = new Map<string, GoalRequest>();
@@ -79,6 +80,8 @@ export class GoalManager {
     this.listeners.forEach(listener => listener());
   };
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+  /** Only accepted live events are published; restoring or reading history is local. */
+  subscribeHealth = (listener: (event: HealthEvent) => void) => { this.healthListeners.add(listener); return () => { this.healthListeners.delete(listener); }; };
   flush = () => {
     if (this.saveTimer) clearTimeout(this.saveTimer);
     if (!this.storage) return;
@@ -216,7 +219,11 @@ export class GoalManager {
         if (!active() || event.goalId !== id) return;
         const currentEvent = { ...event, eventId: nodeId(event.eventId), nodeId: event.nodeId ? nodeId(event.nodeId) : undefined };
         if (this.adjustments.has(id) && event.layer === "goal" && event.status === "healthy") return;
+        const isNew = !this.snapshot.records[id].healthEvents?.some(item => item.eventId === currentEvent.eventId);
         this.update(id, r => ({ ...r, healthEvents: [...(r.healthEvents || []).filter(e => e.eventId !== currentEvent.eventId), currentEvent].slice(-256) }));
+        if (isNew) for (const listener of this.healthListeners) {
+          try { listener(Object.freeze({ ...currentEvent })); } catch { /* Observers cannot interrupt execution. */ }
+        }
       },
     };
     this.log(id, "info", `${request.track} Goal started`, { target: request.target, objective: request.objective });

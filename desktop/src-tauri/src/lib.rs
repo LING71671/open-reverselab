@@ -6,6 +6,7 @@ use std::process::Command;
 use tauri::Manager;
 mod updates;
 mod network;
+mod performance;
 
 static RESOURCE_ROOT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 
@@ -348,6 +349,7 @@ pub fn run() {
             }
         }))
         .manage(updates::UpdateState::default())
+        .manage(performance::PerformanceState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -359,6 +361,8 @@ pub fn run() {
             network::network_request,
             network::network_cancel,
             network::network_probe,
+            performance::performance_sample,
+            performance::performance_stop,
             updates::update_installation_info,
             updates::update_check,
             updates::update_download,

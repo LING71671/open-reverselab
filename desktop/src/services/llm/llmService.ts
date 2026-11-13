@@ -45,14 +45,7 @@ export class LlmService {
 
   constructor() {
     const savedModel = localStorage.getItem("reverselab_model");
-    if (!savedModel) {
-      this.defaultModel = "mimo-v2.6-flash";
-      try {
-        localStorage.setItem("reverselab_model", "mimo-v2.6-flash");
-      } catch {}
-    } else {
-      this.defaultModel = savedModel;
-    }
+    this.defaultModel = (savedModel ?? (import.meta.env.VITE_LLM_MODEL as string) ?? "").trim();
 
     this.loadProviders();
   }
@@ -147,7 +140,7 @@ export class LlmService {
 
   public getApiKey(): string {
     const active = this.getActiveProvider();
-    return active?.apiKey || (import.meta.env.VITE_LLM_API_KEY as string) || "";
+    return active?.apiKey || "";
   }
 
   public setApiKey(key: string): void {
@@ -192,7 +185,7 @@ export class LlmService {
     try {
       const url = this.resolveUrl("/models", provider.baseUrl);
       const headers: Record<string, string> = {};
-      const key = provider.apiKey || this.getApiKey();
+      const key = provider.apiKey || "";
       if (key) {
         headers["Authorization"] = `Bearer ${key}`;
       }
@@ -225,6 +218,7 @@ export class LlmService {
     const start = performance.now();
     try {
       const active = this.getActiveProvider();
+      if (!active?.baseUrl || !this.defaultModel) throw new Error("请先配置 API 地址和模型 ID");
       const url = this.resolveUrl("/chat/completions", active?.baseUrl);
       const key = active?.apiKey || this.getApiKey();
       const res = await modelFetch(url, {
@@ -270,7 +264,7 @@ export class LlmService {
     const start = performance.now();
     const active = options?.provider || this.getActiveProvider();
     const model = options?.model || this.defaultModel;
-    if (options?.provider && !options.provider.baseUrl) throw new Error("No model provider configured for this goal");
+    if (!active?.baseUrl || !model) throw new Error("请先配置 API 地址和模型 ID");
     const url = this.resolveUrl("/chat/completions", active?.baseUrl);
     const key = options?.provider ? active?.apiKey || "" : active?.apiKey || this.getApiKey();
 

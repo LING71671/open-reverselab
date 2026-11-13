@@ -2,7 +2,7 @@
   "name": "desktop",
   "private": true,
   "license": "Apache-2.0",
-  "version": "2.0.0",
+  "version": "2.0.0-beta.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,8 @@
     "@ai-sdk/react": "^4.0.125",
     "@langchain/core": "^1.2.13",
     "@langchain/langgraph": "^1.4.18",
+    "@radix-ui/react-select": "^2.4.1",
+    "@sentry/react": "^11.12.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-opener": "^2",

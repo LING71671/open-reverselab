@@ -3,6 +3,8 @@ import { Search, RefreshCw, ArrowUpRight, ArrowLeft, X, BookOpen } from "lucide-
 import { matchesTrack, type SecurityTrack } from "../../core";
 import { nativeBridge, type KbTechnique } from "../../services/native/nativeBridge";
 import { MarkdownViewer } from "./MarkdownViewer";
+import { Select } from "../controls/Select";
+import { ResizeHandle, usePaneSize } from "../controls/ResizeHandle";
 
 interface KbNavigatorProps {
   track: SecurityTrack;
@@ -12,6 +14,7 @@ interface KbNavigatorProps {
 const boardNames: Record<string, string> = { "ctf-website": "Web / CTF", "apk-reverse": "Android / APK", "pe-reverse": "Windows / PE", general: "通用", windows: "Windows" };
 
 export function KbNavigator({ track, onTrackChange, onSelectTechnique }: KbNavigatorProps) {
+  const [libraryWidth, setLibraryWidth] = usePaneSize("library", 300);
   const [catalog, setCatalog] = useState<KbTechnique[]>([]);
   const [search, setSearch] = useState("");
   const [board, setBoard] = useState("all");
@@ -74,14 +77,15 @@ export function KbNavigator({ track, onTrackChange, onSelectTechnique }: KbNavig
   };
   return (
     <section className="knowledge-workspace" aria-label="知识库" data-reading={readerOpen}>
-      <div className="knowledge-library">
+      <div className="knowledge-library" style={{ width: libraryWidth }}>
         <div className="knowledge-filters">
           <label className="knowledge-search"><Search size={16} /><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索文档、信号或工具" aria-label="搜索知识库" />{search && <button className="icon-button" aria-label="清除搜索" onClick={() => setSearch("")}><X size={14} /></button>}</label>
-          <div className="knowledge-filter-row"><select aria-label="知识库领域" value={board} onChange={event => setBoard(event.target.value)}><option value="all">所有领域</option>{boards.map(value => <option key={value} value={value}>{boardNames[value] || value}</option>)}</select><span>{filtered.length} 篇</span><button className="icon-button" onClick={refresh} disabled={loading} aria-label="刷新知识库"><RefreshCw size={14} className={loading ? "loading-spinner" : ""} /></button></div>
+          <div className="knowledge-filter-row"><Select label="知识库领域" value={board} onChange={setBoard} options={[{ value: "all", label: "所有领域" }, ...boards.map(value => ({ value, label: boardNames[value] || value }))]} /><span>{filtered.length} 篇</span><button className="icon-button" onClick={refresh} disabled={loading} aria-label="刷新知识库"><RefreshCw size={14} className={loading ? "loading-spinner" : ""} /></button></div>
         </div>
         <div className="knowledge-list" aria-label="文档列表" aria-busy={loading}>
           {loading ? <div className="skeleton-list" aria-label="正在加载知识库">{[0,1,2,3,4,5].map(n => <div className="skeleton-row" key={n} />)}</div> : error ? <div className="inline-error" role="alert"><p>{error}</p><button className="text-button" onClick={() => setRevision(n => n + 1)}>重试</button></div> : filtered.length === 0 ? <div className="compact-empty">没有匹配文档<button className="text-button" onClick={() => { setSearch(""); setBoard("all"); }}>清除筛选</button></div> : filtered.map(item => <button key={item.path} className="knowledge-row" aria-current={active?.path === item.path ? "true" : undefined} onClick={() => { setActivePath(item.path); setReaderOpen(true); }}><span>{item.title}</span><small><span>{boardNames[item.board] || item.board}</span><span className={`track-text track-${item.track}`}>{item.track}</span></small></button>)}
         </div>
+        <ResizeHandle label="调整文档列表宽度" axis="x" size={libraryWidth} min={240} max={440} initial={300} onChange={setLibraryWidth} />
       </div>
       <article className="knowledge-reader" aria-busy={reading}>
         {active && <>

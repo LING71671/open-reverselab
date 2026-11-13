@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { PerformanceWarnings } from "../src/services/performance/diagnosticPolicy.ts";
+import { sanitizeDiagnosticEvent } from "../src/services/telemetry/sanitize.ts";
+import { configureTelemetryDefaults, reportHealth, setDiagnosticReceiver, telemetryPreference } from "../src/services/telemetry/telemetryStore.ts";
+import { HealthMonitor } from "../src/services/health/healthMonitor.ts";
+test("diagnostic events discard sample data even when nested in SDK fields", () => {
+  const privateText = "PRIVATE_SAMPLE_TARGET_KEY";
+  const clean = sanitizeDiagnosticEvent({ message: privateText, request: { url: privateText }, user: { id: privateText }, extra: { sample: privateText }, breadcrumbs: [{ message: privateText }], contexts: { device: privateText }, tags: { target: privateText, layer: "model", code: "MODEL_AUTH" }, exception: { values: [{ type: "TypeError", value: privateText, stacktrace: { frames: [{ filename: privateText }, { filename: "http://tauri.localhost/assets/index-Abc123.js", lineno: 10, colno: 2, function: privateText, vars: { token: privateText } }] } }] } }, "desktop@test", "test");
+  assert.ok(!JSON.stringify(clean).includes(privateText));
+  assert.equal(clean?.exception.values[0].stacktrace.frames.length, 1);
+  assert.equal(clean?.exception.values[0].value, "MODEL_AUTH");
+  assert.equal(sanitizeDiagnosticEvent({ type: "transaction", transaction: privateText }, "test", "test"), null);
+});
+test("turning remote diagnostics off stops health forwarding without changing local monitoring", () => {
+  const events: unknown[] = [];
+  setDiagnosticReceiver(event => events.push(event));
+  const event = { eventId: "private-id", goalId: "private-goal", layer: "tool" as const, status: "failed" as const, timestamp: 1, code: "TOOL_FAILED" as const, detail: "private-script", durationMs: 30 };
+  telemetryPreference.set({ enabled: false, traceSampleRate: 0.1 }); reportHealth(event);
+  telemetryPreference.set({ enabled: true, traceSampleRate: 0.1 }); reportHealth(event);
+  telemetryPreference.set({ enabled: false, traceSampleRate: 0.1 }); reportHealth(event);
+  assert.deepEqual(events, [{ layer: "tool", status: "failed", code: "TOOL_FAILED", durationMs: 30 }]);
+  configureTelemetryDefaults({ enabled: true, traceSampleRate: 1 });
+  assert.equal(telemetryPreference.getSnapshot().enabled, false);
+  telemetryPreference.set({ enabled: true, traceSampleRate: 0.1 });
+  const history = new HealthMonitor({ goalId: event.goalId });
+  history.record(event); history.snapshot(); history.readHistory();
+  assert.equal(events.length, 1, "reading stored health records must not send diagnostics");
+  telemetryPreference.set({ enabled: false, traceSampleRate: 0.1 });
+  setDiagnosticReceiver();
+});
+test("warnings need sustained evidence, dismiss until recovery, and reset on suspension", () => {
+  const monitor = new PerformanceWarnings({ sampleMs: 1, sustainedMs: 10, cpuPercent: 90, memoryBytes: 100, maxFrameGapMs: 250 });
+  const high = { cpuPercent: 95, memoryBytes: 20, frameGapMs: 16 };
+  assert.equal(monitor.observe(high, 0), null);
+  assert.equal(monitor.observe(high, 9), null);
+  assert.equal(monitor.observe(high, 10), "cpu");
+  monitor.dismiss("cpu"); assert.equal(monitor.observe(high, 20), null);
+  monitor.observe({ ...high, cpuPercent: 10 }, 21);
+  assert.equal(monitor.observe(high, 22), null); assert.equal(monitor.observe(high, 32), "cpu");
+  monitor.reset(); assert.equal(monitor.observe(high, 100), null);
+});

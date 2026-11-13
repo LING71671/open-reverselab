@@ -9,7 +9,6 @@ export * from "./console/ConsoleView";
 export * from "./diagnostics/DiagnosticsPanel";
 export * from "./prompt/PromptConsole";
 export * from "./overlays/DetailDrawer";
-export * from "./overlays/ToolMonitorDrawer";
 export * from "./overlays/LootCard";
-export * from "./settings/SettingsModal";
+export * from "./settings/SettingsView";
 export * from "./kb/KbNavigator";

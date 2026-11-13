@@ -1,0 +1,4 @@
+{
+  "remote": { "enabled": false, "traceSampleRate": 0.1 },
+  "local": { "sampleMs": 2000, "sustainedMs": 15000, "cpuPercent": 90, "memoryBytes": 2147483648, "maxFrameGapMs": 250 }
+}

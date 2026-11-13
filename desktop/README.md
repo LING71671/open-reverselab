@@ -1,58 +1,70 @@
-# ReverseLab Desktop
+# Open ReverseLab Desktop
 
-A desktop workspace for target-bound security analysis with separate `red`, `blue`, and `both` strategies. Goals run in a queue, emit a live workflow graph, collect execution evidence, and finish only after verification or an explicit stop condition.
+[简体中文](README.zh-CN.md)
 
-[中文说明](README.zh-CN.md)
+Open ReverseLab organizes target-based analysis into Goals, with a live execution canvas, readable analysis progress, and saved evidence. Choose `red`, `blue`, or `both`, enter a file, directory, or URL target, and describe the result you need.
 
-## Run
+This guide describes the current desktop source preview. Public downloads and their supported features are listed in [Releases](https://github.com/LING71671/open-reverselab/releases); a version in the source tree does not mean its release package is available.
 
-Install the dependencies with `pnpm install` in this directory. Use `pnpm dev` for the local browser preview or `pnpm tauri dev` for the desktop application. Python must be available on PATH. Native builds also require Rust and the platform's Tauri build prerequisites. `REVERSELAB_ROOT` can identify the repository containing the shared knowledge base and scripts.
+## Start from source
 
-The first launch creates a local default workspace outside this repository. The workspace selector opens or creates other directories. Importing a sample preserves an original copy and creates a separate working copy. Goals, reports, and scripts are stored inside the workspace's `.reverselab` directory.
-
-Configure an OpenAI-compatible chat-completions endpoint and model in Settings. API keys stay in local application storage. Basic SHA256 verification uses a deterministic local path and does not need a model. Other goals use the configured model for planning and independent evidence assessment.
-
-## Behavior
-
-- Switch `red / blue / both` at the upper left. `both` starts isolated red and blue branches and joins their results.
-- Enter a file, directory, or URL target and an objective. Goals have no time or token limit by default. Set either limit only when needed. Goals and ready actions have no default concurrency limit.
-- Switch workspaces or inspect another Goal while execution continues. Each runner retains its original workspace.
-- Browse the actual knowledge index, including defense articles and paired references. Shared articles appear in both tracks.
-- Inspect workflow nodes, execution history, tool output, verification, reports, and health events. Unobserved services remain unknown.
-- Light/dark themes follow the OFFFOLD palette. Motion respects reduced-motion preferences.
-
-The current execution adapter runs bounded Python observations. Native debugger, device-control, and production hardening adapters are not implemented by this desktop rewrite. A generic model-assisted verification result is not a formal proof; reports preserve the actual output and verification assertions. BLA/REA interoperability is a documented benchmark target, not a claim of completed upstream testing.
-
-## Engineering documentation
-
-- [Architecture](ARCHITECTURE.md) and [Agent runtime contracts](AGENT_SYSTEM.md)
-- [Workspace ownership and persistence](WORKSPACES.md)
-- [BLA / REA threat profiles and validation plan](ADVERSARIAL_PROFILES.md)
-- [Application updates](UPDATES.md)
-- [Health events and error codes](ERROR_CODES.md)
-- [UI design](DESIGN_BRIEF.md) and [development guide](DEV_GUIDE.md)
-
-## Checks
-
-From this directory:
+Run these commands in `desktop/`:
 
 ```sh
-pnpm build
-node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs
-node --experimental-strip-types --test tests/*.test.ts
-cargo check --manifest-path src-tauri/Cargo.toml
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-From the repository root, run the relevant Python tests with pytest and `python scripts/misc/public_release_check.py` before publishing. Private workspaces, samples, reports, credentials, and local screenshots must remain outside public changes.
+For the native desktop app, use `pnpm tauri dev`. Python 3.10+ must be available as `python`. Native builds also need Rust and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/), including WebView2 on Windows. Install analysis tools separately. Browser preview uses local development services for workspace and Python operations; native proxy routing, process monitoring, and update installation require the desktop app.
 
-## v2.0.0 release package
+`REVERSELAB_ROOT` can point to the repository containing the knowledge base and scripts. See the [development guide](DEV_GUIDE.md) for build and verification commands.
 
-Download the Windows x64 installer from [Releases](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0). Run the installer, then launch ReverseLab. Settings → Application updates checks versions and downloads signed updates after running tasks finish. Portable ZIP builds are also available; extract the entire directory and upgrade through the installer. Python 3.10+ must be available as `python`; [WebView2 Runtime](https://v2.tauri.app/start/prerequisites/#webview2) is also required. Install external analysis tools separately.
+## Create a Goal
 
-Use Settings for installed-build updates. For portable builds, close the app and extract the new version into a separate directory. Default workspaces are outside the application directory. Back up a custom workspace's `.reverselab/` before opening it. History restoration does not restart interrupted processes or relocate stored absolute paths. Do not replace the executable or move a workspace during a run.
+1. Open or create a workspace through the workspace selector. First launch creates a default workspace outside the application and repository directories.
+2. Open **Settings → Model**, enter a chat-completions-compatible API address, API key, and model ID, then save. You can fetch the provider's model list or enter the ID directly. **Save and test** sends a short request to that provider.
+3. Select `red / blue / both` at the upper left. Enter the **Target** separately from the **Goal**. Importing a file or directory through **Samples** preserves an original copy and creates a working copy; entering an external path directly uses that path.
+4. Start the Goal. Time and token budgets are optional and blank by default. Goals and ready actions have no default concurrency cap.
 
-## Model and execution data
+The model comes from saved settings or an explicitly configured `VITE_LLM_MODEL`. No provider or model is substituted when configuration is missing. Basic SHA256 verification can use a deterministic local check; other Goals use the configured model to plan actions and independently assess their evidence.
 
-API keys are held in WebView local storage without OS-keychain integration. Model-assisted tasks send context and selected evidence to the configured endpoint; the app is not an air-gapped environment. Python actions run with the current user's permissions. Unsent drafts and document positions survive navigation during the current workspace session, without promising persistence across application restarts.
+While a Goal runs, send additional requirements from its input area. They remain in the same Goal, appear as pending, and take effect after the current step ends. Earlier evidence and history remain available; the revised objective must pass its own verification. **Stop** cancels the run and retains its recorded progress.
 
-Packaging and release checks are documented in [RELEASING.md](../RELEASING.md).
+Create other Goals or switch workspaces while work continues. Each runner keeps the workspace in which it started. The model generates a short task title; double-click the title or press **F2** on the task to rename it. Your title takes precedence over generated titles.
+
+## Read progress and evidence
+
+The **Body** view shows the Agent's analysis progress and conclusions. Plans, scripts, structured data, tool output, and verification details are expandable. Report paths remain available with the result.
+
+The **Canvas** shows actual actions, dependencies, evidence handoffs, and joins. Click a card to expand its details or open its execution record. Pan and zoom to inspect a branch, use **Follow workflow** to follow current work, or open the full-screen canvas; **Esc** exits full screen. Manual navigation turns following off until you enable it again.
+
+`red` and `blue` use separate strategies and knowledge routes. In `both`, each side can create parallel actions and share evidence with the other side; the graph includes those cross-links. Each branch is checked separately before the combined objective is verified.
+
+Knowledge lives in [`kb/red/`](../kb/red), [`kb/blue/`](../kb/blue), and [`kb/shared/`](../kb/shared). Red uses attack networks, blue uses defense networks, and both can retrieve shared references. The knowledge view reads the actual index and links paired articles.
+
+Health monitoring groups observed events by Goal, Agent, model, knowledge base, tool, and storage. A service with no observation remains unknown. The current execution adapters provide target triage and Python execution; scripts can use installed libraries and command-line tools. Dedicated debugger, device-control, and hardening adapters require their own integration. BLA / REA acceptance work is tracked in the [adversarial validation plan](ADVERSARIAL_PROFILES.md).
+
+## Settings
+
+Settings opens as a full page, with categories for workspaces, models, proxy pools, diagnostics, local tools, and application updates. **Return to workspace** restores the workspace view.
+
+- [Proxy pools](NETWORK.md): independent routes for model requests and Python target access, named nodes, authentication, connection tests, and model failover.
+- [Diagnostics](DIAGNOSTICS.md): optional background performance warnings and optional Sentry error and timing reports. Both are off by default.
+- [Application updates](UPDATES.md): version checks, download progress, signature verification, and installation for supported installed builds. Installation waits for running and queued Goals in all open workspaces.
+
+## Workspace and data
+
+Goals, reports, scripts, and imported samples are stored under the workspace's `.reverselab/` directory. Back up that directory before moving a workspace or upgrading an installed build. Restoring history does not restart interrupted external processes or relocate absolute target paths. Keep application files and workspace data in separate directories. See [workspace storage](WORKSPACES.md).
+
+API keys and proxy credentials are held in local WebView storage without OS-keychain integration. Model-assisted tasks send task context and selected evidence to the endpoint you configure. Python actions run with the current user's permissions. Drafts and reading positions survive navigation during the current workspace session.
+
+For local development, `VITE_LLM_BASE_URL`, `VITE_LLM_API_KEY`, and `VITE_LLM_MODEL` can seed configuration. Vite embeds `VITE_*` values in the frontend build; keep private keys out of distributed builds and public commits.
+
+Use Open ReverseLab for legal, authorized analysis. Read the [disclaimer](../DISCLAIMER.md). Private samples, targets, reports, credentials, and local screenshots stay outside public changes.
+
+## Engineering references
+
+- [Architecture](ARCHITECTURE.md) and [Agent runtime contracts](AGENT_SYSTEM.md)
+- [Health events and error codes](ERROR_CODES.md)
+- [UI design](DESIGN_BRIEF.md) and [development checks](DEV_GUIDE.md)
+- [Packaging and release checks](../RELEASING.md)

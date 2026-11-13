@@ -2,6 +2,7 @@ import type { Workspace } from "../../core/contracts/workspace";
 import { GoalManager, type GoalSnapshot } from "./goalManager";
 import { nativeBridge } from "../native/nativeBridge";
 import { runOpenSourceAgent } from "../../engine/openSourceAgent";
+import { reportHealth } from "../telemetry/telemetryStore";
 
 export interface WorkspaceRuntime { workspace: Workspace; manager: GoalManager; waitForWrites: () => Promise<void> }
 const runtimes = new Map<string, WorkspaceRuntime>();
@@ -38,6 +39,7 @@ export function loadWorkspaceRuntime(workspace: Workspace): Promise<WorkspaceRun
       removeItem: () => {},
     });
     const runtime = { workspace, manager, waitForWrites: () => writes };
+    manager.subscribeHealth(reportHealth);
     runtimes.set(key, runtime);
     manager.subscribe(() => workloadListeners.forEach(listener => listener()));
     workloadListeners.forEach(listener => listener());

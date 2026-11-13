@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
 @theme {
-  --font-sans: "Nunito Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
   --font-mono: "Cascadia Code", "Consolas", monospace;
 }
 @theme inline {
@@ -27,7 +27,7 @@
   --selection: #2c2c2c; --shadow: 0 12px 40px #0003;
 }
 * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-body { margin: 0; background: var(--bg-canvas); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; line-height: 1.6; overflow: hidden; }
+body { margin: 0; background: var(--bg-canvas); color: var(--text-primary); font-family: var(--font-sans); font-size: 15px; line-height: 1.6; overflow: hidden; }
 button, input, textarea, select { font: inherit; }
 button, summary { cursor: pointer; }
 button { transition: background-color 180ms, color 180ms, border-color 180ms; }

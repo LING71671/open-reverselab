@@ -17,7 +17,7 @@ function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: W
   });
   const [activeSessionId, setActiveSessionId] = useState("");
   const trackSelections = useRef<Partial<Record<SecurityTrack, string>>>({});
-  const [viewMode, setViewMode] = useState<HarnessView>("canvas");
+  const [viewMode, setViewMode] = useState<HarnessView>("chat");
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [isToolMonitorOpen, setToolMonitorOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticItem[]>(diagnosticService.getCached());
@@ -40,20 +40,20 @@ function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: W
     setActiveSessionId(id);
     setActiveTrack(session.track);
     setSelectedStepId(null);
-    setViewMode("canvas");
+    setViewMode(previous => previous === "canvas" ? "canvas" : "chat");
   };
   const newSession = () => {
     const id = goalManager.create(track);
     setActiveSessionId(id);
     setSelectedStepId(null);
-    setViewMode("canvas");
+    setViewMode("chat");
     return id;
   };
   const executeHarness = async (target: string, prompt: string, _mode: HarnessMode, budget?: RunBudget) => {
     const id = goalManager.submit(target, prompt, track, budget, activeSessionId);
     setActiveSessionId(id);
     setSelectedStepId(null);
-    setViewMode("canvas");
+    setViewMode(previous => previous === "canvas" ? "canvas" : "chat");
     return id;
   };
   const selectStep = useCallback((step: GraphStep | null) => setSelectedStepId(step?.id || null), []);
@@ -66,6 +66,7 @@ function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: W
     deliverables: record?.deliverables || null, progress: record?.progress, healthEvents: record?.healthEvents || [], persistenceError,
     diagnostics, selectedStep, isRunning, activeRunCount, queuedCount, isToolMonitorOpen,
     executeHarness,
+    steerGoal: (instruction: string) => goalManager.steer(activeSessionId, instruction),
     sendChatMessage: (content: string, target?: string) => executeHarness(target || currentSession?.target || "", content, "wish"),
     clearMessages: () => goalManager.clearMessages(activeSessionId),
     clearLogs: () => goalManager.clearLogs(activeSessionId),
@@ -74,6 +75,7 @@ function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: W
     runDiagnostics: async () => setDiagnostics(await diagnosticService.runFullDiagnostics(currentSession?.target)),
     newSession, selectSession,
     archiveSession: (id: string) => goalManager.archive(id),
+    renameSession: (id: string, title: string) => goalManager.rename(id, title),
     deleteSession: (id: string) => { goalManager.remove(id); if (id === activeSessionId) setActiveSessionId(""); },
     selectStep,
     setViewMode, setToolMonitorOpen,

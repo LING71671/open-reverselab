@@ -316,3 +316,28 @@ test("asynchronous persistence failures remain visible until the latest disk wri
   await tick();
   assert.equal(manager.getSnapshot().persistenceError, undefined);
 });
+
+test("health subscribers receive live accepted events without replaying history or late callbacks", async () => {
+  const wait = deferred();
+  const saved = storage();
+  let callbacks;
+  const manager = new GoalManager(async (_request, updates) => { callbacks = updates; await wait.promise; updates.onRunProgress(progress()); }, saved);
+  const received = [];
+  manager.subscribeHealth(() => { throw new Error("observer unavailable"); });
+  const unsubscribe = manager.subscribeHealth(event => received.push(event));
+  const id = manager.submit("fixture.bin", "inspect fixture", "blue");
+  const event = { eventId: "observed", goalId: id, layer: "tool", status: "failed", timestamp: 1, code: "TOOL_FAILED" };
+  callbacks.onHealthEvent({ ...event, goalId: "another-goal" });
+  callbacks.onHealthEvent(event);
+  callbacks.onHealthEvent(event);
+  assert.equal(received.length, 1);
+  assert.ok(Object.isFrozen(received[0]));
+  manager.getSnapshot(); manager.flush();
+  const restored = new GoalManager(async () => assert.fail("history restarted"), saved);
+  restored.subscribeHealth(() => assert.fail("history was reported"));
+  assert.equal(restored.getSnapshot().records[id].healthEvents[0].code, "TOOL_FAILED");
+  wait.resolve(); await tick();
+  callbacks.onHealthEvent({ ...event, eventId: "late" });
+  assert.equal(received.length, 1);
+  unsubscribe(); manager.flush();
+});
