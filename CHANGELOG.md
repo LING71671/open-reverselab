@@ -2,7 +2,7 @@
 
 All notable changes to the open-reverseLab project will be documented in this file.
 
-## [1.3.0] - 2026-11-13
+## [2.0.0] - 2026-11-13
 
 ### Added
 

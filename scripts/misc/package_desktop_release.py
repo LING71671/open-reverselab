@@ -77,7 +77,8 @@ def package(installer: Path, notes: Path) -> None:
     if installer.stat().st_mtime < binary.stat().st_mtime or signature.stat().st_mtime < installer.stat().st_mtime:
         raise SystemExit('Installer or signature predates its input. Rebuild and sign together.')
     signed_text = base64.b64decode(signature.read_text(encoding='utf-8').strip()).decode('utf-8')
-    if f'version:{release_version}' not in signed_text and f'app-version:{release_version}' not in signed_text:
+    comments = [line.removeprefix('trusted comment: ') for line in signed_text.splitlines() if line.startswith('trusted comment: ')]
+    if len(comments) != 1 or f'version:{release_version}' not in comments[0].split('\t'):
         raise SystemExit('Installer signature does not bind the release version.')
     OUTPUT.mkdir(parents=True, exist_ok=True)
     filename = f'ReverseLab-v{release_version}-windows-x64-setup.exe'

@@ -4,7 +4,7 @@ description: Install ReverseLab on Windows, create a workspace and configure app
 ---
 # Desktop installation and updates
 
-[Download v1.3.0](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0)
+[Download v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0)
 
 ## Install on Windows
 

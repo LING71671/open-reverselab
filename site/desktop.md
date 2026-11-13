@@ -4,7 +4,7 @@ description: 安装 ReverseLab Windows 桌面端，创建工作区并配置应�
 ---
 # 桌面端安装与更新
 
-[下载 v1.3.0](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0)
+[下载 v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0)
 
 ## Windows 安装
 

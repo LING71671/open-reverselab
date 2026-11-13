@@ -45,9 +45,9 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 From the repository root, run the relevant Python tests with pytest and `python scripts/misc/public_release_check.py` before publishing. Private workspaces, samples, reports, credentials, and local screenshots must remain outside public changes.
 
-## v1.3.0 release package
+## v2.0.0 release package
 
-Download the Windows x64 installer from [Releases](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0). Run the installer, then launch ReverseLab. Settings → Application updates checks versions and downloads signed updates after running tasks finish. Portable ZIP builds are also available; extract the entire directory and upgrade through the installer. Python 3.10+ must be available as `python`; [WebView2 Runtime](https://v2.tauri.app/start/prerequisites/#webview2) is also required. Install external analysis tools separately.
+Download the Windows x64 installer from [Releases](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0). Run the installer, then launch ReverseLab. Settings → Application updates checks versions and downloads signed updates after running tasks finish. Portable ZIP builds are also available; extract the entire directory and upgrade through the installer. Python 3.10+ must be available as `python`; [WebView2 Runtime](https://v2.tauri.app/start/prerequisites/#webview2) is also required. Install external analysis tools separately.
 
 Use Settings for installed-build updates. For portable builds, close the app and extract the new version into a separate directory. Default workspaces are outside the application directory. Back up a custom workspace's `.reverselab/` before opening it. History restoration does not restart interrupted processes or relocate stored absolute paths. Do not replace the executable or move a workspace during a run.
 

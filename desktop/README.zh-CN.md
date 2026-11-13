@@ -20,9 +20,9 @@
 
 架构图见 [ARCHITECTURE.md](ARCHITECTURE.md)，运行规则见 [AGENT_SYSTEM.md](AGENT_SYSTEM.md)，工作区见 [WORKSPACES.md](WORKSPACES.md)，错误码见 [ERROR_CODES.md](ERROR_CODES.md)。
 
-## v1.3.0 发布包
+## v2.0.0 发布包
 
-在 [Releases](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) 下载 Windows x64 安装包，运行后启动 ReverseLab。设置中的应用更新支持版本检查、签名下载与安装，详见 [UPDATES.md](UPDATES.md)。需要 Python 3.10+（命令名 `python`）及 [WebView2 Runtime](https://v2.tauri.app/start/prerequisites/#webview2)。外部逆向工具单独安装。
+在 [Releases](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) 下载 Windows x64 安装包，运行后启动 ReverseLab。设置中的应用更新支持版本检查、签名下载与安装，详见 [UPDATES.md](UPDATES.md)。需要 Python 3.10+（命令名 `python`）及 [WebView2 Runtime](https://v2.tauri.app/start/prerequisites/#webview2)。外部逆向工具单独安装。
 
 安装版在设置中升级；便携 ZIP 需要完整解压并保留根目录 `ReverseLab.exe` 旁的 `kb/` 和 `scripts/`，通过新版安装包迁移或退出后解压到新目录。默认工作区在程序目录之外；备份自选工作区的 `.reverselab/` 后再打开。历史运行不会自动恢复外部进程，当前格式不支持路径自动重定位。不要在任务运行时替换 EXE 或移动工作区。
 

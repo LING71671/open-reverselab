@@ -61,12 +61,12 @@ Tauri CLI 2.12+ 的 `build` 会把应用版本绑定到签名。手动签名必�
 
 ```json
 {
-  "version": "1.3.0",
+  "version": "2.0.0",
   "notes": "本次发布的版本说明",
   "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/LING71671/open-reverselab/releases/download/v1.3.0/ReverseLab_1.3.0_x64-setup.exe",
+      "url": "https://github.com/LING71671/open-reverselab/releases/download/v2.0.0/ReverseLab-v2.0.0-windows-x64-setup.exe",
       "signature": "<本次安装包的签名内容>"
     }
   }

@@ -4,7 +4,7 @@ ReverseLab combines a desktop workspace, a red/blue security knowledge base, and
 
 **English** · [简体中文](README.zh.md)
 
-[Download v1.3.0](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) · [Desktop guide](desktop/README.md) · [Knowledge base](kb/README.md) · [Documentation](https://ling71671.github.io/open-reverselab/)
+[Download v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) · [Desktop guide](desktop/README.md) · [Knowledge base](kb/README.md) · [Documentation](https://ling71671.github.io/open-reverselab/)
 
 [![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
 [![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
@@ -58,7 +58,7 @@ Select `red / blue / both` in the upper-left corner, choose a workspace, and ent
 
 ### Download and start
 
-1. Download and run `ReverseLab-v1.3.0-windows-x64-setup.exe` from the [release](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0).
+1. Download and run `ReverseLab-v2.0.0-windows-x64-setup.exe` from the [release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0).
 2. Install Python 3.10 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
 3. Launch ReverseLab. The installer includes its knowledge base and scripts; keep personal workspaces outside the installation directory.
 4. Open Settings and configure an OpenAI-compatible chat-completions endpoint and model, then enter a target and objective. SHA256 verification can run locally without a model.

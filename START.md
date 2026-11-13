@@ -2,7 +2,7 @@
 
 ## 使用桌面端
 
-从 [v1.3.0 Release](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) 下载 Windows x64 压缩包并完整解压。准备 Python 3.10+（`python` 在 PATH 中）和 WebView2 Runtime，然后打开 `ReverseLab.exe`。程序需要同目录的 `kb/`、`scripts/`，不要只复制 EXE。
+从 [v2.0.0 Release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) 下载 Windows x64 压缩包并完整解压。准备 Python 3.10+（`python` 在 PATH 中）和 WebView2 Runtime，然后打开 `ReverseLab.exe`。程序需要同目录的 `kb/`、`scripts/`，不要只复制 EXE。
 
 首次启动会创建默认工作区。在左上角选择 `red / blue / both`，在设置中配置模型，填写目标和任务内容后开始。时间、Token 限制可选。导入样本、并发执行、报告和升级说明见 [desktop/README.zh-CN.md](desktop/README.zh-CN.md)。
 

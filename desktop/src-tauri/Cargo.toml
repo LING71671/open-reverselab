@@ -1,6 +1,6 @@
 [package]
 name = "desktop"
-version = "1.3.0"
+version = "2.0.0"
 description = "ReverseLab desktop analysis workspace"
 authors = ["ReverseLab contributors"]
 edition = "2021"

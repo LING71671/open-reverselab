@@ -6,7 +6,7 @@ A desktop workspace, a red/blue knowledge base, and CLI/MCP tools for external A
 
 ## Where do I download the desktop?
 
-Download the Windows x64 archive from [v1.3.0 Releases](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0), extract it completely, and open `ReverseLab.exe`. Python 3.10+ and WebView2 Runtime are required. Keep the included `kb/` and `scripts/` beside the application.
+Download the Windows x64 installer from [v2.0.0 Releases](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) and run it. Installed builds support signed updates in Settings. Python 3.10+ and WebView2 Runtime are required. For the portable ZIP, extract everything and keep `kb/` and `scripts/` beside the application.
 
 macOS/Linux retain the CLI/MCP workflow; this release has no native desktop binaries for them. See the [desktop guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.md).
 

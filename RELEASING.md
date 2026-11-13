@@ -1,6 +1,6 @@
 # Desktop 发布
 
-v1.3.0 同时发布项目源码、Windows x64 安装包和便携 ZIP。安装包支持签名更新；便携 ZIP 供完整解压使用。Python、WebView2 和外部逆向工具的依赖见 [桌面安装说明](site/desktop.md)。
+v2.0.0 同时发布项目源码、Windows x64 安装包和便携 ZIP。安装包支持签名更新；便携 ZIP 供完整解压使用。Python、WebView2 和外部逆向工具的依赖见 [桌面安装说明](site/desktop.md)。
 
 ## 发布前
 

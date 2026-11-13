@@ -6,7 +6,7 @@
 
 ## 从哪里下载桌面端？
 
-在 [v1.3.0 Release](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) 下载 Windows x64 压缩包，完整解压后打开 `ReverseLab.exe`。需要 Python 3.10+ 和 WebView2 Runtime。`kb/`、`scripts/` 需要与程序一起保留。
+在 [v2.0.0 Release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) 下载 Windows x64 安装包并运行。需要 Python 3.10+ 和 WebView2 Runtime。安装版支持设置中的签名更新；便携版完整解压后使用，`kb/`、`scripts/` 需要与程序一起保留。
 
 macOS/Linux 可使用仓库的 CLI/MCP 工作流，本版本没有这两个平台的桌面二进制。完整说明见 [桌面端指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.zh-CN.md)。
 

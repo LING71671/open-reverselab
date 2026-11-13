@@ -7,13 +7,13 @@ function setup(options: { workload?: () => number; persist?: () => Promise<void>
   const values = new Map<string, string>();
   if (options.saved) values.set(UPDATE_STORAGE_KEY, options.saved);
   const adapter: UpdateAdapter = {
-    info: async () => ({ version: "1.3.0", mode: "installed" }),
-    check: async () => { calls.check++; return { version: "1.4.0", notes: "Release notes" }; },
+    info: async () => ({ version: "2.0.0", mode: "installed" }),
+    check: async () => { calls.check++; return { version: "2.1.0", notes: "Release notes" }; },
     download: async progress => { calls.download++; progress({ downloaded: 50, total: 100 }); },
     install: async () => { calls.install++; },
     ...options.adapter,
   };
-  const controller = new UpdateController(adapter, "1.3.0", { getItem: key => values.get(key) || null, setItem: (key, value) => { values.set(key, value); } }, options.workload || (() => 0), options.persist || (async () => { calls.persist++; }));
+  const controller = new UpdateController(adapter, "2.0.0", { getItem: key => values.get(key) || null, setItem: (key, value) => { values.set(key, value); } }, options.workload || (() => 0), options.persist || (async () => { calls.persist++; }));
   return { controller, calls, values };
 }
 
@@ -33,9 +33,9 @@ test("background checks are throttled and never download or install", async () =
 test("skipping a version survives navigation while manual checks restore its notice", async () => {
   const { controller, values } = setup();
   await controller.check(); controller.skip();
-  assert.equal(JSON.parse(values.get(UPDATE_STORAGE_KEY)!).skippedVersion, "1.4.0");
+  assert.equal(JSON.parse(values.get(UPDATE_STORAGE_KEY)!).skippedVersion, "2.1.0");
   await controller.check(false, Date.now() + UPDATE_INTERVAL + 1);
-  assert.equal(controller.getSnapshot().preferences.skippedVersion, "1.4.0");
+  assert.equal(controller.getSnapshot().preferences.skippedVersion, "2.1.0");
   await controller.check(true);
   assert.equal(controller.getSnapshot().preferences.skippedVersion, "");
 });
@@ -78,14 +78,14 @@ test("a failed signature can never advance to installable state", async () => {
 });
 
 test("portable packages check versions but cannot invoke installer operations", async () => {
-  const { controller, calls } = setup({ adapter: { info: async () => ({ version: "1.3.0", mode: "portable" }) } });
+  const { controller, calls } = setup({ adapter: { info: async () => ({ version: "2.0.0", mode: "portable" }) } });
   await controller.check(); await controller.download(); await controller.install();
   assert.equal(calls.check, 1);
   assert.equal(calls.download + calls.install, 0);
 });
 
 test("browser preview does not pretend it reached the update service", async () => {
-  const { controller, calls } = setup({ adapter: { info: async () => ({ version: "1.3.0", mode: "browser" }) } });
+  const { controller, calls } = setup({ adapter: { info: async () => ({ version: "2.0.0", mode: "browser" }) } });
   await controller.check();
   assert.equal(calls.check, 0);
   assert.equal(controller.getSnapshot().phase, "idle");

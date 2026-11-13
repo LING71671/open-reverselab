@@ -4,7 +4,7 @@ ReverseLab 提供桌面工作区、红蓝知识库和 MCP 工具，用于围绕�
 
 [English](README.md) · **简体中文**
 
-[下载 v1.3.0](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) · [桌面端说明](desktop/README.zh-CN.md) · [知识库](kb/README.md) · [文档站](https://ling71671.github.io/open-reverselab/)
+[下载 v2.0.0](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) · [桌面端说明](desktop/README.zh-CN.md) · [知识库](kb/README.md) · [文档站](https://ling71671.github.io/open-reverselab/)
 
 [![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
 [![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
@@ -46,7 +46,7 @@ ReverseLab 提供桌面工作区、红蓝知识库和 MCP 工具，用于围绕�
 
 ### 下载与启动
 
-1. 从 [Release](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) 下载并运行 `ReverseLab-v1.3.0-windows-x64-setup.exe`。
+1. 从 [Release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) 下载并运行 `ReverseLab-v2.0.0-windows-x64-setup.exe`。
 2. 安装 Python 3.10 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
 3. 启动 ReverseLab。安装包包含知识库和项目脚本；个人工作区请放在安装目录之外。
 4. 在设置中配置兼容 OpenAI chat-completions 的 API 地址和模型，再填写目标和任务内容。SHA256 核验可直接在本地运行，无需模型。
