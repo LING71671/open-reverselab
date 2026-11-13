@@ -1,8 +1,8 @@
 <div align="center">
 
-# Open-ReverseLab
+# Open ReverseLab
 
-<img src="assets/social-preview-v2.png" width="960" alt="ReverseLab — AI reverse engineering workspace">
+<img src="assets/social-preview-v2.png" width="960" alt="Open ReverseLab — AI reverse engineering workspace">
 
 **面向目标的 AI 逆向分析工作台**
 
@@ -37,10 +37,7 @@
 
 在左上角选择 `red / blue / both`，选好工作区，填写文件、目录或 URL 目标和任务内容。实时流程画板展示执行分支，执行记录、日志、报告和健康监控保留结论所依据的证据。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/desktop/knowledge-dark.png">
-  <img src="assets/desktop/knowledge-light.png" alt="ReverseLab 桌面端 both 模式下的知识库阅读界面" width="1280">
-</picture>
+<img src="assets/desktop/knowledge-light.png" alt="Open ReverseLab 桌面端 both 模式下的知识库阅读界面" width="1280">
 
 - **策略独立。** red 与 blue 分别维护分析策略，both 并行运行两个分支并汇总各自结果。
 - **多任务并行。** 每个工作区默认同时运行两个 Goal。切换页面、任务或工作区不会改变后台任务的输出归属。
@@ -53,7 +50,7 @@
 桌面端正在准备 `v2.0.0-beta.1`，安装包尚未发布。当前可从[源码构建](#从源码运行桌面端)体验预览版，后续下载以 [Releases](https://github.com/LING71671/open-reverselab/releases) 中的实际发布为准。
 
 1. 安装 Python 3.10 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
-2. 从仓库构建并启动 ReverseLab，个人工作区放在源码与安装目录之外。
+2. 从仓库构建并启动 Open ReverseLab，个人工作区放在源码与安装目录之外。
 3. 在设置中配置兼容 OpenAI chat-completions 的 API 地址和模型，再填写目标和任务内容。SHA256 核验可直接在本地运行，无需模型。
 
 桌面端以 Windows x64 为打包目标，Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可使用源码形式的 CLI/MCP 工作流，暂未提供桌面安装包。安装版的更新机制见[应用更新](desktop/UPDATES.md)。

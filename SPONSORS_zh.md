@@ -16,4 +16,4 @@ Sentry 提供赞助账户，用于项目工具链的错误监控与性能追踪�
 
 ## 支持项目
 
-希望赞助 ReverseLab，可通过 GitHub 联系项目维护者。
+希望赞助 Open ReverseLab，可通过 GitHub 联系项目维护者。

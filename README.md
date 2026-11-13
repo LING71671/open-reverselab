@@ -1,8 +1,8 @@
 <div align="center">
 
-# Open-ReverseLab
+# Open ReverseLab
 
-<img src="assets/social-preview-v2.png" width="960" alt="ReverseLab — AI reverse engineering workspace">
+<img src="assets/social-preview-v2.png" width="960" alt="Open ReverseLab — AI reverse engineering workspace">
 
 **An AI workspace for target-based reverse engineering**
 
@@ -37,10 +37,7 @@ Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · M
 
 Select `red / blue / both` in the upper-left corner, choose a workspace, and enter a file, directory, or URL target with a Goal. The live canvas shows execution branches; activity, logs, reports, and health views retain the evidence behind the result.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/desktop/knowledge-dark.png">
-  <img src="assets/desktop/knowledge-light.png" alt="ReverseLab Desktop knowledge reader in both mode" width="1280">
-</picture>
+<img src="assets/desktop/knowledge-light.png" alt="Open ReverseLab Desktop knowledge reader in both mode" width="1280">
 
 - **Independent strategies.** `red` and `blue` use separate analysis policies. `both` runs the branches in parallel and joins their results.
 - **Concurrent Goals.** Each workspace runs up to two Goals at once by default. Switching views, tasks, or workspaces does not redirect a running task's output.
@@ -53,7 +50,7 @@ Select `red / blue / both` in the upper-left corner, choose a workspace, and ent
 The desktop is being prepared for `v2.0.0-beta.1`; its installer has not been published. Use the [source build](#build-the-desktop) to try the current preview. Published downloads will be listed on [Releases](https://github.com/LING71671/open-reverselab/releases).
 
 1. Install Python 3.10 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
-2. Build and launch ReverseLab from the repository. Keep personal workspaces outside the source and installation directories.
+2. Build and launch Open ReverseLab from the repository. Keep personal workspaces outside the source and installation directories.
 3. Open Settings and configure an OpenAI-compatible chat-completions endpoint and model, then enter a target and objective. SHA256 verification can run locally without a model.
 
 Windows x64 is the desktop packaging target. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux support the source-based CLI/MCP workflow; native desktop packages for those platforms are not currently provided. See [application updates](desktop/UPDATES.md) for the installed-build update mechanism.

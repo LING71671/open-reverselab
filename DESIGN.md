@@ -1,6 +1,6 @@
-# ReverseLab 视觉规范
+# Open ReverseLab 视觉规范
 
-官网与桌面端沿用 OFFFOLD 的黑白方向：清爽、少文字、功能清楚，保留 ReverseLab 标识。首页展示实际产品，知识库以阅读和检索为主。
+官网与桌面端沿用 OFFFOLD 的黑白方向：清爽、少文字、功能清楚，保留 Open ReverseLab 标识。首页展示实际产品，知识库以阅读和检索为主。
 
 ## 颜色与字体
 

@@ -16,4 +16,4 @@ Sentry provides a sponsored account for error monitoring and performance tracing
 
 ## Support the project
 
-To sponsor ReverseLab, contact the project maintainer on GitHub.
+To sponsor Open ReverseLab, contact the project maintainer on GitHub.
