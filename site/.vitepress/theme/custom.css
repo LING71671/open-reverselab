@@ -67,10 +67,10 @@ a { text-underline-offset: 4px; }
 .rl-board-list small { display: block; color: var(--rl-muted); font-size: 14px; margin-top: 5px; line-height: 1.6; }
 .rl-board-list svg { flex-shrink: 0; transition: transform .18s ease; }
 .rl-board-list a:hover svg { transform: translateX(4px); }
-.rl-commands { min-width: 0; background: var(--rl-surface); border-radius: 10px; overflow: hidden; }
+.rl-commands { min-width: 0; background: var(--rl-surface); border-radius: 10px; }
 .rl-command-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--rl-line); }
-.rl-command-bar select { background: var(--rl-surface); color: var(--rl-ink); font-size: 14px; padding: 8px 24px 8px 0; max-width: 100%; }
-.rl-command-bar button { padding: 6px 10px; font-size: 13px; text-decoration: underline; white-space: nowrap; }
+.rl-command-bar > .rl-select { flex: 1; max-width: 260px; }
+.rl-command-bar > button { padding: 6px 10px; font-size: 13px; text-decoration: underline; white-space: nowrap; }
 .rl-commands pre { overflow: auto; padding: 22px; font-size: 12px; line-height: 2; margin: 0; }
 .rl-commands > p { margin: 0; padding: 0 22px 14px; font-size: 13px; }
 .rl-community { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; padding: 32px 0; font-size: 14px; }

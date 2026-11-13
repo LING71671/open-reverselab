@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useData, withBase } from 'vitepress'
+import SelectField from './SelectField.vue'
 const { lang } = useData()
 const en = computed(() => lang.value.startsWith('en'))
 const local = (path: string) => withBase(`${en.value ? '/en' : ''}${path}.html`)
@@ -8,6 +9,7 @@ const repo = 'https://github.com/LING71671/open-reverselab'
 const track = ref<'red' | 'blue' | 'both'>('both')
 const modes = ['red', 'blue', 'both'] as const
 const platform = ref('windows')
+const platforms = [{ value: 'windows', label: 'PowerShell' }, { value: 'unix', label: 'Bash · macOS / Linux' }]
 const copyStatus = ref('')
 const boards = [
   { id: 'ctf-website', name: 'Web / CTF', zh: '认证、注入、服务端漏洞与防御验证', en: 'Authentication, injection, server-side flaws and defense checks' },
@@ -46,7 +48,7 @@ async function copyCommand() {
     </section>
     <section class="rl-split rl-section" aria-labelledby="cli-title">
       <div><h2 id="cli-title">{{ en ? 'Prefer the terminal?' : '也可以从命令行使用' }}</h2><p>{{ en ? 'The repository includes scripts, an MCP server and client workflows. Install only the external tools your analysis needs.' : '仓库包含脚本、MCP 服务和客户端工作流。外部工具按分析任务单独安装。' }}</p><a class="rl-text-link" :href="`${repo}/blob/main/START.md`">{{ en ? 'Read the quick start' : '阅读快速开始' }} ↗</a></div>
-      <div class="rl-commands"><div class="rl-command-bar"><label><span class="rl-sr-only">{{ en ? 'Shell' : '命令行环境' }}</span><select v-model="platform" @change="copyStatus = ''"><option value="windows">PowerShell</option><option value="unix">Bash · macOS / Linux</option></select></label><button @click="copyCommand">{{ en ? 'Copy' : '复制' }}</button></div><pre tabindex="0"><code>{{ command }}</code></pre><p v-if="copyStatus" role="status">{{ copyStatus }}</p></div>
+      <div class="rl-commands"><div class="rl-command-bar"><SelectField id="command-platform" v-model="platform" :label="en ? 'Shell' : '命令行环境'" :hide-label="true" :options="platforms" @update:model-value="copyStatus = ''" /><button @click="copyCommand">{{ en ? 'Copy' : '复制' }}</button></div><pre tabindex="0"><code>{{ command }}</code></pre><p v-if="copyStatus" role="status">{{ copyStatus }}</p></div>
     </section>
     <section class="rl-sponsors rl-section" aria-labelledby="sponsors-title">
       <div class="rl-sponsor-heading"><h2 id="sponsors-title">{{ en ? 'Sponsors' : '赞助支持' }}</h2><a class="rl-text-link" :href="`${repo}/blob/main/${en ? 'SPONSORS.md' : 'SPONSORS_zh.md'}`">{{ en ? 'Support the project' : '支持项目' }} ↗</a></div>
