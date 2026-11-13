@@ -1,50 +1,53 @@
 <script setup lang="ts">
-import TelemetryBar from './components/TelemetryBar.vue'
-import HeroSection from './components/HeroSection.vue'
-import PipelineSection from './components/PipelineSection.vue'
-import BoardsSection from './components/BoardsSection.vue'
-import DesktopSection from './components/DesktopSection.vue'
-import McpWorkbench from './components/McpWorkbench.vue'
-import TerminalSection from './components/TerminalSection.vue'
-import RepoScriptsSection from './components/RepoScriptsSection.vue'
-import CommunitySection from './components/CommunitySection.vue'
+import { computed, ref } from 'vue'
+import { useData, withBase } from 'vitepress'
+const { lang, isDark } = useData()
+const en = computed(() => lang.value.startsWith('en'))
+const local = (path: string) => withBase(`${en.value ? '/en' : ''}${path}.html`)
+const repo = 'https://github.com/LING71671/open-reverselab'
+const track = ref<'red' | 'blue' | 'both'>('both')
+const modes = ['red', 'blue', 'both'] as const
+const platform = ref('windows')
+const copyStatus = ref('')
+const boards = [
+  { id: 'ctf-website', name: 'Web / CTF', zh: '认证、注入、服务端漏洞与防御验证', en: 'Authentication, injection, server-side flaws and defense checks' },
+  { id: 'apk-reverse', name: 'Android / APK', zh: 'Java、Native、加密与运行时观测', en: 'Java, native code, cryptography and runtime observation' },
+  { id: 'pe-reverse', name: 'Windows / PE', zh: '静态分析、调试、行为研判与检测', en: 'Static analysis, debugging, behavior and detection' },
+  { id: 'general', name: 'General', zh: '算法、协议、固件与跨领域分析', en: 'Algorithms, protocols, firmware and cross-domain analysis' },
+]
+const tracks = computed(() => ({
+  red: en.value ? 'Investigate attack paths and validate hypotheses against an authorized target. Keep evidence from each attempt.' : '围绕授权目标寻找分析路径，验证假设，保留每次尝试的证据。',
+  blue: en.value ? 'Follow defense guidance to examine behavior, assess controls and produce detection or remediation evidence.' : '结合防御知识检查行为与控制措施，形成检测、加固和修复验证证据。',
+  both: en.value ? 'Run red and blue branches independently, then bring their evidence into a shared result.' : 'red 与 blue 分支独立推进，完成后汇入同一份结果。',
+}))
+const command = computed(() => `git clone ${repo}.git\ncd open-reverselab\n${platform.value === 'windows' ? '.\\scripts\\misc\\bootstrap.ps1' : 'bash ./scripts/misc/bootstrap.sh'}\n${platform.value === 'windows' ? 'python' : 'python3'} scripts/misc/lab_healthcheck.py`)
+async function copyCommand() {
+  try { await navigator.clipboard.writeText(command.value); copyStatus.value = en.value ? 'Copied' : '已复制' }
+  catch { copyStatus.value = en.value ? 'Select the commands to copy them.' : '复制失败，请选中命令手动复制。' }
+}
 </script>
-
 <template>
-  <div class="rl-bench">
-    <!-- 01. Telemetry & Live Status -->
-    <TelemetryBar />
-
-    <!-- 02. Precision Laboratory Hero & Gauges -->
-    <HeroSection />
-
-    <!-- 03. 5-Stage Reversing Pipeline Loop -->
-    <PipelineSection />
-
-    <!-- 04. 5 Attack Boards Matrix -->
-    <BoardsSection />
-
-    <!-- 05. Desktop Visual Workbench (Branch: dev) -->
-    <DesktopSection />
-
-    <!-- 06. Agent MCP Tool Matrix & JSON-RPC Inspector -->
-    <McpWorkbench />
-
-    <!-- 07. Multi-Platform Setup Terminal -->
-    <TerminalSection />
-
-    <!-- 08. Maintainer & Automation Tooling -->
-    <RepoScriptsSection />
-
-    <!-- 09. Star History & Open Source Community -->
-    <CommunitySection />
+  <div class="rl-home">
+    <section id="desktop" class="rl-intro">
+      <div><h1>{{ en ? 'An AI workbench for reverse engineering.' : 'AI 逆向分析工作台' }}</h1><p>{{ en ? 'Give ReverseLab a target and a Goal. Follow parallel analysis, inspect the evidence and keep the results in your workspace.' : '给出目标和 Goal，查看并行分析过程，在工作区中收纳样本、证据与报告。' }}</p></div>
+      <div class="rl-download"><a class="rl-button" :href="`${repo}/releases/tag/v1.3.0`">{{ en ? 'Download for Windows' : '下载 Windows 版' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg></a><span>v1.3.0 · Windows x64</span><a class="rl-text-link" :href="local('/desktop')">{{ en ? 'Installation & updates' : '安装与更新说明' }}</a></div>
+    </section>
+    <figure class="rl-product">
+      <a :href="withBase(`/assets/desktop/knowledge-${isDark ? 'dark' : 'light'}.png`)" :aria-label="en ? 'View full desktop screenshot' : '查看桌面端完整截图'"><img :src="withBase(`/assets/desktop/knowledge-${isDark ? 'dark' : 'light'}.png`)" :alt="en ? 'ReverseLab desktop, showing paired red and blue JWT knowledge articles' : 'ReverseLab 桌面端，展示配对的 red 与 blue JWT 知识文档'" width="1280" height="720" fetchpriority="high" /></a>
+      <figcaption>{{ en ? 'Desktop knowledge base · both' : '桌面端知识库 · both' }}<a :href="local('/kb/ctf-website/techniques/02-auth/jwt/00-overview-defense')">{{ en ? 'Read this article' : '阅读这篇文档' }}<span aria-hidden="true"> ↗</span></a></figcaption>
+    </figure>
+    <section class="rl-split rl-section" aria-labelledby="goal-title">
+      <div><h2 id="goal-title">{{ en ? 'Start with a target.' : '从目标开始' }}</h2><p>{{ en ? 'Use a file, directory or URL. Time and token limits are optional. Follow each branch in the live flow canvas.' : '目标可以是文件、目录或 URL。时间与 Token 上限可选，实时流程画板保留每条分支的进度。' }}</p><a class="rl-text-link" :href="`${repo}/blob/main/desktop/AGENT_SYSTEM.md`">{{ en ? 'How Goals run' : '了解 Goal 如何执行' }} ↗</a></div>
+      <div class="rl-track-demo"><div class="rl-segments" role="group" :aria-label="en ? 'Analysis mode' : '分析模式'"><button v-for="mode in modes" :key="mode" :aria-pressed="track === mode" @click="track = mode">{{ mode }}</button></div><p class="rl-track-description" aria-live="polite">{{ tracks[track] }}</p><div class="rl-track-path" aria-hidden="true"><span>Target</span><span class="rl-path-line"></span><span>{{ track === 'both' ? 'red + blue' : track }}</span><span class="rl-path-line"></span><span>{{ en ? 'Evidence' : '证据' }}</span></div></div>
+    </section>
+    <section id="knowledge" class="rl-split rl-section" aria-labelledby="knowledge-title">
+      <div><h2 id="knowledge-title">{{ en ? 'Knowledge for the next step.' : '按领域查知识' }}</h2><p>{{ en ? 'Analysis techniques and defense guidance live together. Search by signal, then follow the linked procedures and tool mappings.' : '分析技术与 defense 文档按领域组织。按信号检索，继续阅读对应规程和工具映射。' }}</p><a class="rl-text-link" :href="local('/mcp-tools')">{{ en ? 'Browse the tool registry' : '查看工具目录' }} ↗</a></div>
+      <div class="rl-board-list"><a v-for="board in boards" :key="board.id" :href="local(`/kb/${board.id}/README`)"><span><strong>{{ board.name }}</strong><small>{{ en ? board.en : board.zh }}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a></div>
+    </section>
+    <section class="rl-split rl-section" aria-labelledby="cli-title">
+      <div><h2 id="cli-title">{{ en ? 'Prefer the terminal?' : '也可以从命令行使用' }}</h2><p>{{ en ? 'The repository includes scripts, an MCP server and client workflows. Install only the external tools your analysis needs.' : '仓库包含脚本、MCP 服务和客户端工作流。外部工具按分析任务单独安装。' }}</p><a class="rl-text-link" :href="`${repo}/blob/main/START.md`">{{ en ? 'Read the quick start' : '阅读快速开始' }} ↗</a></div>
+      <div class="rl-commands"><div class="rl-command-bar"><label><span class="rl-sr-only">{{ en ? 'Shell' : '命令行环境' }}</span><select v-model="platform" @change="copyStatus = ''"><option value="windows">PowerShell</option><option value="unix">Bash · macOS / Linux</option></select></label><button @click="copyCommand">{{ en ? 'Copy' : '复制' }}</button></div><pre tabindex="0"><code>{{ command }}</code></pre><p v-if="copyStatus" role="status">{{ copyStatus }}</p></div>
+    </section>
+    <section class="rl-community rl-section" :aria-label="en ? 'Open source community' : '开源社区'"><p>{{ en ? 'Open source under GPL-3.0. Supported by' : '以 GPL-3.0 开源。感谢' }} <a href="https://sentry.io">Sentry</a>{{ en ? '.' : ' 的支持。' }}</p><div><a :href="repo">GitHub</a><a href="https://deepwiki.com/LING71671/open-reverselab">DeepWiki</a><a :href="`${repo}/blob/main/.github/CONTRIBUTING.md`">{{ en ? 'Contribute' : '参与贡献' }}</a><a href="https://star-history.com/#LING71671/open-reverselab&Date">Star History</a></div></section>
   </div>
 </template>
-
-<style scoped>
-.rl-bench {
-  max-width: 1160px;
-  margin: 0 auto;
-  padding: 0 24px 80px;
-}
-</style>

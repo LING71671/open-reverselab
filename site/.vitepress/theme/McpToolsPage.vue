@@ -1,167 +1,38 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useData } from 'vitepress'
 import mcpTools from '../mcp-tools.json'
-
-interface McpTool {
-  id: string
-  name: string
-  launch_mode: string
-  ai_callable: boolean
-  notes: string
-}
-
-interface McpGroup {
-  board: string
-  tools: McpTool[]
-}
-
 const { lang } = useData()
-const isEn = computed(() => lang.value.startsWith('en'))
-
-const groups = mcpTools as McpGroup[]
-
-const boardNames: Record<string, Record<string, string>> = {
-  'ctf-website': { zh: 'CTF / Web', en: 'CTF / Web' },
-  android: { zh: 'Android', en: 'Android' },
-  windows: { zh: 'Windows / PE', en: 'Windows / PE' },
-  common: { zh: '通用', en: 'Common' },
-  misc: { zh: '脚本工具', en: 'Scripts' },
-}
-
-const total = groups.reduce((s, g) => s + g.tools.length, 0)
-const aiCallable = groups.reduce((s, g) => s + g.tools.filter((t) => t.ai_callable).length, 0)
-
-const t = computed(() => ({
-  title: isEn.value ? 'MCP Tools Directory' : 'MCP 工具目录',
-  desc: isEn.value
-    ? `${total} core tools, ${aiCallable} marked AI-callable. Configure via <code>tools/ai-tool-registry.json</code> and <code>.mcp.json</code> in the repo; the full 100+ tool set is verified by <code>mcp_smoke_check.py</code>.`
-    : `${total} 个核心工具，${aiCallable} 个标记为 AI 可调用。配置见仓库 <code>tools/ai-tool-registry.json</code> 与 <code>.mcp.json</code>；完整 100+ 工具集由 <code>mcp_smoke_check.py</code> 验证。`,
-  manual: isEn.value ? 'Manual' : '手动',
-}))
-
-const boardName = (board: string) => boardNames[board]?.[isEn.value ? 'en' : 'zh'] ?? board
+const en = computed(() => lang.value.startsWith('en'))
+const query = ref('')
+const board = ref('')
+const groups = computed(() => mcpTools.filter(g => !board.value || g.board === board.value).map(g => ({ ...g, tools: g.tools.filter(t => `${t.id} ${t.name} ${t.notes}`.toLowerCase().includes(query.value.trim().toLowerCase())) })).filter(g => g.tools.length))
 </script>
-
 <template>
   <div class="rl-tools">
-    <header class="rl-tools-hero">
-      <h1>{{ t.title }}</h1>
-      <p v-html="t.desc"></p>
-    </header>
-
-    <section v-for="g in groups" :key="g.board" class="rl-tools-group">
-      <h2>{{ boardName(g.board) }}<span class="rl-count">{{ g.tools.length }}</span></h2>
-      <div class="rl-tools-grid">
-        <div v-for="tool in g.tools" :key="tool.id" class="rl-tool-card">
-          <div class="rl-tool-head">
-            <code>{{ tool.id }}</code>
-            <span class="rl-badge" :class="tool.ai_callable ? 'is-ai' : 'is-manual'">
-              {{ tool.ai_callable ? 'AI' : t.manual }}
-            </span>
-          </div>
-          <div class="rl-tool-name">{{ tool.name }}</div>
-          <div class="rl-tool-mode">{{ tool.launch_mode }}</div>
-          <p v-if="tool.notes">{{ tool.notes }}</p>
-        </div>
-      </div>
-    </section>
+    <h1>{{ en ? 'Tool registry' : '工具目录' }}</h1>
+    <p>{{ en ? 'Tools registered in the repository and their integration methods. AI-callable is a registry attribute; installed dependencies and readiness must be checked on your machine.' : '查看仓库登记的工具和接入方式。AI 可调用是注册表属性，安装情况和可用性需要在本机检查。' }}</p>
+    <p><a href="https://github.com/LING71671/open-reverselab/blob/main/tools/ai-tool-registry.json">{{ en ? 'Registry source' : '注册表源码' }}</a> · <a href="https://github.com/LING71671/open-reverselab/blob/main/tools/skills/mcp/ReverseLabToolsMCP/README.md">{{ en ? 'MCP service setup' : 'MCP 服务配置' }}</a></p>
+    <div class="rl-tool-filters"><label>{{ en ? 'Search tools' : '搜索工具' }}<input type="search" v-model="query" :placeholder="en ? 'Name, ID or description' : '名称、ID 或说明'" /></label><label>{{ en ? 'Domain' : '领域' }}<select v-model="board"><option value="">{{ en ? 'All domains' : '所有领域' }}</option><option v-for="g in mcpTools" :key="g.board">{{ g.board }}</option></select></label></div>
+    <p v-if="!groups.length" role="status">{{ en ? 'No tools match this search.' : '没有匹配的工具。' }} <button class="rl-text-link" @click="query = ''; board = ''">{{ en ? 'Clear filters' : '清除筛选' }}</button></p>
+    <section v-for="g in groups" :key="g.board"><h2>{{ g.board }} <small>{{ g.tools.length }}</small></h2><details v-for="tool in g.tools" :key="tool.id"><summary><span><strong>{{ tool.name }}</strong><code>{{ tool.id }}</code></span><span class="rl-tool-method">{{ tool.ai_callable ? (en ? 'AI-callable' : 'AI 可调用') : (en ? 'Manual' : '手动') }}</span></summary><div><p>{{ tool.notes }}</p><p>{{ en ? 'Integration' : '接入方式' }}: <code>{{ tool.launch_mode }}</code></p></div></details></section>
   </div>
 </template>
-
 <style scoped>
-.rl-tools {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 32px 24px 64px;
-}
-.rl-tools-hero h1 {
-  font-family: var(--rl-font-display);
-  font-size: 2rem;
-  letter-spacing: -0.02em;
-  margin: 0 0 10px;
-}
-.rl-tools-hero p {
-  color: var(--rl-ink-soft);
-  max-width: 72ch;
-  line-height: 1.7;
-}
-.rl-tools-group {
-  margin-top: 36px;
-}
-.rl-tools-group h2 {
-  font-family: var(--rl-font-display);
-  font-size: 1.15rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 14px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--rl-line);
-}
-.rl-count {
-  font-family: var(--rl-font-mono);
-  font-size: 0.8rem;
-  color: var(--rl-muted);
-  background: var(--rl-surface);
-  border-radius: 999px;
-  padding: 1px 9px;
-}
-.rl-tools-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
-}
-.rl-tool-card {
-  border: 1px solid var(--rl-line);
-  border-radius: 10px;
-  padding: 14px 16px;
-  background: var(--rl-bg);
-}
-.rl-tool-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.rl-tool-head code {
-  font-family: var(--rl-font-mono);
-  font-size: 12.5px;
-  color: var(--rl-primary);
-  overflow-wrap: anywhere;
-}
-.rl-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.rl-badge.is-ai {
-  background: var(--rl-primary-soft);
-  color: var(--rl-primary);
-}
-.rl-badge.is-manual {
-  background: var(--rl-surface-2);
-  color: var(--rl-muted);
-}
-.rl-tool-name {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--rl-ink);
-  margin-top: 8px;
-}
-.rl-tool-mode {
-  font-family: var(--rl-font-mono);
-  font-size: 11.5px;
-  color: var(--rl-muted);
-  margin-top: 2px;
-}
-.rl-tool-card p {
-  font-size: 12.5px;
-  color: var(--rl-ink-soft);
-  line-height: 1.6;
-  margin: 8px 0 0;
-}
+.rl-tools { max-width: 1000px; margin: auto; padding: 48px 24px 80px; }
+h1 { font-size: 36px; line-height: 1.2; font-weight: 750; letter-spacing: -.025em; }
+p { margin: 18px 0; line-height: 1.8; color: var(--rl-ink-soft); max-width: 75ch; }
+a { text-decoration: underline; }
+.rl-tool-filters { display: flex; gap: 20px; margin: 32px 0; }
+label { display: grid; gap: 8px; font-size: 14px; flex: 1; }
+input, select { padding: 10px 12px; border: 1px solid var(--rl-line); border-radius: 6px; color: var(--rl-ink); background: var(--rl-bg); width: 100%; }
+input::placeholder { color: var(--rl-muted); }
+section { margin-top: 36px; } h2 { font-size: 22px; font-weight: 700; margin-bottom: 14px; }
+h2 small { font-size: 14px; color: var(--rl-muted); margin-left: 8px; font-variant-numeric: tabular-nums; }
+details { border-top: 1px solid var(--rl-line); }
+summary { display: flex; justify-content: space-between; gap: 24px; align-items: center; padding: 18px 4px; cursor: pointer; }
+summary strong { display: block; font-size: 16px; } summary code { font-size: 12px; color: var(--rl-muted); overflow-wrap: anywhere; }
+.rl-tool-method { flex-shrink: 0; color: var(--rl-muted); font-size: 13px; }
+details[open] summary { background: var(--rl-surface); padding-inline: 12px; } details > div { padding: 0 12px 10px; }
+@media(max-width: 600px) { .rl-tool-filters { flex-direction: column; } h1 { font-size: 30px; } }
 </style>

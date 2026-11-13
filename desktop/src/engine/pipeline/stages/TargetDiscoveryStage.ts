@@ -1,9 +1,9 @@
 import { PipelineStage, PipelineContext, PipelineCallbacks, StageDiagnostic } from "../../../core";
-import { nativeBridge } from "../../../services";
+import { nativeBridge } from "../../../services/native/nativeBridge";
 
 export class TargetDiscoveryStage implements PipelineStage {
   readonly id = "target-discovery";
-  readonly name = "Target & Sample Discovery";
+  readonly name = "目标识别";
   readonly description = "Probes target file or container directory, discovers associated binaries and components";
   readonly category = "discovery" as const;
   enabled = true;
@@ -19,15 +19,14 @@ export class TargetDiscoveryStage implements PipelineStage {
         status: "warn",
         durationMs: 0,
         timestamp: Date.now(),
-        summary: "No target specified; proceeding with generic reverse environment",
+        summary: "未指定 target，无法开始任务",
         metrics: [
           { label: "Target", value: "None", status: "warn" },
-          { label: "Mode", value: "Ad-hoc Request", status: "info" },
         ],
       };
       ctx.diagnostics[this.id] = diag;
       callbacks.onDiagnosticUpdate?.(diag);
-      return;
+      throw new Error("请填写 target");
     }
 
     const toolId = `tool-discovery-${Date.now()}`;
@@ -40,7 +39,7 @@ export class TargetDiscoveryStage implements PipelineStage {
     });
 
     try {
-      const triage = await nativeBridge.triage(target);
+      const triage = await nativeBridge.triage(target, { timeoutMs: ctx.budget.monotonicDeadline - performance.now(), executionId: `${ctx.sessionId}:triage`, signal: ctx.signal });
       ctx.triage = triage;
       ctx.discoveredSamples = triage.discoveredSamples || [];
       ctx.containerDirectory = triage.containerDirectory;
@@ -59,11 +58,11 @@ export class TargetDiscoveryStage implements PipelineStage {
       callbacks.onToolCall?.({
         id: toolId,
         tool: "target_discovery",
-        title: isDir ? `Sample Directory Discovered (${samplesCount} items)` : `Target Binary Verified`,
+        title: isDir ? `样本目录 · ${samplesCount} 项` : "目标识别",
         status: "done",
         detail: isDir
           ? `Primary: ${triage.resolvedBinary || "none"} in ${triage.containerDirectory} (${samplesCount} samples inventory)`
-          : `Binary: ${target} (${triage.fileType || "PE/Binary"})`,
+          : `${target} · ${triage.fileType || "类型未识别"}`,
         output: {
           containerDirectory: triage.containerDirectory,
           resolvedBinary: triage.resolvedBinary,
@@ -75,12 +74,12 @@ export class TargetDiscoveryStage implements PipelineStage {
       const diag: StageDiagnostic = {
         stageId: this.id,
         stageName: this.name,
-        status: "pass",
+        status: triage.httpError ? "warn" : "pass",
         durationMs,
         timestamp: Date.now(),
         summary: isDir
           ? `Found ${samplesCount} samples in ${triage.containerDirectory}; selected [${triage.resolvedBinary}]`
-          : `Target file verified: ${target}`,
+          : triage.targetUrl ? triage.httpError || `HTTP ${triage.httpStatus} · ${triage.targetUrl}` : `文件已读取：${target}`,
         metrics: [
           { label: "Mode", value: isDir ? "Container Directory" : "Single Sample", status: "pass" },
           { label: "Inventory Count", value: samplesCount, unit: "files", status: "pass" },
@@ -121,6 +120,7 @@ export class TargetDiscoveryStage implements PipelineStage {
       };
       ctx.diagnostics[this.id] = diag;
       callbacks.onDiagnosticUpdate?.(diag);
+      throw err;
     }
   }
 }

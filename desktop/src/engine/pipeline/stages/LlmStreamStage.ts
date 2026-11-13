@@ -1,22 +1,36 @@
 import { PipelineStage, PipelineContext, PipelineCallbacks, StageDiagnostic } from "../../../core";
-import { llmService } from "../../../services";
+import { llmService } from "../../../services/llm/llmService";
+import { buildAnalysisMessages, estimateMessageTokens } from "../analysisPrompt";
 
 export class LlmStreamStage implements PipelineStage {
   readonly id = "llm-stream";
-  readonly name = "LLM Stream Reasoning Engine";
+  readonly name = "分析与计划";
   readonly description = "Streams forensic synthesis and assembly-level reasoning from LLM provider";
   readonly category = "llm" as const;
   enabled = true;
 
   async execute(ctx: PipelineContext, callbacks: PipelineCallbacks): Promise<void> {
+    if (ctx.state.builtinHash) {
+      const script = `import hashlib, json\nfrom pathlib import Path\ntarget = ${JSON.stringify(ctx.target)}\npath = Path(target)\nif not path.is_file():\n    raise ValueError("Target must be a file")\nwith path.open("rb") as source:\n    digest = hashlib.file_digest(source, "sha256").hexdigest()\nprint(json.dumps({"target": target, "sha256": digest, "observations": [{"name": "file_size", "value": path.stat().st_size, "source": target}]}))`;
+      ctx.state.fullContent = `SHA256 核验\n\n\`\`\`python\n${script}\n\`\`\``;
+      callbacks.onToken?.(ctx.state.fullContent);
+      const diag: StageDiagnostic = { stageId: this.id, stageName: this.name, status: "skipped", durationMs: 0, timestamp: Date.now(), summary: "使用内置 SHA256 核验脚本，未调用模型", metrics: [] };
+      ctx.diagnostics[this.id] = diag;
+      callbacks.onDiagnosticUpdate?.(diag);
+      return;
+    }
     const startTime = Date.now();
-    const activeProvider = llmService.getActiveProvider();
+    const activeProvider = ctx.state.modelSnapshot?.provider || llmService.getActiveProvider();
     let baseUrl =
       activeProvider?.baseUrl ||
       (import.meta.env.VITE_LLM_BASE_URL as string) ||
-      "https://tokenrhythm.studio/v1";
-    const apiKey = activeProvider?.apiKey || llmService.getApiKey();
-    const model = llmService.getModel() || "mimo-v2.6-flash";
+      "";
+    if (!baseUrl) {
+      ctx.state.globalBlocker = true;
+      throw new Error("尚未配置模型服务");
+    }
+    const apiKey = ctx.state.modelSnapshot ? activeProvider?.apiKey || "" : activeProvider?.apiKey || llmService.getApiKey();
+    const model = ctx.state.modelSnapshot?.model || llmService.getModel();
 
     // In dev mode, route through Vite proxy to avoid CORS preflight issues
     if (
@@ -27,50 +41,17 @@ export class LlmStreamStage implements PipelineStage {
     }
 
     const cleanBase = baseUrl.replace(/\/+$/, "");
-    const triage = ctx.triage;
-    const board = ctx.kbRouting?.board || triage?.board || "pe-reverse";
-
-    // Build context payload infused with open-reverseLab attack network methodology
-    const matchedKbs = ctx.kbRouting?.matchedTechniques?.join("\n  - ") || "kb/pe-reverse/techniques/01-triage";
-    const attackNetSummary = ctx.kbRouting?.content ? ctx.kbRouting.content.slice(0, 1200) : "";
-
-    const systemPrompt =
-      "你是 open-reverseLab 原生自动化逆向工程 Harness 核心 Agent。\n" +
-      "你的工作目标是自主驱动逆向研判，严格遵循 open-reverseLab 攻击网（kb/pe-reverse/techniques/attack-network.md）与标准工程规约：\n" +
-      "1. 绝不泛泛空谈概念；直接落地具体入口点地址、节区熵值、反调试/进程内存/注册表 API 与驱动组件分析。\n" +
-      "2. 深度研判：基于识别出的静态遥测与匹配的知识库技术路径，评估样本行为特征、注入原语与自保护机制。\n" +
-      "3. 自动化取证：必须输出一段精炼完整（约 60 行，用 ```python 包裹）的独立可运行 Python 取证脚本，使用 pefile/hashlib 真实提取该目标的 PE 特征、反调试 API 引用与持久化项并 print 输出。\n" +
-      "4. 输出结构：【一、项目攻击网路由诊断】、【二、关键证据与行为研判】、【三、自动化取证脚本】、【四、最终结论】。\n";
-
-    const compactTriage = {
-      board,
-      targetPath: ctx.resolvedBinary ? `${ctx.containerDirectory || ""}\\${ctx.resolvedBinary}` : ctx.target,
-      arch: triage?.arch,
-      entryPoint: triage?.entryPoint,
-      subsystem: triage?.subsystem,
-      linkerVersion: (triage as any)?.linkerVersion,
-      packer: triage?.packer,
-      sections: triage?.sections?.map((s) => ({ name: s.name, entropy: s.entropy, isExec: s.isExecutable })),
-      capabilities: triage?.capabilities,
-      discoveredSamples: ctx.discoveredSamples?.map((s) => s.name).slice(0, 10),
-    };
-
-    const messagesPayload = [
-      { role: "system", content: systemPrompt },
-      ...ctx.history,
-      {
-        role: "user",
-        content:
-          `【目标上下文】\n` +
-          `- 主目标: ${compactTriage.targetPath}\n` +
-          `- 容器目录: ${ctx.containerDirectory || "单个目标文件"}\n` +
-          `- 发现关联二进制数: ${ctx.discoveredSamples?.length || 1}\n` +
-          `- 匹配 open-reverseLab 攻击网技术路径:\n  - ${matchedKbs}\n\n` +
-          `【静态初筛遥测】\n\`\`\`json\n${JSON.stringify(compactTriage, null, 2)}\n\`\`\`\n\n` +
-          (attackNetSummary ? `【项目攻击网技术指引】\n${attackNetSummary}\n\n` : "") +
-          `【任务需求】\n${ctx.prompt}`,
-      },
-    ];
+    const messagesPayload = buildAnalysisMessages(ctx);
+    const inputEstimate = estimateMessageTokens(messagesPayload);
+    const remaining = Math.floor(ctx.budget.maxTokens - ctx.budget.tokensUsed);
+    if (remaining <= inputEstimate + 32) {
+      ctx.state.tokenBudgetExhausted = true;
+      throw new Error("剩余额度不足以发送本轮上下文");
+    }
+    const outputLimit = Math.min(8192, remaining - inputEstimate);
+    const previousUsage = ctx.budget.tokensUsed;
+    let chargedInput = false;
+    let actualUsage = false;
 
     let fullContent = "";
     let firstTokenTime = 0;
@@ -78,6 +59,9 @@ export class LlmStreamStage implements PipelineStage {
 
     try {
       const url = `${cleanBase}/chat/completions`;
+      chargedInput = true;
+      ctx.budget.tokensUsed = previousUsage + inputEstimate;
+      ctx.budget.usageEstimated = true;
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -89,13 +73,15 @@ export class LlmStreamStage implements PipelineStage {
           messages: messagesPayload,
           stream: true,
           temperature: 0.2,
+          max_tokens: outputLimit,
+          stream_options: { include_usage: true },
         }),
         signal: ctx.signal,
       });
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`LLM HTTP ${res.status}: ${errText}`);
+        throw Object.assign(new Error(`LLM HTTP ${res.status}: ${errText}`), { status: res.status });
       }
 
       const reader = res.body?.getReader();
@@ -122,6 +108,10 @@ export class LlmStreamStage implements PipelineStage {
           if (trimmed.startsWith("data: ")) {
             try {
               const json = JSON.parse(trimmed.slice(6));
+              if (typeof json.usage?.total_tokens === "number" && json.usage.total_tokens >= 0) {
+                ctx.budget.tokensUsed = previousUsage + json.usage.total_tokens;
+                actualUsage = true;
+              }
               const delta = json.choices?.[0]?.delta?.content || "";
               if (delta) {
                 if (!firstTokenTime) {
@@ -129,6 +119,7 @@ export class LlmStreamStage implements PipelineStage {
                 }
                 tokenCount += delta.length > 3 ? Math.round(delta.length / 3) : 1;
                 fullContent += delta;
+                if (!actualUsage) ctx.budget.tokensUsed = previousUsage + inputEstimate + Math.ceil(new TextEncoder().encode(fullContent).length / 3);
                 callbacks.onToken?.(fullContent);
               }
             } catch {
@@ -136,8 +127,16 @@ export class LlmStreamStage implements PipelineStage {
             }
           }
         }
+        if (ctx.budget.tokensUsed >= ctx.budget.maxTokens) {
+          await reader.cancel();
+          ctx.state.tokenBudgetExhausted = true;
+          throw new Error("Token 额度已耗尽");
+        }
       }
 
+      if (!fullContent.trim()) throw new Error("模型未返回可用内容");
+      ctx.budget.usageEstimated = !actualUsage || !!ctx.state.priorEstimatedUsage;
+      ctx.state.priorEstimatedUsage = ctx.budget.usageEstimated;
       ctx.state.fullContent = fullContent;
       const totalDurationMs = Date.now() - startTime;
       const ttftMs = firstTokenTime ? firstTokenTime - startTime : totalDurationMs;
@@ -180,11 +179,14 @@ export class LlmStreamStage implements PipelineStage {
       callbacks.onDiagnosticUpdate?.(diag);
     } catch (err: any) {
       const totalDurationMs = Date.now() - startTime;
+      if (chargedInput && !actualUsage) ctx.budget.usageEstimated = true;
+      ctx.state.globalBlocker = !ctx.signal?.aborted && !ctx.state.tokenBudgetExhausted;
       if (ctx.signal?.aborted || err?.name === "AbortError") {
         fullContent += "\n\n[已手动中止分析]";
       } else {
         fullContent += `\n\n[执行异常: ${err.message || String(err)}]`;
       }
+      ctx.state.fullContent = fullContent;
       callbacks.onToken?.(fullContent);
 
       const diag: StageDiagnostic = {

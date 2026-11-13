@@ -1,325 +1,97 @@
-import { useState, useEffect } from "react";
-import { BookOpen, FileCode, Search, ChevronRight, X, Play, Code2 } from "lucide-react";
-import { useI18n } from "../../core";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Search, RefreshCw, ArrowUpRight, ArrowLeft, X, BookOpen } from "lucide-react";
+import { matchesTrack, type SecurityTrack } from "../../core";
+import { nativeBridge, type KbTechnique } from "../../services/native/nativeBridge";
 import { MarkdownViewer } from "./MarkdownViewer";
 
 interface KbNavigatorProps {
-  onSelectTechnique?: (ref: string) => void;
+  track: SecurityTrack;
+  onTrackChange: (track: SecurityTrack) => void;
+  onSelectTechnique: (path: string, title: string) => void;
 }
+const boardNames: Record<string, string> = { "ctf-website": "Web / CTF", "apk-reverse": "Android / APK", "pe-reverse": "Windows / PE", general: "通用", windows: "Windows" };
 
-interface TechniqueMeta {
-  id: string;
-  board: string;
-  titleZh: string;
-  titleEn: string;
-  category: string;
-  signals: string[];
-  mcpTool: string;
-  docPath: string;
-}
-
-const DEFAULT_CURATED: TechniqueMeta[] = [
-  {
-    id: "pe-reverse:00-triage-pe",
-    board: "pe-reverse",
-    titleZh: "PE 初筛与加壳研判",
-    titleEn: "PE Triage & Packer Analysis",
-    category: "00-triage",
-    signals: ["UPX", "Entropy", "Overlay"],
-    mcpTool: "triage_pe / die_scan",
-    docPath: "kb/pe-reverse/techniques/00-triage/00-triage-pe.md",
-  },
-  {
-    id: "pe-reverse:00-anti-debug-bypass",
-    board: "pe-reverse",
-    titleZh: "反调试与反虚拟机绕过",
-    titleEn: "Anti-Debug & Anti-VM Bypass",
-    category: "02-dynamic",
-    signals: ["IsDebuggerPresent", "NtGlobalFlag"],
-    mcpTool: "patch_pe / x64dbg_scaffold",
-    docPath: "kb/pe-reverse/techniques/02-dynamic/00-anti-debug-bypass.md",
-  },
-  {
-    id: "pe-reverse:00-ghidra-headless",
-    board: "pe-reverse",
-    titleZh: "Ghidra 符号与交叉引用反编译",
-    titleEn: "Ghidra Headless Decompilation",
-    category: "01-static",
-    signals: ["WinMain", "Xrefs", "ImportTable"],
-    mcpTool: "ghidra_headless_analyze",
-    docPath: "kb/pe-reverse/techniques/01-static/00-ghidra-headless.md",
-  },
-  {
-    id: "apk-reverse:00-unpack-dex",
-    board: "apk-reverse",
-    titleZh: "Android 脱壳与内存转储",
-    titleEn: "Android Dex Unpack & Memory Dump",
-    category: "00-unpack",
-    signals: ["SecShell", "Legu", "Bangcle"],
-    mcpTool: "android_crypto_unpack_recipe",
-    docPath: "kb/apk-reverse/techniques/00-unpack/00-unpack-dex.md",
-  },
-  {
-    id: "apk-reverse:00-frida-hook",
-    board: "apk-reverse",
-    titleZh: "Frida 动态插桩与 Hook",
-    titleEn: "Frida Dynamic Instrumentation & Hook",
-    category: "02-dynamic",
-    signals: ["JNI_OnLoad", "Java.use", "Interceptor"],
-    mcpTool: "android_http_observation_recipe",
-    docPath: "kb/apk-reverse/techniques/02-dynamic/00-frida-hook.md",
-  },
-  {
-    id: "ctf-website:00-jwt-attacks",
-    board: "ctf-website",
-    titleZh: "JWT 密钥爆破与算法混淆",
-    titleEn: "JWT Token Cracking & Algorithm Confusion",
-    category: "02-auth",
-    signals: ["NoneAlgorithm", "WeakSecret", "JKU"],
-    mcpTool: "jwt_tool / ctf_autopilot",
-    docPath: "kb/ctf-website/techniques/02-auth/00-jwt-attacks.md",
-  },
-  {
-    id: "general:01-custom-xor-tea",
-    board: "general",
-    titleZh: "对称加解密与哈希算法还原",
-    titleEn: "Symmetric Crypto & Hash Reconstruction",
-    category: "00-crypto",
-    signals: ["TEA", "XOR", "CRC32", "RC4"],
-    mcpTool: "solve_crypto_from_evidence",
-    docPath: "kb/general/techniques/00-crypto/01-custom-xor-tea.md",
-  },
-];
-
-async function tauriInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T | null> {
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    return await invoke<T>(cmd, args);
-  } catch {
-    return null;
-  }
-}
-
-export function KbNavigator({ onSelectTechnique }: KbNavigatorProps) {
-  const { t, locale } = useI18n();
-  const [selectedBoard, setSelectedBoard] = useState<string>("all");
-  const [search, setSearch] = useState<string>("");
-  const [techniques, setTechniques] = useState<TechniqueMeta[]>(DEFAULT_CURATED);
-  const [activeDoc, setActiveDoc] = useState<{ path: string; title: string; content: string } | null>(null);
-
+export function KbNavigator({ track, onTrackChange, onSelectTechnique }: KbNavigatorProps) {
+  const [catalog, setCatalog] = useState<KbTechnique[]>([]);
+  const [search, setSearch] = useState("");
+  const [board, setBoard] = useState("all");
+  const [activePath, setActivePath] = useState("");
+  const [readerOpen, setReaderOpen] = useState(false);
+  const cache = useRef(new Map<string, string>());
+  const scrollPositions = useRef(new Map<string, number>());
+  const reader = useRef<HTMLDivElement>(null);
+  const [document, setDocument] = useState<{ path: string; content?: string; error?: string }>({ path: "" });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [docError, setDocError] = useState("");
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const liveList = await tauriInvoke<any[]>("list_kb_techniques");
-      if (mounted && liveList && liveList.length > 0) {
-        const mapped: TechniqueMeta[] = liveList.map((item) => ({
-          id: item.id,
-          board: item.board,
-          category: item.category,
-          titleZh: item.title,
-          titleEn: item.title,
-          signals: item.signals.length > 0 ? item.signals : ["General"],
-          mcpTool: item.mcp_tools.length > 0 ? item.mcp_tools.join(", ") : "kb_router",
-          docPath: item.path,
-        }));
-        setTechniques(mapped);
+    let cancelled = false;
+    setLoading(true); setError("");
+    nativeBridge.listKb("both").then(items => { if (!cancelled) setCatalog(items); }).catch(err => { if (!cancelled) setError(String(err.message || err)); }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [revision]);
+  const available = useMemo(() => catalog.filter(item => matchesTrack(item.track, track)), [catalog, track]);
+  const boards = [...new Set(available.map(item => item.board))];
+  const filtered = useMemo(() => {
+    const words = search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    return available.filter(item => (board === "all" || item.board === board) && words.every(word => `${item.title} ${item.path} ${item.signals.join(" ")} ${item.mcp_tools.join(" ")}`.toLocaleLowerCase().includes(word)));
+  }, [available, board, search]);
+  const active = filtered.find(item => item.path === activePath) || filtered[0];
+  const content = active ? cache.current.get(active.path) ?? (document.path === active.path ? document.content : undefined) : undefined;
+  const readError = document.path === active?.path ? document.error : undefined;
+  const reading = !!active && content === undefined && !readError;
+  useLayoutEffect(() => {
+    if (reader.current && active && !reading) reader.current.scrollTop = scrollPositions.current.get(active.path) || 0;
+  }, [active?.path, reading]);
+  const refresh = () => { cache.current.clear(); setDocument({ path: "" }); setRevision(n => n + 1); };
+  useEffect(() => {
+    let cancelled = false;
+    setDocError("");
+    if (!active || cache.current.has(active.path)) return;
+    const path = active.path;
+    nativeBridge.readKb(path).then(text => {
+      if (cancelled) return;
+      if (text === null) setDocument({ path, error: "文档不存在，请刷新知识库" });
+      else {
+        if (cache.current.size >= 40) {
+          const oldest = cache.current.keys().next().value!;
+          cache.current.delete(oldest);
+          scrollPositions.current.delete(oldest);
+        }
+        cache.current.set(path, text);
+        setDocument({ path, content: text });
       }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const handleReadDoc = async (item: TechniqueMeta, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const content = await tauriInvoke<string>("read_kb_doc", { relativePath: item.docPath });
-    setActiveDoc({
-      path: item.docPath,
-      title: item.titleZh,
-      content: content || `# ${item.titleZh}\n\n*暂无法直接读取本机文档文本，请查阅: ${item.docPath}*`,
-    });
+    }).catch(err => { if (!cancelled) setDocument({ path, error: String(err.message || err) }); });
+    return () => { cancelled = true; };
+  }, [active?.path, revision]);
+  const related = active ? catalog.filter(item => active.related_paths.includes(item.path)) : [];
+  const openDocument = (path: string) => {
+    const item = catalog.find(item => item.path === path);
+    if (!item) { setDocError(`文档未收录：${path}`); return; }
+    if (!matchesTrack(item.track, track)) onTrackChange(item.track);
+    setSearch(""); setBoard("all"); setActivePath(path); setReaderOpen(true);
   };
-
-  const boards = [
-    { id: "all", label: t.kb.all },
-    { id: "pe-reverse", label: "PE" },
-    { id: "apk-reverse", label: "APK" },
-    { id: "ctf-website", label: "CTF" },
-    { id: "general", label: "General" },
-  ];
-
-  const filtered = techniques.filter((item) => {
-    const matchBoard = selectedBoard === "all" || item.board === selectedBoard;
-    const title = locale === "zh" ? item.titleZh : item.titleEn;
-    const matchSearch =
-      !search.trim() ||
-      title.toLowerCase().includes(search.toLowerCase()) ||
-      item.signals.some((s) => s.toLowerCase().includes(search.toLowerCase())) ||
-      item.mcpTool.toLowerCase().includes(search.toLowerCase()) ||
-      item.docPath.toLowerCase().includes(search.toLowerCase());
-    return matchBoard && matchSearch;
-  });
-
   return (
-    <div className="w-full h-full p-6 flex flex-col gap-4 font-sans select-none overflow-y-auto">
-      {/* Top Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-zinc-400" />
-          <h2 className="text-sm font-semibold tracking-wide text-zinc-100">{t.kb.title}</h2>
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
-            Live KB
-          </span>
+    <section className="knowledge-workspace" aria-label="知识库" data-reading={readerOpen}>
+      <div className="knowledge-library">
+        <div className="knowledge-filters">
+          <label className="knowledge-search"><Search size={16} /><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="搜索文档、信号或工具" aria-label="搜索知识库" />{search && <button className="icon-button" aria-label="清除搜索" onClick={() => setSearch("")}><X size={14} /></button>}</label>
+          <div className="knowledge-filter-row"><select aria-label="知识库领域" value={board} onChange={event => setBoard(event.target.value)}><option value="all">所有领域</option>{boards.map(value => <option key={value} value={value}>{boardNames[value] || value}</option>)}</select><span>{filtered.length} 篇</span><button className="icon-button" onClick={refresh} disabled={loading} aria-label="刷新知识库"><RefreshCw size={14} className={loading ? "loading-spinner" : ""} /></button></div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-zinc-400">
-            {filtered.length} / {techniques.length} 篇技术文件
-          </span>
+        <div className="knowledge-list" aria-label="文档列表" aria-busy={loading}>
+          {loading ? <div className="skeleton-list" aria-label="正在加载知识库">{[0,1,2,3,4,5].map(n => <div className="skeleton-row" key={n} />)}</div> : error ? <div className="inline-error" role="alert"><p>{error}</p><button className="text-button" onClick={() => setRevision(n => n + 1)}>重试</button></div> : filtered.length === 0 ? <div className="compact-empty">没有匹配文档<button className="text-button" onClick={() => { setSearch(""); setBoard("all"); }}>清除筛选</button></div> : filtered.map(item => <button key={item.path} className="knowledge-row" aria-current={active?.path === item.path ? "true" : undefined} onClick={() => { setActivePath(item.path); setReaderOpen(true); }}><span>{item.title}</span><small><span>{boardNames[item.board] || item.board}</span><span className={`track-text track-${item.track}`}>{item.track}</span></small></button>)}
         </div>
       </div>
-
-      {/* Filter and Search Bar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t.kb.searchPlaceholder}
-            className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 placeholder-zinc-600 font-mono focus:outline-none focus:border-zinc-700"
-          />
-        </div>
-
-        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-zinc-950 border border-zinc-900">
-          {boards.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => setSelectedBoard(b.id)}
-              className={`px-2.5 py-1 rounded text-xs font-mono transition cursor-pointer ${
-                selectedBoard === b.id
-                  ? "bg-zinc-800 text-zinc-100"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {b.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Technique Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-        {filtered.map((item) => {
-          const title = locale === "zh" ? item.titleZh : item.titleEn;
-          return (
-            <div
-              key={item.id}
-              className="p-4 rounded-xl bg-zinc-950/60 border border-zinc-900 hover:border-zinc-800 transition flex flex-col justify-between gap-3 group"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
-                    {item.board}
-                  </span>
-                  <span className="text-xs font-mono text-zinc-500 flex items-center gap-1">
-                    <span>{item.category}</span>
-                    <ChevronRight className="w-3 h-3 text-zinc-700 group-hover:text-zinc-400 transition" />
-                  </span>
-                </div>
-
-                <div className="text-xs font-medium text-zinc-200 group-hover:text-white transition">
-                  {title}
-                </div>
-
-                {/* Signals */}
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {item.signals.map((sig, idx) => (
-                    <span
-                      key={idx}
-                      className="text-xs font-mono px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-400 border border-zinc-800/60"
-                    >
-                      {sig}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Toolbar */}
-              <div className="flex items-center justify-between pt-2 border-t border-zinc-900 text-xs font-mono text-zinc-500">
-                <div className="flex items-center gap-1.5 truncate max-w-[180px]">
-                  <FileCode className="w-3 h-3 text-zinc-600 shrink-0" />
-                  <span className="text-zinc-400 truncate">{item.mcpTool}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => handleReadDoc(item, e)}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition cursor-pointer"
-                  >
-                    <Code2 className="w-3 h-3" />
-                    <span>阅读</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectTechnique?.(item.docPath)}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 transition cursor-pointer"
-                  >
-                    <Play className="w-3 h-3" />
-                    <span>执行</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Slide-over / Modal for Markdown Reading */}
-      {activeDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-          <div className="w-full max-w-4xl h-[85vh] bg-[#0c0c0e] border border-zinc-800 rounded-2xl flex flex-col shadow-2xl overflow-hidden font-sans">
-            {/* Header */}
-            <div className="px-5 py-3 border-b border-zinc-800/80 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-zinc-400" />
-                <h3 className="text-xs font-semibold text-zinc-200">{activeDoc.title}</h3>
-                <span className="text-[11px] font-mono text-zinc-500">{activeDoc.path}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveDoc(null)}
-                className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 p-6 overflow-y-auto bg-[#09090b]">
-              <MarkdownViewer content={activeDoc.content} />
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 py-3 border-t border-zinc-800/80 flex items-center justify-between bg-zinc-950">
-              <span className="text-[11px] font-mono text-zinc-500">
-                可复制脚本直接在目标中验证
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectTechnique?.(activeDoc.path);
-                  setActiveDoc(null);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 font-medium text-xs hover:bg-white transition cursor-pointer"
-              >
-                <Play className="w-3.5 h-3.5" />
-                <span>基于此篇发起逆向分析</span>
-              </button>
-            </div>
+      <article className="knowledge-reader" aria-busy={reading}>
+        {active && <>
+          <header className="reader-toolbar"><button className="icon-button reader-back" aria-label="返回文档列表" onClick={() => setReaderOpen(false)}><ArrowLeft size={16} /></button><span className="reader-path" title={active.path}><BookOpen size={15} />{boardNames[active.board] || active.board}</span><span className="grow" /><button className="secondary-button" title="参考此文档创建 Goal" onClick={() => onSelectTechnique(active.path, active.title)}>创建 Goal<ArrowUpRight size={15} /></button></header>
+          {related.length > 0 && <div className="paired-documents"><span>关联文档</span>{related.map(item => <button key={item.path} className="text-button" onClick={() => openDocument(item.path)} title={item.title}><ArrowLeft size={12} /><span className={`track-text track-${item.track}`}>{item.track}</span><span className="paired-title">{item.title}</span></button>)}</div>}
+          <div className="reader-content" key={active.path} ref={reader} onScroll={event => { if (!reading) scrollPositions.current.set(active.path, event.currentTarget.scrollTop); }}>
+            {docError || readError ? <div className="inline-error" role="alert"><p>{docError || readError}</p><button className="text-button" onClick={refresh}>重试</button></div> : reading ? <div className="reader-skeleton" aria-label="正在读取文档"><div /><div /><div /></div> : <MarkdownViewer content={content || ""} docPath={active.path} onNavigate={openDocument} />}
           </div>
-        </div>
-      )}
-    </div>
+        </>}
+      </article>
+    </section>
   );
 }

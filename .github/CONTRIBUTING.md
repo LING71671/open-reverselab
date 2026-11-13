@@ -21,3 +21,14 @@ python scripts/misc/public_release_check.py
 python scripts/misc/lab_healthcheck.py
 .\scripts\ctf-website\smoke_cve_pipeline.ps1
 ```
+
+## 按模块开发
+
+| 模块 | 入口 | 验证 |
+| --- | --- | --- |
+| 桌面端 | [开发指南](../desktop/DEV_GUIDE.md) | `pnpm build`、Goal/流水线与调度测试、相关 Python 测试 |
+| 知识库 | [写作约定](../kb/AI-USAGE.md) | 文档结构、frontmatter、索引与关联路径 |
+| 官网 | [站点说明](../site/README.md) | `pnpm build`、中英文与深浅主题、桌面和窄屏操作 |
+| 发布 | [RELEASING.md](../RELEASING.md) | 提交内容扫描、离线检查、干净克隆、版本和制品哈希 |
+
+JavaScript 项目统一使用 pnpm 和提交的 lockfile。Python 依赖使用 uv 管理的隔离环境。产品截图仅允许合成数据，不得包含用户路径、真实目标或凭据。

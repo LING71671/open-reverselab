@@ -1,104 +1,124 @@
 import { PipelineStage, PipelineContext, PipelineCallbacks, StageDiagnostic } from "../../../core";
-import { nativeBridge } from "../../../services";
+import { nativeBridge, type KbTechnique } from "../../../services/native/nativeBridge";
+import { inferKbBoard, selectKbTechniques } from "../kbSelection";
+import { isHashObjective } from "../../tracks/evidence";
 
 export class KbRoutingStage implements PipelineStage {
   readonly id = "kb-routing";
-  readonly name = "KB Attack Network Routing";
-  readonly description = "Matches domain knowledge base and consults attack network trees";
+  readonly name = "知识检索";
+  readonly description = "Selects indexed red, blue, or shared techniques from observed signals";
   readonly category = "kb" as const;
   enabled = true;
 
   async execute(ctx: PipelineContext, callbacks: PipelineCallbacks): Promise<void> {
     const startTime = Date.now();
-    const board = ctx.triage?.board || "pe-reverse";
-    const kbPath = `kb/${board}/techniques/attack-network.md`;
+    if (isHashObjective(ctx.prompt) && ctx.triage?.sha256) {
+      ctx.state.builtinHash = true;
+      const diag: StageDiagnostic = { stageId: this.id, stageName: this.name, status: "skipped", durationMs: 0, timestamp: Date.now(), summary: "SHA256 可直接核验，无需知识检索", metrics: [] };
+      ctx.diagnostics[this.id] = diag;
+      callbacks.onDiagnosticUpdate?.(diag);
+      return;
+    }
+    let board = ctx.triage?.board || inferKbBoard(ctx.target);
     const toolId = `kb-${Date.now()}`;
-
     callbacks.onToolCall?.({
       id: toolId,
-      tool: "read_kb_doc",
-      title: `Attack Network Routing (${board})`,
+      tool: "list_kb_techniques",
+      title: `Knowledge Base · ${ctx.track}`,
       status: "running",
-      detail: `Loading ${kbPath}`,
-      kbRef: kbPath,
+      detail: `Matching ${ctx.track} techniques${board ? ` in ${board}` : ""}`,
     });
 
-    let docLength = 0;
-    let docLoaded = false;
-    let docError = "";
-    let loadedContent = "";
-
+    const loaded: Array<{ path: string; content: string }> = [];
+    const errors: string[] = [];
+    let catalogLoaded = false;
+    let selectedCount = 0;
     try {
-      const kbContent = await nativeBridge.readKb(kbPath);
-      if (kbContent) {
-        loadedContent = kbContent;
-        docLength = kbContent.length;
-        docLoaded = true;
+      const catalog: KbTechnique[] = ctx.state.kbCatalog || await nativeBridge.listKb(ctx.track);
+      ctx.state.kbCatalog = catalog;
+      catalogLoaded = true;
+      const query = [
+        ctx.prompt,
+        ...Object.values(ctx.triage?.capabilities || {}).flat(),
+        ctx.triage?.packer || "",
+        ctx.triage?.sections?.length ? "section" : "",
+        ...(ctx.triage?.importedDlls || []),
+      ].join(" ");
+      const attempted = new Set<string>(ctx.state.attemptedKbPaths || []);
+      while (!loaded.length && !ctx.signal?.aborted && performance.now() < ctx.budget.monotonicDeadline) {
+        const available = catalog.filter((item: { path: string }) => !attempted.has(item.path));
+        const peerPaths = (ctx.state.readPeerMessages?.() || []).flatMap((message: { payload: { evidenceRefs?: Array<{ path?: string }> } }) => message.payload.evidenceRefs?.map((ref) => ref.path) || []);
+        const preferred = available.filter((item) => ctx.state.preferredKbPaths?.includes(item.path) || item.related_paths.some((path) => peerPaths.includes(path)));
+        const selected = preferred.length ? preferred.slice(0, 4) : selectKbTechniques(available, ctx.track, query, board);
+        if (!selected.length) {
+          if (!attempted.size && ctx.triage && !ctx.state.usedDirectEvidence) {
+            ctx.state.usedDirectEvidence = true;
+            break;
+          }
+          ctx.state.pathsExhausted = true;
+          ctx.state.blockedReason = attempted.size ? "没有未尝试的匹配知识库路线" : "当前信号未匹配知识库路线";
+          break;
+        }
+        selectedCount += selected.length;
+        board ||= selected[0]?.board || "general";
+        selected.forEach((item) => attempted.add(item.path));
+        ctx.state.attemptedKbPaths = [...attempted];
+        const results = await Promise.allSettled(selected.map(async (item) => {
+          const content = await nativeBridge.readKb(item.path);
+          if (!content) throw new Error(`Document unavailable: ${item.path}`);
+          return { path: item.path, content: `### ${item.title} [${item.track}]\nSource: ${item.path}\n${content.slice(0, 3000)}` };
+        }));
+        for (const result of results) {
+          if (result.status === "fulfilled") loaded.push(result.value);
+          else errors.push(String(result.reason?.message || result.reason));
+        }
       }
-    } catch (e: any) {
-      docError = e.message || String(e);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+      ctx.state.pathsExhausted = true;
+      ctx.state.blockedReason = `知识库服务不可用：${errors[0]}`;
     }
 
-    // Match concrete open-reverseLab attack network primitives
-    const matchedTechniques: string[] = [];
-    const triage = ctx.triage;
-    if (triage?.capabilities?.antiDebug && triage.capabilities.antiDebug.length > 0) {
-      matchedTechniques.push("kb/pe-reverse/techniques/04-dynamic-analysis/05-anti-debug-bypass.md");
-    }
-    if (triage?.capabilities?.registryPersistence && triage.capabilities.registryPersistence.length > 0) {
-      matchedTechniques.push("kb/pe-reverse/techniques/06-ioc-extraction/08-procmon-patterns.md");
-    }
-    if (triage?.sections && triage.sections.length > 0) {
-      matchedTechniques.push("kb/pe-reverse/techniques/02-pe-structure/01-pe-header-parsing.md");
-    }
-    if (ctx.discoveredSamples?.some((s) => s.ext === ".sys")) {
-      matchedTechniques.push("kb/pe-reverse/techniques/09-av-evasion/ (Driver Filter Review)");
-    }
-
-    const durationMs = Date.now() - startTime;
+    const content = loaded.map((doc) => doc.content).join("\n\n");
+    const matchedTechniques = loaded.map((doc) => doc.path);
+    const kbPath = `kb/${board || "general"}/techniques/kb-index.json`;
     ctx.kbRouting = {
-      board,
+      board: board || "general",
+      track: ctx.track,
       kbPath,
-      length: docLength,
-      content: loadedContent,
+      length: content.length,
+      content,
       matchedTechniques,
     };
-
+    const durationMs = Date.now() - startTime;
+    const summary = loaded.length
+      ? `${ctx.track}: loaded ${loaded.length}/${selectedCount} matching documents`
+      : catalogLoaded ? `${ctx.track}: no matching documents loaded` : `Knowledge base unavailable: ${errors[0]}`;
     callbacks.onToolCall?.({
       id: toolId,
-      tool: "read_kb_doc",
-      title: `Attack Network Routing (${board})`,
-      status: "done",
-      detail: docLoaded
-        ? `Loaded ${kbPath} (${docLength} chars), Matched ${matchedTechniques.length} techniques`
-        : `Using default reverse guidelines for ${board}`,
-      output: {
-        board,
-        kbPath,
-        docLength,
-        matchedTechniques,
-        status: docLoaded ? "loaded" : "fallback",
-      },
+      tool: "list_kb_techniques",
+      title: `Knowledge Base · ${ctx.track}`,
+      status: errors.length ? "error" : "done",
+      detail: summary,
+      output: { board, track: ctx.track, matchedTechniques, errors },
+      kbRef: matchedTechniques[0],
       durationMs,
     });
-
     const diag: StageDiagnostic = {
       stageId: this.id,
       stageName: this.name,
-      status: docLoaded ? "pass" : "warn",
+      status: loaded.length && !errors.length ? "pass" : "warn",
       durationMs,
       timestamp: Date.now(),
-      summary: docLoaded
-        ? `Active Board: [${board}], Attack Network Document: ${docLength} bytes`
-        : `Active Board: [${board}], Standard rule set active`,
+      summary,
       metrics: [
-        { label: "Target Board", value: board, status: "pass" },
-        { label: "Attack Network", value: kbPath, status: docLoaded ? "pass" : "info" },
-        { label: "Rules Loaded", value: docLoaded ? `${docLength} chars` : "Default", status: docLoaded ? "pass" : "warn" },
-        { label: "Lookup Time", value: durationMs, unit: "ms", status: "pass" },
+        { label: "Track", value: ctx.track, status: "info" },
+        { label: "Target Board", value: board || "general", status: "info" },
+        { label: "Documents Loaded", value: loaded.length, status: loaded.length ? "pass" : "warn" },
+        { label: "Lookup Time", value: durationMs, unit: "ms", status: "info" },
       ],
-      evidence: { board, kbPath, docLength },
-      error: docError || undefined,
+      evidence: { board, track: ctx.track, matchedTechniques, selectedCount },
+      error: errors.length ? errors.join("; ") : undefined,
     };
     ctx.diagnostics[this.id] = diag;
     callbacks.onDiagnosticUpdate?.(diag);

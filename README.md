@@ -1,28 +1,13 @@
-<div align="center">
+# Open-ReverseLab
 
-# Open-ReverseLab — AI Reverse Engineering Agent & MCP Lab
-
-**Open-source AI-powered reverse-engineering platform for autonomous binary analysis, built for Claude Code, Codex, OpenCode and any MCP-compatible agent.**
-
-Ghidra · Frida · x64dbg · Rizin · PE · APK · Cryptography · Blue-Team Hardening · Dual-Track Analysis
-
----
-
-**An open-source reverse-engineering lab — executable 1:1 RED/BLUE knowledge base, 110+ MCP tools, Agent-native.**
-
-*From an input signal to an evidence chain, every step is runnable.*
-
-<br />
-
-[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
-[![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
-[![Sponsor: Sentry](https://img.shields.io/badge/sponsored%20by-Sentry-362D59?style=flat-square&logo=sentry&logoColor=white)](#sponsors)
+ReverseLab combines a desktop workspace, a red/blue security knowledge base, and MCP tools for target-based analysis. Use the desktop to run and inspect Goals, or connect the repository to Claude Code, Codex, OpenCode, and other MCP clients.
 
 **English** · [简体中文](README.zh.md)
 
-</div>
+[Download v1.3.0](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) · [Desktop guide](desktop/README.md) · [Knowledge base](kb/README.md) · [Documentation](https://ling71671.github.io/open-reverselab/)
 
----
+[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
+[![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
 
 ## :handshake: Sponsors
 
@@ -59,183 +44,100 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · Cryptography · Blue-Team Har
 
 ---
 
-## What is ReverseLab
+## Desktop
 
-ReverseLab is an opinionated, runnable **BLUE / RED / BOTH dual-track** reverse-engineering and security knowledge base for reverse engineers, blue-team defenders, security researchers, and AI Agents. Every offensive technique pairs **1:1** with a defensive hardening/detection counterpart (`Scenario → Input signal → Method → Workflow → MCP tool mapping`), defaulting to **`BLUE`** (static analysis, cryptography, detection & hardening) with explicit switching to **`RED`** (offense & dynamic exploitation) or **`BOTH`** (purple-team paired view).
+Select `red / blue / both` in the upper-left corner, choose a workspace, and enter a file, directory, or URL target with a Goal. The live canvas shows execution branches; activity, logs, reports, and health views retain the evidence behind the result.
 
-- **5 boards** spanning web, mobile, Windows, and cross-domain reverse work.
-- **320+ articles** with 1:1 offensive ↔ defensive pairing (`track: blue | red | both`, `defends`).
-- **110+ MCP tools** exposed through `reverse_lab_tools` — `triage_pe`, `ghidra_*`, `rizin_*`, `make_yara_stub`, `solve_crypto_from_evidence`, `kb_router`, `route_track`, `set_track`, … with track gating (`REVERSELAB_MODE=blue|red|both`).
-- **Directory-as-convention**: every artifact has a fixed home (`samples/`, `exports/`, `patches/`, `kb/`, `reports/`). Drop-in a sample, follow the chain, ship the report.
+![ReverseLab Desktop knowledge reader](assets/desktop/knowledge-light.png)
 
-The lab is built to be run, not browsed. If a step can't be executed, it doesn't belong in the KB.
+- **Independent strategies.** `red` and `blue` use separate analysis policies. `both` runs the branches in parallel and joins their results.
+- **Concurrent Goals.** Each workspace runs up to two Goals at once by default. Switching views, tasks, or workspaces does not redirect a running task's output.
+- **Managed workspaces.** First launch creates a default workspace. Open or create others, import samples, and keep original and working copies separate.
+- **Bounded execution.** Optional limits default to 10 minutes and 32,000 tokens per Goal. Failed routes and repeated actions feed back into planning; independent verification decides whether the target objective was met.
+- **Knowledge and usability.** Browse defense articles and paired references, switch light/dark themes, and retain unsent drafts, reading positions, and filters during navigation.
 
-## Who is this for
+### Download and start
 
-| You are … | Start here |
-| --- | --- |
-| A **blue-team defender** hardening services or auditing samples | Default `BLUE` track (`REVERSELAB_MODE=blue`) → `python scripts/misc/kb_router.py "<signal>" --track blue` → `triage_pe` / `make_yara_stub` |
-| A **CTF / red-team researcher** validating exploit chains | Switch to `RED` (`set_track("red")` or `--track red`) → [CTF Website](kb/ctf-website/README.md), [APK Reverse](kb/apk-reverse/README.md), or [PE Reverse](kb/pe-reverse/README.md) |
-| A **security researcher** triaging a sample | [Quick start](#quick-start) → `boards/<board>/AI-USAGE.md` → `sample_full_workup` MCP tool |
-| A **reverse engineer** who wants a workspace, not a tutorial | [Repository layout](#repository-layout) — clone and start |
-| An **AI Agent** developer wiring up reverse-engineering tools | [For AI Agents](#for-ai-agents) — context chain, `route_track`, MCP smoke test, env snapshot protocol |
+1. Download and run `ReverseLab-v1.3.0-windows-x64-setup.exe` from the [release](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0).
+2. Install Python 3.10 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
+3. Launch ReverseLab. The installer includes its knowledge base and scripts; keep personal workspaces outside the installation directory.
+4. Open Settings and configure an OpenAI-compatible chat-completions endpoint and model, then enter a target and objective. SHA256 verification can run locally without a model.
 
-## Quick links
+Settings includes version checks, release notes and signed updates for installed builds. Portable ZIP users can check versions and migrate using the installer; extract the full ZIP with `kb/` and `scripts/` beside `ReverseLab.exe`. See [application updates](desktop/UPDATES.md).
 
-<div align="center">
+The release includes a Windows x64 application and the corresponding project source, scripts, and KB. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux retain the source-based CLI/MCP workflow; this release does not include native desktop builds for those platforms.
 
-[ :book: Knowledge Base ](#knowledge-at-a-glance)
-&nbsp;&nbsp;[ :rocket: Quick start ](#quick-start)
-&nbsp;&nbsp;[ :handshake: Contributing ](.github/CONTRIBUTING.md)
+The desktop currently executes bounded Python observations. MCP tool references in KB articles do not automatically become desktop adapters for debuggers, devices, or hardening tools. Workspace files stay on disk, while model-assisted runs send task context and selected evidence to the endpoint you configure. Python actions run with the current user's permissions. See the [desktop guide](desktop/README.md) for configuration, data handling, and limits.
 
-</div>
+## Knowledge base and MCP
 
----
+The knowledge base covers Web/CTF, Android/APK, Windows/PE, and general topics such as cryptography and protocols. Articles carry `track: red | blue | both`; `both` articles are shared. Related attack and defense articles are linked through index metadata and `defends` references. The current catalog is the source of truth; not every article has a one-to-one counterpart.
 
-## Knowledge at a glance
-
-```
-kb/                                320+ articles, 5 boards (RED ↔ BLUE 1:1 paired)
-├── ctf-website/techniques/        23 categories, 191 articles — Web attack surface & 1:1 BLUE defense
-├── apk-reverse/techniques/         9 categories,  36 articles — Android & hybrid reverse + 1:1 BLUE defense
-├── pe-reverse/techniques/         10 categories,  49 articles — Windows PE / binary + 1:1 BLUE defense
-├── general/techniques/             6 categories,  45 articles — Crypto · Signature · Protocol · Kernel · 1:1 defense
-└── windows/techniques/             platform-specific PE / config topics
-```
-
-| Board | Trigger signals | MCP entry points |
+| Area | Knowledge entry | Tool examples |
 | --- | --- | --- |
-| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · Hardening · DoS | `route_track`, `kb_router`, `http_probe`, `run_ctf_tool` |
-| `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · WebView · RN/Flutter | `android_app_baseline`, `android_crypto_unpack_recipe`, `android_frida_*` |
-| `pe-reverse` | PE · EXE · DLL · asar · x64dbg · Ghidra · Procmon · packer · YARA/Sigma | `triage_pe`, `ghidra_headless_analyze`, `make_yara_stub`, `sample_full_workup` |
-| `general` | AES · RSA · Signature · Protobuf · gRPC · JS runtime · Kernel · Anti-cheat | `die_scan`, `solve_crypto_from_evidence`, `ghidra_*`, `rizin_*` |
-| `misc` | Dual-track gate (`BLUE`/`RED`/`BOTH`) · MCP config · env health check | `get_track_status`, `set_track`, `mcp_smoke_check`, `lab_healthcheck` |
+| Web / CTF | [Web knowledge](kb/ctf-website/README.md) | `kb_router`, `http_probe`, `run_ctf_tool` |
+| Android / APK | [APK knowledge](kb/apk-reverse/README.md) | `android_app_baseline`, `android_crypto_unpack_recipe` |
+| Windows / PE | [PE knowledge](kb/pe-reverse/README.md) | `triage_pe`, `ghidra_headless_analyze`, `sample_full_workup` |
+| General | [Cross-domain knowledge](kb/general/README.md) | `solve_crypto_from_evidence`, `rizin_*` |
 
-The complete directory tree is available under [kb/](kb/).
-
----
-
-## Quick start
-
-Pick the path that matches your role, not your platform — the platform differences are below the role split.
-
-### For humans
-
-**Windows (recommended for first run)** — double-click `START_HERE.bat` (or `START_HERE.cmd`) in the repo root. It checks Python, `uv`, Git, the `reverse_lab_tools` MCP server, runs real MCP smoke calls, and writes `reports/misc/first-run-report.json` plus `reports/misc/mcp-smoke-report.json`.
-
-**macOS / Linux** — run `./START_HERE.sh` from the repo root. It does the same first-run checks using POSIX shell wrappers under `tools/bin/`. Windows-only GUI/PE tools are skipped or reported as such.
-
-<details>
-<summary><b>Per-board install (after first-run passes)</b></summary>
-
-```powershell
-# Pick the boards you actually need — the lab is modular.
-.\scripts\misc\bootstrap.ps1                # core script wrappers (no downloads)
-.\scripts\misc\install_tools.ps1 -CTF       # Web tools (sqlmap, nuclei, ffuf, jwt_tool, …)
-.\scripts\misc\install_tools.ps1 -Android   # APK tools (apktool, jadx, frida, uber-apk-signer, …)
-.\scripts\misc\install_tools.ps1 -Windows   # PE tools (cutter, pe-bear, procmon, …)
-.\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
-```
-
-macOS / Linux equivalent:
+CLI/MCP track selection defaults to `blue`; select `red` or `both` explicitly through `REVERSELAB_MODE`, `--track`, or the MCP track tools. Desktop selection is scoped to its Goals and does not rewrite another client's environment.
 
 ```sh
-./scripts/misc/bootstrap.sh
-export PATH="$PWD/tools/bin:$PWD/tools/ctf-website/bin:$PATH"
-python scripts/misc/ai_toolcheck.py --board misc    # verify the fresh-clone core
+python scripts/misc/kb_router.py "JWT" --track blue
+python scripts/misc/desktop_kb.py list --track both
 ```
 
-Install only the boards you need. Don't dump the full toolchain if you're only doing web CTF.
+## CLI and AI-agent setup
 
-</details>
-
-<details>
-<summary><b>Windows Defender / antivirus note</b></summary>
-
-After installing CTF / ExploitDB tools, Windows Defender may flag exploit samples or payload documentation — e.g. `tools/ctf-website/exploitdb`, `kb/ctf-website/techniques/24-database/03-nosql-injection.md`, `docs/llms-full.txt`. These contain security test payloads, webshells, shellcode, or ExploitDB samples and are **expected components**.
-
-We recommend **minimal path exclusions** rather than excluding the entire repo:
-
-```powershell
-Add-MpPreference -ExclusionPath "D:\open-reverselab\tools\ctf-website\exploitdb"
-```
-
-If individual documents are flagged, handle them case-by-case.
-
-</details>
-
-### For AI Agents
-
-1. Clone into a dedicated local directory, e.g. `<workspace>/open-reverselab`.
-2. **Claude Code**: `cd <workspace>/open-reverselab`, then start your session.
-3. **Codex APP**: Open the existing `open-reverselab` folder directly (no re-clone needed).
-4. Automated AI install: send the contents of [`templates/prompts/ai-install.en.md`](templates/prompts/ai-install.en.md) to your Agent.
-5. Create a task: `python scripts/misc/new_task.py --board windows --name <name>` (or route KB by track: `python scripts/misc/kb_router.py "<signal>" --track blue|red|both`).
-6. Verify real MCP invocation whenever switching machines or updating configs:
-   ```sh
-   uv run --project tools/skills/mcp/ReverseLabToolsMCP \
-     python scripts/misc/mcp_smoke_check.py --write-report
-   ```
-
-**Context chain** — Agents load context through this sequence:
-
-```
-CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
-```
-
-Use [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) for one-click configuration of project-level `.codex/` and MCP servers.
-
-<details>
-<summary><b>Environment snapshot protocol (host-level, shared across projects)</b></summary>
-
-When first opening this project with an AI Agent, it inspects your local environment (OS, toolchains, reverse-engineering libraries, devices, sanitized env vars, network, workspace) following the protocol in [AGENTS.md](AGENTS.md), and caches a snapshot at `~/.open-reverselab/env/env.md` (`%USERPROFILE%\.open-reverselab\env\env.md` on Windows).
-
-This file is **host-level** and **shared across sessions**: subsequent sessions read it directly without re-probing, unless 7 days have passed or the protocol version has bumped. It remains local and is never committed. Sensitive variables are redacted (keys marked "SET", proxies stripped of credentials).
-
-</details>
-
-### Post-install verification
+Clone the repository, then use `START_HERE.bat` / `START_HERE.cmd` on Windows or `./START_HERE.sh` on macOS/Linux. These are setup and MCP checks, not the desktop launcher. The reports are written under `reports/misc/`.
 
 ```sh
+git clone https://github.com/LING71671/open-reverselab.git
+cd open-reverselab
+```
+
+Open this directory in your AI client and read [AI-USAGE.md](AI-USAGE.md). The context chain is `CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md`. For guided installation, use the [English](templates/prompts/ai-install.en.md) or [Chinese](templates/prompts/ai-install.zh.md) prompt. MCP clients need `uv` and the dependencies in `tools/skills/mcp/ReverseLabToolsMCP`.
+
+```sh
+uv sync --project tools/skills/mcp/ReverseLabToolsMCP
+uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report
 python scripts/misc/lab_healthcheck.py
 python scripts/misc/ai_toolcheck.py --board misc
-python scripts/misc/public_release_check.py
 ```
 
-`--board misc` checks the fresh-clone core Agent scripts and lightweight tools. Run full `python scripts/misc/ai_toolcheck.py` only after installing Android / Windows / CTF boards.
+Install only the tool groups needed for the task. Windows provides `scripts/misc/install_tools.ps1 -CTF`, `-Android`, `-Windows`, and `-Common`; POSIX wrappers are generated by `scripts/misc/bootstrap.sh`. See [START.md](START.md) and [tools/README.md](tools/README.md).
 
----
+## Build the desktop
 
-## Repository layout
+With Node 22+, pnpm, Python, Rust, and the platform Tauri prerequisites installed:
 
-The repository uses **directory-as-convention**. Put artifacts where they belong and the tooling finds them automatically.
-
-```
-samples/      Original samples + _quarantine/ + unpacked/   — never modified
-exports/      Tool outputs (triage / IOC / YARA / Sigma / Procmon / Ghidra summaries)
-patches/      Patch artifacts (originals are never modified)
-notes/        Analysis notes
-reports/      Final reports
-scripts/      Automation scripts
-projects/     Ghidra project files
-templates/    Note / report / rule templates · AI install prompts
-kb/           Reusable RED/BLUE dual-track knowledge base — see "Knowledge at a glance"
-tools/        Toolchain (binaries, wrappers, registry, MCP)
-cases/        Lightweight index — no large file copies
+```sh
+cd desktop
+pnpm install --frozen-lockfile
+pnpm tauri dev
+# Or create a production executable:
+pnpm tauri build --no-bundle
 ```
 
-> Don't commit large samples, full PCAPs, or memory dumps. Index them in `cases/` and link to a private store.
+`pnpm dev` is the browser preview. See [development](desktop/DEV_GUIDE.md), [architecture](desktop/ARCHITECTURE.md), [Agent contracts](desktop/AGENT_SYSTEM.md), [error codes](desktop/ERROR_CODES.md), and [release instructions](RELEASING.md).
 
----
+## Data and repository layout
 
-## Community & contributing
+| Location | Purpose |
+| --- | --- |
+| `desktop/` | Desktop UI, queue, execution engine, and Tauri host |
+| `kb/` | Reusable techniques and defense references |
+| `scripts/`, `tools/`, `templates/` | Automation, adapters, and templates |
+| `boards/` | Task routing for external AI clients |
+| `site/` | Documentation-site source |
+| Selected workspace's `.reverselab/` | Desktop originals/work copies, Goal records, exports, and reports |
+| Repository `cases/`, `samples/`, `notes/`, `exports/`, `reports/` | Local CLI analysis artifacts; excluded from publication |
 
-- **Contributing** — see [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md). Bug reports, KB article PRs, new MCP tool wrappers, and board additions are all welcome.
-- **Code of Conduct** — [`.github/CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md) (Contributor Covenant).
-- **Security issues** — read [SECURITY policy](SECURITY.md) before opening a public issue.
-- **Publication guidance** — [PUBLICATION.md](PUBLICATION.md) covers what is OK to publish, what stays in private cases, and AI/ML training protections.
+Desktop data defaults to `~/.open-reverselab/workspaces/Default`. The host environment snapshot is separate at `~/.open-reverselab/env/env.md`. Neither belongs in a public commit. See [workspace storage](desktop/WORKSPACES.md).
 
----
+## Contributing and publication
+
+Read [Contributing](.github/CONTRIBUTING.md), [Security](SECURITY.md), and [Publication](PUBLICATION.md). Publish general implementations and synthetic examples; keep real targets, samples, credentials, and case evidence private. Before submitting, run `python scripts/misc/public_release_check.py` and the checks relevant to the changed module. Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Sponsors
 

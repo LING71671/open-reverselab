@@ -1,87 +1,58 @@
-# ReverseLab Desktop Harness — 开发者扩展指南 (DEV_GUIDE.md)
+# Desktop development guide
 
-本文档面向逆向工程师与前端开发人员，说明如何调试、扩展及接入新工具。
+## Local setup
 
----
+Use the versions supported by `package.json` and the lockfile, with pnpm as the package manager. The current Windows checks use Node 22, Rust 1.93 and Python 3.13. Python 3.10+ must be available as `python` to both Vite and the native process. Native builds require the [platform Tauri prerequisites](https://v2.tauri.app/start/prerequisites/). Windows builds need MSVC C++ build tools; runtime users need WebView2.
 
-## 1. 快速上手
-
-### 1.1 前置要求
-* Node.js >= 20，`pnpm` >= 9
-* Rust >= 1.80 (MSVC 工具链)
-* VS 2022 BuildTools (默认路径 `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`)
-
-### 1.2 启动命令
-
-```bash
-# 进入桌面子工程
-cd desktop
-
-# 方式 A：纯前端 Web 快速调试 (浏览器访问 http://localhost:1420)
+```sh
+pnpm install --frozen-lockfile
 pnpm dev
-
-# 方式 B：启动 Tauri 原生无边框桌面窗体 (自动加载 MSVC 编译环境)
-pnpm dev:desktop
-
-# 方式 C：生产构建验证
+pnpm tauri dev
 pnpm build
 ```
 
----
+Browser preview and native desktop use the same workspace and KB Python services. The browser endpoints are local development middleware, not a remotely deployable service.
 
-## 2. 如何接入新逆向工具或 MCP
+## Adding a tool or strategy
 
-所有逆向工具均按照 **契约优先 (Contract First)** 接入：
+1. Define the request/result contract in `src/core/contracts`.
+2. Add a tool adapter behind `NativeBridge` or an injected runner. Include real timeouts, cancellation, output bounds, result provenance and classified failures.
+3. Add or update the strategy in `src/engine/tracks`; keep red/blue independent.
+4. Use `DagScheduler` for dependent parallel actions and an injected shared `DagResourcePool` for exclusive resources. An abort request must not release a resource before its runner settles.
+5. Emit structured steps, tool records, health events and evidence through callbacks. Do not update React or read the currently visible session from engine code.
+6. Extend the fixed acceptance criteria and independent verifier. A successful process exit alone must not complete the Goal.
+7. Update the relevant Markdown contract and test an actual failure, cancellation or isolation case for the new capability.
 
-### 步骤 1：在 `src/core/types.ts` 定义数据模型
-如果工具产生特殊的证据结构，在 `GraphStep.evidence` 中声明类型。
+Current built-in adapters support Python observations and target triage. KB MCP tool names are references, not automatically registered executable adapters. Adding debugger/device/hardening execution requires the corresponding adapter.
 
-### 步骤 2：在 `src/engine/harnessGraph.ts` 注册状态节点
-在 LangGraph 状态机中新增分析节点：
+## Verification commands
 
-```typescript
-const decompileNode = async (state: HarnessState): Promise<Partial<HarnessState>> => {
-  const step: GraphStep = {
-    id: `node-${Date.now()}`,
-    parentId: state.steps[state.steps.length - 1]?.id || null,
-    agentId: "sub-ghidra",
-    title: "Ghidra Headless 伪代码反编译",
-    status: "running",
-    detail: "执行 ghidra_headless_analyze 脚本...",
-    kbRef: "kb/pe-reverse/techniques/01-static/01-ghidra-decompile.md",
-    timestamp: Date.now(),
-  };
-  emit(step);
+From `desktop`:
 
-  // 调度工具并记录日志
-  logger.tool("sub-ghidra", "analyzeHeadless.bat ...", 1200);
-
-  // 回填执行证据
-  const doneStep: GraphStep = {
-    ...step,
-    status: "done",
-    evidence: { decompilerOutput: "void check_license() { ... }" },
-  };
-  emit(doneStep);
-
-  return { steps: [...state.steps, doneStep] };
-};
-
-// 将节点挂入图
-graph.addNode("decompile", decompileNode);
-graph.addEdge("kbRouting", "decompile");
+```sh
+pnpm build
+node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs
+node --experimental-strip-types --test tests/*.test.ts
+cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
----
+From repository root:
 
-## 3. 如何新增分析视图 (New View)
-
-Harness 支持自由横向扩展视图（例如反汇编视图、十六进制查看器、YARA 匹配器）：
-
-1. **注册视图标识**：在 `src/core/types.ts` 中的 `HarnessView` 联合类型中增加枚举，例如 `"canvas" | "console" | "diagnostics" | "hex"`.
-2. **在 Sidebar 增加切换按钮**：在 `src/components/Sidebar.tsx` 的 Views 网格中添加按钮。
-3. **在 App.tsx 挂载组件**：
-```tsx
-{viewMode === "hex" && <HexViewer currentTarget={currentSession?.target} />}
+```sh
+python -m pytest tests/test_desktop_kb.py tests/test_desktop_workspace.py
+python scripts/misc/public_release_check.py
 ```
-4. 组件直接调用 `useHarness()` 获取目标文件与日志，完全无需通过 Props 逐层透传。
+
+The tests use synthetic targets and mocked model responses. They do not prove a specific provider's live quality or BLA/REA resistance. Save private end-to-end runs and screenshots outside the public change set.
+
+`tests/test_desktop_triage.py` also covers nonexistent targets, unknown file metadata, empty directories and ZIP/APK identity. Target discovery must stop on missing files; architecture, compiler, imports and packing status must never be filled with demo defaults.
+
+## Configuration
+
+`REVERSELAB_ROOT` locates the repository knowledge/scripts. `REVERSELAB_DATA_DIR` changes the local registry root, and `REVERSELAB_WORKSPACE_DIR` changes the default data workspace. Runtime credentials belong in local Settings, never in tracked configuration.
+
+See [WORKSPACES.md](WORKSPACES.md), [AGENT_SYSTEM.md](AGENT_SYSTEM.md) and [ERROR_CODES.md](ERROR_CODES.md) for storage, execution and failure contracts.
+
+## Release
+
+Keep `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` and `src-tauri/tauri.conf.json` aligned with the release version. For a local executable, use `pnpm tauri build --no-bundle`. For signed installation and update releases, stage the committed runtime sources and build with `pnpm tauri build --bundles nsis --config src-tauri/tauri.release.conf.json`; see [RELEASING.md](../RELEASING.md).

@@ -43,7 +43,7 @@ export class LlmService {
 
   constructor() {
     const savedModel = localStorage.getItem("reverselab_model");
-    if (!savedModel || savedModel.includes("deepseek")) {
+    if (!savedModel) {
       this.defaultModel = "mimo-v2.6-flash";
       try {
         localStorage.setItem("reverselab_model", "mimo-v2.6-flash");
@@ -195,7 +195,7 @@ export class LlmService {
         headers["Authorization"] = `Bearer ${key}`;
       }
 
-      const res = await fetch(url, { headers });
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data.data) ? data.data.map((m: any) => m.id) : [];
@@ -236,6 +236,7 @@ export class LlmService {
           messages: [{ role: "user", content: "ping" }],
           max_tokens: 5,
         }),
+        signal: AbortSignal.timeout(10000),
       });
 
       const latencyMs = Math.round(performance.now() - start);
@@ -261,13 +262,15 @@ export class LlmService {
       maxTokens?: number;
       timeoutMs?: number;
       signal?: AbortSignal;
+      provider?: ProviderConfig;
     }
   ): Promise<CompletionResult> {
     const start = performance.now();
-    const active = this.getActiveProvider();
+    const active = options?.provider || this.getActiveProvider();
     const model = options?.model || this.defaultModel;
+    if (options?.provider && !options.provider.baseUrl) throw new Error("No model provider configured for this goal");
     const url = this.resolveUrl("/chat/completions", active?.baseUrl);
-    const key = active?.apiKey || this.getApiKey();
+    const key = options?.provider ? active?.apiKey || "" : active?.apiKey || this.getApiKey();
 
     const timeoutMs = options?.timeoutMs ?? 30000;
     const controller = new AbortController();
@@ -275,7 +278,8 @@ export class LlmService {
 
     const abortHandler = () => controller.abort();
     if (options?.signal) {
-      options.signal.addEventListener("abort", abortHandler);
+      if (options.signal.aborted) controller.abort();
+      else options.signal.addEventListener("abort", abortHandler, { once: true });
     }
 
     try {
@@ -298,7 +302,7 @@ export class LlmService {
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`LLM Error ${res.status}: ${errText}`);
+        throw Object.assign(new Error(`LLM Error ${res.status}: ${errText}`), { status: res.status });
       }
 
       const data = await res.json();

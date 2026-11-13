@@ -1,7 +1,7 @@
 ---
 layout: page
 title: MCP Tools Directory
-description: "ReverseLab MCP tools directory: 38 core tools, grouped by board."
+description: ReverseLab tool registry and integration methods.
 head:
   - - meta
     - property: og:locale

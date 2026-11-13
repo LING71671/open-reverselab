@@ -1,33 +1,18 @@
-# Recommended Skills
+# Skills 与外部 Agent
 
-本项目推荐安装以下 Claude Code skills，安装后可直接在项目内通过 `/skill-name` 调用。
+仓库通过 [AGENTS.md](AGENTS.md)、[AI-USAGE.md](AI-USAGE.md)、board 文档和知识库向外部 Agent 提供工作约定。`tools/skills/` 主要存放 MCP 实现，不是客户端自动发现 skill 的目录。
 
-## 核心 Skills
+## 内置入口
 
-| Skill | 用途 | 安装 |
-|---|---|---|
-| **reverse-lab** | 逆向工程全流程：PE/ELF/APK 分析、Ghidra、x64dbg、Frida | `claude plugins install reverse-lab` |
-| **ctf** | CTF 竞赛辅助：Web/Binary/Crypto/Misc 全题型 | `claude plugins install ctf` |
+- [reverse_lab_tools MCP](tools/skills/mcp/ReverseLabToolsMCP/README.md)：工具实现、依赖与启动说明。
+- [板块路由](boards/README.md)：按目标进入 Web、Android、Windows、General 或 Misc。
+- [知识库路由](kb/AI-USAGE.md)：按信号和 `red / blue / both` 选择技术文档。
+- [外部工作流来源](docs/upstreams/reverse-skills.md)：已记录的上游版本、参考范围与再分发边界。
 
-## 可选 Skills
+## 接入可选 skill
 
-| Skill | 用途 | 安装 |
-|---|---|---|
-| **android-reverse-engineering** | Android APK/DEX 专项逆向 | `claude plugins install android-reverse-engineering-skill` |
-| **gdb** | GDB 调试辅助 | `claude plugins install gdb` |
+使用客户端实际支持的安装方式，并核对来源仓库、许可证和 `SKILL.md`。项目不假设存在同名插件市场包，也不提供未经核实的 `claude plugins install` 命令。外部 skill 不能替代本机工具安装或实际执行验收。
 
-## 验证
+通过 MCP 调用 `project_skills_status` 可检查项目提供的入口。首次接入还应执行 `python scripts/misc/mcp_smoke_check.py --write-report`，使用已安装 MCP 依赖的 Python 环境。
 
-```bash
-claude plugins list
-```
-
-或通过 MCP 检查：
-
-```bash
-# 启动 MCP 后让 AI 调用 project_skills_status
-```
-
-## 搭配 codex-session-patcher
-
-使用 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 配置项目后，AI Agent 会自动路由到对应板块的 `AI-USAGE.md`，skill 提供执行能力，KB 提供知识参考。
+桌面端的运行引擎由项目自身提供，并不会自动加载外部客户端的 skills。扩展桌面工具见 [desktop/DEV_GUIDE.md](desktop/DEV_GUIDE.md)。

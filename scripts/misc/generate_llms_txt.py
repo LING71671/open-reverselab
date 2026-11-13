@@ -99,7 +99,7 @@ def collect_articles() -> list[dict]:
 
             rel = path.relative_to(root).as_posix()
             slug = rel.replace(".md", "")
-            url = f"{base_url}techniques/{slug}/" if not base_url.endswith("/") else f"{base_url}{slug}/"
+            url = f"{base_url}techniques/{slug}.html"
 
             articles.append({
                 "board": board,
@@ -120,7 +120,7 @@ def generate_llms_txt(articles: list[dict]) -> str:
     lines = []
     lines.append("# ReverseLab — Open-Source Reverse Engineering Lab & MCP Tool Ecosystem")
     lines.append("")
-    lines.append(f"> {len(articles)}-article knowledge base, 100+ MCP automation tools for reverse engineering.")
+    lines.append(f"> {len(articles)} knowledge-base articles for reverse engineering and defensive analysis, with desktop and MCP integrations.")
     lines.append("> Agent-native architecture. Covers CTF, APK, PE, cryptography, game cheating, and more.")
     lines.append("")
     lines.append("## Quick Links")

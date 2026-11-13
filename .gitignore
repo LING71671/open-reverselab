@@ -97,6 +97,7 @@ tools/ctf-website/_downloads/
 
 # Machine-level env snapshot (AI-generated per AGENTS.md protocol; lives in user home, never commit)
 .open-reverselab/
+.reverselab/
 
 # Nested standalone project (has its own git repo; not part of open-reverseLab)
 open-city-ai/

@@ -19,7 +19,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def hash_file(file_path: Path) -> dict[str, str]:
+def hash_file(file_path: Path) -> dict[str, Any]:
     md5 = hashlib.md5()
     sha256 = hashlib.sha256()
     size = 0
@@ -31,7 +31,7 @@ def hash_file(file_path: Path) -> dict[str, str]:
     return {
         "md5": md5.hexdigest(),
         "sha256": sha256.hexdigest(),
-        "sizeBytes": str(size),
+        "sizeBytes": size,
     }
 
 
@@ -54,7 +54,8 @@ def extract_strings(data: bytes, min_len: int = 5, limit: int = 25) -> list[str]
 
 def triage_pe(file_path: Path) -> dict[str, Any]:
     hashes = hash_file(file_path)
-    file_bytes = file_path.read_bytes()[:1048576]
+    with file_path.open("rb") as source:
+        file_bytes = source.read(1048576)
     res: dict[str, Any] = {
         "board": "pe-reverse",
         "fileType": "Windows PE Binary",
@@ -95,7 +96,7 @@ def triage_pe(file_path: Path) -> dict[str, Any]:
             })
         res["sections"] = sections
         res["executableSections"] = executable_sections
-        res["packer"] = "UPX" if is_upx else ("High Entropy (Packed / Protected)" if any(s["entropy"] > 7.3 for s in sections) else "None (Unpacked)")
+        res["packer"] = "UPX section marker (heuristic)" if is_upx else ("High entropy (heuristic)" if any(s["entropy"] > 7.3 for s in sections) else "No recognized section indicator")
 
         # Compiler & Framework Heuristics
         is_dotnet = False
@@ -113,8 +114,6 @@ def triage_pe(file_path: Path) -> dict[str, Any]:
             res["compiler"] = "Golang"
         elif b"rust_eh_personality" in file_bytes or b"library\\std" in file_bytes:
             res["compiler"] = "Rust"
-        else:
-            res["compiler"] = "Microsoft Visual C/C++"
 
         # Imports & Suspicious API Taxonomy
         imported_dlls = []
@@ -163,6 +162,7 @@ def triage_apk(file_path: Path) -> dict[str, Any]:
     res: dict[str, Any] = {
         "board": "apk-reverse",
         "fileType": "Android Package (APK)",
+        "targetPath": str(file_path),
         **hashes,
     }
     try:
@@ -173,7 +173,11 @@ def triage_apk(file_path: Path) -> dict[str, Any]:
             res["dexCount"] = len(dex_files)
             res["nativeLibraries"] = [Path(s).name for s in so_files[:8]]
             res["hasManifest"] = "AndroidManifest.xml" in names
-            res["packer"] = "SecShell / Tencent" if any("secneo" in s or "tx" in s for s in names) else "Standard"
+            if any("secneo" in s.lower() for s in names):
+                res["packer"] = "SecNeo name marker (heuristic)"
+            if not res["hasManifest"]:
+                res["board"] = "general"
+                res["fileType"] = "ZIP Archive"
     except Exception as e:
         res["parseWarning"] = str(e)
     return res
@@ -197,6 +201,8 @@ def triage_web(url: str) -> dict[str, Any]:
 
 def triage_target(target: str) -> dict[str, Any]:
     target_clean = target.strip().strip("'\"")
+    if not target_clean:
+        raise ValueError("Target is required")
     if target_clean.startswith(("http://", "https://")):
         return triage_web(target_clean)
 
@@ -210,6 +216,8 @@ def triage_target(target: str) -> dict[str, Any]:
             all_samples = []
             for ext in ("*.exe", "*.dll", "*.sys", "*.apk", "*.dex", "*.so", "*.bin"):
                 for f in p.glob(ext):
+                    if not f.is_file() or f.is_symlink():
+                        continue
                     all_samples.append({
                         "name": f.name,
                         "path": str(f),
@@ -230,7 +238,7 @@ def triage_target(target: str) -> dict[str, Any]:
             if exes:
                 primary = exes[0]
                 primary_path = Path(primary["path"])
-                res = triage_pe(primary_path)
+                res = triage_target(str(primary_path))
                 res["isContainerDirectory"] = True
                 res["containerDirectory"] = str(p)
                 res["resolvedBinary"] = primary["name"]
@@ -243,7 +251,7 @@ def triage_target(target: str) -> dict[str, Any]:
             if apks:
                 primary = apks[0]
                 primary_path = Path(primary["path"])
-                res = triage_apk(primary_path)
+                res = triage_target(str(primary_path))
                 res["isContainerDirectory"] = True
                 res["containerDirectory"] = str(p)
                 res["resolvedBinary"] = primary["name"]
@@ -251,6 +259,15 @@ def triage_target(target: str) -> dict[str, Any]:
                     s["isPrimary"] = (s["name"] == primary["name"])
                 res["discoveredSamples"] = all_samples[:30]
                 return res
+
+            return {
+                "board": "general",
+                "fileType": "Directory",
+                "targetPath": str(p),
+                "isContainerDirectory": True,
+                "containerDirectory": str(p),
+                "discoveredSamples": all_samples[:30],
+            }
 
         elif p.is_file():
             with p.open("rb") as f:
@@ -274,41 +291,7 @@ def triage_target(target: str) -> dict[str, Any]:
                 **hash_file(p),
             }
 
-    # Target path does not exist on disk: return structured reference
-    lower = target_clean.lower()
-    if lower.endswith((".exe", ".dll", ".sys", ".scr")) or any(k in lower for k in ("revo", "uninstaller", "crackme", "patch", "loader", "setup", "keygen")):
-        return {
-            "board": "pe-reverse",
-            "fileType": "Windows Portable Executable (PE32+)",
-            "target": target_clean,
-            "arch": "x86_64",
-            "subsystem": "GUI",
-            "compiler": "Microsoft Visual C/C++",
-            "packer": "None (Unpacked)",
-            "capabilities": {
-                "registryPersistence": ["ADVAPI32.DLL!RegOpenKeyExW", "ADVAPI32.DLL!RegQueryValueExW", "ADVAPI32.DLL!RegSetValueExW"],
-                "fileSystem": ["KERNEL32.DLL!CreateFileW", "KERNEL32.DLL!DeleteFileW"],
-                "processMemory": ["KERNEL32.DLL!OpenProcess", "KERNEL32.DLL!VirtualAlloc"],
-            },
-            "status": "Ready for Execution",
-        }
-    if lower.endswith((".apk", ".dex")) or any(k in lower for k in ("android", "apk", "dex")):
-        return {
-            "board": "apk-reverse",
-            "fileType": "Android Package (APK)",
-            "target": target_clean,
-            "arch": "arm64-v8a",
-            "packer": "Standard DEX",
-            "hasManifest": True,
-            "status": "Ready for Execution",
-        }
-
-    return {
-        "board": "general",
-        "fileType": "Binary Asset (Target Reference)",
-        "target": target_clean,
-        "status": "Ready for Execution",
-    }
+    raise FileNotFoundError(f"Target does not exist or is not a regular file/directory: {target_clean}")
 
 
 def main():

@@ -1,56 +1,35 @@
-# Frequently Asked Questions
+# Frequently asked questions
 
-Answers to common questions about the ReverseLab project, its MCP tools, the knowledge base, and contributing.
+## What does ReverseLab include?
 
-## 1. What is ReverseLab?
+A desktop workspace, a red/blue knowledge base, and CLI/MCP tools for external AI clients. The desktop runs target-bound Goals and displays execution branches, evidence, verification, and reports. Knowledge areas include Web, APK, PE, cryptography, and protocols.
 
-ReverseLab is an open-source reverse engineering lab that combines a knowledge base of **183 in-depth technical articles**, **100+ MCP (Model Context Protocol) automation tools**, and end-to-end automated workflows for CTF / APK / PE analysis. The project follows a "conventions as contracts" design and is built for AI-agent-assisted analysis.
+## Where do I download the desktop?
 
-## 2. Which areas does the ReverseLab knowledge base cover?
+Download the Windows x64 archive from [v1.3.0 Releases](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0), extract it completely, and open `ReverseLab.exe`. Python 3.10+ and WebView2 Runtime are required. Keep the included `kb/` and `scripts/` beside the application.
 
-- **CTF Website** (26 categories, 118 articles): JWT / SQLi / SSRF / XSS / CVE / DoS / Payment / Paywall / Signature attacks / API / OAuth / Cloud-native / IAM
-- **APK Reverse** (8 categories, 23 articles): DEX / Native / JNI / IL2CPP / Frida / Pinning / Unpacking / VMP / Repackaging
-- **PE Reverse** (9 categories, 24 articles): Ghidra static analysis / x64dbg dynamic debugging / TLS Callbacks / API Resolvers / VMP virtualization / IOC / YARA / Sigma / Patch / AV evasion
-- **General** (5 categories, 17 articles): Linux kernel exploitation / crypto algorithm identification / PRNG cracking / game cheating and anti-cheat / protocol reversing / firmware / hardware
-- **Windows** (1 article): Windows platform configuration-injection deep dive
+macOS/Linux retain the CLI/MCP workflow; this release has no native desktop binaries for them. See the [desktop guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.md).
 
-## 3. What are MCP tools, and why do they matter?
+## What do red, blue, and both mean?
 
-MCP (Model Context Protocol) is the **standard protocol** for AI models to interact with external tools. ReverseLab's MCP tools let an AI agent **directly invoke** reverse engineering tooling without manual intervention. For example: the AI spots a JWT token → automatically calls `kb_router` to look up the technique → `kb_read_file` to read the attack method → `http_probe` to send a probe request → decides whether a vulnerability exists. This is rare in the open-source ecosystem and is ReverseLab's core differentiator.
+Red and blue use independent strategies. Both runs two parallel branches and joins their results. In the KB, `both` marks shared documents; attack and defense articles link through relationship metadata. Desktop selection does not change an external MCP client's mode.
 
-## 4. How does an AI agent use ReverseLab for automated analysis?
+## Do I need to set a budget?
 
-After loading the project, the agent walks the context chain (`CLAUDE.md` → `AGENTS.md` → `AI-USAGE.md` → `boards/<board>/AI-USAGE.md`) to learn the conventions. When a signal is detected:
+No. Defaults are 10 minutes and 32,000 tokens per Goal. Optional controls change these limits. Failed routes, repeated scripts, and evidence changes feed back into planning. Independent verification decides completion; exhaustion, cancellation, and blocked routes retain distinct states.
 
-1. Call `kb_router` to find relevant technique articles
-2. Call `kb_read_file` to read the article and its runnable code
-3. Follow the **MCP tool mapping table** in each article to invoke the matching tools automatically
-4. Collect evidence, record notes, and generate reports
+## Can tasks run concurrently?
 
-## 5. How do I install and use ReverseLab?
+Each workspace runs two Goals concurrently by default and queues the remainder. A both Goal has red and blue branches. Switching tasks or workspaces preserves output ownership. Closing the app interrupts execution; history is restored next time, and continuation requires a new Goal.
 
-```powershell
-git clone https://github.com/LING71671/open-reverselab.git
-cd open-reverselab
-.\scripts\misc\bootstrap.ps1
-.\scripts\misc\install_tools.ps1 -CTF       # Web tools
-.\scripts\misc\install_tools.ps1 -Android   # APK tools
-.\scripts\misc\install_tools.ps1 -Windows   # PE tools
-.\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
+## Where do files and model data go?
 
-# Verify
-python scripts/misc/lab_healthcheck.py
-python scripts/misc/ai_toolcheck.py
-```
+The default workspace is `~/.open-reverselab/workspaces/Default`, or you can choose another directory. Originals, work copies, records, and reports live in its `.reverselab/` directory. Model-assisted tasks send context and selected evidence to the configured endpoint. API keys are held in WebView local storage, without operating-system keychain integration.
 
-## 6. Does ReverseLab execute requests on its own?
+## Does the desktop call every MCP tool automatically?
 
-No. ReverseLab provides technical documentation, directory conventions, and an automated toolchain; whether a given request is executed is handled by the AI model provider, hosting platform, or organizational policy you connect to.
+Its current adapter runs bounded Python observations. Tools named in KB articles require corresponding adapters and local installation. External AI clients can call the MCP server separately. Python actions run with the user's permissions; the application does not provide an operating-system sandbox.
 
-## 7. How does ReverseLab relate to Ghidra / x64dbg / Frida and similar tools?
+## How do I check installation and contribute?
 
-ReverseLab is a **knowledge base and automation orchestration layer** — it integrates, but does not bundle, these external tools. Supported tooling includes Ghidra (decompiler), x64dbg (Windows debugger), Frida (dynamic instrumentation), JADX (APK decompiler), sqlmap, Burp Suite, nmap, DirSearch, Cheat Engine, PE-bear, DiE, Procmon, HxD, Cutter/Rizin, and various Python CTF libraries.
-
-## 8. How can I contribute to ReverseLab?
-
-See [CONTRIBUTING.md](https://github.com/LING71671/open-reverselab/blob/main/CONTRIBUTING.md). After adding or changing content, run `public_release_check.py`, `lab_healthcheck.py`, and `kb_doc_audit.py` to keep the directory structure, indexes, and documentation consistent.
+Use `START_HERE.bat` on Windows or `./START_HERE.sh` on macOS/Linux for CLI/MCP checks. Run relevant tests and `python scripts/misc/public_release_check.py` for changes. See [Contributing](https://github.com/LING71671/open-reverselab/blob/main/.github/CONTRIBUTING.md).

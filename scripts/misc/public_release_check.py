@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TEXT_EXTS = {".md", ".py", ".ps1", ".json", ".toml", ".yaml", ".yml", ".js", ".txt", ".env"}
+DESKTOP_TEXT_EXTS = {".ts", ".tsx", ".mjs", ".rs", ".vue", ".css", ".html", ".svg"}
 SECRET_PATTERNS = {
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
@@ -86,7 +87,7 @@ def main() -> int:
         if not is_allowed_public_skeleton(rel):
             failures.append(f"local evidence or workspace artifact must not be public: {rel}")
             continue
-        if path.suffix.lower() not in TEXT_EXTS and path.name not in {"LICENSE", ".env.example"}:
+        if path.suffix.lower() not in TEXT_EXTS | DESKTOP_TEXT_EXTS and path.name not in {"LICENSE", ".env.example"}:
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
         for label, pattern in SECRET_PATTERNS.items():
@@ -100,7 +101,7 @@ def main() -> int:
         # token/key patterns enabled everywhere, but apply assignment heuristics
         # only to executable/config content to avoid treating examples as leaks.
         rel_parts = rel.parts
-        if "kb" not in rel_parts and rel.as_posix() not in KB_DERIVED_FILES and re.search(
+        if path.suffix.lower() in TEXT_EXTS and "kb" not in rel_parts and rel.as_posix() not in KB_DERIVED_FILES and re.search(
             r"(?im)^[^#\n]*(?:password|passwd|api[_-]?key|token|secret)[ \t]*=[ \t]*[^\s#]+",
             text,
         ):

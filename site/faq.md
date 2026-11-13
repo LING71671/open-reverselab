@@ -1,56 +1,35 @@
 # 常见问题
 
-关于 ReverseLab 项目、MCP 工具、知识库和贡献的常见问题解答。
+## ReverseLab 提供什么？
 
-## 1. 什么是 ReverseLab？
+桌面工作区、红蓝知识库，以及供外部 AI 客户端使用的 CLI/MCP 工具。桌面端围绕 target 创建 Goal，展示执行分支、证据、核验结果和报告。知识库覆盖 Web、APK、PE、密码学和协议等领域。
 
-ReverseLab 是一个开源逆向工程实验环境，包含 **183 篇深度技术文章**组成的知识库、**100+ MCP (Model Context Protocol) 自动化工具**、以及 CTF/APK/PE 全链路自动化工作流。项目采用"目录即约定"设计，专为 AI Agent 辅助分析而构建。
+## 从哪里下载桌面端？
 
-## 2. ReverseLab 的知识库覆盖哪些领域？
+在 [v1.3.0 Release](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) 下载 Windows x64 压缩包，完整解压后打开 `ReverseLab.exe`。需要 Python 3.10+ 和 WebView2 Runtime。`kb/`、`scripts/` 需要与程序一起保留。
 
-- **CTF Website**（26 分类 118 篇）：JWT / SQLi / SSRF / XSS / CVE / DoS / Payment / Paywall / 签名攻击 / API / OAuth / 云原生 / IAM
-- **APK Reverse**（8 分类 23 篇）：DEX / Native / JNI / IL2CPP / Frida / Pinning / 脱壳 / VMP / 重打包
-- **PE Reverse**（9 分类 24 篇）：Ghidra 静态分析 / x64dbg 动态调试 / TLS Callback / API Resolver / VMP 虚拟化 / IOC / YARA / Sigma / Patch / 免杀
-- **General**（5 分类 17 篇）：Linux 内核利用 / 加密算法识别 / PRNG 破解 / 游戏作弊与反作弊 / 协议逆向 / 固件 / 硬件
-- **Windows**（1 篇）：Windows 平台配置注入专项
+macOS/Linux 可使用仓库的 CLI/MCP 工作流，本版本没有这两个平台的桌面二进制。完整说明见 [桌面端指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.zh-CN.md)。
 
-## 3. 什么是 MCP 工具？为什么它很重要？
+## red、blue、both 有什么区别？
 
-MCP (Model Context Protocol) 是 AI 模型与外部工具交互的**标准协议**。ReverseLab 的 MCP 工具让 AI Agent 可以**直接调用**逆向分析工具，无需人工手动执行。例如：AI 检测到 JWT Token → 自动调用 `kb_router` 查技术 → `kb_read_file` 读攻击方法 → `http_probe` 发探测请求 → 判断是否存在漏洞。这在整个开源工具生态中非常少见，是 ReverseLab 的核心差异化优势。
+red 与 blue 使用独立分析策略。both 并行运行两个分支，并保留各自结果后合流。知识库的 `both` 文档代表共享知识；攻击与防御文章通过关联路径连接。桌面选择不会改写外部 MCP 客户端的模式。
 
-## 4. AI Agent 如何使用 ReverseLab 进行自动化分析？
+## 必须设置预算吗？
 
-AI Agent 加载项目后沿上下文链（`CLAUDE.md` → `AGENTS.md` → `AI-USAGE.md` → `boards/<board>/AI-USAGE.md`）理解约定。检测到信号后：
+不必。每个 Goal 默认限制为 10 分钟和 32,000 tokens，也可以在“运行限制”中修改。失败路径、重复脚本和证据变化会反馈到后续规划。目标通过独立核验后完成；预算耗尽、手动停止和路线耗尽会分别保留状态。
 
-1. 调用 `kb_router` 查找相关技术文章
-2. 调用 `kb_read_file` 读取文章内容和可运行代码
-3. 按照文章中的 **MCP 工具映射表**自动调用对应工具
-4. 收集证据、记录笔记、生成报告
+## 能同时运行多个任务吗？
 
-## 5. 如何安装和使用 ReverseLab？
+每个工作区默认并发两个 Goal，其余排队；每个 both Goal 内含 red、blue 分支。切换任务或工作区不会改变后台输出归属。关闭应用会中断运行；下次启动保留历史记录，继续分析需创建新 Goal。
 
-```powershell
-git clone https://github.com/LING71671/open-reverselab.git
-cd open-reverselab
-.\scripts\misc\bootstrap.ps1
-.\scripts\misc\install_tools.ps1 -CTF       # Web 工具
-.\scripts\misc\install_tools.ps1 -Android   # APK 工具
-.\scripts\misc\install_tools.ps1 -Windows   # PE 工具
-.\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
+## 文件和模型数据保存在哪里？
 
-# 验证
-python scripts/misc/lab_healthcheck.py
-python scripts/misc/ai_toolcheck.py
-```
+默认工作区为 `~/.open-reverselab/workspaces/Default`，也可另选目录。样本原件、工作副本、任务和报告放在工作区的 `.reverselab/` 下。模型辅助任务会将任务上下文和选中的证据发送至配置的端点。API Key 保存在 WebView 本地存储，当前未接入系统密钥库。
 
-## 6. ReverseLab 内置执行拦截吗？
+## 桌面端会自动调用所有 MCP 工具吗？
 
-不内置。ReverseLab 提供技术文档、目录约定和自动化工具链；具体请求是否执行由使用者所接入的 AI 大模型提供商、运行平台或组织策略处理。
+当前桌面适配器执行有界 Python 观察脚本；知识文档列出的工具需要相应适配器与本机安装。外部 Codex、Claude Code 等客户端可以通过 `reverse_lab_tools` 调用 MCP 工具。Python 动作继承当前用户权限，应用未提供操作系统级沙箱。
 
-## 7. ReverseLab 与 Ghidra/x64dbg/Frida 等工具的关系是什么？
+## 如何验证安装和参与贡献？
 
-ReverseLab 是一个**知识库和自动化编排层**，它集成但不捆绑这些外部工具。支持的工具有：Ghidra（反编译器）、x64dbg（Windows 调试器）、Frida（动态插桩）、JADX（APK 反编译）、sqlmap、Burp Suite、nmap、DirSearch、Cheat Engine、PE-bear、DiE、Procmon、HxD、Cutter/Rizin 以及各种 Python CTF 库。
-
-## 8. 如何为 ReverseLab 贡献？
-
-参考 [CONTRIBUTING.md](https://github.com/LING71671/open-reverselab/blob/main/CONTRIBUTING.md)。新增或修改内容后运行 `public_release_check.py`、`lab_healthcheck.py` 和 `kb_doc_audit.py`，确保目录、索引和文档结构保持一致。
+Windows 使用 `START_HERE.bat`，macOS/Linux 使用 `./START_HERE.sh` 检查 CLI/MCP。开发修改运行相关测试及 `python scripts/misc/public_release_check.py`；具体入口见[贡献指南](https://github.com/LING71671/open-reverselab/blob/main/.github/CONTRIBUTING.md)。

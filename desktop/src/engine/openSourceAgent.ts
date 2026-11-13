@@ -5,8 +5,12 @@ import {
   StageDiagnostic,
   DiscoveredSample,
   PipelineCallbacks,
+  RunBudget,
+  RunProgress,
 } from "../core";
 import { defaultHarnessPipeline, HarnessPipeline } from "./pipeline";
+import type { SecurityTrack } from "../core/contracts/track";
+import type { HealthEvent } from "../core/contracts/health";
 
 export interface AgentRunCallbacks {
   onToken?: (text: string) => void;
@@ -15,6 +19,8 @@ export interface AgentRunCallbacks {
   onDeliverables?: (deliverables: Deliverables) => void;
   onDiagnosticUpdate?: (diagnostic: StageDiagnostic) => void;
   onDiscoveredSamples?: (samples: DiscoveredSample[], containerDir?: string, primary?: string) => void;
+  onRunProgress?: (progress: RunProgress) => void;
+  onHealthEvent?: (event: HealthEvent) => void;
 }
 
 export { defaultHarnessPipeline, HarnessPipeline };
@@ -27,7 +33,11 @@ export async function runOpenSourceAgent(
   prompt: string,
   history: Array<{ role: string; content: string }>,
   callbacks: AgentRunCallbacks,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  track: SecurityTrack = "blue",
+  budget?: RunBudget,
+  goalId?: string,
+  workspaceRoot?: string
 ): Promise<string> {
   const pipelineCallbacks: PipelineCallbacks = {
     onToken: callbacks.onToken,
@@ -36,6 +46,8 @@ export async function runOpenSourceAgent(
     onDeliverables: callbacks.onDeliverables,
     onDiagnosticUpdate: callbacks.onDiagnosticUpdate,
     onDiscoveredSamples: callbacks.onDiscoveredSamples,
+    onRunProgress: callbacks.onRunProgress,
+    onHealthEvent: callbacks.onHealthEvent,
   };
 
   const resultCtx = await defaultHarnessPipeline.run(
@@ -43,7 +55,11 @@ export async function runOpenSourceAgent(
     prompt,
     history,
     pipelineCallbacks,
-    signal
+    signal,
+    goalId,
+    track,
+    budget,
+    { workspaceRoot }
   );
 
   return resultCtx.state.fullContent || "";

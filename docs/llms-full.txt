@@ -1,12 +1,12 @@
 # ReverseLab — Full Knowledge Base Dump for LLM Ingestion
 
 Total articles: 322
-Generated: 2026-11-12
+Generated: 2026-11-13
 
 ---
 ## [ctf-website] 24h Loop Orchestration
 ### 24h Loop Orchestration
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/00-workflow/24h-loop-orchestration/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/00-workflow/24h-loop-orchestration.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/00-workflow/24h-loop-orchestration.md
 
 > >
@@ -134,7 +134,7 @@ manifest 恢复点
 ---
 ## [ctf-website] 人机验证与 CAPTCHA 防绕过加固
 ### CAPTCHA & Anti-Automation Defense Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/captcha-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/captcha-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/captcha-bypass-defense.md
 
 > >
@@ -291,7 +291,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 验证码绕过技术与自动化
 ### CAPTCHA Bypass Techniques and Automation
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/captcha-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/captcha-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/captcha-bypass.md
 
 > >
@@ -579,7 +579,7 @@ page.evaluate("() => { delete window.chrome.runtime }")
 ---
 ## [ctf-website] CDN / Cloudflare 源站隐藏与防直连加固
 ### Origin Server Hiding & Anti-CDN-Bypass Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/cloudflare-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/cloudflare-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/cloudflare-bypass-defense.md
 
 > >
@@ -718,7 +718,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Cloudflare 绕过：寻找真实源服务器 IP
 ### Cloudflare Bypass: Finding the Real Origin Server IP
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/cloudflare-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/cloudflare-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/cloudflare-bypass.md
 
 > >
@@ -957,7 +957,7 @@ def compare_origin(domain, ips):
 ---
 ## [ctf-website] 公网资产收敛与测绘暴露面防御
 ### External Attack Surface Reduction & Cyberspace Exposure Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/fofa-hunting-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/fofa-hunting-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/fofa-hunting-defense.md
 
 > >
@@ -1075,7 +1075,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] FOFA 资产测绘与漏洞狩猎
 ### FOFA Asset Mapping and Vulnerability Hunting
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/fofa-hunting/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/fofa-hunting.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/fofa-hunting.md
 
 > >
@@ -1443,7 +1443,7 @@ def rank_fofa_csv(path):
 ---
 ## [ctf-website] 路由解析一致性与反向代理头信任加固
 ### Route Normalization Consistency & Reverse Proxy Header Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/recon-routing-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/recon-routing-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/recon-routing-defense.md
 
 > >
@@ -1587,7 +1587,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Recon & 路由绕过
 ### Recon and Routing Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/recon-routing/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/recon-routing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/recon-routing.md
 
 > >
@@ -1888,7 +1888,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] 技术栈指纹最小化与运行态错误收敛
 ### Technology Fingerprint Minimization & Runtime Error Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/version-fingerprinting-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/version-fingerprinting-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/version-fingerprinting-defense.md
 
 > >
@@ -2017,7 +2017,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 版本指纹识别
 ### Version Fingerprinting
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/01-recon/version-fingerprinting/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/01-recon/version-fingerprinting.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/01-recon/version-fingerprinting.md
 
 > >
@@ -2319,7 +2319,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] Host Header 注入与路由越权防御
 ### Host Header Injection and Virtual Host Bypass Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/host-header-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/host-header-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/host-header-defense.md
 
 > >
@@ -2483,7 +2483,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Host Header 攻击
 ### Host Header Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/host-header/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/host-header.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/host-header.md
 
 > >
@@ -2746,7 +2746,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT 安全架构与防御全景
 ### JWT Security Architecture and Defense Overview
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/00-overview-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/00-overview-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/00-overview-defense.md
 
 > >
@@ -2944,7 +2944,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 攻击全景
 ### JWT Attack Overview
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/00-overview/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/00-overview.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/00-overview.md
 
 > >
@@ -3169,7 +3169,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT alg:none 无签名绕过防御
 ### JWT alg:none Signature Bypass Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/01-alg-none-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/01-alg-none-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/01-alg-none-defense.md
 
 > >
@@ -3357,7 +3357,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT `alg: none` 无签名绕过
 ### JWT alg:none Signature Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/01-alg-none/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/01-alg-none.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/01-alg-none.md
 
 > >
@@ -3601,7 +3601,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT 非对称/对称算法混淆防御
 ### JWT Algorithm Confusion (RS/ES to HS) Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/02-algorithm-confusion-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/02-algorithm-confusion-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/02-algorithm-confusion-defense.md
 
 > >
@@ -3765,7 +3765,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 算法混淆 (Algorithm Confusion)
 ### JWT Algorithm Confusion Attack
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/02-algorithm-confusion/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/02-algorithm-confusion.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/02-algorithm-confusion.md
 
 > >
@@ -4038,7 +4038,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT HMAC 弱密钥与泄露防御
 ### JWT Weak HMAC Secret and Exposure Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/03-weak-key-bruteforce-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/03-weak-key-bruteforce-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/03-weak-key-bruteforce-defense.md
 
 > >
@@ -4176,7 +4176,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 弱 HMAC 密钥爆破
 ### JWT Weak HMAC Key Bruteforce
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/03-weak-key-bruteforce/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/03-weak-key-bruteforce.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/03-weak-key-bruteforce.md
 
 > >
@@ -4464,7 +4464,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT kid 参数注入防御
 ### JWT kid Parameter Injection Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/04-kid-injection-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/04-kid-injection-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/04-kid-injection-defense.md
 
 > >
@@ -4647,7 +4647,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT `kid` 参数注入
 ### JWT kid Parameter Injection
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/04-kid-injection/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/04-kid-injection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/04-kid-injection.md
 
 > >
@@ -4957,7 +4957,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT jku / x5u / x5c 密钥源劫持防御
 ### JWT jku, x5u, and x5c Key Source Hijacking Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/05-jku-x5u-abuse-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/05-jku-x5u-abuse-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/05-jku-x5u-abuse-defense.md
 
 > >
@@ -5108,7 +5108,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT `jku` / `x5u` 密钥源劫持
 ### JWT jku / x5u Key Source Hijacking
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/05-jku-x5u-abuse/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/05-jku-x5u-abuse.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/05-jku-x5u-abuse.md
 
 > >
@@ -5414,7 +5414,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT Claim 校验与 Token 类型隔离防御
 ### JWT Claim Enforcement and Token Type Isolation Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/06-claim-missing-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/06-claim-missing-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/06-claim-missing-defense.md
 
 > >
@@ -5590,7 +5590,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT Claim 验证缺失 & Token 混用
 ### JWT Claim Validation Missing and Token Confusion
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/06-claim-missing/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/06-claim-missing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/06-claim-missing.md
 
 > >
@@ -5938,7 +5938,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] JWT 凭证窃取、重放与持久化防御
 ### JWT Theft, Replay, and Persistence Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/07-theft-replay-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/07-theft-replay-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/07-theft-replay-defense.md
 
 > >
@@ -6130,7 +6130,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 窃取、重放与持久化
 ### JWT Theft, Replay, and Persistence
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/07-theft-replay/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/07-theft-replay.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/07-theft-replay.md
 
 > >
@@ -6417,7 +6417,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 依赖库 CVE 治理与安全调用防御
 ### JWT Library CVE Remediation and Safe Wrapper Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/08-cve-library-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/08-cve-library-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/08-cve-library-defense.md
 
 > >
@@ -6592,7 +6592,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 依赖库 CVE 与指纹路由
 ### JWT Library CVEs and Fingerprint Routing
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/08-cve-library/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/08-cve-library.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/08-cve-library.md
 
 > >
@@ -6827,7 +6827,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 防御验证流水线、CI 门禁与结果矩阵
 ### JWT Defense Verification Pipeline, CI Gates, and Result Matrix
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-operations-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-operations-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-operations-defense.md
 
 > >
@@ -7007,7 +7007,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] JWT 工具链、操作流程与结果矩阵
 ### JWT Toolchain, Operations Workflow, and Result Matrix
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/jwt/09-toolchain-operations/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-operations.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/jwt/09-toolchain-operations.md
 
 > >
@@ -7214,7 +7214,7 @@ curl -s https://target.example/.well-known/jwks.json
 ---
 ## [ctf-website] LDAP 过滤器注入与匿名绑定防御
 ### LDAP Filter Injection and Anonymous Bind Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/ldap-injection-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/ldap-injection-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/ldap-injection-defense.md
 
 > >
@@ -7393,7 +7393,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] LDAP Injection
 ### LDAP Injection
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/ldap-injection/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/ldap-injection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/ldap-injection.md
 
 > >
@@ -7663,7 +7663,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] OAuth 2.0 / OIDC 单点登录安全防御
 ### OAuth 2.0 and OIDC SSO Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/oauth-sso-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/oauth-sso-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/oauth-sso-defense.md
 
 > >
@@ -7833,7 +7833,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] OAuth 2.0 / OIDC 攻击实战
 ### OAuth 2.0 / OIDC Attack Techniques
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/oauth-sso/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/oauth-sso.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/oauth-sso.md
 
 > >
@@ -8169,7 +8169,7 @@ def force_i
 ---
 ## [ctf-website] SAML 2.0 XML 签名包装与解析器差异防御
 ### SAML 2.0 XSW, Void Canonicalization, and Replay Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/saml-attacks-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/saml-attacks-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/saml-attacks-defense.md
 
 > >
@@ -8376,7 +8376,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] SAML 2.0 攻击
 ### SAML 2.0 Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/02-auth/saml-attacks/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/02-auth/saml-attacks.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/02-auth/saml-attacks.md
 
 > >
@@ -8630,7 +8630,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] GraphQL 防御与安全架构加固
 ### GraphQL Defense and Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/graphql-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/graphql-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/graphql-defense.md
 
 > >
@@ -8809,7 +8809,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] GraphQL 攻击实战
 ### GraphQL Attack Techniques
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/graphql/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/graphql.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/graphql.md
 
 > >
@@ -9164,7 +9164,7 @@ CTF 常见错配：网关按 hash 放行，后端仍执行 body 里的 `query`�
 ---
 ## [ctf-website] HPP 与 CRLF 响应头注入防御
 ### HPP and CRLF Header Injection Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/hpp-crlf-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/hpp-crlf-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/hpp-crlf-defense.md
 
 > >
@@ -9339,7 +9339,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] HPP / CRLF Injection / Header Injection
 ### HPP, CRLF Injection, and Header Injection
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/hpp-crlf/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/hpp-crlf.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/hpp-crlf.md
 
 > >
@@ -9542,7 +9542,7 @@ CRLF SSRF URL
 ---
 ## [ctf-website] Prototype Pollution (原型链污染) 纵深防御
 ### Prototype Pollution Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/prototype-pollution-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/prototype-pollution-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/prototype-pollution-defense.md
 
 > >
@@ -9732,7 +9732,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Prototype Pollution (原型链污染)
 ### Prototype Pollution
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/prototype-pollution/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/prototype-pollution.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/prototype-pollution.md
 
 > >
@@ -9938,7 +9938,7 @@ parser/source 命中
 ---
 ## [ctf-website] ReDoS 正则回溯与时序侧信道防御
 ### ReDoS and Timing Side-Channel Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/redos-timing-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/redos-timing-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/redos-timing-defense.md
 
 > >
@@ -10095,7 +10095,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] ReDoS & 时序攻击
 ### ReDoS and Timing Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/redos-timing/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/redos-timing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/redos-timing.md
 
 > >
@@ -10315,7 +10315,7 @@ Timing
 ---
 ## [ctf-website] SQLi 与 NoSQLi 纵深防御及账本隔离
 ### SQLi and NoSQLi Defense and Ledger Isolation
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/sqli-nosqli-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/sqli-nosqli-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/sqli-nosqli-defense.md
 
 > >
@@ -10510,7 +10510,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] SQLi & NoSQLi (数据库注入高阶实战)
 ### Advanced SQLi and NoSQLi Injection
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/sqli-nosqli/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/sqli-nosqli.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/sqli-nosqli.md
 
 > >
@@ -10844,7 +10844,7 @@ MONGO_OPS = {
 ---
 ## [ctf-website] SSTI (服务器端模板注入) 与多引擎沙盒加固
 ### Server-Side Template Injection (SSTI) Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/ssti-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/ssti-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/ssti-defense.md
 
 > >
@@ -10996,7 +10996,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] SSTI (Server-Side Template Injection)
 ### Server-Side Template Injection (SSTI)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/03-injection/ssti/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/03-injection/ssti.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/03-injection/ssti.md
 
 > >
@@ -11317,7 +11317,7 @@ console.log(ctx.Vue.compile(tpl).toString());     // ← 生成代码原文
 ---
 ## [ctf-website] 开放重定向与 URL 解析差分防御
 ### Open Redirect & URL Parser Differential Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/open-redirect-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/04-ssrf/open-redirect-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/04-ssrf/open-redirect-defense.md
 
 > >
@@ -11452,7 +11452,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Open Redirect & Redirect Chain Attacks
 ### Open Redirect & Redirect Chain Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/open-redirect/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/04-ssrf/open-redirect.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/04-ssrf/open-redirect.md
 
 > >
@@ -11622,7 +11622,7 @@ Open Redirect
 ---
 ## [ctf-website] SSRF 纵深防御：协议封堵、DNS Pinning 与云元数据隔离
 ### SSRF Defense-in-Depth: Protocol Allowlisting, DNS Pinning & IMDSv2
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/ssrf-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/04-ssrf/ssrf-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/04-ssrf/ssrf-defense.md
 
 > >
@@ -11765,7 +11765,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] SSRF (Server-Side Request Forgery)
 ### SSRF (Server-Side Request Forgery)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/04-ssrf/ssrf/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/04-ssrf/ssrf.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/04-ssrf/ssrf.md
 
 > >
@@ -12066,7 +12066,7 @@ frame
 ---
 ## [ctf-website] 多语言反序列化安全防御与类型约束
 ### Polyglot Deserialization Hardening & Type Allowlisting
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/05-deserialization/deserialization-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/05-deserialization/deserialization-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/05-deserialization/deserialization-defense.md
 
 > >
@@ -12209,7 +12209,7 @@ Java JEP 290 全局与局部反序列化过滤器参考配置（JVM 启动参数
 ---
 ## [ctf-website] Deserialization Vulnerabilities
 ### Deserialization Vulnerabilities
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/05-deserialization/deserialization/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/05-deserialization/deserialization.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/05-deserialization/deserialization.md
 
 > >
@@ -12386,7 +12386,7 @@ blob 识别
 ---
 ## [ctf-website] 文件上传隔离、XXE 禁用与路径穿越防御
 ### File Upload Sandboxing, XXE Disabling & Path Traversal Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/06-file-attacks/file-upload-xxe-lfi-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/06-file-attacks/file-upload-xxe-lfi-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/06-file-attacks/file-upload-xxe-lfi-defense.md
 
 > >
@@ -12530,7 +12530,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] File Upload / XXE / LFI / Path Traversal
 ### File Upload / XXE / LFI / Path Traversal
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/06-file-attacks/file-upload-xxe-lfi/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/06-file-attacks/file-upload-xxe-lfi.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/06-file-attacks/file-upload-xxe-lfi.md
 
 > >
@@ -12867,7 +12867,7 @@ LFI_PAYLOADS = [
 ---
 ## [ctf-website] Admin Bot 与 XSS 跨站脚本纵深防御
 ### Admin Bot and XSS Defense-in-Depth
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/admin-bot-xss-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/admin-bot-xss-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/admin-bot-xss-defense.md
 
 > >
@@ -13051,7 +13051,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Admin Bot / XSS 实战
 ### Admin Bot / XSS Practical Guide
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/admin-bot-xss/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/admin-bot-xss.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/admin-bot-xss.md
 
 > >
@@ -13248,7 +13248,7 @@ XSS 注入
 ---
 ## [ctf-website] CORS 跨域策略与 CSRF 请求伪造防御
 ### CORS and CSRF Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/cors-csrf-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/cors-csrf-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/cors-csrf-defense.md
 
 > >
@@ -13425,7 +13425,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] CORS / CSRF 高级攻击
 ### Advanced CORS / CSRF Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/cors-csrf/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/cors-csrf.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/cors-csrf.md
 
 > >
@@ -13661,7 +13661,7 @@ CSRF simple request
 ---
 ## [ctf-website] PostMessage 跨域消息通信纵深防御
 ### PostMessage Cross-Origin Communication Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/postmessage-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/postmessage-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/postmessage-defense.md
 
 > >
@@ -13823,7 +13823,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] PostMessage / 跨域通信攻击
 ### PostMessage / Cross-Origin Communication Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/postmessage/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/postmessage.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/postmessage.md
 
 > >
@@ -14003,7 +14003,7 @@ handler 定位
 ---
 ## [ctf-website] WebSocket / Socket.IO / MQTT 实时通道纵深防御
 ### WebSocket, Socket.IO, and MQTT Security Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/websocket-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/websocket-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/websocket-defense.md
 
 > >
@@ -14190,7 +14190,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] WebSocket 攻击实战
 ### WebSocket Attack Practical Guide
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/07-client/websocket/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/07-client/websocket.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/07-client/websocket.md
 
 > >
@@ -14514,7 +14514,7 @@ sio.connect('https://target.com', transpo
 ---
 ## [ctf-website] HTTP/2 协议栈防御：HPACK 限额、CONTINUATION 封堵与 H2C 禁用
 ### HTTP/2 Protocol Hardening: HPACK Limits, CONTINUATION Bounds & H2C Disabling
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/http2-attacks-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/08-infra/http2-attacks-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/08-infra/http2-attacks-defense.md
 
 > >
@@ -14638,7 +14638,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] HTTP/2 攻击
 ### HTTP/2 Attacks — HPACK Bomb & Stream Multiplexing Abuse
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/http2-attacks/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/08-infra/http2-attacks.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/08-infra/http2-attacks.md
 
 > >
@@ -14831,7 +14831,7 @@ python3 exploit/exploit.py --host 127.0.0.1 --port 80 --no-tls \
 ---
 ## [ctf-website] 并发竞态原子化、缓存键隔离与 HTTP 走私防御
 ### Concurrency Atomicity, Cache Key Isolation & HTTP Request Smuggling Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/race-cache-smuggling-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/08-infra/race-cache-smuggling-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/08-infra/race-cache-smuggling-defense.md
 
 > >
@@ -14960,7 +14960,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Race Condition / Cache Poisoning / Request Smuggling
 ### Race Condition / Cache Poisoning / Request Smuggling
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/race-cache-smuggling/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/08-infra/race-cache-smuggling.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/08-infra/race-cache-smuggling.md
 
 > >
@@ -15286,7 +15286,7 @@ def te_te(host):
 ---
 ## [ctf-website] Web Cache Deception 防御与 CDN/源站路径一致性加固
 ### Web Cache Deception Defense & CDN/Origin Path Consistency
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/web-cache-deception-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/08-infra/web-cache-deception-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/08-infra/web-cache-deception-defense.md
 
 > >
@@ -15426,7 +15426,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Web Cache Deception
 ### Web Cache Deception
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/08-infra/web-cache-deception/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/08-infra/web-cache-deception.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/08-infra/web-cache-deception.md
 
 > >
@@ -15705,7 +15705,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] Blink UAF 防御：CSSFontFeatureValuesMap 迭代器生命周期与浏览器沙箱加固（CVE-2026-2441）
 ### Blink UAF Defense: CSSFontFeatureValuesMap Iterator Lifecycle & Browser Sandbox Hardening (CVE-2026-2441)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/01-browser-sandbox-escape-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/01-browser-sandbox-escape-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/01-browser-sandbox-escape-defense.md
 
 > >
@@ -15859,7 +15859,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Blink UAF：CSSFontFeatureValuesMap 迭代器悬空指针（CVE-2026-2441）
 ### Blink UAF: CSSFontFeatureValuesMap Iterator Dangling Pointer (CVE-2026-2441)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/01-browser-sandbox-escape/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/01-browser-sandbox-escape.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/01-browser-sandbox-escape.md
 
 > >
@@ -16046,7 +16046,7 @@ UAF 本身导致渲染进程崩溃（DoS）。要实现完整 RCE，需要：
 ---
 ## [ctf-website] Redis/Valkey RESTORE 防御：zipmap 规范编码校验与 ACL 隔离（CVE-2026-25243）
 ### Redis/Valkey RESTORE Defense: zipmap Canonical Validation & ACL Isolation (CVE-2026-25243)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/02-redis-zipmap-rce-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/02-redis-zipmap-rce-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/02-redis-zipmap-rce-defense.md
 
 > >
@@ -16218,7 +16218,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Redis/Valkey RESTORE：zipmap 长度前缀步长不一致（CVE-2026-25243）
 ### Redis/Valkey RESTORE: zipmap Length Prefix Step Mismatch (CVE-2026-25243)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/02-redis-zipmap-rce/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/02-redis-zipmap-rce.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/02-redis-zipmap-rce.md
 
 > >
@@ -16387,7 +16387,7 @@ valkey-cli ACL SETUSER <user> -RESTORE
 ---
 ## [ctf-website] cPanel CalDAV 路径穿越与权限降级加固（CVE-2026-29205）
 ### cPanel CalDAV Path Traversal & Privilege Drop Hardening (CVE-2026-29205)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/03-cpanel-caldav-traversal-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/03-cpanel-caldav-traversal-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/03-cpanel-caldav-traversal-defense.md
 
 > >
@@ -16531,7 +16531,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] cPanel CalDAV 预认证路径穿越（CVE-2026-29205）
 ### cPanel CalDAV Pre-Auth Path Traversal (CVE-2026-29205)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/03-cpanel-caldav-traversal/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/03-cpanel-caldav-traversal.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/03-cpanel-caldav-traversal.md
 
 > >
@@ -16673,7 +16673,7 @@ CALDAV_DEFAULT_WAIT_LADDER = [5, 10, 20, 30]  # 秒
 ---
 ## [ctf-website] Nezha Monitoring 防御：Go 路径段匹配加固与 JWT 密钥隔离（CVE-2026-53519）
 ### Nezha Monitoring Defense: Go Path Segment Containment & JWT Key Isolation (CVE-2026-53519)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/04-nezha-path-traversal-jwt-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/04-nezha-path-traversal-jwt-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/04-nezha-path-traversal-jwt-defense.md
 
 > >
@@ -16836,7 +16836,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Nezha Monitoring：路径遍历 + JWT 伪造管理员接管（CVE-2026-53519）
 ### Nezha Monitoring: Path Traversal + JWT Forgery Admin Takeover (CVE-2026-53519)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/04-nezha-path-traversal-jwt/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/04-nezha-path-traversal-jwt.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/04-nezha-path-traversal-jwt.md
 
 > >
@@ -16972,7 +16972,7 @@ python3 CVE-2026-53519.py http://127.0.0.1:8008 <jwt_secret> <user_id>
 ---
 ## [ctf-website] LiteLLM 权限提升防御：RBAC 路由边界与 API Key 授权隔离（CVE-2026-47101）
 ### LiteLLM Privilege Escalation Defense: RBAC Route Boundary & API Key Authorization Isolation (CVE-2026-47101)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/05-litellm-privesc-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/05-litellm-privesc-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/05-litellm-privesc-defense.md
 
 > >
@@ -17104,7 +17104,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] LiteLLM：API Key 生成绕过角色限制 + 自提权（CVE-2026-47101）
 ### LiteLLM: API Key Generation Bypass Role Restrictions + Self-Privilege Escalation (CVE-2026-47101)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/05-litellm-privesc/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/05-litellm-privesc.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/05-litellm-privesc.md
 
 > >
@@ -17242,7 +17242,7 @@ curl -s -X GET http://localhost:4000/user/list \
 ---
 ## [ctf-website] NGINX rewrite 模块堆溢出防御：版本升级、指令安全重构与运行缓解（CVE-2026-42945）
 ### NGINX rewrite Module Heap Overflow Defense: Version Upgrade, Directive Refactoring & Runtime Hardening (CVE-2026-42945)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/06-nginx-rewrite-heapoverflow-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/06-nginx-rewrite-heapoverflow-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/06-nginx-rewrite-heapoverflow-defense.md
 
 > >
@@ -17401,7 +17401,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] NGINX rewrite 模块：set 缓冲区长度错配堆溢出（CVE-2026-42945）
 ### NGINX rewrite Module: set Buffer Length Mismatch Heap Overflow (CVE-2026-42945)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/06-nginx-rewrite-heapoverflow/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/06-nginx-rewrite-heapoverflow.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/06-nginx-rewrite-heapoverflow.md
 
 > >
@@ -17572,7 +17572,7 @@ python3 exploit/exp.py \
 ---
 ## [ctf-website] CVE Correlation Graph（CVE 关联网）
 ### CVE Correlation Graph
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/cve-correlation-graph/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/cve-correlation-graph.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/cve-correlation-graph.md
 
 > >
@@ -17662,7 +17662,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] CVE Workflow For World-Class Web CTF
 ### CVE Workflow For World-Class Web CTF
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/cve-workflow/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/cve-workflow.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/cve-workflow.md
 
 > >
@@ -17748,7 +17748,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] Multi-CVE Chain Playbook（多 CVE 组合联合利用）
 ### Multi-CVE Chain Playbook
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/09-cve/multi-cve-chain-playbook/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/09-cve/multi-cve-chain-playbook.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/09-cve/multi-cve-chain-playbook.md
 
 > >
@@ -17859,7 +17859,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] AWS IAM 最小权限与提权路径防御
 ### AWS IAM Least Privilege and Privilege Escalation Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/aws-iam-privesc-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/aws-iam-privesc-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/aws-iam-privesc-defense.md
 
 > >
@@ -18037,7 +18037,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] AWS IAM 权限枚举与提权路径
 ### AWS IAM Enumeration and Privilege Escalation Paths
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/aws-iam-privesc/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/aws-iam-privesc.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/aws-iam-privesc.md
 
 > >
@@ -18166,7 +18166,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述步骤：
 ---
 ## [ctf-website] CI/CD Pipeline 防御：上下文注入消除、Runner 隔离与供应链签名
 ### CI/CD Pipeline Defense: Context Injection Elimination, Runner Isolation & Artifact Signing
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/ci-cd-pipeline-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/ci-cd-pipeline-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/ci-cd-pipeline-defense.md
 
 > >
@@ -18311,7 +18311,7 @@ jobs:
 ---
 ## [ctf-website] CI/CD Pipeline 攻击
 ### CI/CD Pipeline Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/ci-cd-pipeline/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/ci-cd-pipeline.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/ci-cd-pipeline.md
 
 > >
@@ -18564,7 +18564,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] 容器运行时逃逸防御：Docker Socket 隔离、Capabilities 收敛与 LSM 加固
 ### Container Runtime Escape Defense: Docker Socket Isolation, Capabilities Drop & LSM Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/container-runtime-escape-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/container-runtime-escape-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/container-runtime-escape-defense.md
 
 > >
@@ -18702,7 +18702,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 容器运行时逃逸打点
 ### Container Runtime Escape Field Checks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/container-runtime-escape/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/container-runtime-escape.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/container-runtime-escape.md
 
 > >
@@ -18824,7 +18824,7 @@ CI container → mounted workspace + cloud env → CI secret → cloud IAM
 ---
 ## [ctf-website] GitHub Actions 滥用路径防御：Token 最小权限、触发器隔离与 Action 固定
 ### GitHub Actions Abuse Defense: Minimal GITHUB_TOKEN, Trigger Isolation & SHA Pinning
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/github-actions-abuse-paths-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/github-actions-abuse-paths-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/github-actions-abuse-paths-defense.md
 
 > >
@@ -18975,7 +18975,7 @@ jobs:
 ---
 ## [ctf-website] GitHub Actions 滥用路径
 ### GitHub Actions Abuse Paths
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/github-actions-abuse-paths/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/github-actions-abuse-paths.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/github-actions-abuse-paths.md
 
 > >
@@ -19085,7 +19085,7 @@ OIDC trust 过宽 → 任意 branch 获取云临时凭证 → Terraform apply
 ---
 ## [ctf-website] Kubernetes RBAC 最小权限防御与高危权限边阻断
 ### Kubernetes RBAC Least Privilege Defense and High-Risk Edge Blocking
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/k8s-rbac-attack-paths-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/k8s-rbac-attack-paths-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/k8s-rbac-attack-paths-defense.md
 
 > >
@@ -19232,7 +19232,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Kubernetes RBAC 攻击路径
 ### Kubernetes RBAC Attack Paths
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/k8s-rbac-attack-paths/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/k8s-rbac-attack-paths.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/k8s-rbac-attack-paths.md
 
 > >
@@ -19351,7 +19351,7 @@ K8s service account → IRSA → AWS AssumeRoleWithWebIdentity → 云资源访�
 ---
 ## [ctf-website] Kubernetes 与容器逃逸纵深防御：Pod Security、控制面隔离与网络策略
 ### Kubernetes & Container Escape Defense-in-Depth: Pod Security, Control-Plane Isolation & NetworkPolicy
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/kubernetes-container-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/kubernetes-container-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/kubernetes-container-defense.md
 
 > >
@@ -19506,7 +19506,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Kubernetes & 容器逃逸
 ### Kubernetes & Container Escape
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/kubernetes-container/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/kubernetes-container.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/kubernetes-container.md
 
 > >
@@ -19795,7 +19795,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] Serverless / Lambda 防御：最小角色、事件源校验与执行隔离
 ### Serverless / Lambda Defense: Least-Privilege Execution Role, Event Validation & Isolation
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/serverless-lambda-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/serverless-lambda-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/serverless-lambda-defense.md
 
 > >
@@ -19936,7 +19936,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Serverless / Lambda 攻击
 ### Serverless / Lambda Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/serverless-lambda/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/serverless-lambda.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/serverless-lambda.md
 
 > >
@@ -20213,7 +20213,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] Terraform State 与 IaC 凭证防御：加密远端状态、零密钥输出与暴露阻断
 ### Terraform State and IaC Secret Defense: Encrypted Remote State, Zero-Secret Outputs & Exposure Blocking
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/terraform-state-secrets-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/terraform-state-secrets-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/terraform-state-secrets-defense.md
 
 > >
@@ -20347,7 +20347,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Terraform State 与 IaC 凭证泄露
 ### Terraform State and IaC Secret Exposure
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/10-cloud/terraform-state-secrets/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/10-cloud/terraform-state-secrets.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/10-cloud/terraform-state-secrets.md
 
 > >
@@ -20452,7 +20452,7 @@ tfvars leak → provider credential → sts:GetCallerIdentity → 云资源枚�
 ---
 ## [ctf-website] Valkey RESP 协议状态机 DoS 防御：版本升级、状态重置补丁与边界接入控制（CVE-2026-27623）
 ### Valkey RESP Protocol Pre-Auth DoS Defense: Upgrade, State Reset Patch & Perimeter Access Control (CVE-2026-27623)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/11-dos/01-valkey-resp-dos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/11-dos/01-valkey-resp-dos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/11-dos/01-valkey-resp-dos-defense.md
 
 > >
@@ -20592,7 +20592,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Valkey RESP 协议：预认证断言失败 DoS（CVE-2026-27623）
 ### Valkey RESP Protocol Pre-Auth Assertion Failure DoS (CVE-2026-27623)
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/11-dos/01-valkey-resp-dos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/11-dos/01-valkey-resp-dos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/11-dos/01-valkey-resp-dos.md
 
 > >
@@ -20724,7 +20724,7 @@ python3 exploit/exp.py
 ---
 ## [ctf-website] Dependency Confusion 与供应链投毒防御：私有源隔离、锁文件校验与脚本禁用
 ### Dependency Confusion & Supply Chain Defense: Scoped Registries, Lockfile Integrity & Script Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/11-supply-chain/dependency-confusion-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/11-supply-chain/dependency-confusion-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/11-supply-chain/dependency-confusion-defense.md
 
 > >
@@ -20847,7 +20847,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Dependency Confusion & 供应链攻击
 ### Dependency Confusion & Supply Chain Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/11-supply-chain/dependency-confusion/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/11-supply-chain/dependency-confusion.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/11-supply-chain/dependency-confusion.md
 
 > >
@@ -21145,7 +21145,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击步骤：
 ---
 ## [ctf-website] 支付绕过纵深防御 — 服务端权威计价、状态机与精度控制
 ### Payment Bypass Defense — Server-Authoritative Pricing, State Machine & Precision Controls
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-bypass-defense.md
 
 > >
@@ -21329,7 +21329,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Payment Bypass — 支付绕过深度技术手册
 ### Payment Bypass — Advanced Payment Evasion Techniques
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-bypass.md
 
 > >
@@ -21674,7 +21674,7 @@ ORDERS = {
 ---
 ## [ctf-website] 支付回调与异步链路防御 — 验签、幂等锁、Anti-SSRF 与事件因果保护
 ### Payment Callback & Async Defense — Signature Verification, Idempotency, Anti-SSRF & Causal Ordering
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-callback-async-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-callback-async-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-callback-async-defense.md
 
 > >
@@ -21856,7 +21856,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Payment Callback & Async Attack — 支付回调与异步攻击深度手册
 ### Payment Callback & Async Attack — Deep Dive into Payment Callback and Async Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-callback-async/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-callback-async.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-callback-async.md
 
 > >
@@ -22195,7 +22195,7 @@ PAYPAL_CALLBACK = {
 ---
 ## [ctf-website] 虚拟商品与内购 (IAP) 防御 — 收据服务端直验、防重放与铸币防护
 ### Digital Goods & IAP Defense — Server-Side Receipt Verification, Replay Protection & Minting Guards
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-digital-goods-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-digital-goods-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-digital-goods-defense.md
 
 > >
@@ -22344,7 +22344,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Payment Digital Goods & IAP — 虚拟商品/内购攻击手册
 ### Digital Goods & IAP Attack Manual — iOS/Android Receipt Bypass and Virtual Currency Exploits
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-digital-goods/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-digital-goods.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-digital-goods.md
 
 > >
@@ -22741,7 +22741,7 @@ def cdkey_attacks():
 ---
 ## [ctf-website] 退信泄露与订单越权防御 — 最小化 NDR 回执与所有权强鉴权
 ### Bounce Email Leak & Order IDOR Defense — Minimal NDR Payloads & Strict Ownership Authorization
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-email-bounce-idor-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-email-bounce-idor-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-email-bounce-idor-defense.md
 
 > >
@@ -22876,7 +22876,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 退信滥用 + 订单号授权绕过
 ### Bounce Email Abuse + Order ID Authorization Bypass to Steal Card Keys
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-email-bounce-idor/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-email-bounce-idor.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-email-bounce-idor.md
 
 > >
@@ -23155,7 +23155,7 @@ AI Agent 可调用以下 MCP 工具自动检测上述漏洞：
 ---
 ## [ctf-website] 支付业务逻辑纵深防御 — 多账本一致性、防注入与闭环校验
 ### Payment Business Logic Defense — Multi-Ledger Consistency, Injection Isolation & Closed-Loop Validation
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-logic-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-logic-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-logic-defense.md
 
 > >
@@ -23305,7 +23305,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Payment Logic Attacks — 支付类 Web CTF 技术手册
 ### Payment Logic Attacks — Web CTF Payment Technique Handbook
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-logic/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-logic.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-logic.md
 
 > >
@@ -23672,7 +23672,7 @@ def try_status(order_id):
 ---
 ## [ctf-website] PHP 支付系统纵深防御 — 严格类型比较、反序列化禁用与 BCMath 计价
 ### PHP Payment Defense — Strict Comparisons, Safe Deserialization & BCMath Precision
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-php-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-php-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-php-defense.md
 
 > >
@@ -23817,7 +23817,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] PHP Payment Attacks — PHP 支付专项攻击手册
 ### PHP Payment Attacks — PHP-Specific Payment Exploitation Handbook
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-php/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-php.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-php.md
 
 > >
@@ -24149,7 +24149,7 @@ def laravel_cashier_attacks():
 ---
 ## [ctf-website] 余额扣减丢失更新 (Lost Update) 防御 — 条件原子更新、行锁与复式账本
 ### Balance Deduction Lost Update Defense — Atomic Conditional Updates, Row Locks & Double-Entry Ledgers
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-race-lost-update-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-race-lost-update-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-race-lost-update-defense.md
 
 > >
@@ -24305,7 +24305,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Payment Race / Lost Update — 余额扣减丢失更新
 ### Payment Race / Lost Update — Balance Deduction Loss via Race Conditions
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-race-lost-update/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-race-lost-update.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-race-lost-update.md
 
 > >
@@ -24659,7 +24659,7 @@ XFF 信任错误 → 绕过限流 → 扩大 race 窗口
 ---
 ## [ctf-website] 订阅与周期计费防御 — 试用反滥用、Proration 校验与 Seat 强绑定
 ### Subscription & Recurring Billing Defense — Trial Anti-Abuse, Proration Verification & Seat Binding
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-subscription-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-subscription-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-subscription-defense.md
 
 > >
@@ -24820,7 +24820,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Payment Subscription — 订阅/定期付款攻击深度手册
 ### Payment Subscription — Subscription & Recurring Payment Attack Handbook
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/12-payment/payment-subscription/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/12-payment/payment-subscription.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/12-payment/payment-subscription.md
 
 > >
@@ -25250,7 +25250,7 @@ STRIPE_FORGERY = {
 ---
 ## [ctf-website] IDOR 纵深防御 — 对象级授权 (BOLA)、多租户隔离与不可预测标识
 ### IDOR Defense — Broken Object Level Authorization (BOLA), Tenant Isolation & Opaque IDs
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/01-idor-enumeration-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/14-idor/01-idor-enumeration-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/14-idor/01-idor-enumeration-defense.md
 
 > >
@@ -25412,7 +25412,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] IDOR 深度枚举与利用 — 水平/垂直越权实战方法论
 ### IDOR Deep Enumeration & Exploitation — Horizontal/Vertical Privilege Escalation Methodology
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/01-idor-enumeration/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/14-idor/01-idor-enumeration.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/14-idor/01-idor-enumeration.md
 
 > >
@@ -25704,7 +25704,7 @@ class MultiStepIDOR:
 ---
 ## [ctf-website] 功能级访问控制 (BAC) 防御 — 默认拒绝、防方法覆写与流程状态锁
 ### Broken Access Control (BAC) Defense — Default-Deny RBAC, Anti-Method-Override & Workflow State Locking
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/02-bac-business-logic-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/14-idor/02-bac-business-logic-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/14-idor/02-bac-business-logic-defense.md
 
 > >
@@ -25863,7 +25863,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 功能级访问控制缺失 (BAC) — 垂直越权与业务逻辑绕过
 ### Broken Access Control (BAC) — Vertical Privilege Escalation & Business Logic Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/14-idor/02-bac-business-logic/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/14-idor/02-bac-business-logic.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/14-idor/02-bac-business-logic.md
 
 > >
@@ -26154,7 +26154,7 @@ def test_method_override(base_url, endpoint, session):
 ---
 ## [ctf-website] 批量赋值与属性注入防御 — DTO 白名单绑定、禁危险函数与 GraphQL 类型收敛
 ### Mass Assignment Defense — Strict DTO Allowlists, Safe Binding & GraphQL Input Types
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/01-mass-assignment-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/15-mass-assignment/01-mass-assignment-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/15-mass-assignment/01-mass-assignment-defense.md
 
 > >
@@ -26283,7 +26283,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 批量赋值与属性注入深度利用手册
 ### Mass Assignment & Attribute Injection Deep Exploitation Handbook
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/01-mass-assignment/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/15-mass-assignment/01-mass-assignment.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/15-mass-assignment/01-mass-assignment.md
 
 > >
@@ -26576,7 +26576,7 @@ DJANGO_MASS_ASSIGN_PAYLOADS = {
 ---
 ## [ctf-website] 参数篡改与优惠券竞态防御 — 契约校验、不可变折扣账本与防 TOCTOU
 ### Parameter Tampering & Coupon Race Defense — Contract Validation, Immutable Discount Ledgers & Anti-TOCTOU
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/02-parameter-tampering-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/15-mass-assignment/02-parameter-tampering-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/15-mass-assignment/02-parameter-tampering-defense.md
 
 > >
@@ -26730,7 +26730,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 参数篡改全链 — 价格/数量/优惠券/竞态深度攻击
 ### Parameter Tampering Full Chain — Price/Quantity/Coupon/Race Condition Deep Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/15-mass-assignment/02-parameter-tampering/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/15-mass-assignment/02-parameter-tampering.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/15-mass-assignment/02-parameter-tampering.md
 
 > >
@@ -27065,7 +27065,7 @@ class CouponLifecycleAttack:
 ---
 ## [ctf-website] 速率限制绕过防御 — 可信代理链、规范化键、原子令牌桶与验证码强绑定
 ### Rate Limit Bypass Defense — Trusted Proxy Chains, Canonical Keys, Atomic Token Buckets & CAPTCHA Binding
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/01-rate-limit-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/16-rate-limit/01-rate-limit-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/16-rate-limit/01-rate-limit-bypass-defense.md
 
 > >
@@ -27345,7 +27345,7 @@ def run_self_checks() -> None:
 ---
 ## [ctf-website] 速率限制绕过 — IP 轮换、Header 操纵与应用层绕过
 ### Rate Limit Bypass — IP Rotation, Header Manipulation & Application-Layer Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/01-rate-limit-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/16-rate-limit/01-rate-limit-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/16-rate-limit/01-rate-limit-bypass.md
 
 > >
@@ -27713,7 +27713,7 @@ class RateLimitRaceBypass:
 ---
 ## [ctf-website] 高级暴力破解防御 — 反凭证喷洒、抗 MFA 疲劳、恒定时间认证与哈希加固
 ### Advanced Brute Force Defense — Anti-Spraying, Phishing-Resistant MFA, Constant-Time Auth & Hash Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/02-brute-force-tactics-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/16-rate-limit/02-brute-force-tactics-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/16-rate-limit/02-brute-force-tactics-defense.md
 
 > >
@@ -27941,7 +27941,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 高级暴力破解 — 凭证喷洒、MFA 疲劳、Hash 策略
 ### Advanced Brute Force — Credential Spraying, MFA Fatigue & Hash Strategies
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/16-rate-limit/02-brute-force-tactics/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/16-rate-limit/02-brute-force-tactics.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/16-rate-limit/02-brute-force-tactics.md
 
 > >
@@ -28269,7 +28269,7 @@ class TimingBasedEnumeration:
 ---
 ## [ctf-website] API 发现与信息泄露防御 — 生产文档收敛、GraphQL 内省禁用、Source Map 隔离与版本治理
 ### API Discovery & Information Disclosure Defense — Spec Gating, GraphQL Introspection Hardening, Source Map Isolation & Version Governance
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/01-api-discovery-leak-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/17-api-attacks/01-api-discovery-leak-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/17-api-attacks/01-api-discovery-leak-defense.md
 
 > >
@@ -28501,7 +28501,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] API 发现与信息泄露 — Swagger、GraphQL、Source Map 与移动端提取
 ### API Discovery and Information Disclosure — Swagger, GraphQL, Source Maps, and Mobile Extraction
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/01-api-discovery-leak/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/17-api-attacks/01-api-discovery-leak.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/17-api-attacks/01-api-discovery-leak.md
 
 > >
@@ -28818,7 +28818,7 @@ def graphql_error_field_discovery(base_url, endpoint="/graphql"):
 ---
 ## [ctf-website] API 密钥泄露防御 — 前后端密钥隔离、最小权限作用域、CI 密钥门禁与云规则锁定
 ### API Key Leakage Defense — Client-Server Key Separation, Least-Privilege Scopes, CI Secret Gates & Cloud Rule Lockdown
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/02-api-key-leak-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/17-api-attacks/02-api-key-leak-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/17-api-attacks/02-api-key-leak-defense.md
 
 > >
@@ -29015,7 +29015,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] API 密钥泄露与利用 — GitHub Dorking、客户端密钥链、云服务滥用
 ### API Key Leakage and Exploitation — GitHub Dorking, Client-Side Key Chains, Cloud Service Abuse
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/17-api-attacks/02-api-key-leak/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/17-api-attacks/02-api-key-leak.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/17-api-attacks/02-api-key-leak.md
 
 > >
@@ -29273,7 +29273,7 @@ class GitHubDorker:
 ---
 ## [ctf-website] CSP 绕过防御 — Strict-Dynamic、单次 Nonce、Trusted Types 与无脚本外带阻断
 ### CSP Bypass Defense — Strict-Dynamic, Per-Response Nonces, Trusted Types & Scriptless Exfiltration Blocking
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/01-csp-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/18-cors-csp-advanced/01-csp-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/18-cors-csp-advanced/01-csp-bypass-defense.md
 
 > >
@@ -29507,7 +29507,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] CSP 绕过全技术栈
 ### CSP Bypass Complete Techniques
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/01-csp-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/18-cors-csp-advanced/01-csp-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/18-cors-csp-advanced/01-csp-bypass.md
 
 > >
@@ -29833,7 +29833,7 @@ const CDN_GADGETS = {
 ---
 ## [ctf-website] XS-Leaks 浏览器侧信道防御 — Fetch Metadata、CORP/COOP 跨源隔离与恒定响应防线
 ### XS-Leaks Browser Side-Channel Defense — Fetch Metadata, CORP/COOP Isolation & Constant-Shape Responses
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels-defense.md
 
 > >
@@ -30068,7 +30068,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] XS-Leaks 浏览器侧信道攻击
 ### XS-Leaks Browser Side-Channel Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/18-cors-csp-advanced/02-xs-leaks-browser-sidechannels.md
 
 > >
@@ -30426,7 +30426,7 @@ class XSSearchEngine:
 ---
 ## [ctf-website] 子域名接管防御 — DNS 生命周期治理、悬空记录核销、托管域认领锁定与 CAA 收敛
 ### Subdomain Takeover Defense — DNS Lifecycle Governance, Dangling Record Cleanup, Domain Claim Verification & CAA Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/01-subdomain-takeover-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/19-dns-email/01-subdomain-takeover-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/19-dns-email/01-subdomain-takeover-defense.md
 
 > >
@@ -30707,7 +30707,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 子域名接管深度
 ### Subdomain Takeover Deep Dive
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/01-subdomain-takeover/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/19-dns-email/01-subdomain-takeover.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/19-dns-email/01-subdomain-takeover.md
 
 > >
@@ -31035,7 +31035,7 @@ TAKEOVER_SIGNATURES = {
 ---
 ## [ctf-website] 邮件伪造防御 — SPF/DKIM/DMARC 严格对齐、显示名同形字过滤与 SMTP/iCal 注入阻断
 ### Email Spoofing Defense — Strict SPF/DKIM/DMARC Alignment, Homograph Filtering & SMTP/iCal Injection Prevention
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/02-email-spoofing-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/19-dns-email/02-email-spoofing-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/19-dns-email/02-email-spoofing-defense.md
 
 > >
@@ -31298,7 +31298,7 @@ def run_self_checks() -> None:
 ---
 ## [ctf-website] 邮件伪造与 SPF / DKIM / DMARC
 ### Email Spoofing and SPF / DKIM / DMARC
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/19-dns-email/02-email-spoofing/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/19-dns-email/02-email-spoofing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/19-dns-email/02-email-spoofing.md
 
 > >
@@ -31626,7 +31626,7 @@ def parse_auth_results(header):
 ---
 ## [ctf-website] OAuth 2.0 攻击全链防御 — 强制 PKCE S256、精确 redirect_uri 匹配、State 绑定与授权码单次核销
 ### OAuth 2.0 Attack Chains Defense — Mandatory PKCE S256, Exact redirect_uri Matching, State Binding & Single-Use Codes
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/01-oauth-attack-chains-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/20-oauth-deep/01-oauth-attack-chains-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/20-oauth-deep/01-oauth-attack-chains-defense.md
 
 > >
@@ -31883,7 +31883,7 @@ def run_self_checks() -> None:
 ---
 ## [ctf-website] OAuth 2.0 攻击全链
 ### OAuth 2.0 Attack Chains
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/01-oauth-attack-chains/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/20-oauth-deep/01-oauth-attack-chains.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/20-oauth-deep/01-oauth-attack-chains.md
 
 > >
@@ -32208,7 +32208,7 @@ class RedirectURIBypass:
 ---
 ## [ctf-website] Session 固定与 SSO 劫持防御 — 认证会话轮换、Cookie 主机锁定、JWT 吊销与命名空间隔离
 ### Session Fixation & SSO Hijacking Defense — Session Rotation, Host-Locked Cookies, JWT Revocation & Store Isolation
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/02-session-fixation-attacks-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/20-oauth-deep/02-session-fixation-attacks-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/20-oauth-deep/02-session-fixation-attacks-defense.md
 
 > >
@@ -32442,7 +32442,7 @@ class HardenedJWTSessionVerifier:
 ---
 ## [ctf-website] Session 固定与 SSO 劫持
 ### Session Fixation and SSO Hijacking
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/20-oauth-deep/02-session-fixation-attacks/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/20-oauth-deep/02-session-fixation-attacks.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/20-oauth-deep/02-session-fixation-attacks.md
 
 > >
@@ -32778,7 +32778,7 @@ class RememberMeTokenAnalyzer:
 ---
 ## [ctf-website] 应用层拒绝服务防御与协议弹性加固
 ### Application-Layer DoS Defense and Protocol Resilience Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/01-application-layer-dos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/01-application-layer-dos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/01-application-layer-dos-defense.md
 
 > >
@@ -33063,7 +33063,7 @@ def run_self_checks() -> None:
 ---
 ## [ctf-website] Application-Layer DoS
 ### Application-Layer DoS
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/01-application-layer-dos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/01-application-layer-dos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/01-application-layer-dos.md
 
 > >
@@ -33415,7 +33415,7 @@ class H2RapidReset:
 ---
 ## [ctf-website] 资源耗尽与算法复杂度攻击防御
 ### Resource Exhaustion and Algorithm Complexity Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/02-resource-exhaustion-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/02-resource-exhaustion-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/02-resource-exhaustion-defense.md
 
 > >
@@ -33708,7 +33708,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Resource Exhaustion & Algorithm Complexity Attacks
 ### Resource Exhaustion & Algorithm Complexity Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/02-resource-exhaustion/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/02-resource-exhaustion.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/02-resource-exhaustion.md
 
 > >
@@ -34060,7 +34060,7 @@ class XMLBombGenerator:
 ---
 ## [ctf-website] UDP 反射与放大攻击（DRDoS）防御
 ### UDP Amplification and DRDoS Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/03-amplification-drdos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/03-amplification-drdos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/03-amplification-drdos-defense.md
 
 > >
@@ -34319,7 +34319,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Amplification / DRDoS Attacks
 ### Amplification / DRDoS Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/03-amplification-drdos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/03-amplification-drdos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/03-amplification-drdos.md
 
 > >
@@ -34706,7 +34706,7 @@ class NTPAmplificationScanner:
 ---
 ## [ctf-website] ReDoS 正则表达式拒绝服务防御
 ### ReDoS — Regular Expression Denial of Service Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/04-redos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/04-redos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/04-redos-defense.md
 
 > >
@@ -34887,7 +34887,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] ReDoS — 正则表达式拒绝服务
 ### ReDoS — Regular Expression Denial of Service
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/04-redos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/04-redos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/04-redos.md
 
 > >
@@ -35200,7 +35200,7 @@ Rust     regex       DFA 引擎                 极低
 ---
 ## [ctf-website] HTTP/2 CONTINUATION Flood 与 H2/H3 协议弹性防御
 ### HTTP/2 CONTINUATION Flood and H2/H3 Resilience Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/05-http2-continuation-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/05-http2-continuation-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/05-http2-continuation-defense.md
 
 > >
@@ -35423,7 +35423,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] HTTP/2 CONTINUATION Flood & H2/H3 高级攻击
 ### HTTP/2 CONTINUATION Flood & Advanced H2/H3 Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/05-http2-continuation/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/05-http2-continuation.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/05-http2-continuation.md
 
 > >
@@ -35754,7 +35754,7 @@ function quic_cid_exhaust(target, cid_count=1000000):
 ---
 ## [ctf-website] TCP 协议栈状态耗尽防御与内核调优
 ### TCP Protocol Stack State Exhaustion Defense and Kernel Tuning
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/06-tcp-state-exhaustion-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/06-tcp-state-exhaustion-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/06-tcp-state-exhaustion-defense.md
 
 > >
@@ -35971,7 +35971,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] TCP 协议栈状态耗尽
 ### TCP Protocol Stack State Exhaustion
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/06-tcp-state-exhaustion/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/06-tcp-state-exhaustion.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/06-tcp-state-exhaustion.md
 
 > >
@@ -36276,7 +36276,7 @@ function tcp_buffer_pressure(target, port=80, connections=500):
 ---
 ## [ctf-website] DNS 拒绝服务与缓存投毒防御
 ### DNS Denial of Service and Cache Poisoning Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/07-dns-dos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/07-dns-dos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/07-dns-dos-defense.md
 
 > >
@@ -36494,7 +36494,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] DNS 拒绝服务攻击
 ### DNS Denial of Service Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/07-dns-dos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/07-dns-dos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/07-dns-dos.md
 
 > >
@@ -36831,7 +36831,7 @@ DNSSEC DoS:    攻击 DNS 服务器本身
 ---
 ## [ctf-website] TLS/SSL 握手耗尽防御与密码学优化
 ### TLS/SSL Handshake Exhaustion Defense and Cryptographic Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/08-tls-exhaustion-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/08-tls-exhaustion-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/08-tls-exhaustion-defense.md
 
 > >
@@ -37029,7 +37029,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] TLS/SSL 握手耗尽
 ### TLS/SSL Handshake Exhaustion
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/08-tls-exhaustion/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/08-tls-exhaustion.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/08-tls-exhaustion.md
 
 > >
@@ -37450,7 +37450,7 @@ Layer 3 - Session Cache 抖动:
 ---
 ## [ctf-website] 缓存穿透、源站暴露与 CDN 拒绝服务防御
 ### Cache Busting, Origin Exposure, and CDN DoS Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/09-cache-cdn-dos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/09-cache-cdn-dos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/09-cache-cdn-dos-defense.md
 
 > >
@@ -37661,7 +37661,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 缓存 / CDN 拒绝服务
 ### Cache / CDN Denial of Service
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/09-cache-cdn-dos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/09-cache-cdn-dos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/09-cache-cdn-dos.md
 
 > >
@@ -38111,7 +38111,7 @@ Phase 1 — 源站暴露:
 ---
 ## [ctf-website] API 滥用拒绝服务防御与配额治理解析
 ### API Abuse Denial of Service Defense and Quota Governance
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/10-api-abuse-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/10-api-abuse-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/10-api-abuse-defense.md
 
 > >
@@ -38319,7 +38319,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] API 滥用拒绝服务
 ### API Abuse Denial of Service
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/10-api-abuse/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/10-api-abuse.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/10-api-abuse.md
 
 > >
@@ -38802,7 +38802,7 @@ function upload_abuse(upload_url, token):
 ---
 ## [ctf-website] 云原生、Kubernetes 与 Serverless 拒绝服务防御
 ### Cloud-Native, Kubernetes, and Serverless DoS Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/11-cloud-container-dos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/11-cloud-container-dos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/11-cloud-container-dos-defense.md
 
 > >
@@ -39046,7 +39046,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 云原生 / 容器拒绝服务
 ### Cloud-Native / Container Denial of Service
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/11-cloud-container-dos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/11-cloud-container-dos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/11-cloud-container-dos.md
 
 > >
@@ -39486,7 +39486,7 @@ function container_resource_escape():
 ---
 ## [ctf-website] SSRF 驱动的拒绝服务防御与出站隔离
 ### SSRF-Driven Denial of Service Defense and Egress Isolation
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/12-ssrf-dos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/12-ssrf-dos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/12-ssrf-dos-defense.md
 
 > >
@@ -39698,7 +39698,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] SSRF 驱动的拒绝服务
 ### SSRF-Driven Denial of Service
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/12-ssrf-dos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/12-ssrf-dos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/12-ssrf-dos.md
 
 > >
@@ -40113,7 +40113,7 @@ function ssrf_file_blocking(ssrf_endpoint):
 ---
 ## [ctf-website] 数据库层拒绝服务防御与查询资源治理
 ### Database Layer Denial of Service Defense and Query Resource Governance
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/13-database-dos-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/13-database-dos-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/13-database-dos-defense.md
 
 > >
@@ -40323,7 +40323,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] 数据库层拒绝服务
 ### Database Layer Denial of Service
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/22-dos/13-database-dos/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/22-dos/13-database-dos.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/22-dos/13-database-dos.md
 
 > >
@@ -40786,7 +40786,7 @@ function index_degradation(db_config):
 ---
 ## [ctf-website] Database Attack Surface — 数据库攻击全景与决策树
 ### Database Attack Surface — Overview & Decision Tree
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/00-overview/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/00-overview.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/00-overview.md
 
 > >
@@ -40969,7 +40969,7 @@ def route_signal(text):
 ---
 ## [ctf-website] SQL Injection Core Defense — SQL 注入基础防御与参数化体系
 ### SQL Injection Core Defense — Parameterization & Baseline Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/01-sqli-fundamentals-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/01-sqli-fundamentals-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/01-sqli-fundamentals-defense.md
 
 > >
@@ -41199,7 +41199,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] SQL Injection Core — SQL 注入基础与全类型覆盖
 ### SQL Injection Core — Fundamentals & Full Type Coverage
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/01-sqli-fundamentals/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/01-sqli-fundamentals.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/01-sqli-fundamentals.md
 
 > >
@@ -41560,7 +41560,7 @@ def column_name_expr(table, offset, dbms="mysql"):
 ---
 ## [ctf-website] Advanced SQLi & Second-Order Defense — 高级注入、二阶与 OOB 防御
 ### Advanced SQLi, Second-Order & OOB Exfiltration Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/02-sqli-advanced-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/02-sqli-advanced-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/02-sqli-advanced-defense.md
 
 > >
@@ -41777,7 +41777,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Advanced SQLi & WAF Bypass — 高级注入与绕过技术
 ### Advanced SQLi & WAF Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/02-sqli-advanced/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/02-sqli-advanced.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/02-sqli-advanced.md
 
 > >
@@ -42171,7 +42171,7 @@ def diff_rounds(oracle, order_id,
 ---
 ## [ctf-website] NoSQL Injection Defense — MongoDB/Redis/ES/CouchDB/Memcached 全栈防御
 ### NoSQL Injection & Unauthorized Access Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/03-nosql-injection-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/03-nosql-injection-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/03-nosql-injection-defense.md
 
 > >
@@ -42403,7 +42403,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] NoSQL Injection — NoSQL 注入攻击
 ### NoSQL Injection Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/03-nosql-injection/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/03-nosql-injection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/03-nosql-injection.md
 
 > >
@@ -42822,7 +42822,7 @@ notify.raw > notify.sign > notify.created_at
 ---
 ## [ctf-website] Database Config Exposure Defense — 数据库配置与凭证防泄露
 ### Database Config Exposure Defense — Secrets & Surface Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/04-config-exposure-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/04-config-exposure-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/04-config-exposure-defense.md
 
 > >
@@ -43029,7 +43029,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Database Config Exposure — 数据库配置泄露
 ### Database Config Exposure — Configuration & Credential Leaks
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/04-config-exposure/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/04-config-exposure.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/04-config-exposure.md
 
 > >
@@ -43369,7 +43369,7 @@ Evidence 保存 `config_pivot.json`、`db_min_sample.jsonl`、`payment_secret_pr
 ---
 ## [ctf-website] Database Backup & Log Leak Defense — 数据库备份、日志与运维残留防护
 ### Database Backup, Log & Operational Remnant Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/05-backup-log-leak-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/05-backup-log-leak-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/05-backup-log-leak-defense.md
 
 > >
@@ -43547,7 +43547,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Database Backup & Log Leak — 数据库备份与日志泄露
 ### Database Backup & Log Leak — Backup Files & Log Exposure
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/05-backup-log-leak/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/05-backup-log-leak.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/05-backup-log-leak.md
 
 > >
@@ -43978,7 +43978,7 @@ def build_graph(path):
 ---
 ## [ctf-website] Leak Containment & Anti-Extraction Defense — 泄露遏制、凭证轮换与数据掩码体系
 ### Leak Containment, Post-Incident Rotation & PII Tokenization Defense
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/07-data-cleaning-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/07-data-cleaning-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/07-data-cleaning-defense.md
 
 > >
@@ -44177,7 +44177,7 @@ if __name__ == "__main__":
 ---
 ## [ctf-website] Database Dump Cleaning — 泄露数据清洗方法论
 ### Database Dump Cleaning — Leaked Data Cleaning Methodology
-URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/24-database/07-data-cleaning/
+URL: https://ling71671.github.io/open-reverselab/kb/ctf-website/techniques/24-database/07-data-cleaning.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/ctf-website/techniques/24-database/07-data-cleaning.md
 
 > >
@@ -44558,7 +44558,7 @@ def main():
 ---
 ## [apk-reverse] Smali 代码注入与 DEX 篡改防御
 ### Smali Code Injection and DEX Tampering Defense
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/01-dex-java/01-smali-injection-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/01-dex-java/01-smali-injection-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/01-dex-java/01-smali-injection-defense.md
 
 > >
@@ -44737,7 +44737,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] Smali 代码注入与 DEX 修改
 ### Smali Code Injection and DEX Modification
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/01-dex-java/01-smali-injection/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/01-dex-java/01-smali-injection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/01-dex-java/01-smali-injection.md
 
 > >
@@ -44896,7 +44896,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] Unity IL2CPP 静态逆向与偏移发现
 ### Unity IL2CPP Static Reverse Engineering and Offset Discovery
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/01-il2cpp-offset-discovery/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/02-native/01-il2cpp-offset-discovery.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/01-il2cpp-offset-discovery.md
 
 > >
@@ -45021,7 +45021,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 指针链遍历模式
 ### Pointer Chain Traversal Patterns
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/02-pointer-chain-patterns/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/02-native/02-pointer-chain-patterns.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/02-pointer-chain-patterns.md
 
 > >
@@ -45139,7 +45139,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] UE4 引擎游戏偏移发现
 ### UE4 Engine Game Offset Discovery
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/03-ue4-offset-hunting/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/02-native/03-ue4-offset-hunting.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/03-ue4-offset-hunting.md
 
 > >
@@ -45287,7 +45287,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] Kernel Driver 注入：proc 节点读写
 ### Kernel Driver Injection via proc Node Read/Write
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/04-kernel-procfs-driver/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/02-native/04-kernel-procfs-driver.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/04-kernel-procfs-driver.md
 
 > >
@@ -45446,7 +45446,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 虚拟地址 → 物理地址转换
 ### Virtual-to-Physical Address Translation
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/05-virt-phys-memory/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/02-native/05-virt-phys-memory.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/05-virt-phys-memory.md
 
 > >
@@ -45615,7 +45615,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] JNI RegisterNatives 追踪与 Native 入口还原
 ### JNI RegisterNatives Tracing and Native Entry Recovery
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/02-native/06-jni-register-natives-tracing/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/02-native/06-jni-register-natives-tracing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/02-native/06-jni-register-natives-tracing.md
 
 > >
@@ -45785,7 +45785,7 @@ Java.perform(function () {
 ---
 ## [apk-reverse] 入口点追踪与组件分析
 ### Entry Point Tracing and Component Analysis
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/03-manifest/01-entry-point-tracing/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/03-manifest/01-entry-point-tracing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/03-manifest/01-entry-point-tracing.md
 
 > >
@@ -45937,7 +45937,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 游戏数据加解密识别与绕过
 ### Game Data Encryption Identification and Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/04-crypto/01-game-encryption-patterns/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/04-crypto/01-game-encryption-patterns.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/04-crypto/01-game-encryption-patterns.md
 
 > >
@@ -46087,7 +46087,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 自定义对称加密：RC4 与组合模式
 ### Custom Symmetric Encryption: RC4 and Combination Patterns
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/04-crypto/02-rc4-custom-crypto/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/04-crypto/02-rc4-custom-crypto.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/04-crypto/02-rc4-custom-crypto.md
 
 > >
@@ -46253,7 +46253,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 游戏协议防 Hook、抗重放与端到端加固
 ### Game Protocol Anti-Hook, Anti-Replay, and End-to-End Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/01-game-protocol-hook-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/05-network/01-game-protocol-hook-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/01-game-protocol-hook-defense.md
 
 > >
@@ -46386,7 +46386,7 @@ protobuf {
 ---
 ## [apk-reverse] 游戏协议 Hook 与封包分析
 ### Game Protocol Hooking and Packet Analysis
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/01-game-protocol-hook/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/05-network/01-game-protocol-hook.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/01-game-protocol-hook.md
 
 > >
@@ -46563,7 +46563,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 在线许可证与授权校验加固
 ### Online License Verification Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/02-license-verification-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/05-network/02-license-verification-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/02-license-verification-bypass-defense.md
 
 > >
@@ -46712,7 +46712,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] 在线验证系统分析与绕过
 ### Online License Verification Analysis and Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/02-license-verification-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/05-network/02-license-verification-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/02-license-verification-bypass.md
 
 > >
@@ -46885,7 +46885,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] TLS 证书固定（Pinning）多层加固与防绕过
 ### Multi-Layer TLS Certificate Pinning Hardening and Anti-Unpinning
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/03-tls-pinning-unpinning-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/05-network/03-tls-pinning-unpinning-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/03-tls-pinning-unpinning-defense.md
 
 > >
@@ -47042,7 +47042,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] TLS Pinning 定位与 Unpinning
 ### TLS Pinning Location and Unpinning
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/05-network/03-tls-pinning-unpinning/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/05-network/03-tls-pinning-unpinning.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/05-network/03-tls-pinning-unpinning.md
 
 > >
@@ -47185,7 +47185,7 @@ Java.perform(function () {
 ---
 ## [apk-reverse] 进程内存读写防护、反附加与敏感内存保护
 ### Process Memory Read/Write Defense, Anti-Attach, and Sensitive Memory Protection
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/01-memory-rw-hook-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/06-dynamic/01-memory-rw-hook-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/01-memory-rw-hook-defense.md
 
 > >
@@ -47341,7 +47341,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] 进程内存读写检测与 Hook
 ### Process Memory Read/Write Detection and Hook
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/01-memory-rw-hook/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/06-dynamic/01-memory-rw-hook.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/01-memory-rw-hook.md
 
 > >
@@ -47437,7 +47437,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 悬浮窗覆盖与图形渲染管线劫持防御
 ### Overlay Window and Graphics Rendering Pipeline Hook Defense
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/02-overlay-rendering-hook-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/06-dynamic/02-overlay-rendering-hook-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/02-overlay-rendering-hook-defense.md
 
 > >
@@ -47569,7 +47569,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] Overlay 渲染与 ImGui 检测
 ### Overlay Rendering and ImGui Detection
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/02-overlay-rendering-hook/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/06-dynamic/02-overlay-rendering-hook.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/02-overlay-rendering-hook.md
 
 > >
@@ -47697,7 +47697,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 触摸输入注入防护与异常手势识别
 ### Touch Input Injection Defense and Synthetic Gesture Detection
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/03-touch-input-hook-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/06-dynamic/03-touch-input-hook-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/03-touch-input-hook-defense.md
 
 > >
@@ -47877,7 +47877,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] 触摸输入 Hook 与注入分析
 ### Touch Input Hooking and Injection Analysis
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/06-dynamic/03-touch-input-hook/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/06-dynamic/03-touch-input-hook.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/06-dynamic/03-touch-input-hook.md
 
 > >
@@ -48038,7 +48038,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 编译期混淆检测与识别
 ### Compile-Time Obfuscation Detection and Identification
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/07-packer/01-obfuscation-detection/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/07-packer/01-obfuscation-detection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/07-packer/01-obfuscation-detection.md
 
 > >
@@ -48156,7 +48156,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] 自解压 Payload 与脚本嵌入
 ### Self-Extracting Payload and Script Embedding
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/07-packer/02-self-extracting-payload/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/07-packer/02-self-extracting-payload.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/07-packer/02-self-extracting-payload.md
 
 > >
@@ -48319,7 +48319,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] VMP/dex2c 加固识别与形态判定
 ### VMP/dex2c Protection Detection and Form Identification
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/07-packer/03-vmp-dex2c-detection/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/07-packer/03-vmp-dex2c-detection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/07-packer/03-vmp-dex2c-detection.md
 
 > >
@@ -48466,7 +48466,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] VMP 脱壳与语义还原（Dump/Trace/Recovery）
 ### VMP Unpacking and Semantic Recovery (Dump/Trace/Recovery)
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/07-packer/04-vmp-dump-trace-recovery/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/07-packer/04-vmp-dump-trace-recovery.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/07-packer/04-vmp-dump-trace-recovery.md
 
 > >
@@ -48635,7 +48635,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] Android 反调试检测与绕过（VMP 场景）
 ### Android Anti-Debug Detection and Bypass (VMP Scenario)
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/07-packer/05-vmp-anti-debug-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/07-packer/05-vmp-anti-debug-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/07-packer/05-vmp-anti-debug-bypass.md
 
 > >
@@ -48789,7 +48789,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] Native SO 注入与 APK 重打包防御
 ### Native SO Injection and APK Repacking Defense
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/01-so-injection-repack-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/08-patch-repack/01-so-injection-repack-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/01-so-injection-repack-defense.md
 
 > >
@@ -48937,7 +48937,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] Native SO 注入与 APK 重打包
 ### Native SO Injection and APK Repacking
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/01-so-injection-repack/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/08-patch-repack/01-so-injection-repack.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/01-so-injection-repack.md
 
 > >
@@ -49111,7 +49111,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [apk-reverse] APK 签名与包体完整性多层加固
 ### APK Signature and Package Integrity Multi-Layer Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/02-signature-integrity-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/08-patch-repack/02-signature-integrity-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/02-signature-integrity-bypass-defense.md
 
 > >
@@ -49251,7 +49251,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] 签名与完整性检查绕过
 ### Signature and Integrity Check Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/08-patch-repack/02-signature-integrity-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/08-patch-repack/02-signature-integrity-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/08-patch-repack/02-signature-integrity-bypass.md
 
 > >
@@ -49406,7 +49406,7 @@ effect: repack 后启动进入主界面
 ---
 ## [apk-reverse] 移动 WebView 桥接、协议与证书安全加固
 ### Mobile WebView Bridge, Scheme, and SSL Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/01-webview-attacks-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/09-hybrid-frameworks/01-webview-attacks-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/09-hybrid-frameworks/01-webview-attacks-defense.md
 
 > >
@@ -49583,7 +49583,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] WebView 攻击全技术
 ### WebView Attacks Complete Techniques
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/01-webview-attacks/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/09-hybrid-frameworks/01-webview-attacks.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/09-hybrid-frameworks/01-webview-attacks.md
 
 > >
@@ -49943,7 +49943,7 @@ def fuzz_deeplink(scheme: str, host: str, activity: str):
 ---
 ## [apk-reverse] 跨平台混合框架（Cordova/RN/Flutter/Electron）加固
 ### Cross-Platform Hybrid Frameworks Hardening (Cordova / RN / Flutter / Electron)
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/02-cordova-reactnative-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/09-hybrid-frameworks/02-cordova-reactnative-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/09-hybrid-frameworks/02-cordova-reactnative-defense.md
 
 > >
@@ -50104,7 +50104,7 @@ if __name__ == "__main__":
 ---
 ## [apk-reverse] 跨平台框架攻击面 — Cordova / React Native / Flutter / Electron
 ### Cross-Platform Framework Attack Surface — Cordova / React Native / Flutter / Electron
-URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/09-hybrid-frameworks/02-cordova-reactnative/
+URL: https://ling71671.github.io/open-reverselab/kb/apk-reverse/techniques/09-hybrid-frameworks/02-cordova-reactnative.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/apk-reverse/techniques/09-hybrid-frameworks/02-cordova-reactnative.md
 
 > >
@@ -50484,7 +50484,7 @@ def detect_flutter_build_type(apk_path):
 ---
 ## [pe-reverse] AOB 特征码扫描
 ### AOB Signature Scanning
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/01-triage/01-aob-signature-scan/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/01-triage/01-aob-signature-scan.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/01-triage/01-aob-signature-scan.md
 
 > >
@@ -50686,7 +50686,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] PE 头解析与节区定位
 ### PE Header Parsing and Section Location
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/02-pe-structure/01-pe-header-parsing/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/02-pe-structure/01-pe-header-parsing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/02-pe-structure/01-pe-header-parsing.md
 
 > >
@@ -50890,7 +50890,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] TLS Callback 定位与早期执行链
 ### TLS Callback Location and Early Execution Chain
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/02-pe-structure/02-tls-callback-analysis/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/02-pe-structure/02-tls-callback-analysis.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/02-pe-structure/02-tls-callback-analysis.md
 
 > >
@@ -51027,7 +51027,7 @@ EntryPoint 前退出 / OEP 不落地
 ---
 ## [pe-reverse] 内存结构体逆向重建
 ### Memory Structure Reverse Reconstruction
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/01-struct-reconstruction/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/03-static-analysis/01-struct-reconstruction.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/03-static-analysis/01-struct-reconstruction.md
 
 > >
@@ -51243,7 +51243,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 反汇编（Zydis）与 JIT 汇编（Xbyak）
 ### Disassembly (Zydis) and JIT Assembly (Xbyak)
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/02-disasm-jit-asm/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/03-static-analysis/02-disasm-jit-asm.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/03-static-analysis/02-disasm-jit-asm.md
 
 > >
@@ -51503,7 +51503,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] x64dbg 断点策略
 ### x64dbg Breakpoint Strategies
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/03-x64dbg-breakpoints/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/03-static-analysis/03-x64dbg-breakpoints.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/03-static-analysis/03-x64dbg-breakpoints.md
 
 > >
@@ -51688,7 +51688,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] ReClass 结构体实时重建
 ### ReClass Real-Time Structure Reconstruction
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/04-reclass-reconstruction/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/03-static-analysis/04-reclass-reconstruction.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/03-static-analysis/04-reclass-reconstruction.md
 
 > >
@@ -51872,7 +51872,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 动态 API 解析链还原
 ### Dynamic API Resolution Chain Recovery
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/05-dynamic-api-resolution/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/03-static-analysis/05-dynamic-api-resolution.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/03-static-analysis/05-dynamic-api-resolution.md
 
 > >
@@ -52038,7 +52038,7 @@ Import Table 稀疏 / 行为与导入不匹配
 ---
 ## [pe-reverse] Electron 应用 asar 静态还原与混淆破解
 ### Electron App asar Static Reverse & Deobfuscation
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/03-static-analysis/06-electron-asar-reverse/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/03-static-analysis/06-electron-asar-reverse.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/03-static-analysis/06-electron-asar-reverse.md
 
 > >
@@ -52193,7 +52193,7 @@ main.js 启动链/preload contextBridge → IPC 全通道 CSV → HTTP API 面
 ---
 ## [pe-reverse] DLL 注入纵深防御与检测
 ### DLL Injection Defense-in-Depth and Detection
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/01-dll-injection-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/01-dll-injection-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/01-dll-injection-defense.md
 
 > >
@@ -52362,7 +52362,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] DLL 注入三模式
 ### DLL Injection: Three Patterns
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/01-dll-injection/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/01-dll-injection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/01-dll-injection.md
 
 > >
@@ -52555,7 +52555,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] Trampoline Inline Hook 防护与代码段完整性检测
 ### Trampoline Inline Hook Protection and Code Integrity Detection
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/02-trampoline-detour-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/02-trampoline-detour-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/02-trampoline-detour-defense.md
 
 > >
@@ -52697,7 +52697,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] Trampoline Hook（函数劫持）
 ### Trampoline Hook (Function Hijacking)
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/02-trampoline-detour/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/02-trampoline-detour.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/02-trampoline-detour.md
 
 > >
@@ -52917,7 +52917,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 跨进程内存读写防护与敏感数据混淆
 ### Cross-Process Memory Read/Write Protection and Data Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/03-external-memory-rw-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/03-external-memory-rw-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/03-external-memory-rw-defense.md
 
 > >
@@ -53104,7 +53104,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 外部进程内存读写
 ### External Process Memory Read/Write
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/03-external-memory-rw/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/03-external-memory-rw.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/03-external-memory-rw.md
 
 > >
@@ -53306,7 +53306,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] Naked 汇编跳板 Hook 防护与未映射代码检测
 ### Naked Assembly Gateway Hook Defense and Unbacked Code Detection
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/04-naked-function-hook-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/04-naked-function-hook-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/04-naked-function-hook-defense.md
 
 > >
@@ -53464,7 +53464,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] Naked 函数 Hook（内联汇编）
 ### Naked Function Hook (Inline Assembly)
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/04-naked-function-hook/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/04-naked-function-hook.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/04-naked-function-hook.md
 
 > >
@@ -53709,7 +53709,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 反调试机制加固与抗 Frida/ScyllaHide 绕过检测
 ### Anti-Debug Hardening and Anti-Frida/ScyllaHide Bypass Detection
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/05-anti-debug-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/05-anti-debug-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/05-anti-debug-bypass-defense.md
 
 > >
@@ -53867,7 +53867,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 反调试检测与绕过
 ### Anti-Debug Detection and Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/05-anti-debug-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/05-anti-debug-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/05-anti-debug-bypass.md
 
 > >
@@ -54107,7 +54107,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 手动映射（Manual Map）无痕注入检测与防护
 ### Manual Map Stealth Injection Detection and Defense
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/06-manual-map-injection-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/06-manual-map-injection-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/06-manual-map-injection-defense.md
 
 > >
@@ -54266,7 +54266,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 手动映射 DLL 注入
 ### Manual Map DLL Injection
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/06-manual-map-injection/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/06-manual-map-injection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/06-manual-map-injection.md
 
 > >
@@ -54514,7 +54514,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] Direct Syscall 检测与内核态调用链溯源防护
 ### Direct Syscall Detection and Kernel-Side Call Stack Defense
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/07-direct-syscall-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/07-direct-syscall-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/07-direct-syscall-defense.md
 
 > >
@@ -54645,7 +54645,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] Direct Syscall：绕过用户态 Hook
 ### Direct Syscall: Bypassing User-Mode Hooks
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/07-direct-syscall/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/07-direct-syscall.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/07-direct-syscall.md
 
 > >
@@ -54855,7 +54855,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 行为监控暴露面收敛与持久化检测防御
 ### Behavior Monitoring Exposure Hardening and Persistence Detection
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/08-procmon-patterns-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/08-procmon-patterns-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/08-procmon-patterns-defense.md
 
 > >
@@ -55005,7 +55005,7 @@ bool SealLocalState(const std::vector<uint8_t>& plaintext,
 ---
 ## [pe-reverse] Procmon 行为监控与过滤
 ### Procmon Behavior Monitoring and Filtering
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/04-dynamic-analysis/08-procmon-patterns/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/04-dynamic-analysis/08-procmon-patterns.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/04-dynamic-analysis/08-procmon-patterns.md
 
 > >
@@ -55183,7 +55183,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] PE 脱壳与内存 Dump
 ### PE Unpacking and Memory Dumping
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/05-crypto-unpack/01-pe-unpack-dump/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/05-crypto-unpack/01-pe-unpack-dump.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/05-crypto-unpack/01-pe-unpack-dump.md
 
 > >
@@ -55381,7 +55381,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] VMP 虚拟化原理与 VM Entry 定位
 ### VMProtect Virtualization Internals and VM Entry Location
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/05-crypto-unpack/02-vmp-virtualization-analysis/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/05-crypto-unpack/02-vmp-virtualization-analysis.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/05-crypto-unpack/02-vmp-virtualization-analysis.md
 
 > >
@@ -55561,7 +55561,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] VMP 去虚拟化工具链（Devirtualization）
 ### VMProtect Devirtualization Toolchain
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/05-crypto-unpack/03-vmp-devirtualization-toolchain/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/05-crypto-unpack/03-vmp-devirtualization-toolchain.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/05-crypto-unpack/03-vmp-devirtualization-toolchain.md
 
 > >
@@ -55711,7 +55711,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] IOC 提取技巧
 ### IOC Extraction Techniques
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/06-ioc-extraction/01-ioc-extraction/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/06-ioc-extraction/01-ioc-extraction.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/06-ioc-extraction/01-ioc-extraction.md
 
 > >
@@ -55922,7 +55922,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 持久化与启动链 IOC 提取
 ### Persistence and Startup Chain IOC Extraction
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/06-ioc-extraction/02-persistence-startup-chain/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/06-ioc-extraction/02-persistence-startup-chain.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/06-ioc-extraction/02-persistence-startup-chain.md
 
 > >
@@ -56058,7 +56058,7 @@ return code:
 ---
 ## [pe-reverse] YARA 规则编写（逆向视角）
 ### YARA Rule Writing (Reverse Engineering Perspective)
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/07-yara-sigma/01-yara-rule-writing/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/07-yara-sigma/01-yara-rule-writing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/07-yara-sigma/01-yara-rule-writing.md
 
 > >
@@ -56265,7 +56265,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] 代码篡改防护与 PE 节区完整性自检
 ### Code Patching Defense and PE Section Integrity Verification
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/08-patch/01-code-patching-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/08-patch/01-code-patching-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/08-patch/01-code-patching-defense.md
 
 > >
@@ -56443,7 +56443,7 @@ bool VerifyCodeSectionReadOnly(HMODULE hMod) {
 ---
 ## [pe-reverse] 代码 Patch 与字节修改
 ### Code Patching and Byte Modification
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/08-patch/01-code-patching/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/08-patch/01-code-patching.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/08-patch/01-code-patching.md
 
 > >
@@ -56672,7 +56672,7 @@ AI Agent 可调用以下 MCP 工具自动完成或加速上述攻击链步骤：
 ---
 ## [pe-reverse] AI 驱动免杀：Shellcode 处理 + Loader 编写
 ### AI-Driven Antivirus Evasion: Shellcode Processing + Loader Development
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/09-av-evasion/01-ai-powered-evasion/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/09-av-evasion/01-ai-powered-evasion.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/09-av-evasion/01-ai-powered-evasion.md
 
 > >
@@ -57020,7 +57020,7 @@ def main():
 ---
 ## [pe-reverse] 规避与混淆特征静态识别（Shellcode / Syscall / 反沙箱）
 ### Static Detection of Evasion & Obfuscation Indicators
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/09-av-evasion/01-evasion-indicator-detection/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/09-av-evasion/01-evasion-indicator-detection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/09-av-evasion/01-evasion-indicator-detection.md
 
 > >
@@ -57100,7 +57100,7 @@ python scripts/windows/detect_evasion_indicators.py samples/<sample.exe>
 ---
 ## [pe-reverse] 商业软件授权架构纵深防御选型
 ### Commercial Software Licensing Defense-in-Depth Architecture
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/01-license-mechanism-classification-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/01-license-mechanism-classification-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/01-license-mechanism-classification-defense.md
 
 > >
@@ -57206,7 +57206,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 许可证机制分类与攻击路径选择
 ### License Mechanism Classification and Attack Path Selection
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/01-license-mechanism-classification/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/01-license-mechanism-classification.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/01-license-mechanism-classification.md
 
 > >
@@ -57360,7 +57360,7 @@ key 有效性由厂商服务器判定（激活时 POST key → 服务器验库/�
 ---
 ## [pe-reverse] 授权校验逻辑隐匿与抗静态/动态定位加固
 ### License Validation Obfuscation and Anti-Location Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/02-validation-function-location-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/02-validation-function-location-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/02-validation-function-location-defense.md
 
 > >
@@ -57506,7 +57506,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 许可证校验函数定位
 ### Locating the License Validation Function
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/02-validation-function-location/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/02-validation-function-location.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/02-validation-function-location.md
 
 > >
@@ -57676,7 +57676,7 @@ sys.stdin.read()
 ---
 ## [pe-reverse] 注册码算法加固与防 Keygen 密码学设计
 ### License Key Algorithm Hardening and Anti-Keygen Cryptography
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/03-key-algorithm-recovery-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/03-key-algorithm-recovery-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/03-key-algorithm-recovery-defense.md
 
 > >
@@ -57854,7 +57854,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 注册码算法还原与 keygen 复现
 ### License Key Algorithm Recovery and Keygen Replication
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/03-key-algorithm-recovery/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/03-key-algorithm-recovery.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/03-key-algorithm-recovery.md
 
 > >
@@ -58084,7 +58084,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 签名链信任锚保护与抗公钥替换加固
 ### Signature Chain Trust Anchor Protection and Anti-Pubkey-Swap Hardening
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/04-signature-chain-pubkey-swap-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/04-signature-chain-pubkey-swap-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/04-signature-chain-pubkey-swap-defense.md
 
 > >
@@ -58257,7 +58257,7 @@ bool VerifyPinnedAuthenticode(LPCWSTR filePath, const BYTE expectedCertSha256[32
 ---
 ## [pe-reverse] 签名链校验与公钥替换攻击
 ### Signature Chain Validation and Public Key Swap
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/04-signature-chain-pubkey-swap/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/04-signature-chain-pubkey-swap.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/04-signature-chain-pubkey-swap.md
 
 > >
@@ -58401,7 +58401,7 @@ signature = priv.sign(props_text.encode())
 ---
 ## [pe-reverse] 进程内 Hook 替换、标志位篡改与本地配置伪造防护
 ### In-Process Hook Swap, Memory Flag Tampering, and Config Forgery Defense
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/05-keygen-frida-verification-loop-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/05-keygen-frida-verification-loop-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/05-keygen-frida-verification-loop-defense.md
 
 > >
@@ -58569,7 +58569,7 @@ bool CheckLicensingSurfaceClean() {
 ---
 ## [pe-reverse] keygen 实机验证闭环（Frida 进程内替换）
 ### Keygen Verification Loop with In-Process Frida Swap
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/05-keygen-frida-verification-loop/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/05-keygen-frida-verification-loop.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/05-keygen-frida-verification-loop.md
 
 > >
@@ -58740,7 +58740,7 @@ cfg.write_text(json.dumps(data, indent=2), encoding="utf-8")  # ② 写回
 ---
 ## [pe-reverse] 云端授权查询面防 Hook 与本地状态/试用重置防御
 ### Cloud License Query Surface Hardening and Anti-Trial-Reset Defense
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/06-cloud-license-frida-hook-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/06-cloud-license-frida-hook-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/06-cloud-license-frida-hook-defense.md
 
 > >
@@ -58920,7 +58920,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 云端授权识别与 Frida hook 替代路径
 ### Cloud License Identification and Frida Hook Alternatives
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/06-cloud-license-frida-hook/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/06-cloud-license-frida-hook.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/06-cloud-license-frida-hook.md
 
 > >
@@ -59075,7 +59075,7 @@ Remove-Item "$env:APPDATA\TargetApp\state.dat"
 ---
 ## [pe-reverse] 自引用切片漏洞根治与抗迭代收敛签名架构
 ### Eliminating Self-Referencing Slice Vulnerabilities and Convergence Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/07-self-referencing-signature-convergence-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/07-self-referencing-signature-convergence-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/07-self-referencing-signature-convergence-defense.md
 
 > >
@@ -59233,7 +59233,7 @@ if __name__ == "__main__":
 ---
 ## [pe-reverse] 自引用签名嵌入与单步迭代收敛
 ### Self-Referencing Signature Embedding and One-Shot Iterative Convergence
-URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/10-license-keygen/07-self-referencing-signature-convergence/
+URL: https://ling71671.github.io/open-reverselab/kb/pe-reverse/techniques/10-license-keygen/07-self-referencing-signature-convergence.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/pe-reverse/techniques/10-license-keygen/07-self-referencing-signature-convergence.md
 
 > >
@@ -59383,7 +59383,7 @@ def backfill(key: str, x_slice: str, pos: int, width: int) -> str:
 ---
 ## [general] Linux Page-Cache 原地写入漏洞家族防御（禁用高危零拷贝路径 / Seccomp / 只读根分区）
 ### Defense Against Linux Kernel Page-Cache In-Place Write Family
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/01-page-cache-write-family-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/01-page-cache-write-family-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/01-page-cache-write-family-defense.md
 
 > >
@@ -59479,7 +59479,7 @@ if __name__ == "__main__":
 ---
 ## [general] Linux 内核 Page-Cache 写入家族：Copy Fail / Dirty Frag / Fragnesia
 ### Linux Kernel Page-Cache Write Family: Copy Fail / Dirty Frag / Fragnesia
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/01-page-cache-write-family/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/01-page-cache-write-family.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/01-page-cache-write-family.md
 
 > >
@@ -59771,7 +59771,7 @@ gcc -O2 -Wall -Wextra -static exp.c -o fragnesia_exp
 ---
 ## [general] Slab 跨缓存释放防御（禁用非特权 BPF / SLUB 加固 / KFENCE 策略）
 ### Defense Against Slab Cross-Cache Free and KFENCE Exploitation
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/02-slab-cross-cache-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/02-slab-cross-cache-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/02-slab-cross-cache-defense.md
 
 > >
@@ -59874,7 +59874,7 @@ if __name__ == "__main__":
 ---
 ## [general] Slab 跨缓存释放：KFENCE 精确大小报告导致 SKB head 释放到错误缓存
 ### Slab Cross-Cache Free: KFENCE Exact Size Report Frees SKB Head into Wrong Cache
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/02-slab-cross-cache/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/02-slab-cross-cache.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/02-slab-cross-cache.md
 
 > >
@@ -60051,7 +60051,7 @@ dmesg | grep -E "warn_free_bad_obj|Wrong slab cache"
 ---
 ## [general] 内核 FD Theft 与 mm-NULL Ptrace 绕过防御（Yama / Seccomp / SUID 收敛）
 ### Defense Against Kernel FD Theft and mm-NULL ptrace Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/03-mm-null-ptrace-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/03-mm-null-ptrace-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/03-mm-null-ptrace-bypass-defense.md
 
 > >
@@ -60149,7 +60149,7 @@ if __name__ == "__main__":
 ---
 ## [general] 内核 FD Theft：mm-NULL ptrace check bypass
 ### Kernel FD Theft: mm-NULL ptrace Check Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/03-mm-null-ptrace-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/03-mm-null-ptrace-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/03-mm-null-ptrace-bypass.md
 
 > >
@@ -60343,7 +60343,7 @@ fd 5 -> /etc/ssh/ssh_host_ed25519_key (round=37 try=812)
 ---
 ## [general] CIFSwitch（cifs.spnego 身份混淆与 root NSS 加载）防御
 ### Defense Against CIFSwitch cifs.spnego Identity Confusion and NSS Injection
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/04-cifswitch-nss-privesc-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/04-cifswitch-nss-privesc-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/04-cifswitch-nss-privesc-defense.md
 
 > >
@@ -60438,7 +60438,7 @@ if __name__ == "__main__":
 ---
 ## [general] CIFSwitch：cifs.spnego 身份混淆 → root 权限 NSS 加载
 ### CIFSwitch: cifs.spnego Identity Confusion to Root NSS Loading
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/04-cifswitch-nss-privesc/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/04-cifswitch-nss-privesc.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/04-cifswitch-nss-privesc.md
 
 > >
@@ -60601,7 +60601,7 @@ rm -rf /tmp/cifs-upcall-sudoers-poc-*/
 ---
 ## [general] PinTheft（RDS zcopy + io_uring 页缓存污染 LPE）防御
 ### Defense Against PinTheft RDS Zerocopy and io_uring Page-Cache Poisoning
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/05-pintheft-io-uring-page-cache-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/05-pintheft-io-uring-page-cache-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/05-pintheft-io-uring-page-cache-defense.md
 
 > >
@@ -60699,7 +60699,7 @@ if __name__ == "__main__":
 ---
 ## [general] RDS zcopy double-free + io_uring dangling struct page*：PinTheft 内核 LPE
 ### RDS zcopy Double-Free + io_uring Dangling struct page: PinTheft Kernel LPE
-URL: https://ling71671.github.io/open-reverselab/kb/general/01-kernel/05-pintheft-io-uring-page-cache/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/01-kernel/05-pintheft-io-uring-page-cache.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/01-kernel/05-pintheft-io-uring-page-cache.md
 
 > >
@@ -60844,7 +60844,7 @@ pkill -f "sleep 99999"
 ---
 ## [general] 内存搜索与篡改防御（ObRegisterCallbacks / 数值加密 / IOMMU）
 ### Defense Against Memory Searching and Modification
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/01-memory-hacking-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/01-memory-hacking-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/01-memory-hacking-defense.md
 
 > >
@@ -60987,7 +60987,7 @@ if __name__ == "__main__":
 ---
 ## [general] 内存搜索与修改
 ### Memory Searching and Modification
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/01-memory-hacking/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/01-memory-hacking.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/01-memory-hacking.md
 
 > >
@@ -61399,7 +61399,7 @@ Cheat Engine 初步扫描 → 识别加密/混淆模式 → 逆向解密函数
 ---
 ## [general] 封包拦截与重放防御（TLS Pinning / 协议双向校验 / 序列号抗重放）
 ### Defense Against Packet Interception and Replay
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/02-packet-interception-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/02-packet-interception-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/02-packet-interception-defense.md
 
 > >
@@ -61514,7 +61514,7 @@ if __name__ == "__main__":
 ---
 ## [general] 封包拦截与修改
 ### Packet Interception and Modification
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/02-packet-interception/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/02-packet-interception.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/02-packet-interception.md
 
 > >
@@ -61895,7 +61895,7 @@ class PacketReplayer:
 ---
 ## [general] 透视与 ESP 渲染防御（视野剔除 / 渲染管线完整性 / 覆盖窗口检测）
 ### Defense Against ESP and Wallhack Rendering
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/03-esp-wallhack-rendering-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/03-esp-wallhack-rendering-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/03-esp-wallhack-rendering-defense.md
 
 > >
@@ -61993,7 +61993,7 @@ if __name__ == "__main__":
 ---
 ## [general] 透视/ESP 渲染技术
 ### ESP / Wallhack Rendering Techniques
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/03-esp-wallhack-rendering/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/03-esp-wallhack-rendering.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/03-esp-wallhack-rendering.md
 
 > >
@@ -62385,7 +62385,7 @@ HRESULT __stdcall HookedPresent(IDXGISwapChain* swapChain, ...) {
 ---
 ## [general] 反作弊绕过防御（内核回调加固 / 栈回溯 / ETW-Ti 与 HVCI）
 ### Defense Against Anti-Cheat System Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/04-anti-cheat-bypass-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/04-anti-cheat-bypass-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/04-anti-cheat-bypass-defense.md
 
 > >
@@ -62471,7 +62471,7 @@ if __name__ == "__main__":
 ---
 ## [general] 反作弊系统绕过
 ### Anti-Cheat System Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/04-anti-cheat-bypass/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/04-anti-cheat-bypass.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/04-anti-cheat-bypass.md
 
 > >
@@ -62866,7 +62866,7 @@ DWORD GetSyscallNumber(const char* name) {
 ---
 ## [general] 加速与时间操控防御（多源时钟交叉校验 / 服务端 Tick 预算）
 ### Defense Against Speedhack and Time Manipulation
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/05-speedhack-time-manipulation-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/05-speedhack-time-manipulation-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/05-speedhack-time-manipulation-defense.md
 
 > >
@@ -62968,7 +62968,7 @@ if __name__ == "__main__":
 ---
 ## [general] 加速/时间操控
 ### Speedhack / Time Manipulation
-URL: https://ling71671.github.io/open-reverselab/kb/general/cheating/05-speedhack-time-manipulation/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/cheating/05-speedhack-time-manipulation.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/cheating/05-speedhack-time-manipulation.md
 
 > >
@@ -63384,7 +63384,7 @@ public:
 ---
 ## [general] 算法盲识别：从字节特征反推加密/哈希/压缩算法
 ### Blind Algorithm Identification: Inferring Encryption/Hash/Compression from Byte Features
-URL: https://ling71671.github.io/open-reverselab/kb/general/crypto/01-algorithm-identification/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/crypto/01-algorithm-identification.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/crypto/01-algorithm-identification.md
 
 > >
@@ -63752,7 +63752,7 @@ COMPRESSION_HEURISTIC = {
 ---
 ## [general] 自定义混淆/加密还原方法论
 ### Custom Obfuscation and Encryption Reverse Engineering Methodology
-URL: https://ling71671.github.io/open-reverselab/kb/general/crypto/02-custom-obfuscation-reverse/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/crypto/02-custom-obfuscation-reverse.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/crypto/02-custom-obfuscation-reverse.md
 
 > >
@@ -64134,7 +64134,7 @@ function dump_sbox_from_memory(sboxAddr, sboxSize, label) {
 ---
 ## [general] 伪随机数生成器(PRNG)破解 — 从输出恢复内部状态与种子
 ### PRNG Cracking: Recovering Internal State and Seed from Output
-URL: https://ling71671.github.io/open-reverselab/kb/general/crypto/03-prng-randomness-cracking/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/crypto/03-prng-randomness-cracking.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/crypto/03-prng-randomness-cracking.md
 
 > >
@@ -64549,7 +64549,7 @@ def v8_double_to_state_value(d: float) -> int:
 ---
 ## [general] RSA 攻击族 — 按已知量选攻击
 ### The RSA Attack Family: Choosing by What You Are Given
-URL: https://ling71671.github.io/open-reverselab/kb/general/crypto/04-rsa-attack-family/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/crypto/04-rsa-attack-family.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/crypto/04-rsa-attack-family.md
 
 > >
@@ -64962,7 +64962,7 @@ def batch_gcd(moduli: list):
 ---
 ## [general] Web Crypto API 滥用
 ### Web Crypto API Abuse
-URL: https://ling71671.github.io/open-reverselab/kb/general/crypto/05-web-crypto-abuse/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/crypto/05-web-crypto-abuse.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/crypto/05-web-crypto-abuse.md
 
 > >
@@ -65180,7 +65180,7 @@ if __name__ == "__main__":
 ---
 ## [general] 拿到样本的前30分钟清单
 ### First 30 Minutes Sample Triage Checklist
-URL: https://ling71671.github.io/open-reverselab/kb/general/methodology/01-reverse-checklist-first-30-min/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/methodology/01-reverse-checklist-first-30-min.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/methodology/01-reverse-checklist-first-30-min.md
 
 > >
@@ -65629,7 +65629,7 @@ strings suspicious.exe | head -100
 ---
 ## [general] 按信号选工具决策树
 ### Signal-Based Tool Selection Decision Tree
-URL: https://ling71671.github.io/open-reverselab/kb/general/methodology/02-toolchain-decision-tree/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/methodology/02-toolchain-decision-tree.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/methodology/02-toolchain-decision-tree.md
 
 > >
@@ -66008,7 +66008,7 @@ Obfuscation 类型:
 ---
 ## [general] 未知协议逆向方法论
 ### Unknown Protocol Reverse Engineering Methodology
-URL: https://ling71671.github.io/open-reverselab/kb/general/protocol/01-unknown-protocol-reverse/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/protocol/01-unknown-protocol-reverse.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/protocol/01-unknown-protocol-reverse.md
 
 > >
@@ -66378,7 +66378,7 @@ def try_crc_reversing(checksum_bytes: bytes, data: bytes, crc_width: int = 16) -
 ---
 ## [general] Protobuf / FlatBuffers 无 Schema 逆向
 ### Protobuf / FlatBuffers Schema-less Reverse Engineering
-URL: https://ling71671.github.io/open-reverselab/kb/general/protocol/02-protobuf-flatbuffers-reverse/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/protocol/02-protobuf-flatbuffers-reverse.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/protocol/02-protobuf-flatbuffers-reverse.md
 
 > >
@@ -66765,7 +66765,7 @@ def print_protobuf_tree(fields: List[dict], indent: int = 0) -> str:
 ---
 ## [general] gRPC / Protobuf 攻击
 ### gRPC and Protobuf Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/general/protocol/03-grpc-protobuf/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/protocol/03-grpc-protobuf.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/protocol/03-grpc-protobuf.md
 
 > >
@@ -66962,7 +66962,7 @@ gRPC 入口
 ---
 ## [general] JS Runtime / Browser Reversing
 ### JS Runtime / Browser Reversing
-URL: https://ling71671.github.io/open-reverselab/kb/general/protocol/04-js-runtime-reversing/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/protocol/04-js-runtime-reversing.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/protocol/04-js-runtime-reversing.md
 
 > >
@@ -67230,7 +67230,7 @@ bundle/chunk 枚举
 ---
 ## [general] 签名验证纵深防御全景（强算法绑定 / 规范化 / 抗重放 / 业务账本闭环）
 ### Signature Verification Defense-in-Depth Panorama
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/00-overview-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/00-overview-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/00-overview-defense.md
 
 > >
@@ -67339,7 +67339,7 @@ if __name__ == "__main__":
 ---
 ## [general] Signature Forgery — 签名伪造与验证绕过全景手册
 ### Signature Forgery — Complete Panoramic Handbook for Signature Forgery & Verification Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/00-overview/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/00-overview.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/00-overview.md
 
 > >
@@ -67591,7 +67591,7 @@ def decide_tree(base_url: str, sample_body: dict = None):
 ---
 ## [general] 签名算法降级与混淆防御（服务端算法锁定 / 拒绝 alg=none / 密钥类型隔离）
 ### Defense Against Signature Algorithm Downgrade and Confusion
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/01-algorithm-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/01-algorithm-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/01-algorithm-defense.md
 
 > >
@@ -67707,7 +67707,7 @@ if __name__ == "__main__":
 ---
 ## [general] Signature Algorithm Attacks — 签名算法降级/混淆/None 攻击深度手册
 ### Signature Algorithm Attacks — Algorithm Downgrade, Confusion & None Attack Deep Manual
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/01-algorithm/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/01-algorithm.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/01-algorithm.md
 
 > >
@@ -67999,7 +67999,7 @@ def wechat_downgrade_test(prepay_id: str):
 ---
 ## [general] 签名验证实现缺陷防御（恒定时间比对 / 严格类型校验 / Fail-Closed）
 ### Defense Against Signature Implementation Bugs
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/02-implementation-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/02-implementation-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/02-implementation-defense.md
 
 > >
@@ -68101,7 +68101,7 @@ if __name__ == "__main__":
 ---
 ## [general] Signature Implementation Bugs — 签名实现缺陷深度手册
 ### Signature Implementation Bugs — Implementation-Level Signature Bypass Manual
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/02-implementation/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/02-implementation.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/02-implementation.md
 
 > >
@@ -68343,7 +68343,7 @@ AFFECTED_FUNCTIONS = {
 ---
 ## [general] 签名密钥生命周期防御（CSPRNG 强熵 / KMS 托管 / 客户端隔离与轮换）
 ### Defense Against Signature Key Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/03-key-attacks-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/03-key-attacks-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/03-key-attacks-defense.md
 
 > >
@@ -68438,7 +68438,7 @@ if __name__ == "__main__":
 ---
 ## [general] Key Attacks — 签名密钥攻击深度技术手册
 ### Key Attacks — Signature Key Attack Deep Technical Manual
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/03-key-attacks/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/03-key-attacks.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/03-key-attacks.md
 
 > >
@@ -68790,7 +68790,7 @@ def generate_keys_from_timestamp(
 ---
 ## [general] 签名规范化绕过防御（Verify-After-Parse / RFC 8785 JCS / HPP 拦截）
 ### Defense Against Signature Canonicalization Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/04-canonicalization-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/04-canonicalization-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/04-canonicalization-defense.md
 
 > >
@@ -68905,7 +68905,7 @@ if __name__ == "__main__":
 ---
 ## [general] Canonicalization Attacks — 签名规范化绕过
 ### Canonicalization Attacks — Signature Canonicalization Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/04-canonicalization/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/04-canonicalization.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/04-canonicalization.md
 
 > >
@@ -69256,7 +69256,7 @@ def double_encode_exploit():
 ---
 ## [general] 哈希长度扩展（HLE）防御（HMAC / KMAC / 非对称签名迁移）
 ### Defense Against Hash Length Extension Attacks
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/05-length-extension-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/05-length-extension-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/05-length-extension-defense.md
 
 > >
@@ -69348,7 +69348,7 @@ if __name__ == "__main__":
 ---
 ## [general] Hash Length Extension 攻击 — 深度技术手册
 ### Hash Length Extension Attacks — Deep Technical Manual
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/05-length-extension/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/05-length-extension.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/05-length-extension.md
 
 > >
@@ -69699,7 +69699,7 @@ API 签名模式：
 ---
 ## [general] 重放攻击与 Nonce/Timestamp 绕过防御（原子去重 / 严格时间窗 / 上下文绑定）
 ### Defense Against Replay Attacks and Nonce/Timestamp Bypass
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/06-replay-nonce-defense/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/06-replay-nonce-defense.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/06-replay-nonce-defense.md
 
 > >
@@ -69838,7 +69838,7 @@ if __name__ == "__main__":
 ---
 ## [general] Replay / Nonce / Timestamp — 重放攻击深度技术手册
 ### Replay / Nonce / Timestamp — Replay Attack Deep Technical Manual
-URL: https://ling71671.github.io/open-reverselab/kb/general/signature/06-replay-nonce/
+URL: https://ling71671.github.io/open-reverselab/kb/general/techniques/signature/06-replay-nonce.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/general/techniques/signature/06-replay-nonce.md
 
 > >
@@ -70193,7 +70193,7 @@ def exploit_sequential_nonce():
 ---
 ## [windows] Notepad++ config.xml 命令注入（CVE-2026-48778）
 ### Notepad++ config.xml Command Injection (CVE-2026-48778)
-URL: https://ling71671.github.io/open-reverselab/kb/windows/notepadpp-config-injection/
+URL: https://ling71671.github.io/open-reverselab/kb/windows/techniques/notepadpp-config-injection.html
 Source: https://github.com/LING71671/open-reverselab/blob/main/kb/windows/techniques/notepadpp-config-injection.md
 
 > >

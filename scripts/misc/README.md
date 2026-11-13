@@ -25,5 +25,13 @@ python scripts/misc/ai_toolcheck.py --board misc
 ```
 
 Windows 专用 GUI/PE 工具（例如 Procmon、x64dbg、PE-bear）在 macOS/Linux 上会被标记为
-unsupported/skipped；这些工具随 Windows release 分发。macOS/Linux release 聚焦 Python/MCP
-core、Web/Android CLI 工具和 PATH 中已安装的 native 工具。
+unsupported/skipped。第三方工具由安装脚本或各工具的官方安装方式单独提供，当前 release 不捆绑这些二进制。macOS/Linux 保留 Python/MCP core 与 PATH 中已安装的 native CLI 工具支持。
+
+## 桌面与发布
+
+- `desktop_workspace.py`：工作区注册、样本原件／副本、Goal 与报告的磁盘操作。
+- `desktop_kb.py`：桌面与浏览器预览共用的知识目录和文档读取接口。
+- `triage_target.py`：文件、目录与 URL 初筛；缺失目标返回错误，未知字段保持未知。
+- `package_desktop_release.py`：从提交快照与生产 EXE 生成 Windows 发布包和 SHA256 校验文件。
+
+使用与约束见 [桌面文档](../../desktop/README.zh-CN.md)和[发布流程](../../RELEASING.md)。

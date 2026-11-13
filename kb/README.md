@@ -1,12 +1,32 @@
-# Knowledge Base
+# 知识库
 
-AI 使用说明：[AI-USAGE.md](AI-USAGE.md)
+这里保存可复用的分析、检测和防御方法。单个目标的日志、样本和报告保存在私有工作区，写作约定见 [AI-USAGE.md](AI-USAGE.md)。
 
-Reusable knowledge lives here. Unlike `notes/`, this is not per-case evidence; it is a tactical reference library.
+| 领域 | 内容 |
+| --- | --- |
+| [Web / CTF](ctf-website/README.md) | Web 攻击面、认证、数据库、协议、CVE 与对应防御 |
+| [Android / APK](apk-reverse/README.md) | DEX、Native、混合框架、动态分析与加固验证 |
+| [Windows / PE](pe-reverse/README.md) | PE、静态／动态分析、检测、逆向与防御 |
+| [General](general/README.md) | 密码学、签名、协议、固件、内核与跨领域分析 |
+| [Windows 专项](windows/README.md) | 平台配置等专项参考 |
 
-| Area | Path | Content |
-|---|---|---|
-| Web CTF | [ctf-website](ctf-website/README.md) | 23 类 191 篇 — Web 攻击全表面 + 云原生 + CVE 实战 + DoS + 1:1 蓝队防御 |
-| APK Reverse | [apk-reverse](apk-reverse/README.md) | 9 类 36 篇 — APK/DEX/Hybrid 逆向 + 1:1 蓝队防御 |
-| PE Reverse | [pe-reverse](pe-reverse/README.md) | 10 类 49 篇 — Windows 本地代码执行 + PE 分析 + 1:1 蓝队防御 |
-| General | [general](general/README.md) | 6 类 45 篇 — 密码学/协议/签名/内核/对抗 + 1:1 蓝队防御 |
+## red / blue / both
+
+文档按 `track` 分类；`both` 表示共享知识。防御文档通过 `defends` 关联攻击文档，桌面端将这些关系展示为“关联文档”。保留领域目录，不建立两套重复的根目录。实际配对由索引决定，不要求所有共享或专项文档都有一对一对应项。
+
+```sh
+python scripts/misc/kb_router.py "JWT" --track blue
+python scripts/misc/desktop_kb.py list --track both
+```
+
+前者面向信号检索，后者输出桌面使用的完整目录。桌面分类与命令行工具门控分别使用自身运行上下文。
+
+## 更新后检查
+
+```sh
+python scripts/misc/kb_doc_audit.py
+python scripts/misc/add_frontmatter.py --verify
+python scripts/misc/generate_llms_txt.py --check
+```
+
+文章、索引和衍生文档的具体维护方式见 [贡献指南](../.github/CONTRIBUTING.md)。

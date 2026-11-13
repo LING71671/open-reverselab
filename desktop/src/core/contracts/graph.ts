@@ -29,6 +29,7 @@ export interface GoalVerification {
 }
 
 export interface Deliverables {
+  branches?: Partial<Record<"red" | "blue", Deliverables>>;
   script?: string;
   key?: string;
   flag?: string;

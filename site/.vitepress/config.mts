@@ -40,19 +40,20 @@ const enSidebar = toEnSidebar(sidebar)
 // canonical link must be prefixed with the repository base path.
 const base = process.env.VITEPRESS_BASE || '/'
 const siteUrl = (process.env.VITEPRESS_SITE_URL || 'https://ling71671.github.io/open-reverselab').replace(/\/$/, '')
-const socialPreview = `${siteUrl}/assets/social-preview.png`
+const socialPreview = `${siteUrl}/assets/desktop/knowledge-light.png`
 
 const zhThemeConfig = {
   nav: [
-    { text: '知识库', link: '/kb/ctf-website/README', activeMatch: '/kb/' },
-    { text: 'CTF Website', link: '/kb/ctf-website/README' },
-    { text: 'APK Reverse', link: '/kb/apk-reverse/README' },
-    { text: 'PE Reverse', link: '/kb/pe-reverse/README' },
-    { text: 'General', link: '/kb/general/README' },
-    { text: 'MCP 工具', link: '/mcp-tools', activeMatch: '/mcp-tools' },
-    { text: 'Desktop (dev)', link: 'https://github.com/LING71671/open-reverselab/tree/dev/desktop' },
-    { text: 'FAQ', link: '/faq', activeMatch: '/faq' },
-    { text: 'GitHub', link: 'https://github.com/LING71671/open-reverselab' },
+    { text: '桌面端', link: '/desktop' },
+    { text: '知识库', items: [
+      { text: 'Web / CTF', link: '/kb/ctf-website/README' },
+      { text: 'Android / APK', link: '/kb/apk-reverse/README' },
+      { text: 'Windows / PE', link: '/kb/pe-reverse/README' },
+      { text: 'General', link: '/kb/general/README' },
+      { text: 'Windows', link: '/kb/windows/README' },
+    ] },
+    { text: '工具', link: '/mcp-tools' },
+    { text: 'FAQ', link: '/faq' },
   ],
   sidebar,
   outline: { level: [2, 3], label: '本页目录' },
@@ -83,15 +84,16 @@ const zhThemeConfig = {
 
 const enThemeConfig = {
   nav: [
-    { text: 'Knowledge Base', link: '/en/kb/ctf-website/README', activeMatch: '/kb/' },
-    { text: 'CTF Website', link: '/en/kb/ctf-website/README' },
-    { text: 'APK Reverse', link: '/en/kb/apk-reverse/README' },
-    { text: 'PE Reverse', link: '/en/kb/pe-reverse/README' },
-    { text: 'General', link: '/en/kb/general/README' },
-    { text: 'MCP Tools', link: '/en/mcp-tools', activeMatch: '/en/mcp-tools' },
-    { text: 'Desktop (dev)', link: 'https://github.com/LING71671/open-reverselab/tree/dev/desktop' },
-    { text: 'FAQ', link: '/en/faq', activeMatch: '/en/faq' },
-    { text: 'GitHub', link: 'https://github.com/LING71671/open-reverselab' },
+    { text: 'Desktop', link: '/en/desktop' },
+    { text: 'Knowledge', items: [
+      { text: 'Web / CTF', link: '/en/kb/ctf-website/README' },
+      { text: 'Android / APK', link: '/en/kb/apk-reverse/README' },
+      { text: 'Windows / PE', link: '/en/kb/pe-reverse/README' },
+      { text: 'General', link: '/en/kb/general/README' },
+      { text: 'Windows', link: '/en/kb/windows/README' },
+    ] },
+    { text: 'Tools', link: '/en/mcp-tools' },
+    { text: 'FAQ', link: '/en/faq' },
   ],
   sidebar: enSidebar,
   outline: { level: [2, 3], label: 'On this page' },
@@ -131,11 +133,12 @@ const languageDetectScript = `(function () {
   try {
     var pref = localStorage.getItem('rl-lang');
     if (pref) return;
-    var path = location.pathname;
+    var base = ${JSON.stringify(base)};
+    var path = '/' + location.pathname.slice(base.length);
     if (path === '/en' || path.indexOf('/en/') === 0) return;
     var lang = (navigator.language || 'zh').toLowerCase();
     if (lang.indexOf('en') === 0) {
-      location.replace('/en' + (path === '/' ? '/' : path));
+      location.replace(base + 'en' + (path === '/' ? '/' : path) + location.search + location.hash);
     }
   } catch (e) {}
 })();`
@@ -144,14 +147,14 @@ export default defineConfig({
   base,
   lang: 'zh-CN',
   title: 'ReverseLab',
-  description: '开源逆向工程实验环境：183 篇可执行知识库 + 100+ MCP 自动化工具。Agent 原生，目录即约定。',
+  description: 'ReverseLab AI 逆向分析工作台，支持 red / blue / both、并行 Goal、工作区与分析知识库。',
 
   head: [
     ['meta', { name: 'keywords', content: 'reverse engineering, 逆向工程, CTF, APK reverse, PE analysis, MCP tools, Frida, Ghidra, x64dbg, web security, knowledge base' }],
     ['meta', { name: 'author', content: 'ReverseLab' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'ReverseLab — 开源逆向工程实验环境' }],
-    ['meta', { property: 'og:description', content: '183 篇可执行知识库文章 + 100+ MCP 自动化工具，覆盖 CTF/APK/PE/加密/游戏作弊全领域。' }],
+    ['meta', { property: 'og:description', content: '桌面端、分析与防御知识库、MCP 工具和命令行工作流。' }],
     ['meta', { property: 'og:site_name', content: 'ReverseLab' }],
     ['meta', { property: 'og:locale', content: 'zh_CN' }],
     ['meta', { property: 'og:image', content: socialPreview }],
@@ -165,7 +168,7 @@ export default defineConfig({
       label: '简体中文',
       lang: 'zh-CN',
       title: 'ReverseLab',
-      description: '开源逆向工程实验环境：183 篇可执行知识库 + 100+ MCP 自动化工具。Agent 原生，目录即约定。',
+      description: 'ReverseLab AI 逆向分析工作台，支持 red / blue / both、并行 Goal、工作区与分析知识库。',
       themeConfig: zhThemeConfig,
     },
     en: {
@@ -173,7 +176,7 @@ export default defineConfig({
       lang: 'en-US',
       link: '/en/',
       title: 'ReverseLab',
-      description: 'Open-source reverse engineering lab: 183 executable knowledge-base articles + 100+ MCP automation tools. Agent-native, conventions as contracts.',
+      description: 'ReverseLab AI reverse engineering workbench with red / blue / both, parallel Goals, workspaces and a knowledge base.',
       themeConfig: enThemeConfig,
     },
   },
@@ -184,6 +187,7 @@ export default defineConfig({
     // reads site.themeConfig.search, not the per-locale themeConfig.
     logo: '/assets/favicon.svg',
     siteTitle: 'ReverseLab',
+    socialLinks: [{ icon: 'github', link: 'https://github.com/LING71671/open-reverselab' }],
     search: {
       provider: 'local',
       options: {},

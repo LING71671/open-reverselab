@@ -1,40 +1,58 @@
-# ReverseLab Desktop Harness
+# ReverseLab Desktop
 
-ReverseLab Desktop 是专为 `open-reverseLab` 打造的现代化、低耦合 AI 逆向工程自动化桌面工作台。
+A desktop workspace for target-bound security analysis with separate `red`, `blue`, and `both` strategies. Goals run in a queue, emit a live workflow graph, collect execution evidence, and finish only after verification or an explicit stop condition.
 
-基于 **TypeScript + Tauri v2 + React 19 + LangGraph.js + @xyflow/react** 构建。
+[中文说明](README.zh-CN.md)
 
----
+## Run
 
-## 核心特性
+Install the dependencies with `pnpm install` in this directory. Use `pnpm dev` for the local browser preview or `pnpm tauri dev` for the desktop application. Python must be available on PATH. Native builds also require Rust and the platform's Tauri build prerequisites. `REVERSELAB_ROOT` can identify the repository containing the shared knowledge base and scripts.
 
-* **极简暗黑精工设计**：无边框内嵌顶栏，采用 Linear 级哑光深黑设计语言，零廉价电光蓝与浮夸特效。
-* **双模式研判胶囊**：
-  * **许愿闭环 (Wish Mode)**：输入逆向意图，全自动进行初筛、知识库攻击网查表、并行子 Agent 调度与算法还原。
-  * **交互诊断 (Interactive Mode)**：提供专家级逐步交互、实时日志监控与断点干预。
-* **多重视图无缝切换**：
-  * **拓扑画板 (Graph)**：React Flow 驱动的动态水平分支图，自动平滑聚焦活跃节点。
-  * **终端日志 (Logs)**：虚拟化高频结构化日志流，支持 Level 过滤、关键字检索与载荷展开。
-  * **诊断中心 (Diag)**：双层环境体检，覆盖本机逆向工具链、4 大 MCP 协议服务及样本初筛。
-* **低耦合分层架构**：领域契约、业务探针、日志总线与状态机引擎完全无头化，与 UI 彻底解耦。
+The first launch creates a local default workspace outside this repository. The workspace selector opens or creates other directories. Importing a sample preserves an original copy and creates a separate working copy. Goals, reports, and scripts are stored inside the workspace's `.reverselab` directory.
 
----
+Configure an OpenAI-compatible chat-completions endpoint and model in Settings. API keys stay in local application storage. Basic SHA256 verification uses a deterministic local path and does not need a model. Other goals use the configured model for planning and independent evidence assessment.
 
-## 规范与文档导航
+## Behavior
 
-* [分层解耦架构设计 (ARCHITECTURE.md)](file:///e:/open-reverseLab/desktop/ARCHITECTURE.md)
-* [开发者与工具扩展指南 (DEV_GUIDE.md)](file:///e:/open-reverseLab/desktop/DEV_GUIDE.md)
-* [UI/UX 美学与合规规范 (STANDARDS.md)](file:///e:/open-reverseLab/desktop/STANDARDS.md)
+- Switch `red / blue / both` at the upper left. `both` starts isolated red and blue branches and joins their results.
+- Enter a file, directory, or URL target and an objective. Optional limits default to 10 minutes and 32,000 tokens per Goal. The default queue runs two Goals per workspace.
+- Switch workspaces or inspect another Goal while execution continues. Each runner retains its original workspace.
+- Browse the actual knowledge index, including defense articles and paired references. Shared articles appear in both tracks.
+- Inspect workflow nodes, execution history, tool output, verification, reports, and health events. Unobserved services remain unknown.
+- Light/dark themes follow the OFFFOLD palette. Motion respects reduced-motion preferences.
 
----
+The current execution adapter runs bounded Python observations. Native debugger, device-control, and production hardening adapters are not implemented by this desktop rewrite. A generic model-assisted verification result is not a formal proof; reports preserve the actual output and verification assertions. BLA/REA interoperability is a documented benchmark target, not a claim of completed upstream testing.
 
-## 快速启动
+## Engineering documentation
 
-```bash
-# 启动桌面原生无边框客户端
-cd desktop
-pnpm dev:desktop
+- [Architecture](ARCHITECTURE.md) and [Agent runtime contracts](AGENT_SYSTEM.md)
+- [Workspace ownership and persistence](WORKSPACES.md)
+- [BLA / REA threat profiles and validation plan](ADVERSARIAL_PROFILES.md)
+- [Application updates](UPDATES.md)
+- [Health events and error codes](ERROR_CODES.md)
+- [UI design](DESIGN_BRIEF.md) and [development guide](DEV_GUIDE.md)
 
-# 或启动纯 Web 调试模式
-pnpm dev
+## Checks
+
+From this directory:
+
+```sh
+pnpm build
+node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs
+node --experimental-strip-types --test tests/*.test.ts
+cargo check --manifest-path src-tauri/Cargo.toml
 ```
+
+From the repository root, run the relevant Python tests with pytest and `python scripts/misc/public_release_check.py` before publishing. Private workspaces, samples, reports, credentials, and local screenshots must remain outside public changes.
+
+## v1.3.0 release package
+
+Download the Windows x64 installer from [Releases](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0). Run the installer, then launch ReverseLab. Settings → Application updates checks versions and downloads signed updates after running tasks finish. Portable ZIP builds are also available; extract the entire directory and upgrade through the installer. Python 3.10+ must be available as `python`; [WebView2 Runtime](https://v2.tauri.app/start/prerequisites/#webview2) is also required. Install external analysis tools separately.
+
+Use Settings for installed-build updates. For portable builds, close the app and extract the new version into a separate directory. Default workspaces are outside the application directory. Back up a custom workspace's `.reverselab/` before opening it. History restoration does not restart interrupted processes or relocate stored absolute paths. Do not replace the executable or move a workspace during a run.
+
+## Model and execution data
+
+API keys are held in WebView local storage without OS-keychain integration. Model-assisted tasks send context and selected evidence to the configured endpoint; the app is not an air-gapped environment. Python actions run with the current user's permissions. Unsent drafts and document positions survive navigation during the current workspace session, without promising persistence across application restarts.
+
+Packaging and release checks are documented in [RELEASING.md](../RELEASING.md).

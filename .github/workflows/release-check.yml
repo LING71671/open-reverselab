@@ -55,3 +55,25 @@ jobs:
           pip install uv
           uv sync --project tools/skills/mcp/ReverseLabToolsMCP
           uv run --project tools/skills/mcp/ReverseLabToolsMCP python tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py --help
+
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop
+      - run: pnpm build
+        working-directory: desktop
+      - name: Goal, pipeline and runtime tests
+        working-directory: desktop
+        run: |
+          node --test src/services/goals/goalManager.test.mjs src/engine/tests/pipeline.test.mjs
+          node --experimental-strip-types --test tests/*.test.ts

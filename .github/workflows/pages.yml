@@ -26,12 +26,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.14.0
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: site/package-lock.json
+          cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -47,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: site
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build site
         working-directory: site
@@ -55,7 +59,7 @@ jobs:
           # configure-pages emits base_path without a trailing slash; VitePress
           # requires one, so append it (and fall back to the project-pages path).
           VITEPRESS_BASE: ${{ steps.pages.outputs.base_path || '/open-reverselab' }}/
-        run: npm run build
+        run: pnpm build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

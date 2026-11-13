@@ -14,12 +14,16 @@ env.md 后再继续。env.md 是本机级快照、跨项目共享，只写本机
 
 | 任务类型 | 主入口 | 工具入口 | 知识/模板 |
 |---|---|---|---|
+| 桌面 UI / Goal / 工作区 / Agent 调度 | `desktop/README.zh-CN.md` | `desktop/src/`, `scripts/misc/desktop_*.py` | `desktop/ARCHITECTURE.md`, `desktop/AGENT_SYSTEM.md` |
+| 官网 / 文档 / 发布 | `site/README.md`, `RELEASING.md` | `site/`, `.github/workflows/` | `PRODUCT.md`, `DESIGN.md` |
 | Web / Website CTF / CVE 链 | `boards/ctf-website/README.md` | `tools/ctf-website/` | `kb/ctf-website/README.md` |
 | Android / APK / DEX / Frida | `boards/android/README.md` | `tools/android/` | `templates/notes/android-apk-analysis.md` |
 | Windows / PE / crackme / malware triage | `boards/windows/README.md` | `tools/windows/`, `tools/common/` | `templates/notes/windows-pe-analysis.md` |
 | General / crypto / protocol / firmware / IoT / radio / AI | `boards/general/README.md` | `tools/general/` | `kb/general/README.md` |
 | MCP / skills / lab health / automation | `boards/misc/README.md` | `tools/skills/README.md` | `reports/misc/`, `scripts/misc/` |
 | 跨板块综合案件 | `cases/README.md` | 链接各板块 tools/scripts | `templates/cases/` |
+
+桌面运行数据使用所选工作区的 `.reverselab/`，与以下外部 Agent 的 `cases/` 协议分开。桌面开发先读 [DEV_GUIDE.md](desktop/DEV_GUIDE.md)；不要因当前界面切换而改变后台任务的工作区。
 
 ## 2. AI 默认工作流
 

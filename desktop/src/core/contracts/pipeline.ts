@@ -1,9 +1,48 @@
 import { Deliverables } from "./graph";
 import { ToolExecutionRecord } from "./chat";
+import type { SecurityTrack } from "./track";
+import type { HealthEvent } from "./health";
 
 import { TriageResult } from "../../services/native/nativeBridge";
 
 export type StageStatus = "pending" | "running" | "pass" | "warn" | "fail" | "skipped";
+
+export interface RunBudget {
+  maxDurationMs: number;
+  maxTokens: number;
+}
+
+export interface AcceptancePlan {
+  target: string;
+  objective: string;
+  checks: Array<{ id: string; criterion: string; expected: string }>;
+}
+
+export interface RunProgress extends RunBudget {
+  status: "running" | "completed" | "exhausted" | "blocked" | "cancelled";
+  reason?: string;
+  elapsedMs: number;
+  tokensUsed: number;
+  usageEstimated?: boolean;
+  attempts: number;
+  checkpoint?: {
+    target: string;
+    objective: string;
+    track: SecurityTrack;
+    visitedPaths: string[];
+    actionFingerprints: string[];
+    blockedReasons: string[];
+  };
+}
+
+export interface PipelineBudget extends RunBudget {
+  startedAt: number;
+  deadline: number;
+  monotonicDeadline: number;
+  tokensUsed: number;
+  usageEstimated: boolean;
+  attempts: number;
+}
 
 export interface DiagnosticMetric {
   label: string;
@@ -35,8 +74,11 @@ export interface DiscoveredSample {
 
 export interface PipelineContext {
   sessionId: string;
-  target: string;
-  prompt: string;
+  readonly track: SecurityTrack;
+  budget: PipelineBudget;
+  runProgress?: RunProgress;
+  readonly target: string;
+  readonly prompt: string;
   history: Array<{ role: string; content: string }>;
   signal?: AbortSignal;
   diagnostics: Record<string, StageDiagnostic>;
@@ -46,6 +88,7 @@ export interface PipelineContext {
   triage?: TriageResult;
   kbRouting?: {
     board: string;
+    track: SecurityTrack;
     kbPath: string;
     length: number;
     content?: string;
@@ -70,6 +113,8 @@ export interface PipelineCallbacks {
   onDeliverables?: (deliverables: Deliverables) => void;
   onDiagnosticUpdate?: (diagnostic: StageDiagnostic) => void;
   onDiscoveredSamples?: (samples: DiscoveredSample[], containerDir?: string, primary?: string) => void;
+  onRunProgress?: (progress: RunProgress) => void;
+  onHealthEvent?: (event: HealthEvent) => void;
 }
 
 export interface PipelineStage {

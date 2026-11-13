@@ -1,28 +1,13 @@
-<div align="center">
+# Open-ReverseLab
 
-# Open-ReverseLab — AI Reverse Engineering Agent & MCP Lab
-
-**Open-source AI-powered reverse-engineering platform for autonomous binary analysis, built for Claude Code, Codex, OpenCode and any MCP-compatible agent.**
-
-Ghidra · Frida · x64dbg · Rizin · PE · APK · 密码学 · 蓝队加固 · 红蓝双轨逆向
-
----
-
-**开源逆向工程实验环境 —— 可执行的 1:1 RED/BLUE 知识库，110+ MCP 工具，Agent 原生。**
-
-*从入口信号到证据闭环，每一步都能跑。*
-
-<br />
-
-[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
-[![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
-[![Sponsor: Sentry](https://img.shields.io/badge/sponsored%20by-Sentry-362D59?style=flat-square&logo=sentry&logoColor=white)](#sponsors)
+ReverseLab 提供桌面工作区、红蓝知识库和 MCP 工具，用于围绕目标开展分析。可以在桌面端运行与查看 Goal，也可以将仓库接入 Claude Code、Codex、OpenCode 等 MCP 客户端。
 
 [English](README.md) · **简体中文**
 
-</div>
+[下载 v1.3.0](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) · [桌面端说明](desktop/README.zh-CN.md) · [知识库](kb/README.md) · [文档站](https://ling71671.github.io/open-reverselab/)
 
----
+[![Ask DeepWiki](assets/badges/ask-deepwiki.svg)](https://deepwiki.com/LING71671/open-reverselab)
+[![License: GPL-3.0](https://img.shields.io/github/license/LING71671/open-reverselab?style=flat-square&color=blue)](LICENSE)
 
 ## :handshake: 赞助支持
 
@@ -47,183 +32,100 @@ Ghidra · Frida · x64dbg · Rizin · PE · APK · 密码学 · 蓝队加固 · 
 
 ---
 
-## 这是什么
+## 桌面端
 
-ReverseLab 是一份「观点鲜明、可直接跑」的 **BLUE / RED / BOTH 双轨** 逆向工程与攻防知识库，面向逆向工程师、蓝队防御者、安全研究员与 AI Agent。每项技术均采用 **1:1 攻防对位**（`场景 → 输入信号 → 方法 → 工作流 → MCP 工具映射`），默认以 **`BLUE`（静态分析、密码学、特征识别与防御加固）** 为入口，可显式切换到 **`RED`（进攻出击）** 或 **`BOTH`（紫队对照）**。
+在左上角选择 `red / blue / both`，选好工作区，填写文件、目录或 URL 目标和任务内容。实时流程画板展示执行分支，执行记录、日志、报告和健康监控保留结论所依据的证据。
 
-- **5 大板块**，覆盖 Web、移动端、Windows、密码学与跨领域逆向。
-- **320+ 篇文章**，支持攻击面与 1:1 蓝队加固双向配对（`track: blue | red | both`、`defends`）。
-- **110+ MCP 工具**，通过 `reverse_lab_tools` 暴露 —— `triage_pe` / `ghidra_*` / `rizin_*` / `make_yara_stub` / `solve_crypto_from_evidence` / `kb_router` / `route_track` / `set_track` … 带 `REVERSELAB_MODE=blue|red|both` 轨道门控。
-- **目录即约定**：每个产物都有固定归宿（`samples/` / `exports/` / `patches/` / `kb/` / `reports/`）。样本丢进去，沿链走完，报告交出来。
+![ReverseLab 桌面端知识库阅读界面](assets/desktop/knowledge-light.png)
 
-实验室是用来「跑」的，不是用来「翻」的。如果某一步不能被执行，它就不该进 KB。
+- **策略独立。** red 与 blue 分别维护分析策略，both 并行运行两个分支并汇总各自结果。
+- **多任务并行。** 每个工作区默认同时运行两个 Goal。切换页面、任务或工作区不会改变后台任务的输出归属。
+- **工作区管理。** 首次启动创建默认工作区，也可新建或打开其他目录。导入样本时保留原件，另建工作副本。
+- **目标与运行限制。** 时间和 Token 上限可选，默认每个 Goal 为 10 分钟、32,000 tokens。失败路线和重复动作反馈给规划器，目标是否完成由独立核验决定。
+- **知识库与操作体验。** 支持 defense 文档、关联阅读、深浅主题；页面切换时保留未提交草稿、阅读位置和筛选条件。
 
-## 适合谁
+### 下载与启动
 
-| 你是 … | 从这里开始 |
-| --- | --- |
-| 做服务加固或样本检测的 **蓝队防御者** | 默认 `BLUE` 轨道（`REVERSELAB_MODE=blue`）→ `python scripts/misc/kb_router.py "<信号>" --track blue` → `triage_pe` / `make_yara_stub` |
-| 需要验证利用链的 **CTF / 红队研究员** | 切到 `RED`（`set_track("red")` 或 `--track red`）→ 浏览 [CTF Website](kb/ctf-website/README.md)、[APK Reverse](kb/apk-reverse/README.md)、[PE Reverse](kb/pe-reverse/README.md) |
-| 拿到一个样本的 **安全研究员** | [快速开始](#快速开始) → `boards/<board>/AI-USAGE.md` → `sample_full_workup` MCP 工具 |
-| 只想要一个工作区、不想看教程的 **逆向工程师** | [仓库目录约定](#仓库目录约定) —— clone 下来直接开工 |
-| 想给逆向工具接 **AI Agent** 的开发者 | [面向 AI Agent](#面向-ai-agent) —— 上下文链、`route_track`、MCP 烟测、环境快照协议 |
+1. 从 [Release](https://github.com/LING71671/open-reverselab/releases/tag/v1.3.0) 下载并运行 `ReverseLab-v1.3.0-windows-x64-setup.exe`。
+2. 安装 Python 3.10 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
+3. 启动 ReverseLab。安装包包含知识库和项目脚本；个人工作区请放在安装目录之外。
+4. 在设置中配置兼容 OpenAI chat-completions 的 API 地址和模型，再填写目标和任务内容。SHA256 核验可直接在本地运行，无需模型。
 
-## 快速跳转
+设置中可检查版本、查看发布说明并下载签名更新。便携 ZIP 可检查版本，通过安装包迁移；使用便携版时完整解压并保留 `ReverseLab.exe` 旁的 `kb/` 和 `scripts/`。详见[应用更新](desktop/UPDATES.md)。
 
-<div align="center">
+发布包包含 Windows x64 程序和对应版本的项目源码、脚本、知识库。Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可继续使用源码形式的 CLI/MCP 工作流；本版本未提供这两个平台的桌面二进制。
 
-[ :book: 知识库速览 ](#知识库速览)
-&nbsp;&nbsp;[ :rocket: 快速开始 ](#快速开始)
-&nbsp;&nbsp;[ :handshake: 参与贡献 ](.github/CONTRIBUTING.md)
+桌面端当前直接执行有界 Python 观察脚本。知识库中的 MCP 工具名不会自动成为调试器、设备或加固执行适配器。工作区文件保存在本地，模型辅助任务会把任务上下文和所选证据发送到配置的模型端点；Python 动作继承当前用户权限。配置、数据流向和能力范围见[桌面端说明](desktop/README.zh-CN.md)。
 
-</div>
+## 知识库与 MCP
 
----
+知识库覆盖 Web/CTF、Android/APK、Windows/PE，以及密码学、协议等通用主题。文档用 `track: red | blue | both` 标记所属轨道，其中 `both` 表示共享。攻击与防御文档通过索引元数据和 `defends` 关联；实际目录为准，并非每篇文章都存在一对一对应项。
 
-## 知识库速览
-
-```
-kb/                                320+ 篇文章，5 大板块（RED ↔ BLUE 1:1 对位）
-├── ctf-website/techniques/        23 类 191 篇 —— Web 攻击全表面 + 1:1 蓝队防御
-├── apk-reverse/techniques/         9 类  36 篇 —— Android 与混合框架逆向 + 1:1 蓝队防御
-├── pe-reverse/techniques/         10 类  49 篇 —— Windows PE / 二进制 + 1:1 蓝队防御
-├── general/techniques/             6 类  45 篇 —— 密码学 · 签名 · 协议 · 内核 · 1:1 蓝队防御
-└── windows/techniques/             Windows 平台专项
-```
-
-| 板块 | 触发信号 | MCP 入口 |
+| 领域 | 知识入口 | 工具示例 |
 | --- | --- | --- |
-| `ctf-website` | URL · HTTP · JWT · SQLi · SSRF · CVE · API · CSP · OAuth · 加固自检 · DoS | `route_track`、`kb_router`、`http_probe`、`run_ctf_tool` |
-| `apk-reverse` | APK · DEX · adb · Frida · jadx · smali · SO · WebView · RN/Flutter | `android_app_baseline`、`android_crypto_unpack_recipe`、`android_frida_*` |
-| `pe-reverse` | PE · EXE · DLL · asar · x64dbg · Ghidra · Procmon · packer · YARA/Sigma | `triage_pe`、`ghidra_headless_analyze`、`make_yara_stub`、`sample_full_workup` |
-| `general` | AES · RSA · 签名校验 · Protobuf · gRPC · JS 运行时 · 内核 · 反作弊 | `die_scan`、`solve_crypto_from_evidence`、`ghidra_*`、`rizin_*` |
-| `misc` | 红蓝双轨门控（`BLUE`/`RED`/`BOTH`）· MCP 配置 · 环境自检 | `get_track_status`、`set_track`、`mcp_smoke_check`、`lab_healthcheck` |
+| Web / CTF | [Web 知识库](kb/ctf-website/README.md) | `kb_router`、`http_probe`、`run_ctf_tool` |
+| Android / APK | [APK 知识库](kb/apk-reverse/README.md) | `android_app_baseline`、`android_crypto_unpack_recipe` |
+| Windows / PE | [PE 知识库](kb/pe-reverse/README.md) | `triage_pe`、`ghidra_headless_analyze`、`sample_full_workup` |
+| 通用 | [跨领域知识库](kb/general/README.md) | `solve_crypto_from_evidence`、`rizin_*` |
 
-完整目录树见 [kb/](kb/) 目录。
-
----
-
-## 快速开始
-
-按你的角色选路径，平台差异在下面分别给出。
-
-### 给真人用户
-
-**Windows（首次运行推荐）** —— 双击仓库根目录的 `START_HERE.bat`（或 `START_HERE.cmd`）。它会自动检查 Python、`uv`、Git、`reverse_lab_tools` MCP，真实调用 MCP 核心工具，并写入 `reports/misc/first-run-report.json` 与 `reports/misc/mcp-smoke-report.json`。
-
-**macOS / Linux** —— 在仓库根目录运行 `./START_HERE.sh`。它做同样的首次检查，并使用 `tools/bin/` 下的 POSIX shell wrapper；Windows 专属的 GUI / PE 工具会被跳过或明确标注。
-
-<details>
-<summary><b>按板块安装（首次检查通过后）</b></summary>
-
-```powershell
-# 按需选择 —— 实验室是模块化的，不要全装
-.\scripts\misc\bootstrap.ps1                # 生成核心脚本 wrappers（无下载）
-.\scripts\misc\install_tools.ps1 -CTF       # Web 工具（sqlmap、nuclei、ffuf、jwt_tool …）
-.\scripts\misc\install_tools.ps1 -Android   # APK 工具（apktool、jadx、frida、uber-apk-signer …）
-.\scripts\misc\install_tools.ps1 -Windows   # PE 工具（cutter、pe-bear、procmon …）
-.\scripts\misc\install_tools.ps1 -Common    # Ghidra + Maven
-```
-
-macOS / Linux 等价命令：
+CLI/MCP 默认使用 `blue`，可通过 `REVERSELAB_MODE`、`--track` 或 MCP 轨道工具显式切换。桌面端的模式属于各自 Goal，不会改写其他客户端的环境变量。
 
 ```sh
-./scripts/misc/bootstrap.sh
-export PATH="$PWD/tools/bin:$PWD/tools/ctf-website/bin:$PATH"
-python scripts/misc/ai_toolcheck.py --board misc    # 校验最小化核心
+python scripts/misc/kb_router.py "JWT" --track blue
+python scripts/misc/desktop_kb.py list --track both
 ```
 
-只装你需要的板块。纯做 Web CTF，就别下整个工具链。
+## CLI 与 AI Agent 入门
 
-</details>
-
-<details>
-<summary><b>Windows Defender / 安全软件提示</b></summary>
-
-安装 CTF / ExploitDB 相关工具后，Windows 安全中心可能对漏洞样本、payload 文档报毒 —— 例如 `tools/ctf-website/exploitdb`、`kb/ctf-website/techniques/24-database/03-nosql-injection.md`、`docs/llms-full.txt`。这些文件包含安全测试 payload、webshell、shellcode 或 ExploitDB 样本，**属于正常内容**。
-
-建议**最小范围排除**而不是排除整个仓库：
-
-```powershell
-Add-MpPreference -ExclusionPath "D:\open-reverselab\tools\ctf-website\exploitdb"
-```
-
-如果个别文档也被拦截，再只针对具体文件处理。
-
-</details>
-
-### 面向 AI Agent
-
-1. 克隆到一个固定的本地目录，例如 `<workspace>/open-reverselab`。
-2. **Claude Code**：先 `cd <workspace>/open-reverselab`，再启动会话。
-3. **Codex APP**：直接打开现有的 `open-reverselab` 文件夹（无需重新 clone）。
-4. 想让 AI 代装：把 [`templates/prompts/ai-install.zh.md`](templates/prompts/ai-install.zh.md) 整段提示词发给 Agent。
-5. 创建任务：`python scripts/misc/new_task.py --board windows --name <name>`（或按轨道检索 KB：`python scripts/misc/kb_router.py "<信号>" --track blue|red|both`）。
-6. 每次换机器或重配 MCP 后，确认 MCP 真实可调用：
-   ```sh
-   uv run --project tools/skills/mcp/ReverseLabToolsMCP \
-     python scripts/misc/mcp_smoke_check.py --write-report
-   ```
-
-**上下文链** —— 启动时 Agent 沿此链路加载上下文：
-
-```
-CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md
-```
-
-搭配 [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) 一键配置项目级 `.codex/` 与 MCP 服务器。
-
-<details>
-<summary><b>环境快照协议（本机级、跨项目共享）</b></summary>
-
-首次用 AI 打开本项目时，Agent 会按 [AGENTS.md 的「环境快照协议」](AGENTS.md) 自动探测本机环境（系统、开发环境、逆向工具链、Python 逆向库、设备、环境变量脱敏、网络、工作区），并写入本机 `~/.open-reverselab/env/env.md`（Windows 为 `%USERPROFILE%\.open-reverselab\env\env.md`）。
-
-该文件是**本机级**快照，**跨项目共享**：之后每次新开会话 / 新开文件夹，Agent 直接读取，只有超过 7 天或协议版本升级时才自动重新探测。快照只存本机约定路径，不会进入仓库；环境变量按协议脱敏（密钥类只标"已设置"，代理去除 userinfo）。
-
-</details>
-
-### 安装后校验
+克隆仓库后，Windows 使用 `START_HERE.bat` / `START_HERE.cmd`，macOS/Linux 使用 `./START_HERE.sh`。这些入口负责环境和 MCP 检查，桌面程序单独启动。检查报告写入 `reports/misc/`。
 
 ```sh
+git clone https://github.com/LING71671/open-reverselab.git
+cd open-reverselab
+```
+
+在 AI 客户端打开目录并阅读 [AI-USAGE.md](AI-USAGE.md)。上下文链为 `CLAUDE.md → AGENTS.md → AI-USAGE.md → boards/<board>/AI-USAGE.md`。需要 AI 协助安装时使用[中文提示词](templates/prompts/ai-install.zh.md)。MCP 客户端需要 `uv` 和 `tools/skills/mcp/ReverseLabToolsMCP` 中的依赖。
+
+```sh
+uv sync --project tools/skills/mcp/ReverseLabToolsMCP
+uv run --project tools/skills/mcp/ReverseLabToolsMCP python scripts/misc/mcp_smoke_check.py --write-report
 python scripts/misc/lab_healthcheck.py
 python scripts/misc/ai_toolcheck.py --board misc
-python scripts/misc/public_release_check.py
 ```
 
-`--board misc` 校验 fresh-clone 下的核心 Agent 脚本与轻量工具。完整 `python scripts/misc/ai_toolcheck.py` 跑全板块工具链校验，只有在你装完 Android / Windows / CTF 板块工具链之后才需要跑。
+按任务安装工具组。Windows 提供 `scripts/misc/install_tools.ps1 -CTF`、`-Android`、`-Windows`、`-Common`；POSIX wrapper 由 `scripts/misc/bootstrap.sh` 生成。详见 [START.md](START.md) 与 [tools/README.md](tools/README.md)。
 
----
+## 从源码运行桌面端
 
-## 仓库目录约定
+准备 Node 22+、pnpm、Python、Rust 和当前平台的 Tauri 构建依赖：
 
-仓库遵循**目录即约定**。把产物放对位置，剩下的工具链会自动找过来。
-
-```
-samples/      原始样本 + _quarantine/ + unpacked/   —— 永不修改
-exports/      工具输出（triage / IOC / YARA / Sigma / Procmon / Ghidra 摘要）
-patches/      patch 产物（原始样本永不修改）
-notes/        分析笔记
-reports/      最终报告
-scripts/      自动化脚本
-projects/     Ghidra 项目文件
-templates/    笔记 / 报告 / 规则模板 · AI 安装提示词
-kb/           可复用 RED/BLUE 双轨逆向与防御知识库 —— 见「知识库速览」
-tools/        工具链（二进制、wrapper、registry、MCP）
-cases/        轻量索引 —— 不复制大文件
+```sh
+cd desktop
+pnpm install --frozen-lockfile
+pnpm tauri dev
+# 构建生产程序：
+pnpm tauri build --no-bundle
 ```
 
-> 不要直接 commit 大样本、完整 PCAP、内存 dump。在 `cases/` 里建索引，链接到私有存储。
+`pnpm dev` 启动浏览器预览。详见[开发指南](desktop/DEV_GUIDE.md)、[架构图](desktop/ARCHITECTURE.md)、[Agent 契约](desktop/AGENT_SYSTEM.md)、[错误码](desktop/ERROR_CODES.md)和[发布说明](RELEASING.md)。
 
----
+## 数据与目录
 
-## 社区与贡献
+| 位置 | 用途 |
+| --- | --- |
+| `desktop/` | 桌面 UI、队列、执行引擎与 Tauri 宿主 |
+| `kb/` | 通用技术与防御知识 |
+| `scripts/`、`tools/`、`templates/` | 自动化脚本、适配器和模板 |
+| `boards/` | 外部 AI 客户端的任务路由 |
+| `site/` | 文档站源码 |
+| 所选工作区的 `.reverselab/` | 桌面样本原件／副本、Goal、输出与报告 |
+| 仓库内 `cases/`、`samples/`、`notes/`、`exports/`、`reports/` | CLI 本地分析产物，不进入公开发布 |
 
-- **贡献指南** —— 见 [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)。欢迎提 Issue、提交 KB 文章 PR、新增 MCP wrapper、添加新板块。
-- **行为准则** —— [`.github/CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md)（Contributor Covenant）。
-- **安全问题** —— 公开提 Issue 前请先看 [SECURITY 策略](SECURITY.md)。
-- **发布守则** —— [PUBLICATION.md](PUBLICATION.md) 涵盖什么可以公开发布、什么保留在私有 cases，以及 AI/ML 训练保护条款。
+桌面默认数据目录为 `~/.open-reverselab/workspaces/Default`。本机环境快照另存于 `~/.open-reverselab/env/env.md`；二者都不能提交到公共仓库。备份与迁移见[工作区文档](desktop/WORKSPACES.md)。
 
----
+## 参与贡献与发布
+
+请阅读[贡献指南](.github/CONTRIBUTING.md)、[安全策略](SECURITY.md)与[公开边界](PUBLICATION.md)。提交通用实现和合成示例，真实目标、样本、凭据和案例证据留在本地。提交前运行 `python scripts/misc/public_release_check.py` 及所改模块的检查。版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 赞助方
 

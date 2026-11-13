@@ -1,184 +1,65 @@
-import { useState } from "react";
-import { X, Check, Key, Sliders, ShieldCheck, AlertCircle, Loader2, Globe } from "lucide-react";
-import { llmService } from "../../services";
-import { useI18n } from "../../core";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Loader2, Plus, X } from "lucide-react";
+import { llmService, deriveProviderName } from "../../services/llm/llmService";
+import { UpdatesPane } from "./UpdatesPane";
+import { updateService } from "../../services/updates/updateService";
 
-interface SettingsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSaved?: () => void;
-}
-
-export function SettingsModal({ isOpen, onClose, onSaved }: SettingsModalProps) {
-  const { t, locale, setLocale } = useI18n();
+interface SettingsModalProps { isOpen: boolean; onClose: () => void; onSaved?: () => void; initialTab?: "model" | "updates" }
+export function SettingsModal({ isOpen, onClose, onSaved, initialTab = "model" }: SettingsModalProps) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [tab, setTab] = useState(initialTab);
+  const updates = useSyncExternalStore(updateService.subscribe, updateService.getSnapshot);
+  const installing = updates.phase === "installing";
+  const [providers, setProviders] = useState(llmService.getProviders());
+  const [providerId, setProviderId] = useState(llmService.getActiveProviderId());
+  const [url, setUrl] = useState(llmService.getBaseUrl());
+  const [name, setName] = useState(llmService.getActiveProvider()?.name || "");
   const [apiKey, setApiKey] = useState(llmService.getApiKey());
   const [model, setModel] = useState(llmService.getModel());
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; latencyMs?: number; error?: string } | null>(null);
-
-  if (!isOpen) return null;
-
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    llmService.setApiKey(apiKey);
-    llmService.setModel(model);
-    const res = await llmService.checkHealth();
-    setTesting(false);
-    setTestResult(res);
+  const [result, setResult] = useState("");
+  const [models, setModels] = useState<string[]>([]);
+  useEffect(() => { if (isOpen) dialog.current?.showModal(); else dialog.current?.close(); }, [isOpen]);
+  const select = (id: string) => {
+    const provider = providers.find(p => p.id === id);
+    setProviderId(id); setUrl(provider?.baseUrl || ""); setName(provider?.name || ""); setApiKey(provider?.apiKey || ""); setModels([]); setResult("");
   };
-
-  const handleSave = () => {
-    llmService.setApiKey(apiKey);
-    llmService.setModel(model);
-    onSaved?.();
-    onClose();
+  const save = () => {
+    try {
+      const parsed = new URL(url);
+      if (!["https:", "http:"].includes(parsed.protocol)) throw new Error("请使用 HTTP 或 HTTPS 地址");
+      if (!model.trim()) throw new Error("请填写模型 ID");
+      const id = providerId || `provider-${Date.now()}`;
+      llmService.addProvider({ id, name: name.trim() || deriveProviderName(url), baseUrl: url.trim().replace(/\/+$/, ""), apiKey: apiKey.trim() });
+      llmService.setModel(model.trim()); setProviderId(id); setProviders(llmService.getProviders()); onSaved?.(); return true;
+    } catch (err) { setResult(err instanceof Error ? err.message : String(err)); return false; }
   };
-
-  const modelOptions = [
-    { id: "qwen3.8-flash", name: "qwen3.8-flash" },
-    { id: "qwen3.8-27b", name: "qwen3.8-27b" },
-    { id: "qwen3.8-max", name: "qwen3.8-max" },
-    { id: "deepseek-v4-flash-0731", name: "deepseek-v4-flash-0731" },
-    { id: "glm-5.3-flash", name: "glm-5.3-flash" },
-    { id: "mimo-v2.6-flash", name: "mimo-v2.6-flash" },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-[#121215] border border-zinc-800 rounded-2xl shadow-2xl p-5 flex flex-col gap-4 select-none font-sans text-zinc-100">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-          <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-zinc-400" />
-            <span className="text-sm font-semibold tracking-wide">{t.settings.title}</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="space-y-3.5 text-xs">
-          {/* Language Switcher */}
-          <div className="flex items-center justify-between">
-            <span className="text-zinc-400 font-mono text-[11px] flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-zinc-500" />
-              <span>{t.settings.language}</span>
-            </span>
-            <div className="flex items-center p-0.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] font-mono">
-              <button
-                type="button"
-                onClick={() => setLocale("zh")}
-                className={`px-2 py-0.5 rounded transition cursor-pointer ${
-                  locale === "zh" ? "bg-zinc-800 text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                中文
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocale("en")}
-                className={`px-2 py-0.5 rounded transition cursor-pointer ${
-                  locale === "en" ? "bg-zinc-800 text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                English
-              </button>
-            </div>
-          </div>
-
-          {/* Model Selection */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-mono text-zinc-400">{t.settings.model}</label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-200 font-mono text-xs focus:outline-none focus:border-zinc-700"
-            >
-              {modelOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* API Key */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-mono text-zinc-400 flex items-center gap-1.5">
-              <Key className="w-3 h-3 text-zinc-500" />
-              <span>{t.settings.apiKey}</span>
-            </label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk_..."
-              className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-200 font-mono text-xs focus:outline-none focus:border-zinc-700"
-            />
-          </div>
-
-          {/* Test Status Banner */}
-          {testResult && (
-            <div
-              className={`p-2 rounded-lg border text-xs font-mono flex items-center gap-2 ${
-                testResult.ok
-                  ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-400"
-                  : "bg-rose-950/40 border-rose-800/60 text-rose-400"
-              }`}
-            >
-              {testResult.ok ? (
-                <>
-                  <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-                  <span>
-                    {t.settings.connected} ({testResult.latencyMs}ms)
-                  </span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                  <span className="truncate">{testResult.error || t.settings.disconnected}</span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-zinc-800/80 pt-3">
-          <button
-            type="button"
-            onClick={handleTest}
-            disabled={testing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer disabled:opacity-50"
-          >
-            {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-            <span>{testing ? t.common.testing : t.settings.test}</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 rounded-lg text-xs font-mono text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
-            >
-              {t.common.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-medium transition cursor-pointer"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>{t.common.save}</span>
-            </button>
-          </div>
-        </div>
+  const test = async () => {
+    if (!save()) return;
+    setTesting(true); setResult("");
+    try { const response = await llmService.checkHealth(); setResult(response.ok ? `连接成功 · ${response.latencyMs} ms` : response.error || "连接失败"); }
+    catch (err) { setResult(String(err)); }
+    finally { setTesting(false); }
+  };
+  return <dialog ref={dialog} className="settings-dialog" onCancel={event => { if (installing) event.preventDefault(); else onClose(); }} onClose={onClose}>
+    <form onSubmit={event => { event.preventDefault(); if (save()) onClose(); }}>
+      <header><h2>设置</h2><button type="button" className="icon-button" aria-label="关闭设置" onClick={onClose} disabled={installing}><X size={18} /></button></header>
+      <div className="settings-tabs" role="tablist" aria-label="设置类别" onKeyDown={event => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) { event.preventDefault(); if (installing) return; const next = event.key === "Home" ? "model" : event.key === "End" ? "updates" : tab === "model" ? "updates" : "model"; setTab(next); dialog.current?.querySelector<HTMLButtonElement>(`#settings-tab-${next}`)?.focus(); } }}>
+        <button type="button" role="tab" id="settings-tab-model" aria-controls="settings-model" aria-selected={tab === "model"} tabIndex={tab === "model" ? 0 : -1} onClick={() => setTab("model")} disabled={installing}>模型</button>
+        <button type="button" role="tab" id="settings-tab-updates" aria-controls="settings-updates" aria-selected={tab === "updates"} tabIndex={tab === "updates" ? 0 : -1} onClick={() => setTab("updates")}>应用更新</button>
       </div>
-    </div>
-  );
+      <div className="settings-fields" id="settings-model" role="tabpanel" aria-labelledby="settings-tab-model" hidden={tab !== "model"}>
+        <div className="provider-row"><label>提供商<select value={providerId} onChange={e => select(e.target.value)}><option value="">新增提供商</option>{providers.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></label><button type="button" className="icon-button" aria-label="新增提供商" onClick={() => select("")}><Plus size={18} /></button></div>
+        <label>名称<input value={name} onChange={e => setName(e.target.value)} placeholder="可选" /></label>
+        <label>API 地址<input type="url" required value={url} onChange={e => setUrl(e.target.value)} placeholder="https://api.example.com/v1" spellCheck={false} /></label>
+        <label>API Key<input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} autoComplete="off" /></label>
+        <label>模型 ID<input list="provider-models" required value={model} onChange={e => setModel(e.target.value)} spellCheck={false} /><datalist id="provider-models">{models.map(id => <option key={id} value={id} />)}</datalist></label>
+        <button type="button" className="text-button" disabled={testing} onClick={async () => { if (!save()) return; setTesting(true); const list = await llmService.fetchModels(); setModels(list); setResult(list.length ? `已读取 ${list.length} 个模型` : "未获取到模型列表，可直接填写模型 ID"); setTesting(false); }}>读取模型列表</button>
+        <small>保存后用于新 Goal。API Key 仅保存在本机；测试连接会发送一条短请求。</small>
+        {result && <p className="settings-result" role="status">{result}</p>}
+      </div>
+      <div hidden={tab !== "updates"}><UpdatesPane /></div>
+      <footer hidden={tab !== "model"}><button type="button" className="secondary-button" onClick={test} disabled={testing}>{testing && <Loader2 size={14} className="loading-spinner" />}{testing ? "连接中" : "保存并测试"}</button><span className="grow" /><button type="button" className="text-button" onClick={onClose}>取消</button><button className="primary-button" type="submit" disabled={testing}>保存</button></footer>
+    </form>
+  </dialog>;
 }
