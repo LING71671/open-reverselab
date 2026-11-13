@@ -1,14 +1,14 @@
 # Frequently asked questions
 
-## What does ReverseLab include?
+## What does Open ReverseLab include?
 
 A desktop workspace, a red/blue knowledge base, and CLI/MCP tools for external AI clients. The desktop runs target-bound Goals and displays execution branches, evidence, verification, and reports. Knowledge areas include Web, APK, PE, cryptography, and protocols.
 
 ## Where do I download the desktop?
 
-Download the Windows x64 installer from [v2.0.0 Releases](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) and run it. Installed builds support signed updates in Settings. Python 3.10+ and WebView2 Runtime are required. For the portable ZIP, extract everything and keep `kb/` and `scripts/` beside the application.
+The desktop is being prepared for `v2.0.0-beta.1`; its installer has not been published. Follow [Run from source](./desktop.md#run-from-source) to try the preview. Available downloads are listed on [Releases](https://github.com/LING71671/open-reverselab/releases).
 
-macOS/Linux retain the CLI/MCP workflow; this release has no native desktop binaries for them. See the [desktop guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.md).
+macOS/Linux retain the CLI/MCP workflow; native desktop packages for them are not currently provided. See the [desktop guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.md).
 
 ## What do red, blue, and both mean?
 
@@ -16,7 +16,7 @@ Red and blue use independent strategies. Both runs two parallel branches and joi
 
 ## Do I need to set a budget?
 
-No. Defaults are 10 minutes and 32,000 tokens per Goal. Optional controls change these limits. Failed routes, repeated scripts, and evidence changes feed back into planning. Independent verification decides completion; exhaustion, cancellation, and blocked routes retain distinct states.
+No. Goals have no time or token limit by default. Set either value under Run limits when needed; an empty field remains unlimited. Failed routes, repeated scripts, and evidence changes feed back into planning. Independent verification decides completion; reaching a configured limit, cancellation, and blocked routes retain distinct states.
 
 ## Can tasks run concurrently?
 

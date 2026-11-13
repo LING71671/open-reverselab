@@ -4,11 +4,12 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "description": "ReverseLab VitePress documentation site",
+  "description": "Open ReverseLab VitePress documentation site",
   "scripts": {
     "dev": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && vitepress dev .",
-    "build": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && vitepress build .",
-    "preview": "vitepress preview ."
+    "build": "node scripts/ensure-kb.mjs && python ../scripts/misc/gen_vitepress_sidebar.py && node scripts/gen-en-kb-stubs.mjs && vitepress build . && node scripts/verify-links.mjs",
+    "preview": "vitepress preview .",
+    "test": "node --test scripts/links.test.mjs"
   },
   "devDependencies": {
     "@fontsource/jetbrains-mono": "^5.2.5",

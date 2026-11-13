@@ -1,14 +1,14 @@
 # 常见问题
 
-## ReverseLab 提供什么？
+## Open ReverseLab 提供什么？
 
 桌面工作区、红蓝知识库，以及供外部 AI 客户端使用的 CLI/MCP 工具。桌面端围绕 target 创建 Goal，展示执行分支、证据、核验结果和报告。知识库覆盖 Web、APK、PE、密码学和协议等领域。
 
 ## 从哪里下载桌面端？
 
-在 [v2.0.0 Release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0) 下载 Windows x64 安装包并运行。需要 Python 3.10+ 和 WebView2 Runtime。安装版支持设置中的签名更新；便携版完整解压后使用，`kb/`、`scripts/` 需要与程序一起保留。
+桌面端正在准备 `v2.0.0-beta.1`，安装包尚未发布。当前按[源码构建说明](./desktop.md#从源码运行)体验预览版；可下载版本统一查看 [Releases](https://github.com/LING71671/open-reverselab/releases)。
 
-macOS/Linux 可使用仓库的 CLI/MCP 工作流，本版本没有这两个平台的桌面二进制。完整说明见 [桌面端指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.zh-CN.md)。
+macOS/Linux 可使用仓库的 CLI/MCP 工作流，目前没有这两个平台的桌面二进制。完整说明见 [桌面端指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.zh-CN.md)。
 
 ## red、blue、both 有什么区别？
 
@@ -16,7 +16,7 @@ red 与 blue 使用独立分析策略。both 并行运行两个分支，并保�
 
 ## 必须设置预算吗？
 
-不必。每个 Goal 默认限制为 10 分钟和 32,000 tokens，也可以在“运行限制”中修改。失败路径、重复脚本和证据变化会反馈到后续规划。目标通过独立核验后完成；预算耗尽、手动停止和路线耗尽会分别保留状态。
+不必。默认不设时间和 Token 上限。需要限制时，在“运行限制”中填写相应数值；留空的项目保持不限。失败路径、重复脚本和证据变化会反馈到后续规划。目标通过独立核验后完成；达到已设置的上限、手动停止和路线耗尽会分别保留状态。
 
 ## 能同时运行多个任务吗？
 

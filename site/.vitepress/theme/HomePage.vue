@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useData, withBase } from 'vitepress'
-const { lang, isDark } = useData()
+const { lang } = useData()
 const en = computed(() => lang.value.startsWith('en'))
 const local = (path: string) => withBase(`${en.value ? '/en' : ''}${path}.html`)
 const repo = 'https://github.com/LING71671/open-reverselab'
@@ -29,11 +29,11 @@ async function copyCommand() {
 <template>
   <div class="rl-home">
     <section id="desktop" class="rl-intro">
-      <div><h1>{{ en ? 'An AI workbench for reverse engineering.' : 'AI 逆向分析工作台' }}</h1><p>{{ en ? 'Give ReverseLab a target and a Goal. Follow parallel analysis, inspect the evidence and keep the results in your workspace.' : '给出目标和 Goal，查看并行分析过程，在工作区中收纳样本、证据与报告。' }}</p></div>
-      <div class="rl-download"><a class="rl-button" :href="`${repo}/releases/tag/v2.0.0`">{{ en ? 'Download for Windows' : '下载 Windows 版' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg></a><span>v2.0.0 · Windows x64</span><a class="rl-text-link" :href="local('/desktop')">{{ en ? 'Installation & updates' : '安装与更新说明' }}</a></div>
+      <div><h1>{{ en ? 'An AI workbench for reverse engineering.' : 'AI 逆向分析工作台' }}</h1><p>{{ en ? 'Give Open ReverseLab a target and a Goal. Follow parallel analysis, inspect the evidence and keep the results in your workspace.' : '给出目标和 Goal，查看并行分析过程，在工作区中收纳样本、证据与报告。' }}</p></div>
+      <div class="rl-download"><a class="rl-button" :href="local('/desktop')">{{ en ? 'Build the desktop preview' : '构建桌面预览版' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a><span>{{ en ? 'Source preview · Windows x64' : '源码预览 · Windows x64' }}</span><a class="rl-text-link" :href="`${repo}/releases`">{{ en ? 'Published releases' : '已发布版本' }}</a></div>
     </section>
     <figure class="rl-product">
-      <a :href="withBase(`/assets/desktop/knowledge-${isDark ? 'dark' : 'light'}.png`)" :aria-label="en ? 'View full desktop screenshot' : '查看桌面端完整截图'"><img :src="withBase(`/assets/desktop/knowledge-${isDark ? 'dark' : 'light'}.png`)" :alt="en ? 'ReverseLab desktop, showing paired red and blue JWT knowledge articles' : 'ReverseLab 桌面端，展示配对的 red 与 blue JWT 知识文档'" width="1280" height="720" fetchpriority="high" /></a>
+      <a :href="withBase('/assets/desktop/knowledge-light.png')" :aria-label="en ? 'View full desktop screenshot' : '查看桌面端完整截图'"><img :src="withBase('/assets/desktop/knowledge-light.png')" :alt="en ? 'Open ReverseLab desktop, showing paired red and blue JWT knowledge articles' : 'Open ReverseLab 桌面端，展示配对的 red 与 blue JWT 知识文档'" width="2560" height="1440" fetchpriority="high" /></a>
       <figcaption>{{ en ? 'Desktop knowledge base · both' : '桌面端知识库 · both' }}<a :href="local('/kb/ctf-website/techniques/02-auth/jwt/00-overview-defense')">{{ en ? 'Read this article' : '阅读这篇文档' }}<span aria-hidden="true"> ↗</span></a></figcaption>
     </figure>
     <section class="rl-split rl-section" aria-labelledby="goal-title">
@@ -48,6 +48,13 @@ async function copyCommand() {
       <div><h2 id="cli-title">{{ en ? 'Prefer the terminal?' : '也可以从命令行使用' }}</h2><p>{{ en ? 'The repository includes scripts, an MCP server and client workflows. Install only the external tools your analysis needs.' : '仓库包含脚本、MCP 服务和客户端工作流。外部工具按分析任务单独安装。' }}</p><a class="rl-text-link" :href="`${repo}/blob/main/START.md`">{{ en ? 'Read the quick start' : '阅读快速开始' }} ↗</a></div>
       <div class="rl-commands"><div class="rl-command-bar"><label><span class="rl-sr-only">{{ en ? 'Shell' : '命令行环境' }}</span><select v-model="platform" @change="copyStatus = ''"><option value="windows">PowerShell</option><option value="unix">Bash · macOS / Linux</option></select></label><button @click="copyCommand">{{ en ? 'Copy' : '复制' }}</button></div><pre tabindex="0"><code>{{ command }}</code></pre><p v-if="copyStatus" role="status">{{ copyStatus }}</p></div>
     </section>
-    <section class="rl-community rl-section" :aria-label="en ? 'Open source community' : '开源社区'"><p>{{ en ? 'Open source under Apache-2.0. Supported by' : '以 Apache-2.0 开源。感谢' }} <a href="https://sentry.io">Sentry</a>{{ en ? '.' : ' 的支持。' }}</p><div><a :href="repo">GitHub</a><a href="https://deepwiki.com/LING71671/open-reverselab">DeepWiki</a><a :href="`${repo}/blob/main/.github/CONTRIBUTING.md`">{{ en ? 'Contribute' : '参与贡献' }}</a><a href="https://star-history.com/#LING71671/open-reverselab&Date">Star History</a></div></section>
+    <section class="rl-sponsors rl-section" aria-labelledby="sponsors-title">
+      <div class="rl-sponsor-heading"><h2 id="sponsors-title">{{ en ? 'Sponsors' : '赞助支持' }}</h2><a class="rl-text-link" :href="`${repo}/blob/main/${en ? 'SPONSORS.md' : 'SPONSORS_zh.md'}`">{{ en ? 'Support the project' : '支持项目' }} ↗</a></div>
+      <div class="rl-sponsor-list">
+        <a href="https://infistar.cc/register?aff=OPENREVERSELAB&amp;ref_source=link"><strong>Infistar.cc <span aria-hidden="true">↗</span></strong><p>{{ en ? 'Multi-model API access for AI and MCP workflows. Project referrals receive CNY 5 in sign-up credit.' : '为 AI 与 MCP 工作流提供多模型 API 接入。通过专属链接注册赠 ¥5 体验额度。' }}</p></a>
+        <a href="https://sentry.io"><strong>Sentry <span aria-hidden="true">↗</span></strong><p>{{ en ? 'Sponsored account for error monitoring and performance tracing across the project toolchain.' : '提供赞助账户，支持项目工具链的错误监控与性能追踪。' }}</p></a>
+      </div>
+    </section>
+    <section class="rl-community rl-section" :aria-label="en ? 'Open source community' : '开源社区'"><p>{{ en ? 'Open source under Apache-2.0.' : '以 Apache-2.0 开源。' }}</p><div><a :href="repo">GitHub</a><a href="https://deepwiki.com/LING71671/open-reverselab">DeepWiki</a><a :href="`${repo}/blob/main/.github/CONTRIBUTING.md`">{{ en ? 'Contribute' : '参与贡献' }}</a><a href="https://star-history.com/#LING71671/open-reverselab&Date">Star History</a></div></section>
   </div>
 </template>

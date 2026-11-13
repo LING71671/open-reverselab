@@ -122,11 +122,14 @@ def build_sidebar() -> dict[str, list]:
         landing = f"/kb/{board}/README"
         root_items = [
             {"text": "板块总览", "link": landing},
-            {"text": "攻击网", "link": f"/kb/{board}/techniques/attack-network"},
         ]
+        if (techniques / "attack-network.md").is_file():
+            root_items.append({"text": "攻击网", "link": f"/kb/{board}/techniques/attack-network"})
+        elif (techniques / "README.md").is_file():
+            root_items.append({"text": "技术索引", "link": f"/kb/{board}/techniques/README"})
         if bare_articles:
             root_items.append({"text": "板块文章", "items": bare_articles})
-        sidebar[board] = [{"text": meta["name"], "items": root_items}, *groups]
+        sidebar[f"/kb/{board}/"] = [{"text": meta["name"], "items": root_items}, *groups]
     return sidebar
 
 
