@@ -6,6 +6,9 @@
 .workflow-canvas .harness-node { width: 300px; padding: 0; overflow: hidden; box-shadow: none; cursor: grab; transition: border-color 180ms, background-color 180ms; animation: canvas-node-enter 180ms ease-out; }
 .workflow-canvas .harness-node-summary { display: block; width: 100%; text-align: left; padding: 16px 18px; cursor: inherit; }
 .workflow-canvas .react-flow__node.dragging .harness-node { cursor: grabbing; }
+/* Relationship lines and labels are display-only; dragging belongs to the pane. */
+.workflow-canvas .react-flow__edge,
+.workflow-canvas .react-flow__edge * { pointer-events: none; }
 .harness-node-summary:hover { background: var(--bg-elevated); }
 .node-expand-icon { display: block; margin: 8px auto -6px; color: var(--text-muted); }
 .workflow-canvas .harness-node header { font-size: 13px; margin-bottom: 10px; }

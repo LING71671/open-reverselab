@@ -79,7 +79,7 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
       layout.push({ id: step.id, type: "harnessNode", position: { x, y }, data: { step, isSelected: selectedStep?.id === step.id, expanded: expanded.has(step.id), onToggle: toggleExpanded, onSelect: selectStep } });
       for (const parent of parents) if (byId.has(parent)) {
         const ports = edgePorts(positions.get(parent)!, positions.get(step.id)!);
-        edges.push({ id: `${parent}->${step.id}`, source: parent, target: step.id, sourceHandle: `out-${ports.source}`, targetHandle: `in-${ports.target}`, type: "default", animated: active && step.status === "running", label: parents.length > 1 ? "汇合" : undefined, style: { stroke: step.status === "failed" ? "var(--red)" : step.status === "running" ? "var(--blue)" : "var(--border-hover)", strokeDasharray: "5 5" }, labelStyle: { fill: "var(--text-secondary)", fontSize: 13 }, labelBgStyle: { fill: "var(--bg-canvas)" } });
+        edges.push({ id: `${parent}->${step.id}`, source: parent, target: step.id, sourceHandle: `out-${ports.source}`, targetHandle: `in-${ports.target}`, type: "default", selectable: false, focusable: false, reconnectable: false, interactionWidth: 0, animated: active && step.status === "running", label: parents.length > 1 ? "汇合" : undefined, style: { stroke: step.status === "failed" ? "var(--red)" : step.status === "running" ? "var(--blue)" : "var(--border-hover)", strokeDasharray: "5 5" }, labelStyle: { fill: "var(--text-secondary)", fontSize: 13 }, labelBgStyle: { fill: "var(--bg-canvas)" } });
       }
     }
     return { layout, edges };
