@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import assert from 'node:assert/strict'
 
 const site = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const root = path.join(site, '.vitepress/dist')
@@ -34,3 +35,15 @@ for (const page of pages) {
 }
 if (errors.size) { console.error([...errors].join('\n')); throw new Error(`${errors.size} broken internal links`) }
 console.log(`Checked ${checked} internal links across ${pages.length} pages; no missing targets.`)
+
+const publicRoot = `${(process.env.VITEPRESS_SITE_URL || 'https://ling71671.github.io/open-reverselab').replace(/\/$/, '')}/`
+const sitemap = readFileSync(path.join(root, 'sitemap.xml'), 'utf8')
+const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>|<xhtml:link\b[^>]*\bhref="([^"]+)"/g)].map(match => match[1] || match[2])
+assert.ok(sitemapUrls.length > 0, 'The sitemap must contain published pages')
+for (const url of sitemapUrls) {
+  assert.ok(url.startsWith(publicRoot), `Sitemap URL outside project path: ${url}`)
+  const relative = decodeURIComponent(url.slice(publicRoot.length))
+  assert.notEqual(relative, '404.html', 'Do not submit the error page for indexing')
+  assert.ok(file(path.join(root, relative || 'index.html')) || file(path.join(root, relative, 'index.html')), `Missing sitemap destination: ${url}`)
+}
+console.log(`Checked ${sitemapUrls.length} sitemap page and language URLs; all retain the public project path.`)

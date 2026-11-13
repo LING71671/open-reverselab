@@ -252,7 +252,9 @@ export default defineConfig({
   ignoreDeadLinks: false,
 
   sitemap: {
-    hostname: siteUrl,
+    // Relative page and language URLs must retain the GitHub Pages project path.
+    hostname: `${siteUrl}/`,
+    transformItems: items => items.filter(item => item.url !== '404.html'),
   },
 
   vite: {
