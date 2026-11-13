@@ -51,12 +51,8 @@ export class KbRoutingStage implements PipelineStage {
         const preferred = available.filter((item) => ctx.state.preferredKbPaths?.includes(item.path) || item.related_paths.some((path) => peerPaths.includes(path)));
         const selected = preferred.length ? preferred.slice(0, 4) : selectKbTechniques(available, ctx.track, query, board);
         if (!selected.length) {
-          if (!attempted.size && ctx.triage && !ctx.state.usedDirectEvidence) {
-            ctx.state.usedDirectEvidence = true;
-            break;
-          }
-          ctx.state.pathsExhausted = true;
-          ctx.state.blockedReason = attempted.size ? "没有未尝试的匹配知识库路线" : "当前信号未匹配知识库路线";
+          // Documents inform analysis; exhausting search results does not
+          // exhaust observations or prevent repairing a failed action.
           break;
         }
         selectedCount += selected.length;
@@ -79,8 +75,11 @@ export class KbRoutingStage implements PipelineStage {
       ctx.state.blockedReason = `知识库服务不可用：${errors[0]}`;
     }
 
-    const content = loaded.map((doc) => doc.content).join("\n\n");
-    const matchedTechniques = loaded.map((doc) => doc.path);
+    const documents: Array<{ path: string; content: string }> = [...(ctx.state.kbDocuments || []), ...loaded];
+    ctx.state.kbDocuments = documents;
+    const references = documents.slice(-4);
+    const content = references.map((doc) => doc.content).join("\n\n");
+    const matchedTechniques = references.map((doc) => doc.path);
     const kbPath = `kb/${board || "general"}/techniques/kb-index.json`;
     ctx.kbRouting = {
       board: board || "general",
@@ -93,7 +92,7 @@ export class KbRoutingStage implements PipelineStage {
     const durationMs = Date.now() - startTime;
     const summary = loaded.length
       ? `${ctx.track}: loaded ${loaded.length}/${selectedCount} matching documents`
-      : catalogLoaded ? `${ctx.track}: no matching documents loaded` : `Knowledge base unavailable: ${errors[0]}`;
+      : catalogLoaded ? `${ctx.track}: no new matches; continuing with available evidence` : `Knowledge base unavailable: ${errors[0]}`;
     callbacks.onToolCall?.({
       id: toolId,
       tool: "list_kb_techniques",
@@ -107,14 +106,14 @@ export class KbRoutingStage implements PipelineStage {
     const diag: StageDiagnostic = {
       stageId: this.id,
       stageName: this.name,
-      status: loaded.length && !errors.length ? "pass" : "warn",
+      status: errors.length ? "warn" : "pass",
       durationMs,
       timestamp: Date.now(),
       summary,
       metrics: [
         { label: "Track", value: ctx.track, status: "info" },
         { label: "Target Board", value: board || "general", status: "info" },
-        { label: "Documents Loaded", value: loaded.length, status: loaded.length ? "pass" : "warn" },
+        { label: "Documents Loaded", value: loaded.length, status: loaded.length ? "pass" : "info" },
         { label: "Lookup Time", value: durationMs, unit: "ms", status: "info" },
       ],
       evidence: { board, track: ctx.track, matchedTechniques, selectedCount },

@@ -19,6 +19,120 @@ const storage = (entries = []) => {
 const session = (manager, id) => manager.getSnapshot().sessions.find((entry) => entry.id === id);
 const progress = (status = "completed") => ({ status, maxDurationMs: 1000, maxTokens: 1000, elapsedMs: 10, tokensUsed: 10, attempts: 1 });
 
+test("renamed drafts keep their title when submitted and restored", async () => {
+  const saved = storage();
+  const manager = new GoalManager(async (_request, callbacks) => callbacks.onRunProgress(progress()), saved);
+  const id = manager.create("red");
+  manager.rename(id, "  Crackme review  ");
+  assert.equal(session(manager, id).title, "Crackme review");
+  manager.submit("fixture.bin", "Compute the file hash", "red", undefined, id);
+  await tick();
+  assert.equal(session(manager, id).title, "Crackme review");
+  assert.equal(manager.getSnapshot().records[id].messages[0].content, "Compute the file hash");
+  assert.equal(session(new GoalManager(async () => {}, saved), id).title, "Crackme review");
+  assert.throws(() => manager.rename(id, "   "));
+  assert.throws(() => manager.rename(id, "x".repeat(121)));
+});
+
+test("model titles summarize the goal while manual names and completed runs remain stable", async () => {
+  const wait = deferred();
+  const saved = storage();
+  let stream;
+  const manager = new GoalManager(async (_request, callbacks) => { stream = callbacks; await wait.promise; callbacks.onRunProgress(progress()); }, saved);
+  const objective = "Read a UTF-8 file and count its characters and bytes without changing its content";
+  const id = manager.submit("fixture.txt", objective, "red");
+  assert.equal(session(manager, id).title, "分析任务");
+  stream.onTitle("UTF-8 内容与长度核验");
+  assert.equal(session(manager, id).title, "UTF-8 内容与长度核验");
+  stream.onTitle("Unrelated later title");
+  assert.equal(session(manager, id).title, "UTF-8 内容与长度核验");
+  manager.rename(id, "My sample check");
+  stream.onTitle("Model cannot replace this");
+  wait.resolve(); await tick();
+  stream.onTitle("Late title");
+  assert.equal(session(new GoalManager(async () => {}, saved), id).title, "My sample check");
+  assert.equal(manager.getSnapshot().records[id].messages[0].content, objective);
+});
+
+test("steering preserves a goal, waits for the active stage, and spends only the remaining budget", async () => {
+  const first = deferred();
+  const second = deferred();
+  const runs = [];
+  const manager = new GoalManager(async (request, callbacks) => {
+    runs.push({ request, callbacks });
+    if (!request.revision) {
+      callbacks.onToken("Original analysis");
+      callbacks.onStepNode({ id: "step", parentId: null, agentId: "tool", title: "Observed", detail: "Evidence A", status: "done", timestamp: 1 });
+      callbacks.onToolCall({ id: "tool", tool: "observe", title: "Read evidence", status: "done", output: { observed: "A" } });
+      await first.promise;
+      assert.equal(callbacks.shouldYield(), true);
+      callbacks.onDeliverables({ summary: "Stale success" });
+      callbacks.onRunProgress({ ...progress(), tokensUsed: 40 });
+    } else {
+      await second.promise;
+      callbacks.onToken("Updated analysis");
+      callbacks.onStepNode({ id: "step", parentId: null, agentId: "tool", title: "New check", detail: "Evidence B", status: "done", timestamp: 2 });
+      callbacks.onRunProgress({ ...progress(), tokensUsed: 20 });
+    }
+  }, storage(), 1);
+  const id = manager.submit("fixture.bin", "Inspect", "both", { maxTokens: 100, maxDurationMs: 10000 });
+  manager.steer(id, "Also check the signature");
+  manager.steer(id, "Use offline evidence");
+  assert.equal(runs.length, 1);
+  assert.equal(manager.getSnapshot().records[id].messages.at(-1).adjustment.status, "pending");
+  first.resolve(); await tick();
+  assert.equal(runs.length, 2);
+  assert.equal(runs[1].request.id, id);
+  assert.equal(runs[1].request.revision, 2);
+  assert.match(runs[1].request.objective, /signature[\s\S]*offline/);
+  assert.equal(runs[1].request.budget.maxTokens, 60);
+  assert.ok(runs[1].request.budget.maxDurationMs <= 10000);
+  assert.ok(runs[1].request.history.some(message => message.content.includes('"observed":"A"')));
+  assert.equal(manager.getSnapshot().records[id].deliverables, null);
+  assert.equal(session(manager, id).status, "running");
+  runs[0].callbacks.onToken("Late old stream");
+  second.resolve(); await tick();
+  const record = manager.getSnapshot().records[id];
+  assert.equal(record.progress.tokensUsed, 60);
+  assert.equal(record.messages.filter(message => message.role === "assistant").length, 2);
+  assert.equal(record.messages.find(message => message.id === `${id}-agent`).content, "Original analysis");
+  assert.equal(record.steps.filter(step => step.id.endsWith("step")).length, 2);
+  assert.equal(record.messages.filter(message => message.adjustment).every(message => message.adjustment.status === "applied"), true);
+  assert.equal(manager.getSnapshot().sessions.length, 1);
+  assert.equal(session(manager, id).status, "completed");
+  manager.flush();
+});
+
+test("cancelling an adjusted goal prevents automatic continuation", async () => {
+  const gate = deferred();
+  let runs = 0;
+  const manager = new GoalManager(async () => { runs++; await gate.promise; }, storage());
+  const id = manager.submit("fixture.bin", "Inspect", "red");
+  manager.steer(id, "Check imports");
+  manager.cancel(id);
+  gate.resolve(); await tick();
+  assert.equal(runs, 1);
+  assert.equal(session(manager, id).status, "cancelled");
+  assert.equal(manager.getSnapshot().records[id].messages.find(message => message.adjustment).adjustment.status, "cancelled");
+  manager.flush();
+});
+
+test("steering cannot reset an exhausted quota", async () => {
+  const gate = deferred();
+  let runs = 0;
+  const manager = new GoalManager(async (_request, callbacks) => {
+    runs++; await gate.promise;
+    callbacks.onRunProgress({ ...progress(), tokensUsed: 100 });
+  }, storage());
+  const id = manager.submit("fixture.bin", "Inspect", "red", { maxTokens: 100 });
+  manager.steer(id, "Check imports");
+  gate.resolve(); await tick();
+  assert.equal(runs, 1);
+  assert.equal(session(manager, id).status, "exhausted");
+  assert.equal(manager.getSnapshot().records[id].progress.tokensUsed, 100);
+  manager.flush();
+});
+
 test("two goals run simultaneously, the third queues, and each callback updates only its own goal", async () => {
   const tasks = new Map();
   let active = 0;

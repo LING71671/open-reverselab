@@ -30,7 +30,7 @@ export async function runBothTracks(
     if (!sharedExecutions.has(fingerprint)) {
       sharedExecutions.set(fingerprint, nativeBridge.execPython(script, {
         executionId: `${goalId}:${fingerprint}`,
-        timeoutMs: Math.max(1, budget.maxDurationMs - (performance.now() - started)),
+        timeoutMs: Math.min(60000, Math.max(1, (budget.maxDurationMs ?? Infinity) - (performance.now() - started))),
         signal,
       }));
     }
@@ -46,8 +46,8 @@ export async function runBothTracks(
     id: track,
     run: async ({ signal: branchSignal }) => {
       const branchBudget = {
-        maxDurationMs: Math.max(1, budget.maxDurationMs - (performance.now() - started)),
-        maxTokens: index === 0 ? Math.floor(budget.maxTokens / 2) : budget.maxTokens - Math.floor(budget.maxTokens / 2),
+        maxDurationMs: budget.maxDurationMs === undefined ? undefined : Math.max(1, budget.maxDurationMs - (performance.now() - started)),
+        maxTokens: budget.maxTokens === undefined ? undefined : index === 0 ? Math.floor(budget.maxTokens / 2) : budget.maxTokens - Math.floor(budget.maxTokens / 2),
       };
       const branchCallbacks: PipelineCallbacks = {
         ...callbacks,
@@ -100,10 +100,11 @@ export async function runBothTracks(
   if (!last) throw new Error(signal?.aborted ? "任务已停止" : "both 预算不足");
   const elapsedMs = Math.round(performance.now() - started);
   const tokensUsed = sumUsage();
-  const completed = results.red?.runProgress?.status === "completed" && results.blue?.runProgress?.status === "completed";
-  const status: RunProgress["status"] = signal?.aborted ? "cancelled" : completed ? "completed"
-    : elapsedMs >= budget.maxDurationMs || tokensUsed >= budget.maxTokens ? "exhausted" : "blocked";
-  const reason = completed ? "red 和 blue 均完成独立目标核验"
+  const yielding = !!callbacks.shouldYield?.();
+  const completed = !yielding && results.red?.runProgress?.status === "completed" && results.blue?.runProgress?.status === "completed";
+  const status: RunProgress["status"] = signal?.aborted ? "cancelled" : yielding ? "running" : completed ? "completed"
+    : elapsedMs >= (budget.maxDurationMs ?? Infinity) || tokensUsed >= (budget.maxTokens ?? Infinity) ? "exhausted" : "blocked";
+  const reason = yielding ? "正在应用补充要求" : completed ? "red 和 blue 均完成独立目标核验"
     : (["red", "blue"] as const).map((track) => `${track}: ${results[track]?.runProgress?.reason || "未运行"}`).join("；");
   const checkpoint = {
     target,
@@ -115,8 +116,8 @@ export async function runBothTracks(
   };
   const runProgress: RunProgress = { ...budget, status, reason, elapsedMs, tokensUsed, attempts: sumAttempts(), usageEstimated: Object.values(results).some((ctx) => ctx.budget.usageEstimated), checkpoint };
   callbacks.onRunProgress?.(runProgress);
-  callbacks.onHealthEvent?.({ eventId: `${goalId}:both-final`, goalId, layer: "goal", nodeId: "join", status: completed ? "healthy" : signal?.aborted ? "cancelled" : "degraded", timestamp: Date.now(), reason });
-  callbacks.onStepNode?.({ id: "branch:join", parentId: joinParents()[0], parentIds: joinParents(), agentId: "coordinator", title: "both", status: completed ? "done" : "failed", detail: reason, timestamp: Date.now(), evidence: { status, tokensUsed, branches: Object.fromEntries(Object.entries(results).map(([track, ctx]) => [track, ctx.runProgress])) } });
+  if (!yielding) callbacks.onHealthEvent?.({ eventId: `${goalId}:both-final`, goalId, layer: "goal", nodeId: "join", status: completed ? "healthy" : signal?.aborted ? "cancelled" : "degraded", timestamp: Date.now(), reason });
+  callbacks.onStepNode?.({ id: "branch:join", parentId: joinParents()[0], parentIds: joinParents(), agentId: "coordinator", title: "both", status: yielding ? "pending" : completed ? "done" : "failed", detail: reason, timestamp: Date.now(), evidence: { status, tokensUsed, branches: Object.fromEntries(Object.entries(results).map(([track, ctx]) => [track, ctx.runProgress])) } });
   callbacks.onToken?.(content());
   const deliverables = {
     branches: Object.fromEntries(Object.entries(results).filter(([, ctx]) => ctx.deliverables).map(([track, ctx]) => [track, ctx.deliverables!])),
@@ -129,6 +130,6 @@ export async function runBothTracks(
       timestamp: Date.now(),
     },
   };
-  callbacks.onDeliverables?.(deliverables);
+  if (!yielding) callbacks.onDeliverables?.(deliverables);
   return { ...last, track: "both", runProgress, deliverables, budget: { ...last.budget, ...budget, tokensUsed, attempts: sumAttempts() }, state: { branches: results, messages: bus.readHistory(), fullContent: content(), routeVerified: completed } };
 }

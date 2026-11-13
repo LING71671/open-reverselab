@@ -46,6 +46,32 @@ const catalog = [item("red", "hook", ["kb/pe-reverse/hook-defense.md"]), item("b
 const context = (extra = {}) => ({ sessionId: "test", target: "fixture.bin", prompt: "inspect hook", track: "blue", history: [], diagnostics: {}, state: {}, budget: { maxTokens: 20000, maxDurationMs: 10000, startedAt: Date.now(), deadline: Date.now() + 10000, monotonicDeadline: performance.now() + 10000, tokensUsed: 0, attempts: 1, usageEstimated: false }, ...extra });
 const stage = (id, execute) => ({ id, name: id, description: id, category: "custom", enabled: true, execute });
 
+test("an adjustment yields at a stage boundary without verifying the stale objective", async () => {
+  let pending = false;
+  const pipeline = new HarnessPipeline([
+    stage("observe", async ctx => { ctx.budget.tokensUsed = 25; pending = true; }),
+    stage("forensics-deliverables", async () => assert.fail("executed stale plan")),
+  ]);
+  const result = await pipeline.run("fixture.bin", "old objective", [], { shouldYield: () => pending }, undefined, "steer", "red");
+  assert.equal(result.state.yieldedForAdjustment, true);
+  assert.equal(result.runProgress.status, "running");
+  assert.equal(result.runProgress.tokensUsed, 25);
+  assert.notEqual(result.state.routeVerified, true);
+});
+
+test("both yields both branches before publishing an old merged success", async () => {
+  let pending = false;
+  const finals = [];
+  const pipeline = new HarnessPipeline([
+    stage("observe", async () => { pending = true; }),
+    stage("forensics-deliverables", async () => assert.fail("executed old branch plan")),
+  ]);
+  const result = await pipeline.run("fixture.bin", "old objective", [], { shouldYield: () => pending, onDeliverables: value => finals.push(value) }, undefined, "steer-both", "both");
+  assert.equal(result.runProgress.status, "running");
+  assert.equal(result.state.routeVerified, false);
+  assert.equal(finals.length, 0);
+});
+
 test("track selection includes shared documents and follows actual pair paths", () => {
   assert.deepEqual(selectKbTechniques(catalog, "blue", "hook").map((entry) => entry.track).sort(), ["blue", "both"]);
   assert.deepEqual(selectKbTechniques(catalog, "red", "hook").map((entry) => entry.track).sort(), ["both", "red"]);
@@ -79,6 +105,35 @@ test("acceptance checks bind to the immutable goal and reject duplicate IDs", ()
   assert.equal(plan.target, ctx.target);
   assert.equal(plan.objective, ctx.prompt);
   assert.equal(parseAcceptancePlan('```goal-plan\n{"checks":[{"id":"C1","criterion":"x","expected":"y"},{"id":"C1","criterion":"x","expected":"y"}]}\n```', ctx), undefined);
+});
+
+test("valid plans tolerate JSON or omitted fences without relaxing their schema", () => {
+  const ctx = context();
+  const json = JSON.stringify({ title: "Inspect text encoding", checks: [{ id: "C1", criterion: "Read actual bytes", expected: "UTF-8 data" }] });
+  for (const content of [json + '\n\n```python\nread()\n```', '```json\n' + json + '\n```']) {
+    assert.equal(parseAcceptancePlan(content, ctx).objective, ctx.prompt);
+    assert.equal(ctx.state.suggestedTitle, "Inspect text encoding");
+  }
+  assert.equal(parseAcceptancePlan('{"checks":[]}', ctx), undefined);
+  assert.equal(parseAcceptancePlan('null', ctx), undefined);
+});
+
+test("no additional KB matches still allows repairing a failed observation", async () => {
+  const original = nativeBridge.listKb;
+  try {
+    nativeBridge.listKb = async () => [];
+    let attempts = 0;
+    const pipeline = new HarnessPipeline([new KbRoutingStage(), stage("forensics-deliverables", async ctx => {
+      attempts++;
+      ctx.state.routeBlocked = attempts === 1;
+      ctx.state.routeVerified = attempts === 2;
+      ctx.state.blockedReason = "Repair the malformed plan";
+    })]);
+    const result = await pipeline.run("fixture.txt", "count characters", [], {}, undefined, "kb-fallback", "red");
+    assert.equal(attempts, 2);
+    assert.equal(result.runProgress.status, "completed");
+    assert.equal(result.diagnostics["kb-routing"].status, "pass");
+  } finally { nativeBridge.listKb = original; }
 });
 
 test("independent verifier requires actual quoted evidence and accounts for input plus output", async () => {
@@ -133,6 +188,45 @@ test("deadline aborts an in-flight operation and reports exhaustion", async () =
   assert.equal(result.runProgress.status, "exhausted");
 });
 
+test("omitted limits remain unlimited and are not serialized as implicit quotas", async () => {
+  const pipeline = new HarnessPipeline([stage("observe", async (ctx) => {
+    assert.equal(ctx.budget.monotonicDeadline, Infinity);
+    assert.equal(ctx.budget.maxTokens, Infinity);
+    ctx.budget.tokensUsed = 100_000;
+    await new Promise(resolve => setTimeout(resolve, 15));
+    assert.equal(ctx.signal.aborted, false);
+    ctx.state.routeVerified = true;
+  })]);
+  const result = await pipeline.run("fixture.bin", "inspect", [], {}, undefined, "unlimited", "blue");
+  assert.equal(result.runProgress.status, "completed");
+  const saved = JSON.parse(JSON.stringify(result.runProgress));
+  assert.equal(saved.maxTokens, undefined);
+  assert.equal(saved.maxDurationMs, undefined);
+});
+
+test("time-only and token-only limits do not add an unrelated default limit", async () => {
+  const pipeline = new HarnessPipeline([stage("observe", async ctx => { ctx.budget.tokensUsed = 20; ctx.state.routeVerified = true; })]);
+  const timed = await pipeline.run("fixture.bin", "inspect", [], {}, undefined, "time-only", "blue", { maxDurationMs: 5000 });
+  assert.equal(timed.budget.maxTokens, Infinity);
+  assert.equal(timed.runProgress.status, "completed");
+  const capped = await pipeline.run("fixture.bin", "inspect", [], {}, undefined, "tokens-only", "blue", { maxTokens: 10 });
+  assert.equal(capped.budget.monotonicDeadline, Infinity);
+  assert.equal(capped.runProgress.status, "exhausted");
+});
+
+test("unlimited both keeps both branches unbounded and remains cancellable", async () => {
+  const controller = new AbortController();
+  const observed = [];
+  const pipeline = new HarnessPipeline([stage("wait", async ctx => {
+    observed.push([ctx.budget.maxTokens, ctx.budget.monotonicDeadline]);
+    if (observed.length === 2) controller.abort();
+    if (!ctx.signal.aborted) await new Promise(resolve => ctx.signal.addEventListener("abort", resolve, { once: true }));
+  })]);
+  const result = await pipeline.run("fixture.bin", "inspect", [], {}, controller.signal, "both-unlimited", "both");
+  assert.deepEqual(observed, [[Infinity, Infinity], [Infinity, Infinity]]);
+  assert.equal(result.runProgress.status, "cancelled");
+});
+
 test("missing KB files cause a different real document path to be read", async () => {
   const originalList = nativeBridge.listKb;
   const originalRead = nativeBridge.readKb;
@@ -184,6 +278,18 @@ test("repeating a generated script does not execute it twice", async () => {
     assert.match(ctx.state.blockedReason, /重复/);
     assert.equal(ctx.deliverables.savedArtifacts, undefined);
   } finally { nativeBridge.execPython = original; nativeBridge.saveReport = originalSave; }
+});
+
+test("adjusted runs save reports under their own revision without changing goal identity", async () => {
+  const originalSave = nativeBridge.saveReport;
+  let saved;
+  try {
+    nativeBridge.saveReport = async value => { saved = value; return { status: "saved", report_path: "reports/revision/analysis.md" }; };
+    const ctx = context({ state: { reportNamespace: "test-revision-2", fullContent: "No script yet" } });
+    await new ForensicsDeliverablesStage().execute(ctx, {});
+    assert.equal(saved.goalId, "test-revision-2");
+    assert.equal(ctx.sessionId, "test");
+  } finally { nativeBridge.saveReport = originalSave; }
 });
 
 test("concurrent goals on one pipeline keep targets, tracks, budgets and provider snapshots isolated", async () => {

@@ -83,12 +83,12 @@ export class HarnessPipeline {
     signal?: AbortSignal,
     sessionId: string = `session-${Date.now()}`,
     track: SecurityTrack = "blue",
-    budget: RunBudget = { maxDurationMs: 10 * 60 * 1000, maxTokens: 32000 },
+    budget: RunBudget = {},
     initialState: Record<string, any> = {}
   ): Promise<PipelineContext> {
-    if (!Number.isFinite(budget.maxDurationMs) || budget.maxDurationMs <= 0 ||
-        !Number.isFinite(budget.maxTokens) || budget.maxTokens <= 0) {
-      throw new Error("Run budget must contain positive time and token limits");
+    if ((budget.maxDurationMs !== undefined && (!Number.isFinite(budget.maxDurationMs) || budget.maxDurationMs <= 0)) ||
+        (budget.maxTokens !== undefined && (!Number.isSafeInteger(budget.maxTokens) || budget.maxTokens <= 0))) {
+      throw new Error("Optional run limits must be positive; tokens must be an integer");
     }
     const modelSnapshot = initialState.modelSnapshot || {
       model: llmService.getModel(),
@@ -104,7 +104,15 @@ export class HarnessPipeline {
     const forwardAbort = () => controller.abort(signal?.reason);
     if (signal?.aborted) forwardAbort();
     else signal?.addEventListener("abort", forwardAbort, { once: true });
-    const timer = setTimeout(() => controller.abort("Time budget exhausted"), budget.maxDurationMs);
+    const maxDurationMs = budget.maxDurationMs ?? Infinity;
+    const maxTokens = budget.maxTokens ?? Infinity;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleDeadline = () => {
+      const remaining = startedMonotonic + maxDurationMs - performance.now();
+      if (remaining <= 0) controller.abort("Time budget exhausted");
+      else timer = setTimeout(scheduleDeadline, Math.min(remaining, 2_147_483_647));
+    };
+    if (Number.isFinite(maxDurationMs)) scheduleDeadline();
     const ctx: PipelineContext = {
       sessionId,
       track,
@@ -112,7 +120,7 @@ export class HarnessPipeline {
       prompt,
       history,
       signal: controller.signal,
-      budget: { ...budget, startedAt, deadline: startedAt + budget.maxDurationMs, monotonicDeadline: startedMonotonic + budget.maxDurationMs, tokensUsed: 0, usageEstimated: false, attempts: 0 },
+      budget: { maxDurationMs, maxTokens, startedAt, deadline: startedAt + maxDurationMs, monotonicDeadline: startedMonotonic + maxDurationMs, tokensUsed: 0, usageEstimated: false, attempts: 0 },
       diagnostics: {},
       state: { ...initialState, modelSnapshot },
     };
@@ -153,10 +161,17 @@ export class HarnessPipeline {
       return undefined;
     };
     const kbStageIndex = this.stages.findIndex((stage) => stage.id === "kb-routing" && stage.enabled);
+    const yieldForAdjustment = () => {
+      if (!callbacks.shouldYield?.()) return false;
+      ctx.state.yieldedForAdjustment = true;
+      progress("running", "正在应用补充要求");
+      return true;
+    };
     progress("running");
     health("goal", "running", "goal");
     try {
     for (let stageIndex = 0; stageIndex < this.stages.length; stageIndex++) {
+      if (yieldForAdjustment()) break;
       const stage = this.stages[stageIndex];
       const layer: HealthLayer = stage.category === "llm" ? ctx.state.builtinHash ? "tool" : "model" : stage.category === "kb" ? "agent" : stage.category === "forensics" ? "agent" : "tool";
       if (!stage.enabled) {
@@ -199,6 +214,7 @@ export class HarnessPipeline {
         callbacks.onStepNode?.({ id: stageNodeId, parentId: parentStep, agentId: stage.id, title: stage.name, status: ctx.diagnostics[stage.id]?.status === "fail" ? "failed" : "done", detail: ctx.diagnostics[stage.id]?.summary || stage.name, timestamp: Date.now(), evidence: ctx.diagnostics[stage.id]?.evidence });
         ctx.state.lastStepId = stageNodeId;
         progress("running");
+        if (yieldForAdjustment()) break;
         if (ctx.state.pathsExhausted) {
           progress("blocked", ctx.state.blockedReason || "没有未尝试的匹配路线");
           break;
@@ -264,13 +280,13 @@ export class HarnessPipeline {
         break;
       }
     }
-    if (ctx.runProgress?.status === "running") {
+    if (ctx.runProgress?.status === "running" && !ctx.state.yieldedForAdjustment) {
       const reason = stopReason();
       if (reason) progress(signal?.aborted ? "cancelled" : "exhausted", reason);
       else if (ctx.state.routeVerified) progress("completed", "目标条件已通过独立核验；结果见报告");
       else progress("blocked", "流程结束，但尚无已验证的执行结果");
     }
-    if (ctx.runProgress?.status !== "completed") {
+    if (ctx.runProgress?.status !== "completed" && !ctx.state.yieldedForAdjustment) {
       const notice = `\n\n[${ctx.runProgress?.status}: ${ctx.runProgress?.reason}]`;
       ctx.state.fullContent = (ctx.state.fullContent || "") + notice;
       callbacks.onToken?.(ctx.state.fullContent);

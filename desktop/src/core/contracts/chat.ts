@@ -28,5 +28,6 @@ export interface HarnessChatMessage {
   containerDirectory?: string;
   resolvedBinary?: string;
   isRunning?: boolean;
+  adjustment?: { revision: number; status: "pending" | "applied" | "cancelled" };
 }
 

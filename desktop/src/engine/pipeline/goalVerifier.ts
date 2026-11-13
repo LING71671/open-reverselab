@@ -7,13 +7,19 @@ import { HealthFault } from "../../core/contracts/health";
 import { classifyFailure } from "../../services/health/healthMonitor";
 
 export function parseAcceptancePlan(content: string, ctx: PipelineContext): AcceptancePlan | undefined {
-  const raw = content.match(/```goal-plan\s*([\s\S]*?)\s*```/i)?.[1];
+  // Providers may omit the custom fence or label it as JSON. The schema and
+  // immutable target/objective binding remain the same in every representation.
+  const raw = content.match(/```goal-plan\s*([\s\S]*?)\s*```/i)?.[1]
+    ?? content.match(/```json\s*([\s\S]*?)\s*```/i)?.[1]
+    ?? content.split("```")[0].trim();
   if (!raw) return undefined;
   try {
     const plan = JSON.parse(raw);
+    if (!plan || typeof plan !== "object") return undefined;
     if (!Array.isArray(plan.checks) || !plan.checks.length || plan.checks.length > 8) return undefined;
     if (!plan.checks.every((check: any) => typeof check.id === "string" && check.id && typeof check.criterion === "string" && check.criterion && typeof check.expected === "string" && check.expected)) return undefined;
     if (new Set(plan.checks.map((check: any) => check.id)).size !== plan.checks.length) return undefined;
+    if (typeof plan.title === "string" && plan.title.trim() && [...plan.title.trim()].length <= 48 && !/[\r\n]/.test(plan.title)) ctx.state.suggestedTitle = plan.title.trim();
     ctx.state.currentHypothesis = typeof plan.hypothesis === "string" ? plan.hypothesis : "";
     return { target: ctx.target, objective: ctx.prompt, checks: plan.checks.map((check: any) => ({ id: check.id, criterion: check.criterion, expected: check.expected })) };
   } catch { return undefined; }
@@ -57,7 +63,7 @@ export async function verifyGoalWithModel(
     response = await llmService.complete(messages, {
       maxTokens: Math.min(2048, remaining - inputEstimate),
       temperature: 0,
-      timeoutMs: Math.max(1, ctx.budget.monotonicDeadline - performance.now()),
+      timeoutMs: Math.min(30000, Math.max(1, ctx.budget.monotonicDeadline - performance.now())),
       signal: ctx.signal,
       provider: ctx.state.modelSnapshot?.provider,
       model: ctx.state.modelSnapshot?.model,

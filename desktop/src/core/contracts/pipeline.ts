@@ -8,8 +8,8 @@ import { TriageResult } from "../../services/native/nativeBridge";
 export type StageStatus = "pending" | "running" | "pass" | "warn" | "fail" | "skipped";
 
 export interface RunBudget {
-  maxDurationMs: number;
-  maxTokens: number;
+  maxDurationMs?: number;
+  maxTokens?: number;
 }
 
 export interface AcceptancePlan {
@@ -36,6 +36,8 @@ export interface RunProgress extends RunBudget {
 }
 
 export interface PipelineBudget extends RunBudget {
+  maxDurationMs: number;
+  maxTokens: number;
   startedAt: number;
   deadline: number;
   monotonicDeadline: number;
@@ -107,7 +109,10 @@ export interface PipelineContext {
 }
 
 export interface PipelineCallbacks {
+  /** A user adjustment yields after the current bounded stage has settled. */
+  shouldYield?: () => boolean;
   onToken?: (text: string) => void;
+  onTitle?: (title: string) => void;
   onToolCall?: (toolRecord: ToolExecutionRecord) => void;
   onStepNode?: (step: any) => void;
   onDeliverables?: (deliverables: Deliverables) => void;

@@ -13,7 +13,9 @@ import type { SecurityTrack } from "../core/contracts/track";
 import type { HealthEvent } from "../core/contracts/health";
 
 export interface AgentRunCallbacks {
+  shouldYield?: () => boolean;
   onToken?: (text: string) => void;
+  onTitle?: (title: string) => void;
   onToolCall?: (toolRecord: ToolExecutionRecord) => void;
   onStepNode?: (step: GraphStep) => void;
   onDeliverables?: (deliverables: Deliverables) => void;
@@ -37,10 +39,13 @@ export async function runOpenSourceAgent(
   track: SecurityTrack = "blue",
   budget?: RunBudget,
   goalId?: string,
-  workspaceRoot?: string
+  workspaceRoot?: string,
+  revision = 0,
 ): Promise<string> {
   const pipelineCallbacks: PipelineCallbacks = {
+    shouldYield: callbacks.shouldYield,
     onToken: callbacks.onToken,
+    onTitle: callbacks.onTitle,
     onToolCall: callbacks.onToolCall,
     onStepNode: callbacks.onStepNode,
     onDeliverables: callbacks.onDeliverables,
@@ -59,7 +64,7 @@ export async function runOpenSourceAgent(
     goalId,
     track,
     budget,
-    { workspaceRoot }
+    { workspaceRoot, reportNamespace: revision && goalId ? `${goalId}-revision-${revision}` : goalId }
   );
 
   return resultCtx.state.fullContent || "";

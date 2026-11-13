@@ -87,7 +87,7 @@ export class ForensicsDeliverablesStage implements PipelineStage {
           key: deliverables.key,
           track: ctx.track,
           executionOutput,
-          goalId: ctx.sessionId,
+          goalId: ctx.state.reportNamespace || ctx.sessionId,
           attempt: ctx.budget.attempts,
           workspaceRoot: ctx.state.workspaceRoot,
           goalVerification: verification.goal,

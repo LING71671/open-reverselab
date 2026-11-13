@@ -19,7 +19,7 @@ export function loadWorkspaceRuntime(workspace: Workspace): Promise<WorkspaceRun
     const saved = await nativeBridge.workspace<GoalSnapshot | null>({ action: "load", root: workspace.root });
     let cache = saved ? JSON.stringify(saved) : "";
     let writes = Promise.resolve();
-    const manager = new GoalManager((goal, callbacks, signal) => runOpenSourceAgent(goal.target, goal.objective, [], callbacks, signal, goal.track, goal.budget, goal.id, workspace.root), {
+    const manager = new GoalManager((goal, callbacks, signal) => runOpenSourceAgent(goal.target, goal.objective, goal.history || [], callbacks, signal, goal.track, goal.budget, goal.id, workspace.root, goal.revision), {
       getItem: key => {
         if (key === "reverselab_goals_v2") return cache || null;
         if (!saved && workspace.name === "默认工作区") { try { return localStorage.getItem(key); } catch { return null; } }

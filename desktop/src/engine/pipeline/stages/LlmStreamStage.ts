@@ -1,6 +1,7 @@
 import { PipelineStage, PipelineContext, PipelineCallbacks, StageDiagnostic } from "../../../core";
 import { llmService } from "../../../services/llm/llmService";
 import { buildAnalysisMessages, estimateMessageTokens } from "../analysisPrompt";
+import { parseAcceptancePlan } from "../goalVerifier";
 
 export class LlmStreamStage implements PipelineStage {
   readonly id = "llm-stream";
@@ -11,6 +12,7 @@ export class LlmStreamStage implements PipelineStage {
 
   async execute(ctx: PipelineContext, callbacks: PipelineCallbacks): Promise<void> {
     if (ctx.state.builtinHash) {
+      callbacks.onTitle?.("SHA256 核验");
       const script = `import hashlib, json\nfrom pathlib import Path\ntarget = ${JSON.stringify(ctx.target)}\npath = Path(target)\nif not path.is_file():\n    raise ValueError("Target must be a file")\nwith path.open("rb") as source:\n    digest = hashlib.file_digest(source, "sha256").hexdigest()\nprint(json.dumps({"target": target, "sha256": digest, "observations": [{"name": "file_size", "value": path.stat().st_size, "source": target}]}))`;
       ctx.state.fullContent = `SHA256 核验\n\n\`\`\`python\n${script}\n\`\`\``;
       callbacks.onToken?.(ctx.state.fullContent);
@@ -56,6 +58,7 @@ export class LlmStreamStage implements PipelineStage {
     let fullContent = "";
     let firstTokenTime = 0;
     let tokenCount = 0;
+    let titleSent = false;
 
     try {
       const url = `${cleanBase}/chat/completions`;
@@ -119,6 +122,10 @@ export class LlmStreamStage implements PipelineStage {
                 }
                 tokenCount += delta.length > 3 ? Math.round(delta.length / 3) : 1;
                 fullContent += delta;
+                if (!titleSent && fullContent.includes('"title"') && parseAcceptancePlan(fullContent, ctx) && ctx.state.suggestedTitle) {
+                  callbacks.onTitle?.(ctx.state.suggestedTitle);
+                  titleSent = true;
+                }
                 if (!actualUsage) ctx.budget.tokensUsed = previousUsage + inputEstimate + Math.ceil(new TextEncoder().encode(fullContent).length / 3);
                 callbacks.onToken?.(fullContent);
               }
