@@ -2,7 +2,9 @@
 
 [English](RELEASING.md)
 
-`v2.0.0-beta.1` 包含项目源码、Windows x64 NSIS 安装包、便携 ZIP、安装包签名、更新清单和 SHA256 校验值。Python 3.11+、WebView2 与外部分析工具另行安装，详见[桌面安装](site/desktop.md)。
+`v2.0.0-beta.1` 桌面包已于 2026-11-14 撤下，正在调整为桌面端与知识库独立分发。以下流程记录此前的组合打包方式，下次桌面发布前需要更新。替代安装包使用新的版本号与标签。
+
+Python 3.11+、WebView2 与外部分析工具另行安装，详见[桌面端说明](site/desktop.md)。
 
 ## 准备发布提交
 

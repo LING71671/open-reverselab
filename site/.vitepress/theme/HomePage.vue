@@ -31,7 +31,7 @@ async function copyCommand() {
   <div class="rl-home">
     <section id="desktop" class="rl-intro">
       <div><h1>{{ en ? 'An AI workbench for reverse engineering.' : 'AI 逆向分析工作台' }}</h1><p>{{ en ? 'Give Open ReverseLab a target and a Goal. Follow parallel analysis, inspect the evidence and keep the results in your workspace.' : '给出目标和 Goal，查看并行分析过程，在工作区中收纳样本、证据与报告。' }}</p></div>
-      <div class="rl-download"><a class="rl-button" :href="`${repo}/releases/tag/v2.0.0-beta.1`">{{ en ? 'Download Windows beta' : '下载 Windows 测试版' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a><span>v2.0.0-beta.1 · Windows x64</span><a class="rl-text-link" :href="local('/desktop')">{{ en ? 'Installation guide' : '安装说明' }}</a></div>
+      <div class="rl-download"><a class="rl-button" :href="`${local('/desktop')}#${en ? 'run-from-source' : '从源码运行'}`">{{ en ? 'Build the desktop preview' : '构建桌面预览版' }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a><span>{{ en ? 'Desktop packages are being reorganized' : '桌面包分发调整中' }}</span><a class="rl-text-link" :href="local('/desktop')">{{ en ? 'Desktop guide' : '桌面端说明' }}</a></div>
     </section>
     <figure class="rl-product">
       <a :href="withBase('/assets/desktop/knowledge-light.png')" :aria-label="en ? 'View full desktop screenshot' : '查看桌面端完整截图'"><img :src="withBase('/assets/desktop/knowledge-light.png')" :alt="en ? 'Open ReverseLab desktop, showing paired red and blue JWT knowledge articles' : 'Open ReverseLab 桌面端，展示配对的 red 与 blue JWT 知识文档'" width="2560" height="1440" fetchpriority="high" /></a>

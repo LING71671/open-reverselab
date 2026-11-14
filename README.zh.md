@@ -10,7 +10,7 @@
 
 <p><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1"><strong>下载 Windows 测试版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="kb/README.md">知识库</a></p>
+<p><a href="#从源码运行桌面端"><strong>构建桌面预览版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="kb/README.md">知识库</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -47,10 +47,10 @@
 
 ### 下载与启动
 
-[v2.0.0-beta.1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) 提供 Windows x64 安装包、便携 ZIP、签名文件与 SHA256 校验值，也可[从源码构建](#从源码运行桌面端)。
+`v2.0.0-beta.1` 桌面包已撤下，正在调整为桌面端与知识库独立分发，替代安装包尚未发布。目前可[从源码构建预览版](#从源码运行桌面端)。
 
 1. 安装 Python 3.11 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
-2. 运行安装包，或完整解压便携 ZIP 后启动 `OpenReverseLab.exe`。个人工作区放在源码与安装目录之外。
+2. 按[源码构建步骤](#从源码运行桌面端)启动，个人工作区放在源码目录之外。
 3. 在设置中配置兼容 OpenAI chat-completions 的 API 地址和模型，再填写目标和任务内容。SHA256 核验可直接在本地运行，无需模型。
 
 桌面端以 Windows x64 为打包目标，Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可使用源码形式的 CLI/MCP 工作流，暂未提供桌面安装包。安装版提供“测试版”和“稳定版”更新渠道，beta 构建初始选择测试版渠道，详见[应用更新](desktop/UPDATES.zh-CN.md)。

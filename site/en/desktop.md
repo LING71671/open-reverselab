@@ -1,15 +1,15 @@
 ---
 title: Desktop installation and updates
-description: Download Open ReverseLab v2.0.0-beta.1 for Windows, configure a model, create a workspace, and run Goals.
+description: Build the Open ReverseLab desktop preview, configure a model, create a workspace, and run Goals.
 ---
 # Desktop installation and updates
 
-[Download v2.0.0-beta.1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) for the Windows x64 installer or portable ZIP. Release notes, signature files, and SHA256 checksums are on the same release page.
+The `v2.0.0-beta.1` desktop packages have been withdrawn while desktop and knowledge-base distribution are separated. A replacement package is not yet published. You can [run the source preview](#run-from-source).
 
-## Install on Windows
+## Windows source preview
 
 1. Install Python 3.11+, make `python` available on PATH, and install Microsoft Edge WebView2 Runtime.
-2. Download and run `OpenReverseLab-v2.0.0-beta.1-windows-x64-setup.exe`. For the portable edition, extract the complete ZIP and run `OpenReverseLab.exe`.
+2. Follow the [source setup steps](#run-from-source) below to install development dependencies and launch the desktop.
 3. Start the application and save your provider's API endpoint, API key, and model ID in Settings. Model-assisted work uses the saved configuration.
 4. Choose a workspace and create a Goal with a file, directory, or URL target and the result you want. Basic SHA256 verification can run locally.
 
@@ -47,6 +47,6 @@ The [complete build instructions](https://github.com/LING71671/open-reverselab#b
 
 The configured model endpoint receives task context and selected evidence. API keys are stored in local WebView storage. Generated Python runs with the current user's permissions. Performance warnings and Sentry diagnostics are separate options, both off by default.
 
-Desktop packages in this release support Windows x64. macOS / Linux retain the repository's CLI/MCP workflow; native desktop packages for those platforms are not provided.
+Desktop packaging targets Windows x64; downloads are currently paused. macOS / Linux retain the repository's CLI/MCP workflow; native desktop packages for those platforms are not provided.
 
 [Desktop guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.md) · [Developer guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/DEV_GUIDE.md) · [Agent runtime](https://github.com/LING71671/open-reverselab/blob/main/desktop/AGENT_SYSTEM.md)

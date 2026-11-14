@@ -2,7 +2,9 @@
 
 [简体中文](RELEASING.zh-CN.md)
 
-The `v2.0.0-beta.1` release contains the project source, a Windows x64 NSIS installer, a portable ZIP, the installer signature, an update manifest, and SHA256 checksums. Python 3.11+, WebView2, and external analysis tools are separate dependencies; see [desktop installation](site/en/desktop.md).
+The `v2.0.0-beta.1` packages were withdrawn on 2026-11-14 while desktop and knowledge-base distribution are separated. The procedure below records the previous combined package layout; it must be updated before the next desktop release. Publish the replacement under a new version and tag.
+
+Python 3.11+, WebView2, and external analysis tools are separate dependencies; see the [desktop guide](site/en/desktop.md).
 
 ## Prepare the release commit
 

@@ -4,7 +4,9 @@
 
 Notable changes to Open ReverseLab.
 
-## [2.0.0-beta.1] - 2026-11-13
+## [2.0.0-beta.1] - 2026-11-13 (withdrawn)
+
+Withdrawn on 2026-11-14 while desktop and knowledge-base distribution are separated. A replacement package is not yet published.
 
 ### Desktop and Agent execution
 

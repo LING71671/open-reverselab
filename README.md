@@ -10,7 +10,7 @@ Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · M
 
 <p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
 
-<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1"><strong>Download Windows beta</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="kb/README.md">Knowledge base</a></p>
+<p><a href="#build-the-desktop"><strong>Build the desktop preview</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="kb/README.md">Knowledge base</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -47,10 +47,10 @@ Select `red / blue / both` in the upper-left corner, choose a workspace, and ent
 
 ### Download and setup
 
-[v2.0.0-beta.1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) includes a Windows x64 installer and portable ZIP, with signature files and SHA256 checksums. You can also [build from source](#build-the-desktop).
+The `v2.0.0-beta.1` desktop packages have been withdrawn while desktop and knowledge-base distribution are separated. A replacement package is not yet published. You can [build the current source preview](#build-the-desktop).
 
 1. Install Python 3.11 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
-2. Run the installer, or extract the complete portable ZIP and launch `OpenReverseLab.exe`. Keep personal workspaces outside the source and installation directories.
+2. Follow the [source build instructions](#build-the-desktop). Keep personal workspaces outside the source directory.
 3. Open Settings and configure an OpenAI-compatible chat-completions endpoint and model, then enter a target and objective. SHA256 verification can run locally without a model.
 
 Windows x64 is the desktop packaging target. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux support the source-based CLI/MCP workflow; native desktop packages for those platforms are not currently provided. The installed edition offers Beta and Stable update channels; beta builds select Beta initially. See [application updates](desktop/UPDATES.md).

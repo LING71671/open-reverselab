@@ -1,15 +1,15 @@
 ---
 title: 桌面端安装与更新
-description: 下载 Open ReverseLab v2.0.0-beta.1 Windows 桌面版，配置模型、创建工作区并运行 Goal。
+description: 从源码运行 Open ReverseLab 桌面预览版，配置模型、创建工作区并运行 Goal。
 ---
 # 桌面端安装与更新
 
-[下载 v2.0.0-beta.1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta.1) 提供 Windows x64 安装包与便携 ZIP。版本说明、签名文件和 SHA256 校验值位于同一发布页。
+`v2.0.0-beta.1` 桌面包已撤下，正在调整为桌面端与知识库独立分发。替代安装包尚未发布，目前可[从源码运行](#从源码运行)。
 
-## 安装 Windows 版
+## Windows 源码预览
 
 1. 安装 Python 3.11+，确保终端能执行 `python`，并安装 Microsoft Edge WebView2 Runtime。
-2. 下载并运行 `OpenReverseLab-v2.0.0-beta.1-windows-x64-setup.exe`。使用便携版时，完整解压 ZIP 后运行 `OpenReverseLab.exe`。
+2. 按下方[源码运行步骤](#从源码运行)安装开发依赖并启动桌面端。
 3. 启动应用，在设置中保存模型提供商的 API 地址、API Key 和模型 ID。模型使用已保存配置，不会代选提供商。
 4. 选择工作区，新建 Goal，分别填写文件、目录或 URL 目标，以及希望完成的结果。基础 SHA256 核验可以在本地完成。
 
@@ -47,6 +47,6 @@ pnpm tauri dev
 
 配置的模型端点会收到任务上下文和选定证据。API Key 保存在本机 WebView 存储中，生成的 Python 使用当前用户权限执行。性能异常提醒和 Sentry 诊断均默认关闭，可在设置中独立开启。
 
-本版桌面包支持 Windows x64。macOS / Linux 可以使用仓库 CLI/MCP 工作流，暂未提供原生桌面包。
+桌面打包目标为 Windows x64，目前下载暂停。macOS / Linux 可以使用仓库 CLI/MCP 工作流，暂未提供原生桌面包。
 
 [桌面指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.zh-CN.md) · [开发指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/DEV_GUIDE.zh-CN.md) · [Agent 运行机制](https://github.com/LING71671/open-reverselab/blob/main/desktop/AGENT_SYSTEM.zh-CN.md)
