@@ -1,0 +1,12 @@
+{
+  "protocol": "open-reverselab.extension/v1-draft",
+  "kind": "knowledge",
+  "id": "example.integrity",
+  "version": "0.1.0",
+  "title": "File integrity methods",
+  "description": "A synthetic knowledge pack demonstrating shared reading and independent red/blue checks.",
+  "license": "Apache-2.0",
+  "files": ["knowledge.json", "docs/read.md", "docs/inspect.md", "docs/verify.md"],
+  "requires": [],
+  "knowledge": "knowledge.json"
+}

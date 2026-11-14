@@ -1,0 +1,12 @@
+{
+  "protocol": "open-reverselab.extension/v1-draft",
+  "kind": "mcp",
+  "id": "example.http-mcp",
+  "version": "0.1.0",
+  "title": "Configured HTTP MCP server",
+  "description": "Connect a user-supplied Streamable HTTP endpoint; the preset does not supply a server.",
+  "license": "Apache-2.0",
+  "files": ["connection.json"],
+  "requires": [],
+  "mcp": "connection.json"
+}

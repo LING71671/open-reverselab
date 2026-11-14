@@ -2,6 +2,8 @@
 
 本目录保存 MCP 实现；项目级行为由 `AGENTS.md`、board 的 `AI-USAGE.md` 和知识库技术文件定义。
 
+编写第三方知识包、MCP 扩展描述或 GitHub 扩展目录时，使用 [create-reverselab-extension/SKILL.md](create-reverselab-extension/SKILL.md)。它包含草案协议与离线作者工具，应用导入仍属于待开发功能，不能将包校验写成应用验收通过。
+
 ## MCP 服务器
 
 MCP 配置在项目根目录的 `.mcp.json` 中。默认服务器：

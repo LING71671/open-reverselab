@@ -1,0 +1,7 @@
+{
+  "transport": "streamable-http",
+  "url": "${inputs.endpoint}",
+  "inputs": [
+    {"name": "endpoint", "type": "url", "required": true}
+  ]
+}

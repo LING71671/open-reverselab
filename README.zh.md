@@ -59,6 +59,8 @@
 
 ## 知识库与 MCP
 
+独立知识包、MCP 扩展及 GitHub/ZIP 导入方案见[扩展设计](EXTENSIONS.zh-CN.md)。[创建 skill](tools/skills/create-reverselab-extension/SKILL.zh-CN.md) 提供草案模板与离线 ZIP 检查工具，应用导入器仍待开发。
+
 知识库覆盖 Web/CTF、Android/APK、Windows/PE，以及密码学、协议等通用主题。文档用 `track: red | blue | both` 标记所属轨道，其中 `both` 表示共享。攻击与防御文档通过索引元数据和 `defends` 关联；实际目录为准，并非每篇文章都存在一对一对应项。
 
 | 领域 | 知识入口 | 工具示例 |

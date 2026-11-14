@@ -1,0 +1,4 @@
+interface:
+  display_name: "Open ReverseLab Extension Author"
+  short_description: "Create knowledge packs, MCP presets, and catalogs"
+  default_prompt: "Use $create-reverselab-extension to prepare an Open ReverseLab extension with source files and a checked ZIP."

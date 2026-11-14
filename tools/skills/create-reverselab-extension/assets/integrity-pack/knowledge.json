@@ -1,0 +1,18 @@
+{
+  "domains": ["file-integrity"],
+  "documents": [
+    {"id": "example.integrity/docs/read", "title": "Read exact bytes", "path": "docs/read.md", "track": "shared", "domain": "file-integrity"},
+    {"id": "example.integrity/docs/inspect", "title": "Inspect a digest claim", "path": "docs/inspect.md", "track": "red", "domain": "file-integrity"},
+    {"id": "example.integrity/docs/verify", "title": "Verify file integrity", "path": "docs/verify.md", "track": "blue", "domain": "file-integrity"}
+  ],
+  "methods": [
+    {"id": "example.integrity/read", "title": "Read exact bytes", "document": "example.integrity/docs/read", "track": "shared", "domain": "file-integrity", "signals": ["file"], "requiresEvidence": ["target.file"], "produces": ["file.sha256"], "toolRequirements": ["file.read"]},
+    {"id": "example.integrity/inspect", "title": "Inspect a digest claim", "document": "example.integrity/docs/inspect", "track": "red", "domain": "file-integrity", "signals": ["declared digest"], "requiresEvidence": ["file.sha256", "declared.sha256"], "produces": ["claim.comparison"], "toolRequirements": []},
+    {"id": "example.integrity/verify", "title": "Verify file integrity", "document": "example.integrity/docs/verify", "track": "blue", "domain": "file-integrity", "signals": ["integrity verification"], "requiresEvidence": ["file.sha256", "declared.sha256", "declaration.source"], "produces": ["integrity.result"], "toolRequirements": []}
+  ],
+  "networks": [
+    {"id": "example.integrity/networks/red", "title": "Claim inspection", "track": "red", "entrypoints": ["example.integrity/read"], "nodes": ["example.integrity/read", "example.integrity/inspect"], "relations": [{"from": "example.integrity/inspect", "to": "example.integrity/read", "type": "depends_on"}]},
+    {"id": "example.integrity/networks/blue", "title": "Integrity verification", "track": "blue", "entrypoints": ["example.integrity/read"], "nodes": ["example.integrity/read", "example.integrity/inspect", "example.integrity/verify"], "relations": [{"from": "example.integrity/verify", "to": "example.integrity/read", "type": "depends_on"}, {"from": "example.integrity/verify", "to": "example.integrity/inspect", "type": "verifies"}]}
+  ],
+  "bindings": []
+}

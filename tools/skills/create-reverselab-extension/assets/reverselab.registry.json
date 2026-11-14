@@ -1,0 +1,9 @@
+{
+  "protocol": "open-reverselab.registry/v1-draft",
+  "id": "example.extensions",
+  "title": "Extension authoring examples",
+  "entries": [
+    {"id": "example.integrity", "kind": "knowledge", "title": "File integrity methods", "version": "0.1.0", "path": "integrity-pack"},
+    {"id": "example.http-mcp", "kind": "mcp", "title": "Configured HTTP MCP server", "version": "0.1.0", "path": "http-mcp"}
+  ]
+}

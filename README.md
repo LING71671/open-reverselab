@@ -59,6 +59,8 @@ The desktop executes target triage and Python actions without a default tool tim
 
 ## Knowledge base and MCP
 
+Independent knowledge packs, MCP extensions, and GitHub/ZIP import are described in the [extension design](EXTENSIONS.md). The [authoring skill](tools/skills/create-reverselab-extension/SKILL.md) includes draft templates and an offline ZIP checker; the application importer is planned.
+
 The knowledge base covers Web/CTF, Android/APK, Windows/PE, and general topics such as cryptography and protocols. Articles carry `track: red | blue | both`; `both` articles are shared. Related attack and defense articles are linked through index metadata and `defends` references. The current catalog is the source of truth; not every article has a one-to-one counterpart.
 
 | Area | Knowledge entry | Tool examples |
