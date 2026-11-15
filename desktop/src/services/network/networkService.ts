@@ -99,3 +99,13 @@ export function redactProxyOutput(text: string, route: ProxyRoute): string {
   }
   return text;
 }
+
+export async function modelResponseError(response: Response): Promise<Error> {
+  const retryAfter = response.headers.get("retry-after");
+  const seconds = retryAfter === null ? NaN : Number(retryAfter);
+  const retryAfterMs = Number.isFinite(seconds) ? Math.max(0, seconds * 1000)
+    : retryAfter ? Math.max(0, Date.parse(retryAfter) - Date.now()) : undefined;
+  let body = "";
+  try { body = await response.text(); } catch { /* Preserve the known HTTP failure if its body is interrupted. */ }
+  return Object.assign(new Error(`LLM HTTP ${response.status}: ${body}`), { status: response.status, retryAfterMs });
+}

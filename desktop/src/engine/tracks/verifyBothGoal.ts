@@ -49,6 +49,7 @@ export async function verifyBothGoal(
   combined.state.acceptancePlan = { target, objective, scope: "goal", checks };
   combined.state.executionEvidence = evidence;
   combined.state.verificationProgram = programs;
+  combined.state.verificationParentIds = contexts.flatMap(ctx => ctx.state.lastStepId ? [`${ctx.track}:${ctx.state.lastStepId}`] : [`branch:${ctx.track}`]);
   callbacks.onStepNode?.({ id: "branch:join", parentIds: contexts.flatMap(ctx => ctx.state.lastStepId ? [`${ctx.track}:${ctx.state.lastStepId}`] : [`branch:${ctx.track}`]), agentId: "coordinator", title: "核验完整目标", status: "running", timestamp: Date.now() });
   try {
     const verification = await verifyGoalWithModel(combined, { success: true, stdout: JSON.stringify(evidence), stderr: "" }, scripts.join("\n\n"), initial, callbacks);

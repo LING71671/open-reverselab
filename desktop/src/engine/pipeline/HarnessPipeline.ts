@@ -6,6 +6,7 @@ import {
   RunBudget,
   RunProgress,
 } from "../../core";
+import { ModelRetryYielded } from "./modelRecovery";
 import { TargetDiscoveryStage } from "./stages/TargetDiscoveryStage";
 import { StaticTriageStage } from "./stages/StaticTriageStage";
 import { KbRoutingStage } from "./stages/KbRoutingStage";
@@ -301,6 +302,10 @@ export class HarnessPipeline {
           stageIndex = kbStageIndex - 1;
         }
       } catch (err: any) {
+        if (err instanceof ModelRetryYielded && yieldForAdjustment()) {
+          callbacks.onStepNode?.({ id: `${ctx.sessionId}:${ctx.budget.attempts}:${stage.id}`, agentId: stage.id, title: stage.name, status: "pending", detail: "正在应用补充要求", timestamp: Date.now() });
+          break;
+        }
         health(layer, "failed", `${ctx.sessionId}:${ctx.budget.attempts}:${stage.id}`, classifyFailure(err, layer, { code: ctx.state.tokenBudgetExhausted ? "BUDGET_TOKENS" : undefined }));
         callbacks.onStepNode?.({ id: `${ctx.sessionId}:${ctx.budget.attempts}:${stage.id}`, parentId: ctx.state.lastStepId || null, agentId: stage.id, title: stage.name, status: "failed", detail: err.message || String(err), timestamp: Date.now() });
         // Capture error in stage diagnostics

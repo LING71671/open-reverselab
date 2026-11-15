@@ -27,6 +27,7 @@ async function compile(file) {
   await writeFile(output, code);
   return output;
 }
+const realFetch = globalThis.fetch;
 const storage = new Map();
 globalThis.localStorage = { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
 const load = async (relative) => import(pathToFileURL(await compile(path.join(root, relative))).href);
@@ -1173,4 +1174,178 @@ test("combined verification rejects different observed target versions before a 
     assert.equal(result.verification.goalVerified, false);
     assert.match(result.verification.reason, /目标内容版本不同/);
   } finally { llmService.complete = original; }
+});
+
+const { recoverModelRequest, canRetryModelRequest, ModelRetryYielded } = await load("engine/pipeline/modelRecovery.ts");
+const { modelResponseError } = await load("services/network/networkService.ts");
+function recoveryBrowser(t, online = true) {
+  const events = new EventTarget();
+  events.location = { href: "http://localhost/" };
+  const network = { onLine: online };
+  for (const [key, value] of [["window", events], ["navigator", network]]) {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
+    Object.defineProperty(globalThis, key, { configurable: true, value });
+    t.after(() => { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; });
+  }
+  return { network, disconnect() { network.onLine = false; events.dispatchEvent(new Event("offline")); }, reconnect() { queueMicrotask(() => { network.onLine = true; events.dispatchEvent(new Event("online")); }); } };
+}
+const recoveryNode = { id: "planning", title: "分析与计划", agentId: "llm-stream", parentId: "evidence" };
+
+test("model recovery retries transient failures without a count cap and clears waiting health", async t => {
+  const browser = recoveryBrowser(t), events = [], steps = [];
+  const ctx = context(); ctx.budget.maxTokens = Infinity; ctx.budget.monotonicDeadline = Infinity;
+  let calls = 0;
+  const result = await recoverModelRequest(ctx, {
+    onStepNode: step => { steps.push(step); if (step.detail.includes("秒后重试")) browser.reconnect(); },
+    onHealthEvent: event => events.push(event),
+  }, async () => { if (++calls <= 8) throw new HealthFault("NETWORK_FAILED", "Stream interrupted"); return "finished"; }, recoveryNode);
+  assert.equal(result, "finished"); assert.equal(calls, 9);
+  assert.ok(steps.every(step => step.id === "planning" && step.parentId === "evidence" && step.status === "running"));
+  assert.equal(events.at(-1).status, "healthy");
+  assert.equal(new Set(events.map(event => event.eventId)).size, events.length);
+});
+
+test("offline waits without dispatching requests and online resumes the same operation", async t => {
+  const browser = recoveryBrowser(t, false), ctx = context();
+  let calls = 0;
+  const result = await recoverModelRequest(ctx, { onStepNode: step => {
+    if (step.detail.includes("网络已断开")) { assert.equal(calls, 0); browser.reconnect(); }
+  } }, async () => { calls++; return "resumed"; }, recoveryNode);
+  assert.equal(result, "resumed"); assert.equal(calls, 1); assert.equal(ctx.budget.tokensUsed, 0);
+});
+
+test("stopping or revising while disconnected interrupts the retry wait", async t => {
+  const browser = recoveryBrowser(t);
+  for (const revise of [false, true]) {
+    const controller = new AbortController(), ctx = context({ signal: controller.signal });
+    let calls = 0, yieldNow = false;
+    await assert.rejects(recoverModelRequest(ctx, {
+      shouldYield: () => yieldNow,
+      onStepNode: step => { if (step.detail.includes("秒后重试")) queueMicrotask(() => { if (revise) { yieldNow = true; browser.reconnect(); } else controller.abort(); }); },
+    }, async () => { calls++; throw new TypeError("Failed to fetch"); }, recoveryNode), revise ? ModelRetryYielded : { name: "AbortError" });
+    assert.equal(calls, 1);
+  }
+});
+
+test("finite time and token budgets also apply while waiting for recovery", async t => {
+  recoveryBrowser(t);
+  for (const tokens of [false, true]) {
+    const ctx = context();
+    if (tokens) ctx.budget.tokensUsed = ctx.budget.maxTokens; else ctx.budget.monotonicDeadline = performance.now() + 15;
+    await assert.rejects(recoverModelRequest(ctx, {}, async () => { throw new TypeError("Failed to fetch"); }, recoveryNode), error => error.code === (tokens ? "BUDGET_TOKENS" : "BUDGET_TIME"));
+  }
+});
+
+test("authentication quota malformed requests and proxy configuration do not loop", () => {
+  for (const status of [400, 401, 403, 404, 422]) assert.equal(canRetryModelRequest(Object.assign(new Error("HTTP failure"), { status })), false);
+  assert.equal(canRetryModelRequest(Object.assign(new Error("insufficient_quota"), { status: 429 })), false);
+  for (const code of ["PROXY_AUTH", "PROXY_CONFIG", "BUDGET_TIME", "BUDGET_TOKENS"]) assert.equal(canRetryModelRequest(new HealthFault(code, code)), false);
+  for (const status of [408, 429, 500, 502, 503, 504]) assert.equal(canRetryModelRequest(Object.assign(new Error("HTTP failure"), { status })), true);
+});
+
+test("Retry-After survives HTTP error parsing and an online event cannot bypass it", async t => {
+  const browser = recoveryBrowser(t), controller = new AbortController();
+  const error = await modelResponseError(new Response("rate limited", { status: 429, headers: { "Retry-After": "60" } }));
+  assert.equal(error.retryAfterMs, 60_000);
+  const dated = await modelResponseError(new Response("busy", { status: 503, headers: { "Retry-After": new Date(Date.now() + 60_000).toUTCString() } }));
+  assert.ok(dated.retryAfterMs > 58_000);
+  let calls = 0;
+  await assert.rejects(recoverModelRequest(context({ signal: controller.signal }), { onStepNode: step => {
+    if (step.detail.includes("秒后重试")) { browser.reconnect(); setTimeout(() => controller.abort(), 20); }
+  } }, async () => { calls++; throw error; }, recoveryNode), { name: "AbortError" });
+  assert.equal(calls, 1);
+});
+
+test("truncated planning is replaced after reconnect and its usage remains accounted", async t => {
+  const browser = recoveryBrowser(t), ctx = context({ state: { modelSnapshot } });
+  const outputs = []; let requests = 0;
+  t.mock.method(globalThis, "fetch", async () => {
+    requests++;
+    const text = requests === 1 ? "incomplete plan" : "complete plan";
+    return new Response(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n${requests === 1 ? "" : "data: [DONE]\n\n"}`);
+  });
+  await new LlmStreamStage().execute(ctx, { onToken: text => outputs.push(text), onStepNode: step => { if (step.detail.includes("秒后重试")) browser.reconnect(); } });
+  assert.equal(requests, 2); assert.equal(ctx.state.fullContent, "complete plan");
+  assert.equal(outputs.at(-1), "complete plan");
+  assert.ok(ctx.budget.tokensUsed > estimateMessageTokens(buildAnalysisMessages(ctx)) * 2);
+  assert.equal(ctx.budget.usageEstimated, true); assert.notEqual(ctx.state.globalBlocker, true);
+});
+
+test("finish_reason permits a clean EOF while interrupted readers are cancelled", async t => {
+  recoveryBrowser(t); const ctx = context({ state: { modelSnapshot } }); let cancelled = 0;
+  t.mock.method(globalThis, "fetch", async () => new Response(new ReadableStream({ start(controller) {
+    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "complete" }, finish_reason: "stop" }] })}\n\ndata: [DONE]`));
+    controller.close();
+  }, cancel() { cancelled++; } })));
+  await new LlmStreamStage().execute(ctx, {});
+  assert.equal(ctx.state.fullContent, "complete");
+  t.mock.method(globalThis, "fetch", async () => new Response(new ReadableStream({ start(controller) {
+    controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"complete"}}]}\n\ndata: [DONE]\n\n'));
+  }, cancel() { cancelled++; } })));
+  await new LlmStreamStage().execute(context({ state: { modelSnapshot } }), {});
+  assert.equal(cancelled, 1);
+});
+
+test("verification reconnects without executing the successful tool again", async t => {
+  const browser = recoveryBrowser(t); let executions = 0, verifications = 0;
+  const events = [];
+  t.mock.method(nativeBridge, "execPython", async () => { executions++; return { success: true, stdout: "observed fixture", stderr: "" }; });
+  t.mock.method(nativeBridge, "saveReport", async () => ({ status: "saved" }));
+  t.mock.method(llmService, "complete", async () => {
+    if (++verifications === 1) throw new HealthFault("NETWORK_FAILED", "Network interrupted");
+    return { content: JSON.stringify({ status: "verified", reason: "observed", checks: [{ id: "C1", passed: true, evidenceRef: "execution.stdout", evidenceQuote: "observed fixture" }] }), usage: { totalTokens: 20 } };
+  });
+  const pipeline = new HarnessPipeline([stage("prepare", async ctx => { ctx.state.fullContent = '```goal-plan\n' + JSON.stringify({ checks: [{ id: "C1", criterion: "observe", expected: "fixture" }] }) + '\n```\n```python\nread_fixture()\n```'; }), new ForensicsDeliverablesStage()]);
+  const result = await pipeline.run("fixture.txt", "inspect fixture", [], { onHealthEvent: event => events.push(event), onStepNode: step => { if (step.detail?.includes("秒后重试")) browser.reconnect(); } }, undefined, "recover-verifier", "blue", {}, { knowledgeSnapshot: true, modelSnapshot });
+  assert.equal(result.runProgress.status, "completed", result.runProgress.reason);
+  assert.equal(executions, 1); assert.equal(verifications, 2);
+  assert.equal(result.budget.usageEstimated, true);
+  assert.ok(events.some(event => event.layer === "model" && event.status === "degraded"));
+  assert.ok(events.some(event => event.layer === "model" && event.status === "healthy"));
+});
+
+test("a pending revision during planning recovery yields the same Goal without blocking it", async t => {
+  const browser = recoveryBrowser(t); let revision = false, requests = 0;
+  t.mock.method(globalThis, "fetch", async () => { requests++; throw new TypeError("Failed to fetch"); });
+  const pipeline = new HarnessPipeline([new LlmStreamStage()]);
+  const result = await pipeline.run("fixture.txt", "inspect", [], {
+    shouldYield: () => revision, onStepNode: step => { if (step.detail?.includes("秒后重试")) { revision = true; browser.reconnect(); } },
+  }, undefined, "revision-recovery", "blue", {}, { knowledgeSnapshot: true, modelSnapshot });
+  assert.equal(result.runProgress.status, "running"); assert.equal(result.state.yieldedForAdjustment, true); assert.equal(requests, 1);
+});
+
+test("an offline event aborts a stalled stream and recovery resumes with a new complete response", async t => {
+  const browser = recoveryBrowser(t), ctx = context({ state: { modelSnapshot } });
+  let calls = 0, disconnected = false;
+  t.mock.method(globalThis, "fetch", async input => {
+    if (++calls > 1) return new Response('data: {"choices":[{"delta":{"content":"recovered"}}]}\n\ndata: [DONE]\n\n');
+    return new Response(new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'));
+      input.signal.addEventListener("abort", () => { disconnected = true; controller.error(input.signal.reason); }, { once: true });
+    } }));
+  });
+  await new LlmStreamStage().execute(ctx, { onToken: text => { if (text === "partial") browser.disconnect(); }, onStepNode: step => { if (step.detail.includes("秒后重试")) browser.reconnect(); } });
+  assert.equal(disconnected, true); assert.equal(calls, 2); assert.equal(ctx.state.fullContent, "recovered");
+});
+
+test("a real dropped HTTP stream retries automatically after backoff", { timeout: 8000 }, async t => {
+  const { createServer } = await import("node:http");
+  t.mock.method(globalThis, "fetch", realFetch);
+  let requests = 0;
+  const server = createServer((request, response) => {
+    request.resume();
+    requests++;
+    response.writeHead(200, { "Content-Type": "text/event-stream" });
+    if (requests === 1) {
+      response.write('data: {"choices":[{"delta":{"content":"discard this partial plan"}}]}\n\n');
+      setTimeout(() => response.destroy(), 20);
+    } else response.end('data: {"choices":[{"delta":{"content":"complete recovered plan"}}]}\n\ndata: [DONE]\n\n');
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const ctx = context({ state: { modelSnapshot: { ...modelSnapshot, provider: { ...modelSnapshot.provider, baseUrl: `http://127.0.0.1:${server.address().port}/v1` } } } });
+  const waiting = [];
+  await new LlmStreamStage().execute(ctx, { onStepNode: step => waiting.push(step.detail) });
+  assert.equal(requests, 2); assert.equal(ctx.state.fullContent, "complete recovered plan");
+  assert.ok(waiting.some(detail => detail.includes("2 秒后重试")));
 });

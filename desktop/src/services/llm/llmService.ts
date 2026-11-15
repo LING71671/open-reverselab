@@ -1,4 +1,4 @@
-import { modelFetch, usesNativeNetwork } from "../network/networkService";
+import { modelFetch, modelResponseError, usesNativeNetwork } from "../network/networkService";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -290,9 +290,9 @@ export class LlmService {
       checkDeadline();
     }
 
-    const abortHandler = () => controller.abort();
+    const abortHandler = () => controller.abort(options?.signal?.reason);
     if (options?.signal) {
-      if (options.signal.aborted) controller.abort();
+      if (options.signal.aborted) controller.abort(options.signal.reason);
       else options.signal.addEventListener("abort", abortHandler, { once: true });
     }
 
@@ -315,8 +315,7 @@ export class LlmService {
       const durationMs = Math.round(performance.now() - start);
 
       if (!res.ok) {
-        const errText = await res.text();
-        throw Object.assign(new Error(`LLM Error ${res.status}: ${errText}`), { status: res.status });
+        throw await modelResponseError(res);
       }
 
       const data = await res.json();

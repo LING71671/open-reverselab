@@ -1,8 +1,10 @@
 import { PipelineStage, PipelineContext, PipelineCallbacks, StageDiagnostic } from "../../../core";
 import { llmService } from "../../../services/llm/llmService";
-import { modelFetch, usesNativeNetwork } from "../../../services/network/networkService";
+import { modelFetch, modelResponseError, usesNativeNetwork } from "../../../services/network/networkService";
 import { buildAnalysisMessages, estimateMessageTokens, refreshMcpTools } from "../analysisPrompt";
 import { parseAcceptancePlan } from "../goalVerifier";
+import { HealthFault } from "../../../core/contracts/health";
+import { canRetryModelRequest, recoverModelRequest } from "../modelRecovery";
 
 export class LlmStreamStage implements PipelineStage {
   readonly id = "llm-stream";
@@ -22,6 +24,12 @@ export class LlmStreamStage implements PipelineStage {
       callbacks.onDiagnosticUpdate?.(diag);
       return;
     }
+    await recoverModelRequest(ctx, callbacks, signal => this.generate(ctx, callbacks, signal), {
+      id: `${ctx.sessionId}:${ctx.budget.attempts}:${this.id}`, title: this.name, agentId: this.id, parentId: ctx.state.lastStepId || null,
+    });
+  }
+
+  private async generate(ctx: PipelineContext, callbacks: PipelineCallbacks, requestSignal: AbortSignal): Promise<void> {
     const startTime = Date.now();
     const activeProvider = ctx.state.modelSnapshot?.provider || llmService.getActiveProvider();
     let baseUrl =
@@ -55,6 +63,7 @@ export class LlmStreamStage implements PipelineStage {
     }
     const outputLimit = Number.isFinite(remaining) ? remaining - inputEstimate : undefined;
     const previousUsage = ctx.budget.tokensUsed;
+    const previousEstimated = ctx.budget.usageEstimated;
     let chargedInput = false;
     let actualUsage = false;
 
@@ -82,12 +91,11 @@ export class LlmStreamStage implements PipelineStage {
           max_tokens: outputLimit,
           stream_options: { include_usage: true },
         }),
-        signal: ctx.signal,
+        signal: requestSignal,
       });
 
       if (!res.ok) {
-        const errText = await res.text();
-        throw Object.assign(new Error(`LLM HTTP ${res.status}: ${errText}`), { status: res.status });
+        throw await modelResponseError(res);
       }
 
       const reader = res.body?.getReader();
@@ -95,57 +103,57 @@ export class LlmStreamStage implements PipelineStage {
 
       const decoder = new TextDecoder();
       let buffer = "";
-
       let isStreamDone = false;
-      while (!isStreamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith(":")) continue;
-          if (trimmed === "data: [DONE]") {
-            isStreamDone = true;
-            break;
-          }
-          if (trimmed.startsWith("data: ")) {
-            try {
-              const json = JSON.parse(trimmed.slice(6));
-              if (typeof json.usage?.total_tokens === "number" && json.usage.total_tokens >= 0) {
-                ctx.budget.tokensUsed = previousUsage + json.usage.total_tokens;
-                actualUsage = true;
-              }
-              const delta = json.choices?.[0]?.delta?.content || "";
-              if (delta) {
-                if (!firstTokenTime) {
-                  firstTokenTime = Date.now();
-                }
-                tokenCount += delta.length > 3 ? Math.round(delta.length / 3) : 1;
-                fullContent += delta;
-                if (!titleSent && fullContent.includes('"title"') && parseAcceptancePlan(fullContent, ctx) && ctx.state.suggestedTitle) {
-                  callbacks.onTitle?.(ctx.state.suggestedTitle);
-                  titleSent = true;
-                }
-                if (!actualUsage) ctx.budget.tokensUsed = previousUsage + inputEstimate + Math.ceil(new TextEncoder().encode(fullContent).length / 3);
-                callbacks.onToken?.(fullContent);
-              }
-            } catch {
-              // ignore malformed SSE line
-            }
-          }
+      let finishedChoice = false;
+      const consume = (line: string) => {
+        const trimmed = line.trim();
+        if (trimmed === "data: [DONE]") { isStreamDone = true; return; }
+        if (!trimmed.startsWith("data:")) return;
+        let json;
+        try { json = JSON.parse(trimmed.slice(5).trim()); } catch { return; }
+        if (!json || typeof json !== "object") return;
+        if (json.error) throw Object.assign(new Error(JSON.stringify(json.error)), { status: json.error.status });
+        if (typeof json.usage?.total_tokens === "number" && json.usage.total_tokens >= 0) {
+          ctx.budget.tokensUsed = previousUsage + json.usage.total_tokens;
+          actualUsage = true;
         }
-        if (ctx.budget.tokensUsed >= ctx.budget.maxTokens) {
-          await reader.cancel();
-          ctx.state.tokenBudgetExhausted = true;
-          throw new Error("Token 额度已耗尽");
+        const choice = json.choices?.[0];
+        if (choice?.finish_reason != null) finishedChoice = true;
+        const delta = choice?.delta?.content || "";
+        if (delta) {
+          if (!firstTokenTime) firstTokenTime = Date.now();
+          tokenCount += delta.length > 3 ? Math.round(delta.length / 3) : 1;
+          fullContent += delta;
+          if (!titleSent && fullContent.includes('"title"') && parseAcceptancePlan(fullContent, ctx) && ctx.state.suggestedTitle) {
+            callbacks.onTitle?.(ctx.state.suggestedTitle);
+            titleSent = true;
+          }
+          if (!actualUsage) ctx.budget.tokensUsed = previousUsage + inputEstimate + Math.ceil(new TextEncoder().encode(fullContent).length / 3);
+          callbacks.onToken?.(fullContent);
         }
+      };
+      try {
+        while (!isStreamDone) {
+          const { done, value } = await reader.read();
+          buffer += decoder.decode(value, { stream: !done });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) { consume(line); if (isStreamDone) break; }
+          if (done && !isStreamDone && buffer.trim()) consume(buffer);
+          if (ctx.budget.tokensUsed >= ctx.budget.maxTokens) {
+            ctx.state.tokenBudgetExhausted = true;
+            throw new Error("Token 额度已耗尽");
+          }
+          if (done) break;
+        }
+        if (!isStreamDone && !finishedChoice) throw new HealthFault("NETWORK_FAILED", "模型响应未完成，连接已中断");
+      } finally {
+        await reader.cancel().catch(() => {});
+        reader.releaseLock();
       }
 
       if (!fullContent.trim()) throw new Error("模型未返回可用内容");
-      ctx.budget.usageEstimated = !actualUsage || !!ctx.state.priorEstimatedUsage;
+      ctx.budget.usageEstimated = previousEstimated || !actualUsage || !!ctx.state.priorEstimatedUsage;
       ctx.state.priorEstimatedUsage = ctx.budget.usageEstimated;
       ctx.state.fullContent = fullContent;
       const totalDurationMs = Date.now() - startTime;
@@ -190,6 +198,10 @@ export class LlmStreamStage implements PipelineStage {
     } catch (err: any) {
       const totalDurationMs = Date.now() - startTime;
       if (chargedInput && !actualUsage) ctx.budget.usageEstimated = true;
+      if (!ctx.signal?.aborted && !ctx.state.tokenBudgetExhausted && canRetryModelRequest(err)) {
+        ctx.state.fullContent = fullContent;
+        throw err;
+      }
       ctx.state.globalBlocker = !ctx.signal?.aborted && !ctx.state.tokenBudgetExhausted;
       if (ctx.signal?.aborted || err?.name === "AbortError") {
         fullContent += "\n\n[已手动中止分析]";

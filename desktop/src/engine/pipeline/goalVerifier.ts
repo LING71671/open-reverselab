@@ -6,6 +6,7 @@ import { estimateMessageTokens } from "./analysisPrompt";
 import { HealthFault } from "../../core/contracts/health";
 import { classifyFailure } from "../../services/health/healthMonitor";
 import { structuredPlanCandidates } from "./structuredPlans";
+import { ModelRetryYielded, recoverModelRequest } from "./modelRecovery";
 import { trackPolicies } from "../tracks";
 
 export function parseAcceptancePlan(content: string, ctx: PipelineContext): AcceptancePlan | undefined {
@@ -55,36 +56,45 @@ export async function verifyGoalWithModel(
       ...(ctx.state.verificationProgram ? { program: ctx.state.verificationProgram } : { script }), evidence, stderr: result.stderr.slice(0, 2000), triage: ctx.triage }) },
   ];
   const inputEstimate = estimateMessageTokens(messages);
-  if (ctx.state.refreshTokenBudget) ctx.budget.maxTokens = ctx.state.refreshTokenBudget();
-  const remaining = Math.floor(ctx.budget.maxTokens - ctx.budget.tokensUsed);
-  if (remaining <= inputEstimate + 64) {
-    ctx.state.tokenBudgetExhausted = true;
-    throw new Error("剩余额度不足以完成独立 Goal 核验");
-  }
   const toolId = `verify-${ctx.track}-${ctx.budget.attempts}-${Date.now()}`;
   callbacks.onToolCall?.({ id: toolId, tool: "goal_verifier", title: `${ctx.track} · Goal verification`, status: "running" });
-  const previousTokens = ctx.budget.tokensUsed;
-  const priorEstimated = ctx.budget.usageEstimated;
-  ctx.budget.tokensUsed += inputEstimate;
-  ctx.budget.usageEstimated = true;
   let response;
   try {
-    response = await llmService.complete(messages, {
-      maxTokens: Number.isFinite(remaining) ? remaining - inputEstimate : undefined,
-      temperature: 0,
-      timeoutMs: Number.isFinite(ctx.budget.monotonicDeadline) ? Math.max(1, ctx.budget.monotonicDeadline - performance.now()) : undefined,
-      signal: ctx.signal,
-      provider: ctx.state.modelSnapshot?.provider,
-      model: ctx.state.modelSnapshot?.model,
+    response = await recoverModelRequest(ctx, callbacks, async signal => {
+      if (ctx.state.refreshTokenBudget) ctx.budget.maxTokens = ctx.state.refreshTokenBudget();
+      const remaining = Math.floor(ctx.budget.maxTokens - ctx.budget.tokensUsed);
+      if (remaining <= inputEstimate + 64) {
+        ctx.state.tokenBudgetExhausted = true;
+        throw new HealthFault("BUDGET_TOKENS", "剩余额度不足以完成独立 Goal 核验");
+      }
+      const previousTokens = ctx.budget.tokensUsed;
+      const priorEstimated = ctx.budget.usageEstimated;
+      ctx.budget.tokensUsed += inputEstimate;
+      ctx.budget.usageEstimated = true;
+      const result = await llmService.complete(messages, {
+        maxTokens: Number.isFinite(remaining) ? remaining - inputEstimate : undefined,
+        temperature: 0,
+        timeoutMs: Number.isFinite(ctx.budget.monotonicDeadline) ? Math.max(1, ctx.budget.monotonicDeadline - performance.now()) : undefined,
+        signal,
+        provider: ctx.state.modelSnapshot?.provider,
+        model: ctx.state.modelSnapshot?.model,
+      });
+      const actualUsage = result.usage?.totalTokens;
+      ctx.budget.tokensUsed = previousTokens + (actualUsage && actualUsage > 0 ? actualUsage : inputEstimate + Math.ceil(new TextEncoder().encode(result.content).length / 3));
+      ctx.budget.usageEstimated = priorEstimated || !actualUsage;
+      return result;
+    }, {
+      id: ctx.track === "both" ? "branch:join" : `${ctx.sessionId}:${ctx.budget.attempts}:forensics-deliverables`,
+      title: ctx.track === "both" ? "核验完整目标" : "执行与核验", agentId: ctx.track === "both" ? "coordinator" : "forensics-deliverables",
+      parentId: ctx.state.verificationParentIds?.[0] || ctx.state.lastStepId || null,
+      parentIds: ctx.state.verificationParentIds,
     });
   } catch (error) {
+    if (error instanceof ModelRetryYielded) throw error;
     ctx.state.globalBlocker = !ctx.signal?.aborted;
     const failure = classifyFailure(error, "model");
     throw new HealthFault(failure.code, failure.detail);
   }
-  const actualUsage = response.usage?.totalTokens;
-  ctx.budget.tokensUsed = previousTokens + (actualUsage && actualUsage > 0 ? actualUsage : inputEstimate + Math.ceil(new TextEncoder().encode(response.content).length / 3));
-  ctx.budget.usageEstimated = priorEstimated || !actualUsage;
   let verdict: any;
   try { verdict = JSON.parse(response.content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()); }
   catch { verdict = { status: "continue", reason: "独立核验器未返回有效判定", checks: [] }; }
