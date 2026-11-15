@@ -4,6 +4,10 @@
 
 Notable changes to Open ReverseLab.
 
+## Unreleased
+
+- Planning and verification now wait and retry after temporary model connection failures. Reconnection retains the Goal and completed tool evidence, replaces incomplete responses, respects provider retry intervals and explicit budgets, and remains cancellable.
+
 ## [2.0.0-beta2] - 2026-11-15
 
 - Fixed creation and opening of empty workspaces in the installed app. A native response with no saved history no longer falls through to a browser endpoint and produces an HTML/JSON parse error.

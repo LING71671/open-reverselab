@@ -107,6 +107,8 @@ For both, scoped verdicts retain separate responsibilities. Combined verificatio
 
 ## Budgets and terminal states
 
+Planning and verification use [model reconnection](NETWORK.md#model-reconnection) for transient failures. Waiting keeps the current Goal running and retains completed observations. Recovery repeats only the interrupted model request; a truncated stream cannot become an executable plan. Cancellation, revisions, and explicit budgets remain effective while waiting.
+
 `maxDurationMs` and `maxTokens` are independent optional fields. Omitted fields mean no total limit and are omitted from persisted request budgets. Model calls omit output-token and request-time limits when no finite remaining budget exists.
 
 Pipeline deadlines use monotonic time. Requests and actions receive the remaining duration when a total deadline exists. Goal revisions deduct earlier elapsed time and token use; changing routes does not reset consumption.
