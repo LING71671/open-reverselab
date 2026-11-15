@@ -6,7 +6,7 @@ A desktop workspace, a red/blue knowledge base, and CLI/MCP tools for external A
 
 ## Where do I download the desktop?
 
-Download the Windows x64 installer or portable ZIP from the [v2.0.0-beta1 release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1); see the [desktop guide](./desktop.md) for setup. The desktop packages do not bundle a knowledge base or MCP server. Enter `https://github.com/LING71671/open-reverselab-knowledge` in **Extensions** to install the official knowledge pack, and add MCP connections separately.
+Download the Windows x64 installer or portable ZIP from the [v2.0.0-beta2 release](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2); see the [desktop guide](./desktop.md) for setup. The desktop packages do not bundle a knowledge base or MCP server. Browse **Open ReverseLab official knowledge** in **Extensions → Sources** to install the official knowledge pack, and add MCP connections separately.
 
 macOS/Linux retain the CLI/MCP workflow; native desktop packages for them are not currently provided. See the [desktop guide](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.md).
 

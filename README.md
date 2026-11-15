@@ -10,7 +10,7 @@ Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · M
 
 <p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
 
-<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1"><strong>Download for Windows</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">Knowledge base</a></p>
+<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2"><strong>Download for Windows</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">Knowledge base</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -47,7 +47,7 @@ Select `red / blue / both` in the upper-left corner, choose a workspace, and ent
 
 ### Download and setup
 
-[Download v2.0.0-beta1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1) for Windows x64: choose the installer (`-setup.exe`) or portable ZIP. Both packages contain the desktop runtime without a bundled knowledge base or MCP server. Install knowledge through **Extensions** and configure MCP connections separately.
+[Download v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2) for Windows x64: choose the installer (`-setup.exe`) or portable ZIP. Both packages contain the desktop runtime without a bundled knowledge base or MCP server. Install knowledge through **Extensions** and configure MCP connections separately.
 
 1. Install Python 3.11 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
 2. Run the installer, or extract the complete portable ZIP and launch `OpenReverseLab.exe`. Keep personal workspaces outside the installation directory.
@@ -61,7 +61,7 @@ The desktop executes target triage, Python actions, and tools discovered through
 
 Knowledge sources live in [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge). This repository pins that content through the `kb` Git submodule. For an existing checkout, run `git submodule update --init --recursive`. Submit knowledge changes in the knowledge repository.
 
-The **Extensions** page imports knowledge packs and MCP descriptors from GitHub repositories, catalogs, folders, or ZIP files. Install the official knowledge pack by entering `https://github.com/LING71671/open-reverselab-knowledge`; the desktop runtime is distributed separately. Packs can be enabled, disabled, and exported, including selected networks with their referenced documents. MCP connections support stdio and Streamable HTTP. See the [v1 protocol and usage](EXTENSIONS.md) and [authoring skill](tools/skills/create-reverselab-extension/SKILL.md).
+The **Extensions** page imports knowledge packs and MCP descriptors from GitHub repositories, catalogs, folders, or ZIP files. Under **Sources**, browse **Open ReverseLab official knowledge** and install the pack; the desktop runtime is distributed separately. Packs can be enabled, disabled, and exported, including selected networks with their referenced documents. MCP connections support stdio and Streamable HTTP. See the [v1 protocol and usage](EXTENSIONS.md) and [authoring skill](tools/skills/create-reverselab-extension/SKILL.md).
 
 The knowledge base covers Web/CTF, Android/APK, Windows/PE, and general topics such as cryptography and protocols. Articles carry `track: red | blue | both`; `both` articles are shared. Related attack and defense articles are linked through index metadata and `defends` references. The current catalog is the source of truth; not every article has a one-to-one counterpart.
 

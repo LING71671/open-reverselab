@@ -10,7 +10,7 @@
 
 <p><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1"><strong>下载 Windows 版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">知识库</a></p>
+<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2"><strong>下载 Windows 版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">知识库</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -47,7 +47,7 @@
 
 ### 下载与启动
 
-[下载 v2.0.0-beta1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1)，提供 Windows x64 安装版（`-setup.exe`）与便携 ZIP。两种包均只包含桌面运行时，不内置知识库或 MCP 服务；知识库通过**扩展**导入，MCP 连接单独配置。
+[下载 v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2)，提供 Windows x64 安装版（`-setup.exe`）与便携 ZIP。两种包均只包含桌面运行时，不内置知识库或 MCP 服务；知识库通过**扩展**导入，MCP 连接单独配置。
 
 1. 安装 Python 3.11 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
 2. 运行安装程序，或完整解压便携 ZIP 后启动 `OpenReverseLab.exe`。个人工作区放在安装目录之外。
@@ -61,7 +61,7 @@
 
 知识源码在独立仓库 [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge) 维护，本仓库通过 `kb` Git 子模块固定所引用的内容。已有源码目录执行 `git submodule update --init --recursive` 拉取知识库；文章与网络的修改提交到知识库仓库。
 
-**扩展**页面支持从 GitHub 仓库、目录清单、本地文件夹或 ZIP 导入知识包和 MCP 描述包。输入 `https://github.com/LING71671/open-reverselab-knowledge` 即可选择官方知识包，桌面运行时独立分发。知识包支持启停、完整导出和按网络导出关联文档；MCP 支持 stdio 与 Streamable HTTP 连接。详见 [v1 协议与使用说明](EXTENSIONS.zh-CN.md)和[创建 skill](tools/skills/create-reverselab-extension/SKILL.zh-CN.md)。
+**扩展**页面支持从 GitHub 仓库、目录清单、本地文件夹或 ZIP 导入知识包和 MCP 描述包。在**市场源**中浏览 **Open ReverseLab 官方知识库**即可安装官方知识包，桌面运行时独立分发。知识包支持启停、完整导出和按网络导出关联文档；MCP 支持 stdio 与 Streamable HTTP 连接。详见 [v1 协议与使用说明](EXTENSIONS.zh-CN.md)和[创建 skill](tools/skills/create-reverselab-extension/SKILL.zh-CN.md)。
 
 知识库覆盖 Web/CTF、Android/APK、Windows/PE，以及密码学、协议等通用主题。文档用 `track: red | blue | both` 标记所属轨道，其中 `both` 表示共享。攻击与防御文档通过索引元数据和 `defends` 关联；实际目录为准，并非每篇文章都存在一对一对应项。
 

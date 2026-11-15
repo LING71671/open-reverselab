@@ -4,13 +4,13 @@ description: Download the Open ReverseLab Windows desktop beta, install knowledg
 ---
 # Desktop installation and updates
 
-[Download v2.0.0-beta1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1) for Windows x64 as an installer or portable ZIP. The desktop packages do not bundle a knowledge base or MCP server. Import knowledge packs and add MCP connections in the application after installation.
+[Download v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2) for Windows x64 as an installer or portable ZIP. The desktop packages do not bundle a knowledge base or MCP server. Import knowledge packs and add MCP connections in the application after installation.
 
 ## Windows installation
 
 1. Install Python 3.11+, make `python` available on PATH, and install Microsoft Edge WebView2 Runtime.
 2. Download and run the `-setup.exe` installer, or extract the complete portable ZIP and launch `OpenReverseLab.exe`.
-3. Start the application and save your provider's API endpoint, API key, and model ID in Settings. Model-assisted work uses the saved configuration.
+3. Start the application and save your provider's API endpoint, API key, and model ID in Settings. If the provider offers a model catalog, switch models directly in the Goal composer.
 4. Choose a workspace and create a Goal with a file, directory, or URL target and the result you want. Basic SHA256 verification can run locally.
 
 First launch creates a default workspace. You can also create or open other directories. Workspaces hold samples, Goals, evidence, and reports. Keep them outside the installation directory. Install external tools such as Ghidra and Frida separately as needed.
@@ -29,7 +29,7 @@ Switching red, blue, and both restores each strategy's selected Goal. Unsent dra
 
 ## Install knowledge and MCP
 
-The desktop runtime and knowledge packs are distributed independently. Open **Extensions**, enter `https://github.com/LING71671/open-reverselab-knowledge`, read the catalog, and install the official knowledge pack. Other repositories, local folders, and ZIPs work too. Sources stores catalogs for later browsing.
+The desktop runtime and knowledge packs are distributed independently. Open **Extensions → Sources**, browse **Open ReverseLab official knowledge**, and install the pack. Other repositories, local folders, and ZIPs work too. Sources stores catalogs for later browsing.
 
 Knowledge packs can be enabled, disabled, removed, and exported. For GitHub installations, choose **Check for updates**, then **Update to …** to install the version found on the source repository's default branch. Selected-network export includes referenced methods and documents; the ZIP can be imported again. Running Goals retain pinned documents, methods, and networks when packs are updated.
 

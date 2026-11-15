@@ -4,13 +4,13 @@ description: 下载 Open ReverseLab Windows 桌面测试版，安装知识库扩
 ---
 # 桌面端安装与更新
 
-[下载 v2.0.0-beta1](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1)，提供 Windows x64 安装版与便携版。桌面包不内置知识库或 MCP 服务；安装后可在应用中导入知识包、添加 MCP 连接。
+[下载 v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2)，提供 Windows x64 安装版与便携版。桌面包不内置知识库或 MCP 服务；安装后可在应用中导入知识包、添加 MCP 连接。
 
 ## Windows 安装
 
 1. 安装 Python 3.11+，确保终端能执行 `python`，并安装 Microsoft Edge WebView2 Runtime。
 2. 从发布页下载 `-setup.exe` 安装包并运行，或完整解压便携 ZIP 后启动 `OpenReverseLab.exe`。
-3. 启动应用，在设置中保存模型提供商的 API 地址、API Key 和模型 ID。模型使用已保存配置，不会代选提供商。
+3. 启动应用，在设置中保存模型提供商的 API 地址、API Key 和模型 ID。提供商支持模型列表时，可在 Goal 输入区直接切换模型。
 4. 选择工作区，新建 Goal，分别填写文件、目录或 URL 目标，以及希望完成的结果。基础 SHA256 核验可以在本地完成。
 
 首次启动会创建默认工作区，也可以新建或打开其他目录。样本、Goal、证据与报告保存在工作区中。工作区放在安装目录之外；Ghidra、Frida 等外部工具按任务单独安装。
@@ -29,7 +29,7 @@ Goal 与就绪动作的并发数量默认不设上限。时间和 Token 预算�
 
 ## 安装知识库与 MCP
 
-桌面运行时与知识包独立分发。打开侧栏**扩展**，输入 `https://github.com/LING71671/open-reverselab-knowledge`，读取目录后安装官方知识包。也可导入其他仓库、文件夹或 ZIP；市场源用于保存和浏览扩展目录。
+桌面运行时与知识包独立分发。打开侧栏**扩展 → 市场源**，浏览 **Open ReverseLab 官方知识库**并安装。也可导入其他仓库、文件夹或 ZIP；市场源用于保存和浏览扩展目录。
 
 知识包可启用、停用、移除和导出。GitHub 安装可点击**检查更新**，再点击**更新到…**，安装来源仓库默认分支上的新版。选择网络导出时会带上引用的方法与文档，ZIP 可再次导入。进行中的 Goal 固定文档、方法与网络版本，后续更新不会替换已有引用。
 

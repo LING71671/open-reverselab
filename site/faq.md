@@ -6,7 +6,7 @@
 
 ## 从哪里下载桌面端？
 
-从 [v2.0.0-beta1 发布页](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta1)下载 Windows x64 安装版或便携 ZIP，配置见[桌面指南](./desktop.md)。桌面包不内置知识库或 MCP 服务：在应用**扩展**页面输入 `https://github.com/LING71671/open-reverselab-knowledge` 安装官方知识包，MCP 连接单独添加。
+从 [v2.0.0-beta2 发布页](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2)下载 Windows x64 安装版或便携 ZIP，配置见[桌面指南](./desktop.md)。桌面包不内置知识库或 MCP 服务：在应用**扩展 → 市场源**中浏览 **Open ReverseLab 官方知识库**并安装，MCP 连接单独添加。
 
 macOS/Linux 可使用仓库的 CLI/MCP 工作流，目前没有这两个平台的桌面二进制。完整说明见 [桌面端指南](https://github.com/LING71671/open-reverselab/blob/main/desktop/README.zh-CN.md)。
 
