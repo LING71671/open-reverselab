@@ -39,6 +39,8 @@ Typed relations include `depends_on`, `enables`, `composes_with`, `defends`, `de
 
 ## Storage, updates, and export
 
+For knowledge installed from GitHub, choose **Check for updates** on its installed entry, then **Update to …**. Discovery checks the original repository's default branch and package path, including installations reached through a pinned catalog. Only a higher SemVer content version is offered; the update installs the exact commit inspected. Checking does not replace content. A failed update leaves the installed version active, and a disabled pack stays disabled after updating. Local folders and ZIPs use manual import of the new content.
+
 The store uses `REVERSELAB_EXTENSIONS_DIR`, otherwise `REVERSELAB_DATA_DIR/extensions`, otherwise the user's `.open-reverselab/extensions`. MCP connection values are local application data, separate from package payloads. Python and third-party tools are installed separately.
 
 Import validates paths, archive members, hashes, references, features, and dependencies before atomic registry activation. It rejects traversal/absolute paths, links, duplicate names, and case collisions. Installing a newer version from the same source disables the old version and retains its bytes. Goals use pinned IDs/digests. Removing an extension excludes it from new selections, retains pinned content, and disables required dependents. Disabling a package needed by enabled dependents is rejected with their IDs.
@@ -64,6 +66,6 @@ python scripts/misc/extension_protocol.py check path/to/extension.zip
 python scripts/misc/extension_protocol.py migrate path/to/draft.zip path/to/v1.zip
 ```
 
-`desktop_extensions.py` accepts one stdin JSON request with `operation`: `list`, `inspect`, `install`, `enable`, `remove`, `export`, `sources/list`, `sources/add`, `sources/remove`, `sources/refresh`, `pin`, `catalog`, `graph`, `get`, `read`, `resolve`, or `neighbors`. Selected-network export adds `networkIds` to `export`. `desktop_mcp.py` supports `list`, `configure`, `remove`, `connect`, `disconnect`, `call`, and `read`. Each returns one JSON result.
+`desktop_extensions.py` accepts one stdin JSON request with `operation`: `list`, `inspect`, `install`, `updates/check`, `updates/install`, `enable`, `remove`, `export`, `sources/list`, `sources/add`, `sources/remove`, `sources/refresh`, `pin`, `catalog`, `graph`, `get`, `read`, `resolve`, or `neighbors`. Selected-network export adds `networkIds` to `export`. `desktop_mcp.py` supports `list`, `configure`, `remove`, `connect`, `disconnect`, `call`, and `read`. Each returns one JSON result.
 
 Check structure, then test actual import/export/reimport and relevant MCP behavior separately. A descriptor check does not demonstrate server reachability or successful tool execution. Publishing a package, desktop release, or source catalog remains a separate action.

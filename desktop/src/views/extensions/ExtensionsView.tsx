@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Loader2, Plus, RefreshCw, Upload, X } from "lucide-react";
 import { isTauri } from "@tauri-apps/api/core";
-import type { ExtensionEntry, ExtensionInspection, ExtensionSource, InstalledExtension, McpConnection } from "../../core/contracts/extensions";
+import type { ExtensionEntry, ExtensionInspection, ExtensionSource, InstalledExtension, KnowledgeUpdate, McpConnection } from "../../core/contracts/extensions";
 import { nativeBridge } from "../../services/native/nativeBridge";
 import { McpConfiguration } from "./McpConfiguration";
 import "./extensions.css";
@@ -21,6 +21,7 @@ export function ExtensionsView({ active }: { active: boolean }) {
   const [connections, setConnections] = useState<McpConnection[]>([]);
   const [sources, setSources] = useState<ExtensionSource[]>([]);
   const [inspection, setInspection] = useState<ExtensionInspection | null>(null);
+  const [updates, setUpdates] = useState<Record<string, KnowledgeUpdate>>({});
   const [source, setSource] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [busy, setBusy] = useState("");
@@ -94,6 +95,22 @@ export function ExtensionsView({ active }: { active: boolean }) {
     changed(); await reload(signal); setNotice(`已安装 ${entry.title}`);
   });
   const isInstalled = (entry: ExtensionEntry) => installed.some(item => item.id === entry.id && item.version === entry.version && item.kind === entry.kind && item.source.identity === entry.source?.identity);
+  const checkUpdate = (entry: InstalledExtension) => run(`正在检查 ${entry.title} 更新`, async signal => {
+    setUpdates(previous => { const next = { ...previous }; delete next[entry.installationId]; return next; });
+    const result = await nativeBridge.extensions<KnowledgeUpdate>({ operation: "updates/check", installationId: entry.installationId }, { signal });
+    setUpdates(previous => ({ ...previous, [entry.installationId]: result }));
+  });
+  const applyUpdate = (entry: InstalledExtension) => run(`正在更新 ${entry.title}`, async signal => {
+    const update = updates[entry.installationId];
+    if (!update?.inspectionId || !update.available) return;
+    const result = await nativeBridge.extensions<{ entry: InstalledExtension }>({ operation: "updates/install", installationId: entry.installationId, inspectionId: update.inspectionId }, { signal });
+    setUpdates(previous => { const next = { ...previous }; delete next[entry.installationId]; return next; });
+    changed(); await reload(signal); setNotice(`已更新到 ${result.entry.version}，已有 Goal 继续使用原版本`);
+  });
+  const renderUpdate = (entry: InstalledExtension) => entry.kind === "knowledge" && entry.source.identity?.startsWith("https://github.com/") ? <>
+    <button className="text-button" disabled={Boolean(busy)} onClick={() => void checkUpdate(entry)}>检查更新</button>
+    {updates[entry.installationId]?.available ? <button className="text-button" disabled={Boolean(busy)} onClick={() => void applyUpdate(entry)}>更新到 {updates[entry.installationId].latestVersion}</button> : updates[entry.installationId]?.message && <span role="status">{updates[entry.installationId].message}</span>}
+  </> : null;
   const mutate = (entry: InstalledExtension, operation: "enable" | "remove") => run(operation === "remove" ? "正在移除扩展" : "正在更新扩展", async signal => {
     const result = await nativeBridge.extensions<{ disabledDependents?: string[] }>({ operation, installationId: entry.installationId, ...(operation === "enable" ? { enabled: !entry.enabled } : {}) }, { signal });
     if (operation === "remove") { setRemoving(null); if (configuration !== "new" && configuration?.installationId === entry.installationId) setConfiguration(null); }
@@ -162,7 +179,7 @@ export function ExtensionsView({ active }: { active: boolean }) {
           const connection = entryConnection(entry);
           return <article className="extension-installed" key={entry.installationId}>
             <div className="extension-row"><div className="extension-row-content"><h3>{entry.title}<small>{entry.version}</small></h3>{entry.description && <p>{entry.description}</p>}<p className="extension-meta" title={sourceLabel(entry.source)}>{sourceLabel(entry.source)}</p>{kind === "mcp" && (connection ? renderConnection(connection) : <span className="extension-status">待配置</span>)}</div><label className="extension-switch"><input type="checkbox" role="switch" checked={entry.enabled} aria-label={`启用 ${entry.title}`} disabled={Boolean(busy)} onChange={() => void mutate(entry, "enable")} /><span>{entry.enabled ? "已启用" : "已停用"}</span></label></div>
-            <div className="extension-row-actions">{kind === "mcp" && <><button className="text-button" disabled={Boolean(busy)} onClick={() => setConfiguration(entry)}>配置</button>{connection && <><button className="text-button" disabled={Boolean(busy) || !entry.enabled} onClick={() => void mcpAction(connection, "connect")}>验证连接</button>{connection.status === "ready" && <button className="text-button" disabled={Boolean(busy)} onClick={() => void mcpAction(connection, "disconnect")}>断开</button>}</>}</>}<button className="text-button" disabled={Boolean(busy)} onClick={() => void exportEntry(entry)}>导出 ZIP</button>{kind === "kb" && <button className="text-button" disabled={Boolean(busy)} onClick={() => void selectNetworks(entry)}>选择网络导出</button>}{removing === entry.installationId ? <><span>移除扩展？</span><button className="text-button" disabled={Boolean(busy)} onClick={() => setRemoving(null)}>取消</button><button className="text-button danger-text" disabled={Boolean(busy)} onClick={() => void mutate(entry, "remove")}>确认移除</button></> : <button className="text-button" disabled={Boolean(busy)} onClick={() => setRemoving(entry.installationId)}>移除</button>}</div>
+            <div className="extension-row-actions">{renderUpdate(entry)}{kind === "mcp" && <><button className="text-button" disabled={Boolean(busy)} onClick={() => setConfiguration(entry)}>配置</button>{connection && <><button className="text-button" disabled={Boolean(busy) || !entry.enabled} onClick={() => void mcpAction(connection, "connect")}>验证连接</button>{connection.status === "ready" && <button className="text-button" disabled={Boolean(busy)} onClick={() => void mcpAction(connection, "disconnect")}>断开</button>}</>}</>}<button className="text-button" disabled={Boolean(busy)} onClick={() => void exportEntry(entry)}>导出 ZIP</button>{kind === "kb" && <button className="text-button" disabled={Boolean(busy)} onClick={() => void selectNetworks(entry)}>选择网络导出</button>}{removing === entry.installationId ? <><span>移除扩展？</span><button className="text-button" disabled={Boolean(busy)} onClick={() => setRemoving(null)}>取消</button><button className="text-button danger-text" disabled={Boolean(busy)} onClick={() => void mutate(entry, "remove")}>确认移除</button></> : <button className="text-button" disabled={Boolean(busy)} onClick={() => setRemoving(entry.installationId)}>移除</button>}</div>
             {networkSelection?.installationId === entry.installationId && <fieldset className="extension-networks"><legend>选择网络</legend>{networkSelection.networks.map(network => <label key={network.id}><input type="checkbox" checked={networkSelection.selected.includes(network.id)} disabled={Boolean(busy)} onChange={event => setNetworkSelection(previous => previous && ({ ...previous, selected: event.target.checked ? [...previous.selected, network.id] : previous.selected.filter(id => id !== network.id) }))} /><span>{network.title.endsWith(` · ${network.track}`) ? network.title.slice(0, -(` · ${network.track}`).length) : network.title}<small>{network.track}</small></span></label>)}<div className="extension-form-actions"><button className="text-button" disabled={Boolean(busy)} onClick={() => setNetworkSelection(null)}>取消</button><button className="secondary-button" disabled={Boolean(busy) || !networkSelection.selected.length} onClick={() => void exportEntry(entry, networkSelection.selected)}>导出所选网络</button></div></fieldset>}
             {configuration !== "new" && configuration?.installationId === entry.installationId && <McpConfiguration key={entry.installationId} entry={entry} connection={connection} busy={Boolean(busy)} onClose={() => setConfiguration(null)} onSave={request => void run("正在保存配置", async signal => { await nativeBridge.mcp(request, { signal }); setConfiguration(null); changed(); await reload(signal); setNotice("配置已保存，可验证连接"); })} />}
           </article>;

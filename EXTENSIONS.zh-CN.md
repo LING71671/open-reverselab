@@ -39,6 +39,8 @@
 
 ## 存储、更新与导出
 
+从 GitHub 安装的知识包可在已安装条目上点击**检查更新**，发现新版后点击**更新到…**。检查读取原仓库默认分支与原包路径，通过固定目录提交安装的包也遵循此规则。只提供更高的 SemVer 内容版本，实际安装固定为检查时找到的提交。检查本身不替换内容，更新失败时原版本保持可用；已停用的包更新后仍保持停用。本地文件夹与 ZIP 通过手动导入新内容更新。
+
 扩展优先存放在 `REVERSELAB_EXTENSIONS_DIR`，其次为 `REVERSELAB_DATA_DIR/extensions`，默认使用用户目录的 `.open-reverselab/extensions`。MCP 配置值属于本机应用数据，与包内容分开保存。Python 和第三方工具单独安装。
 
 导入先检查路径、压缩成员、摘要、引用、能力和依赖，再原子激活登记条目。拒绝目录穿越、绝对路径、链接、重名与大小写冲突。同一来源安装新版本后停用旧版本并保留文件。Goal 固定安装 ID 与摘要。移除扩展后不再供新任务选择，保留固定内容，并停用必需依赖者。停用仍被其他启用包依赖的扩展时会拒绝操作并返回依赖者 ID。
@@ -64,6 +66,6 @@ python scripts/misc/extension_protocol.py check path/to/extension.zip
 python scripts/misc/extension_protocol.py migrate path/to/draft.zip path/to/v1.zip
 ```
 
-`desktop_extensions.py` 从 stdin 接受一个 JSON 请求，`operation` 可为 `list`、`inspect`、`install`、`enable`、`remove`、`export`、`sources/list`、`sources/add`、`sources/remove`、`sources/refresh`、`pin`、`catalog`、`graph`、`get`、`read`、`resolve`、`neighbors`。导出所选网络在 `export` 请求中增加 `networkIds`。`desktop_mcp.py` 支持 `list`、`configure`、`remove`、`connect`、`disconnect`、`call`、`read`。每次返回一个 JSON 结果。
+`desktop_extensions.py` 从 stdin 接受一个 JSON 请求，`operation` 可为 `list`、`inspect`、`install`、`updates/check`、`updates/install`、`enable`、`remove`、`export`、`sources/list`、`sources/add`、`sources/remove`、`sources/refresh`、`pin`、`catalog`、`graph`、`get`、`read`、`resolve`、`neighbors`。导出所选网络在 `export` 请求中增加 `networkIds`。`desktop_mcp.py` 支持 `list`、`configure`、`remove`、`connect`、`disconnect`、`call`、`read`。每次返回一个 JSON 结果。
 
 先检查结构，再分别测试实际导入、导出后重新导入及所需 MCP 行为。描述文件检查不代表服务可达或工具调用成功。发布包、桌面版本和来源目录仍属于单独操作。

@@ -51,6 +51,17 @@ export interface ExtensionSource {
   error?: string;
 }
 
+export interface KnowledgeUpdate {
+  installationId: string;
+  currentVersion: string;
+  status: "available" | "current" | "superseded" | "manual";
+  available: boolean;
+  latestVersion?: string;
+  inspectionId?: string;
+  entry?: ExtensionEntry;
+  message?: string;
+}
+
 export interface McpTool {
   id: string;
   name: string;

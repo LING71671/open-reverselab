@@ -19,6 +19,10 @@ def dispatch(request: dict, store: ExtensionStore | None = None) -> dict:
         return store.inspect(request.get("source", ""), migrate_draft=request.get("migrateDraft", False), archive_base64=request.get("archiveBase64"), filename=request.get("filename", "package.zip"))
     if operation == "install":
         return {"entry": store.install(request["inspectionId"], request["entryId"])}
+    if operation == "updates/check":
+        return store.check_update(request["installationId"])
+    if operation == "updates/install":
+        return {"entry": store.update(request["installationId"], request["inspectionId"])}
     if operation == "enable":
         return {"entry": store.enable(request["installationId"], request.get("enabled", True))}
     if operation == "remove":

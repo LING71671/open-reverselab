@@ -3,9 +3,9 @@
     {
       "id": "org.open-reverselab.knowledge",
       "kind": "knowledge",
-      "repository": "https://github.com/LING71671/open-reverselab-knowledge/tree/561cbfe6dc40b489ebedee0a7ddf48ccf99109be",
+      "repository": "https://github.com/LING71671/open-reverselab-knowledge/tree/b2f5b45f023bcc5181bbab08723fcdf664b9342c",
       "title": "Open ReverseLab knowledge",
-      "version": "1.0.1"
+      "version": "1.0.2"
     }
   ],
   "id": "org.open-reverselab.registry",

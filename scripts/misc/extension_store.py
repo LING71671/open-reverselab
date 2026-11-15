@@ -36,6 +36,32 @@ def _hash(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def compare_versions(left: str, right: str) -> int:
+    """SemVer precedence; build metadata does not create an upgrade."""
+    def parts(version: str):
+        protocol.require(bool(re.fullmatch(protocol.SEMVER, version)), "Invalid content version")
+        core, separator, prerelease = version.split("+", 1)[0].partition("-")
+        return tuple(map(int, core.split("."))), prerelease.split(".") if separator else []
+
+    left_core, left_pre = parts(left)
+    right_core, right_pre = parts(right)
+    if left_core != right_core:
+        return 1 if left_core > right_core else -1
+    if not left_pre or not right_pre:
+        return (not left_pre) - (not right_pre)
+    for first, second in zip(left_pre, right_pre):
+        if first == second:
+            continue
+        if first.isdigit() and second.isdigit():
+            if int(first) != int(second):
+                return 1 if int(first) > int(second) else -1
+            continue
+        if first.isdigit() != second.isdigit():
+            return -1 if first.isdigit() else 1
+        return 1 if first > second else -1
+    return (len(left_pre) > len(right_pre)) - (len(left_pre) < len(right_pre))
+
+
 def _atomic_json(path: Path, value: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
@@ -130,6 +156,8 @@ def _read_url(url: str, *, optional: bool = False, github_recursive: bool = Fals
     except HTTPError as error:
         if optional and (error.code == 404 or (error.code == 422 and "/commits/" in url)):
             return None
+        if error.code == 429 or (error.code == 403 and error.headers.get("X-RateLimit-Remaining") == "0"):
+            raise ValueError("GitHub 请求已限流，请稍后重试；已安装的知识库仍可使用") from None
         raise ValueError(f"Source request failed (HTTP {error.code})") from None
 
 
@@ -144,9 +172,9 @@ def resolve_github(url: str) -> dict:
     repo = repo.removesuffix(".git")
     protocol.require(bool(re.fullmatch(r"[A-Za-z0-9_.-]+", owner)) and bool(re.fullmatch(r"[A-Za-z0-9_.-]+", repo)), "Invalid GitHub repository")
     api = f"https://api.github.com/repos/{owner}/{repo}"
-    metadata = protocol.object_json(_read_url(api), "GitHub repository")
     path = ""
     if len(parts) == 2:
+        metadata = protocol.object_json(_read_url(api), "GitHub repository")
         ref = metadata["default_branch"]
         commit = protocol.object_json(_read_url(api + "/commits/" + quote(ref, safe="")), "GitHub commit")["sha"]
     else:
@@ -532,7 +560,7 @@ class ExtensionStore:
         for reference, group in refs:
             protocol.require(reference in groups[group] or reference.split("/", 1)[0] in optional_missing, "Unresolved external " + group + " reference: " + reference)
 
-    def install(self, inspection_id: str, entry_id: str) -> dict:
+    def install(self, inspection_id: str, entry_id: str, *, updating: str | None = None) -> dict:
         inspection, stage = self._inspection(inspection_id)
         entry = next((item for item in inspection["entries"] if item["id"] == entry_id), None)
         protocol.require(entry is not None, "Unknown inspection entryId")
@@ -546,6 +574,15 @@ class ExtensionStore:
         with _file_lock(self.lock_path):
             registry = self._registry()
             previous = registry["installations"]
+            enabled = True
+            if updating is not None:
+                current = next((item for item in previous if item["installationId"] == updating and not item.get("removed")), None)
+                protocol.require(current is not None, "Knowledge installation was removed; refresh the list")
+                self._validate_update(current, entry)
+                protocol.require(not any(item["source"]["identity"] == identity and item["id"] == entry["id"] and not item.get("removed")
+                                         and compare_versions(item["version"], current["version"]) > 0 for item in previous),
+                                 "A newer version is already installed; refresh the list")
+                enabled = current["enabled"]
             for item in previous:
                 if item["source"]["identity"] == identity and item["id"] == manifest["id"] and item["version"] == manifest["version"]:
                     protocol.require(item["digest"] == entry["digest"], "Same source/id/version has different content; publish a new version")
@@ -564,10 +601,48 @@ class ExtensionStore:
             for item in previous:
                 if item["source"]["identity"] == identity and item["id"] == manifest["id"]:
                     item["enabled"] = False
-            record = {**self._summary(manifest), "installationId": installation_id, "source": entry["source"], "digest": entry["digest"], "enabled": True, "removed": False, "dependencies": dependencies, "warnings": warnings}
+            record = {**self._summary(manifest), "installationId": installation_id, "source": entry["source"], "digest": entry["digest"], "enabled": enabled, "removed": False, "dependencies": dependencies, "warnings": warnings}
             registry["installations"] = [item for item in previous if item["installationId"] != installation_id] + [record]
             _atomic_json(self.registry_path, registry)
         return self._record(record)
+
+    @staticmethod
+    def _validate_update(current: dict, candidate: dict) -> None:
+        protocol.require(current["kind"] == candidate["kind"] == "knowledge" and current["id"] == candidate["id"], "Update must match the installed knowledge package")
+        protocol.require(current["source"]["identity"] == candidate["source"]["identity"], "Update source differs from the installed knowledge package")
+        protocol.require(compare_versions(candidate["version"], current["version"]) > 0, "Update requires a newer content version")
+
+    def check_update(self, installation_id: str) -> dict:
+        current = self.get(installation_id)
+        protocol.require(current["kind"] == "knowledge" and not current.get("removed"), "Select an installed knowledge package")
+        result = {"installationId": installation_id, "currentVersion": current["version"], "available": False}
+        identity = current["source"]["identity"]
+        if not identity.startswith("https://github.com/"):
+            return {**result, "status": "manual", "message": "此知识包来自本地文件，请通过原来源导入新版本"}
+        for item in self.list():
+            if item["id"] == current["id"] and item["source"]["identity"] == identity and compare_versions(item["version"], current["version"]) > 0:
+                return {**result, "status": "superseded", "message": "已安装更新版本，请在该版本上检查更新"}
+        # Installation commits stay pinned; discovery follows the source's
+        # default branch, including packages reached through pinned catalogs.
+        source = resolve_github(identity)
+        path = current["source"].get("path", "")
+        url = identity + "/tree/" + source["commit"] + ("/" + quote(path, safe="/") if path else "")
+        inspection = self.inspect(url)
+        candidate = next((entry for entry in inspection["entries"] if entry["id"] == current["id"] and entry["kind"] == "knowledge"
+                          and entry["source"]["identity"] == identity), None)
+        protocol.require(candidate is not None, "The source no longer lists this knowledge package")
+        if compare_versions(candidate["version"], current["version"]) <= 0:
+            return {**result, "status": "current", "message": "没有更高版本", "latestVersion": candidate["version"]}
+        return {**result, "status": "available", "available": True, "latestVersion": candidate["version"],
+                "inspectionId": inspection["inspectionId"], "entry": candidate}
+
+    def update(self, installation_id: str, inspection_id: str) -> dict:
+        current = self.get(installation_id)
+        inspection, _ = self._inspection(inspection_id)
+        candidate = next((entry for entry in inspection["entries"] if entry["id"] == current["id"]), None)
+        protocol.require(candidate is not None, "Update inspection does not contain this package")
+        self._validate_update(current, candidate)
+        return self.install(inspection_id, current["id"], updating=installation_id)
 
     def enable(self, installation_id: str, enabled: bool = True) -> dict:
         protocol.require(isinstance(enabled, bool), "enabled must be boolean")

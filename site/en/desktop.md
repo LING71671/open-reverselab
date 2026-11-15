@@ -27,7 +27,7 @@ The transcript presents analysis progress, with expandable plans, scripts, tool 
 
 The desktop runtime and knowledge packs are distributed independently. Open **Extensions**, enter `https://github.com/LING71671/open-reverselab-knowledge`, read the catalog, and install the official knowledge pack. Other repositories, local folders, and ZIPs work too. Sources stores catalogs for later browsing.
 
-Knowledge packs can be enabled, disabled, removed, and exported. Selected-network export includes referenced methods and documents; the ZIP can be imported again. Running Goals retain pinned versions when packs are updated.
+Knowledge packs can be enabled, disabled, removed, and exported. For GitHub installations, choose **Check for updates**, then **Update to …** to install the version found on the source repository's default branch. Selected-network export includes referenced methods and documents; the ZIP can be imported again. Running Goals retain pinned documents, methods, and networks when packs are updated.
 
 Under MCP, import a descriptor or add a standalone connection, configure a stdio command or Streamable HTTP endpoint, then verify the connection to discover tools and resources. Connection values stay local and are excluded from knowledge exports.
 
