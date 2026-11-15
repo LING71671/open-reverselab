@@ -2,7 +2,7 @@
 
 [简体中文](RELEASING.zh-CN.md)
 
-The `v2.0.0-beta1` distribution packages only the desktop runtime. Knowledge packs and MCP servers are independent extensions. The earlier `v2.0.0-beta.1` tag remains unchanged.
+The `v2.0.0-beta2` distribution packages only the desktop runtime. Knowledge packs and MCP servers are independent extensions. The earlier `v2.0.0-beta.1` tag remains unchanged.
 
 Python 3.11+, WebView2, and external analysis tools are separate dependencies; see the [desktop guide](site/en/desktop.md).
 
@@ -58,7 +58,7 @@ The portable ZIP expands to `OpenReverseLab-<VERSION>/`; its launcher is `OpenRe
 
 ## Publish and update channels
 
-Use tag `v<VERSION>` at the same commit used for staging and building. Create a draft GitHub Release, pass the notes through `--notes-file`, and upload the complete asset set. Confirm that the manifest version, platform entry, installer URL, signature, and checksums match those assets. For `v2.0.0-beta1`, publish without GitHub's prerelease flag and mark it Latest so the repository sidebar displays the current desktop download. Keep beta in the version and release title; the desktop Stable channel still excludes this SemVer prerelease.
+Use tag `v<VERSION>` at the same commit used for staging and building. Create a draft GitHub Release, pass the notes through `--notes-file`, and upload the complete asset set. Confirm that the manifest version, platform entry, installer URL, signature, and checksums match those assets. For `v2.0.0-beta2`, publish without GitHub's prerelease flag and mark it Latest so the repository sidebar displays the current desktop download. Keep beta in the version and release title; the desktop Stable channel still excludes this SemVer prerelease.
 
 The desktop discovers releases through the public GitHub Releases API:
 

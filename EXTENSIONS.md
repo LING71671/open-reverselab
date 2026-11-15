@@ -8,7 +8,7 @@ The desktop includes an **Extensions** page for installing knowledge packs and M
 
 Open **Extensions** in the sidebar. **Knowledge** and **MCP** show installed entries; **Sources** stores catalogs to browse later.
 
-Current source builds include **Open ReverseLab official knowledge** under **Sources**, pointing to `https://github.com/LING71671/open-reverselab-knowledge`. Choose **Browse**, then **Install**. The address is available offline and is also added to existing profiles; knowledge is downloaded only when requested. Removing the source is remembered, and it can be added again. In the published `v2.0.0-beta1`, add the same address manually.
+From v2.0.0-beta2, the application includes **Open ReverseLab official knowledge** under **Sources**, pointing to `https://github.com/LING71671/open-reverselab-knowledge`. Choose **Browse**, then **Install**. The address is available offline and is also added to existing profiles; knowledge is downloaded only when requested. Removing the source is remembered, and it can be added again. In the published `v2.0.0-beta1`, add the same address manually.
 
 1. Paste a GitHub repository, tree/folder, manifest, or release ZIP link and choose **Read**, or choose **Import ZIP**. Local package directories and ZIP paths also work.
 2. Select an inspected entry and install it. Reading a source or installing an MCP descriptor does not start its server.

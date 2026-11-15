@@ -4,6 +4,13 @@
 
 Notable changes to Open ReverseLab.
 
+## [2.0.0-beta2] - 2026-11-15
+
+- Fixed creation and opening of empty workspaces in the installed app. A native response with no saved history no longer falls through to a browser endpoint and produces an HTML/JSON parse error.
+- Added the official knowledge repository to extension Sources. Browse and install it from the app; existing profiles receive the source address, and removing it is remembered. Knowledge content remains a separate download.
+- Added direct model selection in the Goal composer for providers with a model catalog. Selection is shared with Settings and retained after restart; the provider button still opens configuration.
+- Aligned the target label and input text and refined the model controls in light and dark themes.
+
 ## [2.0.0-beta1] - 2026-11-15
 
 ### Desktop and extension distribution
