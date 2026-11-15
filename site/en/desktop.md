@@ -19,9 +19,13 @@ First launch creates a default workspace. You can also create or open other dire
 
 Select a strategy at the top left. Red organizes analysis hypotheses and observation paths; blue uses defense guidance to examine behavior and controls. Both runs the two strategies in parallel. Each can plan multiple actions, exchange evidence during execution, and assess its own responsibilities before the combined objective is checked.
 
+New tool evidence from a peer can reopen a blocked branch for further planning, forks, and joins. Repeated observations do not keep restarting the same route. When a target file has a measured SHA256, observations and verification are associated with that content version.
+
 Goals and ready actions have no default concurrency cap. Time and token budgets are also optional. Adding requirements during a run keeps the same Goal's evidence and history and applies the new objective at an execution boundary. Stopping cancels execution and retains recorded progress.
 
 The transcript presents analysis progress, with expandable plans, scripts, tool output, and verification details. The canvas shows actual dependencies and evidence links, with card details, zoom, execution follow, and full-screen mode.
+
+Switching red, blue, and both restores each strategy's selected Goal. Unsent drafts are saved locally per workspace and Goal, so editing can continue after switching workspaces or reloading.
 
 ## Install knowledge and MCP
 
