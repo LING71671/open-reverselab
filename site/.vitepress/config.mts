@@ -56,6 +56,7 @@ const zhThemeConfig = {
     { text: '桌面端', link: '/desktop' },
     { text: '知识库', items: [
       { text: '知识库总览', link: '/kb/README' },
+      { text: '知识库仓库', link: 'https://github.com/LING71671/open-reverselab-knowledge' },
       ...knowledgeNav,
     ] },
     { text: '工具', link: '/mcp-tools' },
@@ -93,6 +94,7 @@ const enThemeConfig = {
     { text: 'Desktop', link: '/en/desktop' },
     { text: 'Knowledge', items: [
       { text: 'Knowledge overview', link: '/en/kb/README' },
+      { text: 'Knowledge repository', link: 'https://github.com/LING71671/open-reverselab-knowledge' },
       ...toEnNavigation(knowledgeNav),
     ] },
     { text: 'Tools', link: '/en/mcp-tools' },

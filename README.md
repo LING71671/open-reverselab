@@ -10,7 +10,7 @@ Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · M
 
 <p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
 
-<p><a href="#build-the-desktop"><strong>Build the desktop preview</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="kb/README.md">Knowledge base</a></p>
+<p><a href="#build-the-desktop"><strong>Build the desktop preview</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">Knowledge base</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -59,16 +59,18 @@ The desktop executes target triage, Python actions, and tools discovered through
 
 ## Knowledge base and MCP
 
-The **Extensions** page imports knowledge packs and MCP descriptors from GitHub repositories, catalogs, folders, or ZIP files. Install the official knowledge pack by entering `https://github.com/LING71671/open-reverselab`; the desktop runtime is distributed separately. Packs can be enabled, disabled, and exported, including selected networks with their referenced documents. MCP connections support stdio and Streamable HTTP. See the [v1 protocol and usage](EXTENSIONS.md) and [authoring skill](tools/skills/create-reverselab-extension/SKILL.md).
+Knowledge sources live in [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge). This repository pins that content through the `kb` Git submodule. For an existing checkout, run `git submodule update --init --recursive`. Submit knowledge changes in the knowledge repository.
+
+The **Extensions** page imports knowledge packs and MCP descriptors from GitHub repositories, catalogs, folders, or ZIP files. Install the official knowledge pack by entering `https://github.com/LING71671/open-reverselab-knowledge`; the desktop runtime is distributed separately. Packs can be enabled, disabled, and exported, including selected networks with their referenced documents. MCP connections support stdio and Streamable HTTP. See the [v1 protocol and usage](EXTENSIONS.md) and [authoring skill](tools/skills/create-reverselab-extension/SKILL.md).
 
 The knowledge base covers Web/CTF, Android/APK, Windows/PE, and general topics such as cryptography and protocols. Articles carry `track: red | blue | both`; `both` articles are shared. Related attack and defense articles are linked through index metadata and `defends` references. The current catalog is the source of truth; not every article has a one-to-one counterpart.
 
 | Area | Knowledge entry | Tool examples |
 | --- | --- | --- |
-| Web / CTF | [Web knowledge](kb/shared/ctf-website/README.md) | `kb_router`, `http_probe`, `run_ctf_tool` |
-| Android / APK | [APK knowledge](kb/shared/apk-reverse/README.md) | `android_app_baseline`, `android_crypto_unpack_recipe` |
-| Windows / PE | [PE knowledge](kb/shared/pe-reverse/README.md) | `triage_pe`, `ghidra_headless_analyze`, `sample_full_workup` |
-| General | [Cross-domain knowledge](kb/shared/general/README.md) | `solve_crypto_from_evidence`, `rizin_*` |
+| Web / CTF | [Web knowledge](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/ctf-website/README.md) | `kb_router`, `http_probe`, `run_ctf_tool` |
+| Android / APK | [APK knowledge](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/apk-reverse/README.md) | `android_app_baseline`, `android_crypto_unpack_recipe` |
+| Windows / PE | [PE knowledge](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/pe-reverse/README.md) | `triage_pe`, `ghidra_headless_analyze`, `sample_full_workup` |
+| General | [Cross-domain knowledge](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/general/README.md) | `solve_crypto_from_evidence`, `rizin_*` |
 
 CLI/MCP track selection defaults to `blue`; select `red` or `both` explicitly through `REVERSELAB_MODE`, `--track`, or the MCP track tools. Desktop selection is scoped to its Goals and does not rewrite another client's environment.
 
@@ -82,7 +84,7 @@ python scripts/misc/desktop_kb.py list --track both
 Clone the repository, then use `START_HERE.bat` / `START_HERE.cmd` on Windows or `./START_HERE.sh` on macOS/Linux. These are setup and MCP checks, not the desktop launcher. The reports are written under `reports/misc/`.
 
 ```sh
-git clone https://github.com/LING71671/open-reverselab.git
+git clone --recurse-submodules https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
 ```
 
@@ -116,7 +118,7 @@ pnpm tauri build --no-bundle
 | Location | Purpose |
 | --- | --- |
 | `desktop/` | Desktop UI, queue, execution engine, and Tauri host |
-| `kb/` | Reusable techniques and defense references |
+| `kb/` | Git submodule linking the independent knowledge repository |
 | `scripts/`, `tools/`, `templates/` | Automation, adapters, and templates |
 | `boards/` | Task routing for external AI clients |
 | `site/` | Documentation-site source |

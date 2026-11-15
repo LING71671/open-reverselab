@@ -40,7 +40,7 @@ pnpm dev
 
 `red` 与 `blue` 使用各自的策略和知识路径。`both` 中，两方可以并行安排动作、相互传递证据，画板呈现相应交叉连线。各分支分别核验后，再核验完整目标。
 
-知识库按 [`kb/red/`](../kb/red)、[`kb/blue/`](../kb/blue) 和 [`kb/shared/`](../kb/shared) 分开。red 读取攻击网，blue 读取防御网，两方均可检索共享资料。在**扩展**页面输入 `https://github.com/LING71671/open-reverselab` 安装官方知识包。知识库页面读取已启用的包并关联配对文章；Goal 固定所选版本，更新或移除扩展后已有引用仍可读取。详见[扩展协议](../EXTENSIONS.zh-CN.md)。
+知识库按 [`kb/red/`](https://github.com/LING71671/open-reverselab-knowledge/blob/main/red)、[`kb/blue/`](https://github.com/LING71671/open-reverselab-knowledge/blob/main/blue) 和 [`kb/shared/`](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared) 分开。red 读取攻击网，blue 读取防御网，两方均可检索共享资料。在**扩展**页面输入 `https://github.com/LING71671/open-reverselab-knowledge` 安装官方知识包。知识库页面读取已启用的包并关联配对文章；Goal 固定所选版本，更新或移除扩展后已有引用仍可读取。详见[扩展协议](../EXTENSIONS.zh-CN.md)。
 
 健康监控按 Goal、Agent、模型、知识库、工具和存储汇总已观测事件，没有观测的服务保持未知。执行适配器支持目标初筛、Python 与已发现的 MCP 工具；MCP 预设和独立连接支持 stdio 与 Streamable HTTP，脚本也可调用已安装的库与命令行工具。专用调试器、设备控制及加固适配器需要另行接入。BLA / REA 验收安排见[对抗验证计划](ADVERSARIAL_PROFILES.md)。
 

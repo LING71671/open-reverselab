@@ -3,7 +3,7 @@
 ## 快速了解
 
 - 项目首页: <https://github.com/LING71671/open-reverselab>
-- 知识库结构: [kb/README.md](../kb/README.md)
+- 知识库独立仓库: [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge)
 - 公开/私有边界: [PUBLICATION.md](../PUBLICATION.md)
 
 ## 提交规则
@@ -27,7 +27,7 @@ python scripts/misc/lab_healthcheck.py
 | 模块 | 入口 | 验证 |
 | --- | --- | --- |
 | 桌面端 | [开发指南](../desktop/DEV_GUIDE.md) | `pnpm build`、Goal/流水线与调度测试、相关 Python 测试 |
-| 知识库 | [写作约定](../kb/AI-USAGE.md) | 文档结构、frontmatter、索引与关联路径 |
+| 知识库 | [独立仓库贡献指南](https://github.com/LING71671/open-reverselab-knowledge/blob/main/CONTRIBUTING.zh-CN.md) | 在知识库仓库修改文章与网络，更新本仓库的 `kb` 子模块与目录引用 |
 | 官网 | [站点说明](../site/README.md) | `pnpm build`、中英文与深浅主题、桌面和窄屏操作 |
 | 发布 | [RELEASING.md](../RELEASING.md) | 提交内容扫描、离线检查、干净克隆、版本和制品哈希 |
 

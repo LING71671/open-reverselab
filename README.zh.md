@@ -10,7 +10,7 @@
 
 <p><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-<p><a href="#从源码运行桌面端"><strong>构建桌面预览版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="kb/README.md">知识库</a></p>
+<p><a href="#从源码运行桌面端"><strong>构建桌面预览版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">知识库</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -59,16 +59,18 @@
 
 ## 知识库与 MCP
 
-**扩展**页面支持从 GitHub 仓库、目录清单、本地文件夹或 ZIP 导入知识包和 MCP 描述包。输入 `https://github.com/LING71671/open-reverselab` 即可选择官方知识包，桌面运行时独立分发。知识包支持启停、完整导出和按网络导出关联文档；MCP 支持 stdio 与 Streamable HTTP 连接。详见 [v1 协议与使用说明](EXTENSIONS.zh-CN.md)和[创建 skill](tools/skills/create-reverselab-extension/SKILL.zh-CN.md)。
+知识源码在独立仓库 [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge) 维护，本仓库通过 `kb` Git 子模块固定所引用的内容。已有源码目录执行 `git submodule update --init --recursive` 拉取知识库；文章与网络的修改提交到知识库仓库。
+
+**扩展**页面支持从 GitHub 仓库、目录清单、本地文件夹或 ZIP 导入知识包和 MCP 描述包。输入 `https://github.com/LING71671/open-reverselab-knowledge` 即可选择官方知识包，桌面运行时独立分发。知识包支持启停、完整导出和按网络导出关联文档；MCP 支持 stdio 与 Streamable HTTP 连接。详见 [v1 协议与使用说明](EXTENSIONS.zh-CN.md)和[创建 skill](tools/skills/create-reverselab-extension/SKILL.zh-CN.md)。
 
 知识库覆盖 Web/CTF、Android/APK、Windows/PE，以及密码学、协议等通用主题。文档用 `track: red | blue | both` 标记所属轨道，其中 `both` 表示共享。攻击与防御文档通过索引元数据和 `defends` 关联；实际目录为准，并非每篇文章都存在一对一对应项。
 
 | 领域 | 知识入口 | 工具示例 |
 | --- | --- | --- |
-| Web / CTF | [Web 知识库](kb/shared/ctf-website/README.md) | `kb_router`、`http_probe`、`run_ctf_tool` |
-| Android / APK | [APK 知识库](kb/shared/apk-reverse/README.md) | `android_app_baseline`、`android_crypto_unpack_recipe` |
-| Windows / PE | [PE 知识库](kb/shared/pe-reverse/README.md) | `triage_pe`、`ghidra_headless_analyze`、`sample_full_workup` |
-| 通用 | [跨领域知识库](kb/shared/general/README.md) | `solve_crypto_from_evidence`、`rizin_*` |
+| Web / CTF | [Web 知识库](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/ctf-website/README.md) | `kb_router`、`http_probe`、`run_ctf_tool` |
+| Android / APK | [APK 知识库](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/apk-reverse/README.md) | `android_app_baseline`、`android_crypto_unpack_recipe` |
+| Windows / PE | [PE 知识库](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/pe-reverse/README.md) | `triage_pe`、`ghidra_headless_analyze`、`sample_full_workup` |
+| 通用 | [跨领域知识库](https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/general/README.md) | `solve_crypto_from_evidence`、`rizin_*` |
 
 CLI/MCP 默认使用 `blue`，可通过 `REVERSELAB_MODE`、`--track` 或 MCP 轨道工具显式切换。桌面端的模式属于各自 Goal，不会改写其他客户端的环境变量。
 
@@ -82,7 +84,7 @@ python scripts/misc/desktop_kb.py list --track both
 克隆仓库后，Windows 使用 `START_HERE.bat` / `START_HERE.cmd`，macOS/Linux 使用 `./START_HERE.sh`。这些入口负责环境和 MCP 检查，桌面程序单独启动。检查报告写入 `reports/misc/`。
 
 ```sh
-git clone https://github.com/LING71671/open-reverselab.git
+git clone --recurse-submodules https://github.com/LING71671/open-reverselab.git
 cd open-reverselab
 ```
 
@@ -116,7 +118,7 @@ pnpm tauri build --no-bundle
 | 位置 | 用途 |
 | --- | --- |
 | `desktop/` | 桌面 UI、队列、执行引擎与 Tauri 宿主 |
-| `kb/` | 通用技术与防御知识 |
+| `kb/` | 链接独立知识库仓库的 Git 子模块 |
 | `scripts/`、`tools/`、`templates/` | 自动化脚本、适配器和模板 |
 | `boards/` | 外部 AI 客户端的任务路由 |
 | `site/` | 文档站源码 |

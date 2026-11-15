@@ -72,14 +72,14 @@ Release 和资产公开后，再发布根 README 与官网对应下载入口。�
 
 ## 单独发布知识包
 
-官方内容使用 `kb/reverselab.extension.json` 中的独立版本。在干净源码目录重建元数据与 ZIP：
+官方内容在 [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge) 独立维护，版本由该仓库的 `reverselab.extension.json` 声明。在知识库的干净克隆中校验、构建 ZIP：
 
 ```sh
-python scripts/misc/package_knowledge.py --version <CONTENT-VERSION> --output <knowledge.zip>
-python scripts/misc/extension_protocol.py check <knowledge.zip>
+python scripts/build.py --version <CONTENT-VERSION> --output ../knowledge.kbpack.zip
+python scripts/extension_protocol.py check ../knowledge.kbpack.zip
 ```
 
-将生成的清单与文章源码一同提交。仓库根目录清单可供应用通过 GitHub 导入，无需发布桌面版本。若发布 ZIP，将其作为独立知识包资产上传，目录的 artifact 条目填写对应 SHA256。MCP 描述包沿用扩展协议并单独管理版本；两种包均不携带本机连接凭据。
+知识修改提交到独立仓库。更新应用引用的内容时，同步更新 `kb` 子模块提交和 `reverselab.registry.json` 中的仓库链接、版本；官网构建该固定提交的内容。应用可通过主仓库目录或知识库仓库链接导入，无需发布桌面版本。若发布 ZIP，将其作为独立知识包资产上传，目录的 artifact 条目填写对应 SHA256。MCP 描述包沿用扩展协议并单独管理版本；两种包均不携带本机连接凭据。
 
 ## 安装与平台范围
 

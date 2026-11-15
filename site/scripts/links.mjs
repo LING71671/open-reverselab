@@ -82,7 +82,7 @@ export function documentLink(href, page, siteRoot) {
     return `https://github.com/LING71671/open-reverselab/blob/main${source}${suffix}`
   }
   if (source.startsWith('/kb/') && !/\.(md|html)$/.test(source) && existsSync(repositoryFile) && !existsSync(`${repositoryFile}.md`)) {
-    return `https://github.com/LING71671/open-reverselab/blob/main${source}${suffix}`
+    return `https://github.com/LING71671/open-reverselab-knowledge/blob/main${source.slice(3)}${suffix}`
   }
   return target + suffix
 }

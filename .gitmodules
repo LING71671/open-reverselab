@@ -1,0 +1,4 @@
+[submodule "kb"]
+	path = kb
+	url = https://github.com/LING71671/open-reverselab-knowledge.git
+	branch = main

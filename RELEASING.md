@@ -72,14 +72,14 @@ After the Release and assets are public, publish the corresponding root README a
 
 ## Publish knowledge separately
 
-The official content has its own version in `kb/reverselab.extension.json`. Rebuild metadata and a distributable ZIP from a clean source checkout:
+Official content is maintained in [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge), with its own version in `reverselab.extension.json`. From a clean checkout of that repository, validate and build a ZIP:
 
 ```sh
-python scripts/misc/package_knowledge.py --version <CONTENT-VERSION> --output <knowledge.zip>
-python scripts/misc/extension_protocol.py check <knowledge.zip>
+python scripts/build.py --version <CONTENT-VERSION> --output ../knowledge.kbpack.zip
+python scripts/extension_protocol.py check ../knowledge.kbpack.zip
 ```
 
-Commit the generated manifests with the source articles. The repository root catalog makes the pack available through GitHub import without a desktop release. For a release ZIP, publish it as a separate knowledge asset and use its SHA256 in catalog artifact entries. MCP descriptors use the same extension protocol and retain independent versions. Neither package contains local connection credentials.
+Commit knowledge changes in that repository. To update the application's linked version, update its `kb` submodule commit and `reverselab.registry.json` repository URL/version together. The website builds that pinned content. The root catalog and the knowledge repository URL both support application imports without a desktop release. For a release ZIP, publish it as a separate knowledge asset and use its SHA256 in catalog artifact entries. MCP descriptors use the same extension protocol and retain independent versions. Neither package contains local connection credentials.
 
 ## Installation and platform scope
 

@@ -11,7 +11,8 @@ test('document-relative links stay stable during a route transition', () => {
 test('repository-only files link to source, not nonexistent HTML pages', () => {
   assert.equal(documentLink('../.github/CONTRIBUTING.md', 'kb/README.md', site), 'https://github.com/LING71671/open-reverselab/blob/main/.github/CONTRIBUTING.md')
   assert.equal(documentLink('../.github/CONTRIBUTING.md', 'en/kb/README.md', site), 'https://github.com/LING71671/open-reverselab/blob/main/.github/CONTRIBUTING.md')
-  assert.equal(documentLink('crypto/04-rsa-attack-family.selftest.py', 'kb/shared/general/techniques/README.md', site), 'https://github.com/LING71671/open-reverselab/blob/main/kb/shared/general/techniques/crypto/04-rsa-attack-family.selftest.py')
+  assert.equal(documentLink('crypto/04-rsa-attack-family.selftest.py', 'kb/shared/general/techniques/README.md', site), 'https://github.com/LING71671/open-reverselab-knowledge/blob/main/shared/general/techniques/crypto/04-rsa-attack-family.selftest.py')
+  assert.equal(documentLink('LICENSE', 'en/kb/README.md', site), 'https://github.com/LING71671/open-reverselab-knowledge/blob/main/LICENSE')
 })
 test('legacy knowledge links retain the locale, query and fragment after migration', () => {
   assert.equal(documentLink('/kb/general/techniques/attack-network.md?view=graph#ai-security', 'en/index.md', site), '/en/kb/red/general/techniques/attack-network.md?view=graph#ai-security')

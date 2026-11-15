@@ -9,9 +9,15 @@ const siteRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const kbLink = path.join(siteRoot, 'kb')
 const kbSource = path.resolve(siteRoot, '..', 'kb')
 
-if (!existsSync(kbSource)) throw new Error(`Knowledge source not found: ${kbSource}`)
+if (!existsSync(path.join(kbSource, 'reverselab.extension.json'))) {
+  throw new Error('Knowledge submodule is missing. Run git submodule update --init --recursive from the project root.')
+}
 if (path.relative(siteRoot, kbLink) !== 'kb' || kbLink === kbSource) throw new Error('Invalid generated KB directory')
 // rmSync unlinks a junction itself; it does not traverse its source directory.
 rmSync(kbLink, { recursive: true, force: true })
-cpSync(kbSource, kbLink, { recursive: true, force: true })
+cpSync(kbSource, kbLink, {
+  recursive: true,
+  force: true,
+  filter: (source) => !['.git', '.github', 'scripts', '__pycache__'].includes(path.basename(source)),
+})
 console.log(`synced kb/ -> ${kbLink}`)

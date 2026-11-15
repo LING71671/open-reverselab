@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      - 'kb'
       - 'kb/**'
+      - '.gitmodules'
       - 'scripts/misc/gen_vitepress_sidebar.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -25,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: pnpm/action-setup@v4
         with:

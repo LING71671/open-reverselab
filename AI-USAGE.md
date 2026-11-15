@@ -10,6 +10,8 @@ env.md 后再继续。env.md 是本机级快照、跨项目共享，只写本机
 
 这是给 AI/Agent 的全局操作入口。任何任务先判断所属板块，再沿 board、case、tools、kb、reports 的链路推进；不要只在当前目录里孤立工作。
 
+`kb/` 通过 Git 子模块链接独立仓库 [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge)。首次使用源码知识工具前执行 `git submodule update --init --recursive`；文章、方法和网络修改在知识库仓库提交。
+
 ## 1. 任务路由
 
 | 任务类型 | 主入口 | 工具入口 | 知识/模板 |
