@@ -55,11 +55,11 @@ The `v2.0.0-beta.1` desktop packages have been withdrawn while desktop and knowl
 
 Windows x64 is the desktop packaging target. Python and third-party tools such as Ghidra, Frida, and x64dbg are installed separately. macOS/Linux support the source-based CLI/MCP workflow; native desktop packages for those platforms are not currently provided. The installed edition offers Beta and Stable update channels; beta builds select Beta initially. See [application updates](desktop/UPDATES.md).
 
-The desktop executes target triage and Python actions without a default tool time limit. MCP tool references in KB articles do not automatically become desktop adapters for debuggers, devices, or hardening tools. Workspace files stay on disk, while model-assisted runs send task context and selected evidence to the endpoint you configure. Python actions run with the current user's permissions. See the [desktop guide](desktop/README.md) for configuration, data handling, and limits.
+The desktop executes target triage, Python actions, and tools discovered through configured MCP connections, without a default overall task deadline. Install and configure MCP servers and external tools as needed. Workspace files stay on disk, while model-assisted runs send task context and selected evidence to the endpoint you configure. Python actions run with the current user's permissions. See the [desktop guide](desktop/README.md) for configuration and data handling.
 
 ## Knowledge base and MCP
 
-Independent knowledge packs, MCP extensions, and GitHub/ZIP import are described in the [extension design](EXTENSIONS.md). The [authoring skill](tools/skills/create-reverselab-extension/SKILL.md) includes draft templates and an offline ZIP checker; the application importer is planned.
+The **Extensions** page imports knowledge packs and MCP descriptors from GitHub repositories, catalogs, folders, or ZIP files. Install the official knowledge pack by entering `https://github.com/LING71671/open-reverselab`; the desktop runtime is distributed separately. Packs can be enabled, disabled, and exported, including selected networks with their referenced documents. MCP connections support stdio and Streamable HTTP. See the [v1 protocol and usage](EXTENSIONS.md) and [authoring skill](tools/skills/create-reverselab-extension/SKILL.md).
 
 The knowledge base covers Web/CTF, Android/APK, Windows/PE, and general topics such as cryptography and protocols. Articles carry `track: red | blue | both`; `both` articles are shared. Related attack and defense articles are linked through index metadata and `defends` references. The current catalog is the source of truth; not every article has a one-to-one counterpart.
 

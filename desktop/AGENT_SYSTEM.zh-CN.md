@@ -18,7 +18,7 @@ Open ReverseLab 围绕目标运行 Goal，由 `red`、`blue` 或 `both` 选择�
 
 两方都可以创建动作分叉与汇合，在执行中交换观察，后续动作也可以依赖对方产生的证据。各自职责通过核验后，还要[核验原始完整目标](src/engine/tracks/verifyBothGoal.ts)。
 
-知识选择依据索引中的 track：red 读取 `kb/red/` 和 `kb/shared/`，blue 读取 `kb/blue/` 和 `kb/shared/`。both 两方分别检索自己的资料，配对文档链接用于定位关联材料，不改变接收方策略。
+知识选择依据已安装知识包的固定版本。在拆分 red/blue 分支前，Goal 保存包 ID、版本、摘要与网络记录；恢复和调整目标保留这些引用。源码中的 track 路径为：red 读取 `kb/red/` 和 `kb/shared/`，blue 读取 `kb/blue/` 和 `kb/shared/`。both 两方分别检索自己的资料，配对文档链接用于定位关联材料，不改变接收方策略。
 
 ## Goal 归属与目标修订
 

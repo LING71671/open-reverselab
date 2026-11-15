@@ -1,8 +1,8 @@
-# 扩展作者协议：v1 草案
+# 扩展作者协议：v1
 
 [English](contract.md)
 
-本文是提案，尚未成为正式桌面导入 API。使用下述完整草案标识。附带工具的 `check` 只实现文中说明的结构检查；运行时依赖解析、条件求值和工具调用单独实现。
+桌面“扩展”导入器支持本文的稳定协议。附带工具复制运行时校验器，`check` 检查本地结构和语义；已安装依赖解析、MCP 调用由运行时执行。已有 v1-draft 包需显式 `migrate` 转换。
 
 ## 通用清单
 
@@ -10,7 +10,7 @@
 
 ```json
 {
-  "protocol": "open-reverselab.extension/v1-draft",
+  "protocol": "open-reverselab.extension/v1",
   "kind": "knowledge",
   "id": "example.integrity",
   "version": "0.1.0",
@@ -83,7 +83,7 @@ HTTP 预设可以要求用户填写端点，无需编造示例服务器：
 
 ## GitHub 仓库目录
 
-根目录 `reverselab.registry.json` 使用 `protocol: "open-reverselab.registry/v1-draft"`、`id`、`title` 和 `entries`。每项包含 `id`、`kind`、`title`、`version`，以及恰好一种位置：
+根目录 `reverselab.registry.json` 使用 `protocol: "open-reverselab.registry/v1"`、`id`、`title` 和 `entries`。每项包含 `id`、`kind`、`title`、`version`，以及恰好一种位置：
 
 - `path`：同一个已解析 commit 下的扩展相对目录；或
 - `artifact`：HTTPS ZIP 链接，同时提供由实际制品计算的 `sha256`。

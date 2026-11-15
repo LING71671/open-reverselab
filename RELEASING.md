@@ -2,13 +2,13 @@
 
 [简体中文](RELEASING.zh-CN.md)
 
-The `v2.0.0-beta.1` packages were withdrawn on 2026-11-14 while desktop and knowledge-base distribution are separated. The procedure below records the previous combined package layout; it must be updated before the next desktop release. Publish the replacement under a new version and tag.
+The `v2.0.0-beta.1` packages were withdrawn on 2026-11-14 while desktop and knowledge-base distribution are separated. The procedure below stages only desktop runtime files; knowledge packs and MCP servers are separate artifacts. Publish the replacement under a new version and tag.
 
 Python 3.11+, WebView2, and external analysis tools are separate dependencies; see the [desktop guide](site/en/desktop.md).
 
 ## Prepare the release commit
 
-1. Keep `desktop/package.json`, `desktop/src-tauri/Cargo.toml`, its lockfile, and `desktop/src-tauri/tauri.conf.json` on `2.0.0-beta.1`.
+1. Keep `desktop/package.json`, `desktop/src-tauri/Cargo.toml`, its lockfile, and `desktop/src-tauri/tauri.conf.json` on the new release version.
 2. Update [CHANGELOG.md](CHANGELOG.md) and its Chinese counterpart with the actual features and completed checks. Keep user acceptance and unperformed evaluations separate from regression results.
 3. Follow the [update signing contract](desktop/UPDATES.md). The private key stays on the release machine or in a CI secret.
 4. Run `python scripts/misc/public_release_check.py` before committing. Keep private targets, credentials, reports, and local screenshots out of the release. Use a GitHub noreply author address for public commits.
@@ -25,7 +25,7 @@ From the repository root:
 python scripts/misc/package_desktop_release.py stage
 ```
 
-Staging uses `git archive HEAD` to populate `desktop/src-tauri/release-resources/` and writes `RELEASE.json` with the version and commit. The generated directory is ignored and becomes the installer's `runtime/` resource tree.
+Staging reads `git archive HEAD` and selects the explicit `RUNTIME_FILES` allowlist to populate `desktop/src-tauri/release-resources/` and writes `RELEASE.json` with the version and commit. Knowledge articles, MCP server sources, examples, and workspace data are excluded. The generated directory is ignored and becomes the installer's `runtime/` resource tree.
 
 Set `TAURI_SIGNING_PRIVATE_KEY` in the build process to the local private-key file and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` to its password. Do not print these values. From `desktop/`:
 
@@ -48,17 +48,17 @@ The packager checks the staged commit and version, source/build ordering, the in
 
 | Asset | Purpose |
 | --- | --- |
-| `OpenReverseLab-v2.0.0-beta.1-windows-x64-setup.exe` | Windows installer |
-| `OpenReverseLab-v2.0.0-beta.1-windows-x64-setup.exe.sig` | Complete updater signature |
-| `OpenReverseLab-v2.0.0-beta.1-windows-x64.zip` | Portable package |
+| `OpenReverseLab-v<VERSION>-windows-x64-setup.exe` | Windows installer |
+| `OpenReverseLab-v<VERSION>-windows-x64-setup.exe.sig` | Complete updater signature |
+| `OpenReverseLab-v<VERSION>-windows-x64.zip` | Portable package |
 | `latest.json` | Version, notes, timestamp, platform URL, and signature |
 | `SHA256SUMS` | Hashes of the release assets |
 
-The portable ZIP expands to `OpenReverseLab-2.0.0-beta.1/`; its launcher is `OpenReverseLab.exe`. Extract the entire package. Its resources and scripts must stay beside the executable in their packaged locations.
+The portable ZIP expands to `OpenReverseLab-<VERSION>/`; its launcher is `OpenReverseLab.exe`. Extract the entire package. Its resources and scripts must stay beside the executable in their packaged locations.
 
 ## Publish and update channels
 
-Use tag `v2.0.0-beta.1` at the same commit used for staging and building. Create a draft GitHub Release, pass the notes through `--notes-file`, and upload the complete asset set. Confirm that the manifest version, platform entry, installer URL, signature, and checksums match those assets. Publish it with the **prerelease** flag, without marking it as the latest production release.
+Use tag `v<VERSION>` at the same commit used for staging and building. Create a draft GitHub Release, pass the notes through `--notes-file`, and upload the complete asset set. Confirm that the manifest version, platform entry, installer URL, signature, and checksums match those assets. Publish it with the **prerelease** flag, without marking it as the latest production release.
 
 The desktop discovers releases through the public GitHub Releases API:
 
@@ -69,6 +69,17 @@ The desktop discovers releases through the public GitHub Releases API:
 The current channels do not rely on one fixed `releases/latest/download/latest.json` endpoint. Older clients that use that endpoint still follow GitHub's latest production release; a beta should not replace it.
 
 After the Release and assets are public, publish the corresponding root README and website download entries. Website publication does not itself publish an installer. Keep published tags and artifact/signature pairs immutable.
+
+## Publish knowledge separately
+
+The official content has its own version in `kb/reverselab.extension.json`. Rebuild metadata and a distributable ZIP from a clean source checkout:
+
+```sh
+python scripts/misc/package_knowledge.py --version <CONTENT-VERSION> --output <knowledge.zip>
+python scripts/misc/extension_protocol.py check <knowledge.zip>
+```
+
+Commit the generated manifests with the source articles. The repository root catalog makes the pack available through GitHub import without a desktop release. For a release ZIP, publish it as a separate knowledge asset and use its SHA256 in catalog artifact entries. MCP descriptors use the same extension protocol and retain independent versions. Neither package contains local connection credentials.
 
 ## Installation and platform scope
 

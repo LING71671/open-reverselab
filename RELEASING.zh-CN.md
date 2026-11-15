@@ -2,13 +2,13 @@
 
 [English](RELEASING.md)
 
-`v2.0.0-beta.1` 桌面包已于 2026-11-14 撤下，正在调整为桌面端与知识库独立分发。以下流程记录此前的组合打包方式，下次桌面发布前需要更新。替代安装包使用新的版本号与标签。
+`v2.0.0-beta.1` 桌面包已于 2026-11-14 撤下，正在调整为桌面端与知识库独立分发。以下流程仅暂存桌面运行文件，知识包与 MCP 服务独立分发。替代安装包使用新的版本号与标签。
 
 Python 3.11+、WebView2 与外部分析工具另行安装，详见[桌面端说明](site/desktop.md)。
 
 ## 准备发布提交
 
-1. 将 `desktop/package.json`、`desktop/src-tauri/Cargo.toml`、对应 lockfile 与 `desktop/src-tauri/tauri.conf.json` 统一为 `2.0.0-beta.1`。
+1. 将 `desktop/package.json`、`desktop/src-tauri/Cargo.toml`、对应 lockfile 与 `desktop/src-tauri/tauri.conf.json` 统一为本次新的发布版本。
 2. 在[更新日志](CHANGELOG.zh-CN.md)和英文版记录实际功能与完成的检查，用户验收和未执行评测与回归结果分别描述。
 3. 遵循[更新签名契约](desktop/UPDATES.zh-CN.md)，私钥只保存在发布机器或 CI secret。
 4. 提交前运行 `python scripts/misc/public_release_check.py`，私人目标、凭据、报告和本机截图不进入发布。公开提交使用 GitHub noreply 作者邮箱。
@@ -25,7 +25,7 @@ Python 3.11+、WebView2 与外部分析工具另行安装，详见[桌面端说�
 python scripts/misc/package_desktop_release.py stage
 ```
 
-暂存使用 `git archive HEAD` 填充 `desktop/src-tauri/release-resources/`，并写入含版本和 commit 的 `RELEASE.json`。生成目录已忽略，安装后映射为 `runtime/` 资源树。
+暂存从 `git archive HEAD` 中按 `RUNTIME_FILES` 明确清单选取文件，填充 `desktop/src-tauri/release-resources/`，并写入含版本和 commit 的 `RELEASE.json`。知识文章、MCP 服务源码、示例与工作区数据不进入桌面包。生成目录已忽略，安装后映射为 `runtime/` 资源树。
 
 构建进程的 `TAURI_SIGNING_PRIVATE_KEY` 指向本机私钥文件，`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 提供对应密码，不回显这些值。在 `desktop/` 执行：
 
@@ -48,17 +48,17 @@ python scripts/misc/package_desktop_release.py package --installer <NSIS-EXE> --
 
 | 资产 | 用途 |
 | --- | --- |
-| `OpenReverseLab-v2.0.0-beta.1-windows-x64-setup.exe` | Windows 安装包 |
-| `OpenReverseLab-v2.0.0-beta.1-windows-x64-setup.exe.sig` | 完整更新签名 |
-| `OpenReverseLab-v2.0.0-beta.1-windows-x64.zip` | 便携包 |
+| `OpenReverseLab-v<VERSION>-windows-x64-setup.exe` | Windows 安装包 |
+| `OpenReverseLab-v<VERSION>-windows-x64-setup.exe.sig` | 完整更新签名 |
+| `OpenReverseLab-v<VERSION>-windows-x64.zip` | 便携包 |
 | `latest.json` | 版本、说明、时间、平台地址与签名 |
 | `SHA256SUMS` | 发布资产的哈希 |
 
-便携 ZIP 解压为 `OpenReverseLab-2.0.0-beta.1/`，入口为 `OpenReverseLab.exe`。需要完整解压，资源与脚本保留打包时相对可执行文件的位置。
+便携 ZIP 解压为 `OpenReverseLab-<VERSION>/`，入口为 `OpenReverseLab.exe`。需要完整解压，资源与脚本保留打包时相对可执行文件的位置。
 
 ## 发布与更新渠道
 
-将 `v2.0.0-beta.1` 标签指向暂存和构建使用的同一提交。先创建草稿 GitHub Release，通过 `--notes-file` 提供说明并上传完整资产；确认清单版本、平台、安装包地址、签名及校验值对应这些资产。公开时标记为**预发布**，不设为最新正式版本。
+将 `v<VERSION>` 标签指向暂存和构建使用的同一提交。先创建草稿 GitHub Release，通过 `--notes-file` 提供说明并上传完整资产；确认清单版本、平台、安装包地址、签名及校验值对应这些资产。公开时标记为**预发布**，不设为最新正式版本。
 
 桌面通过公开 GitHub Releases API 查找发布：
 
@@ -69,6 +69,17 @@ python scripts/misc/package_desktop_release.py package --installer <NSIS-EXE> --
 当前渠道不依赖单一固定的 `releases/latest/download/latest.json` 地址。仍使用这个旧入口的客户端跟随 GitHub 最新正式 Release，beta 不应替换该入口。
 
 Release 和资产公开后，再发布根 README 与官网对应下载入口。发布官网本身不会发布安装包；已发布标签及安装包／签名组合保持不变。
+
+## 单独发布知识包
+
+官方内容使用 `kb/reverselab.extension.json` 中的独立版本。在干净源码目录重建元数据与 ZIP：
+
+```sh
+python scripts/misc/package_knowledge.py --version <CONTENT-VERSION> --output <knowledge.zip>
+python scripts/misc/extension_protocol.py check <knowledge.zip>
+```
+
+将生成的清单与文章源码一同提交。仓库根目录清单可供应用通过 GitHub 导入，无需发布桌面版本。若发布 ZIP，将其作为独立知识包资产上传，目录的 artifact 条目填写对应 SHA256。MCP 描述包沿用扩展协议并单独管理版本；两种包均不携带本机连接凭据。
 
 ## 安装与平台范围
 

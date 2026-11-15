@@ -2,95 +2,68 @@
 
 [简体中文](EXTENSIONS.zh-CN.md)
 
-Status: design proposal for [issue #24](https://github.com/LING71671/open-reverselab/issues/24). The desktop does not yet implement the marketplace, GitHub/ZIP importer, or the contract described here. The authoring skill and its offline packaging helper are available for preparing draft packages.
+The source desktop includes an **Extensions** page for installing knowledge packs and MCP descriptors independently. Desktop installer and portable resources use a runtime allowlist that excludes knowledge content and MCP servers. A replacement desktop release has not been published.
 
-## Distribution and ownership
+## Install and manage
 
-Open ReverseLab will install knowledge and tools independently of the desktop. A knowledge update, new domain, attack network, defense network, or MCP connection should not require rebuilding the application.
+Open **Extensions** in the sidebar. **Knowledge** and **MCP** show installed entries; **Sources** stores catalogs to browse later.
 
-| Component | Owns | Updates independently |
+1. Paste a GitHub repository, tree/folder, manifest, or release ZIP link and choose **Read**, or choose **Import ZIP**. Local package directories and ZIP paths also work.
+2. Select an inspected entry and install it. Reading a source or installing an MCP descriptor does not start its server.
+3. Enable, disable, remove, or export installed entries. Complete ZIP export can be imported again. Knowledge entries also support selecting networks for a derived ZIP containing their local method/document closure and dependency references.
+4. For MCP, open **Configure**, fill the descriptor's inputs, save, and **Verify connection** to discover tools/resources. **Add connection** accepts a standalone stdio command/argument array or Streamable HTTP endpoint without a preset.
+
+Browser development and the native application call the same Python services. Browser ZIP imports upload file bytes; native imports use a file picker. Exports use a native save dialog or browser download. Long operations expose cancellation and have no default overall job deadline; individual network/protocol exchanges retain bounded connection/read waits.
+
+A source can contain one extension or a static `reverselab.registry.json` catalog containing both kinds. Add it under **Sources**, then **Browse**. Refreshing metadata does not replace an installed version. There is no centralized marketplace account or private-repository credential editor.
+
+The importer resolves GitHub branch/tag paths, including slash-containing refs, records the commit and subdirectory, and validates selected files. Catalog entries reference a directory at the same commit or an HTTPS artifact with SHA256. Ordinary Markdown must first be authored into a declared document collection; importing does not invent methods or relationships.
+
+## Stable v1 contract
+
+The [authoring contract](tools/skills/create-reverselab-extension/references/contract.md) and [canonical validator](scripts/misc/extension_protocol.py) define:
+
+| File | Protocol | Purpose |
 | --- | --- | --- |
-| Desktop runtime | Workspaces, Goals, scheduling, evidence, package manager, MCP client | Application |
-| Knowledge pack | Documents, methods, signals, prerequisites, attack/defense networks, relationships, tool bindings | Pack |
-| MCP extension | Server connection or installation descriptor, configuration inputs | Server/preset |
-| Repository catalog | Searchable metadata and references to knowledge and MCP extensions | Catalog |
+| `reverselab.extension.json` | `open-reverselab.extension/v1` | Knowledge/MCP metadata and explicit payload files |
+| `reverselab.registry.json` | `open-reverselab.registry/v1` | Repository catalog entries |
+| `reverselab.lock.json` | `open-reverselab.lock/v1` | Exact manifest and payload hashes |
 
-KnowledgeStore and ToolRegistry are separate services. Packs can be read and searched without a connected MCP server. MCP tools can be used without a corresponding knowledge pack. Bindings can associate several servers with a method or several packs with a server.
+Content versions use SemVer. Dependencies name a source identity, package ID, and **exact version**; install required dependencies first. Missing required dependencies/entities, unsupported `requiredFeatures`, and unsupported versions block activation. Unknown optional metadata survives export. Draft packages need the explicit `migrate` command, which checks old hashes before conversion.
 
-`red` and `blue` retain separate methods and network entrypoints; `shared` contains reusable facts and techniques. `both` composes the installed networks and exchanges evidence across them. It is a runtime strategy, not another copy of the knowledge base or a fixed pair of lanes.
+Installations are identified by source, package ID, version, and digest. Stable entity IDs resolve to `reverselab://<installationId>/<entityId>`. Two sources with the same declared package ID coexist without silently replacing each other. Legacy paths can remain aliases; ambiguous aliases require a source-qualified URI.
 
-## Import through GitHub or ZIP
+Knowledge contains documents, methods, domains, networks, and optional tool bindings. `red` and `blue` retain independent entrypoints; `shared` is available to either. `both` selects across installed tracks. Domains come from installed data.
 
-The application will expose an **Extensions** page with **Knowledge**, **MCP**, **Installed**, and **Sources** views. Its primary actions are **Add GitHub link** and **Import ZIP**. A source may contain one extension or a catalog of many extensions.
+Typed relations include `depends_on`, `enables`, `composes_with`, `defends`, `detects`, `verifies`, and `conflicts`. Conditions use `all`, `any`, `not`, and evidence predicates. The validator provides three-valued evaluation where missing evidence is unknown. These records are available to routing and Goal context; this does not promise that every graph is compiled into a complete condition-driven execution plan. Legacy document-network mappings record their provenance and preserve original articles.
 
-| Input | Resolution |
-| --- | --- |
-| GitHub repository URL | Inspect `reverselab.registry.json`; otherwise inspect a root extension manifest |
-| GitHub tree/folder or manifest URL | Resolve the selected path at its ref and inspect that extension/catalog |
-| GitHub release ZIP URL | Download that artifact and inspect its manifest |
-| Local ZIP | Accept a package root or a single enclosing directory, as in GitHub source archives |
+## Storage, updates, and export
 
-Inspection displays the source, kind, version, content summary, dependencies, and configuration required before installation. If a repository contains multiple candidates without a catalog, show the candidates instead of silently choosing the first one. Resolve branch/tag names using GitHub metadata, including refs containing slashes; record the resulting commit and subdirectory. Private repository credentials belong to local source settings.
+The store uses `REVERSELAB_EXTENSIONS_DIR`, otherwise `REVERSELAB_DATA_DIR/extensions`, otherwise the user's `.open-reverselab/extensions`. MCP connection values are local application data, separate from package payloads. Python and third-party tools are installed separately.
 
-Catalog browsing fetches metadata first. Installing an entry fetches only its selected artifact or pack contents. GitHub URLs and ZIPs converge on the same validation and activation path. Missing manifests produce an actionable result: select a contained manifest, or convert ordinary Markdown to a document collection. Conversion preserves the text and does not invent method relations or execution prerequisites.
+Import validates paths, archive members, hashes, references, features, and dependencies before atomic registry activation. It rejects traversal/absolute paths, links, duplicate names, and case collisions. Installing a newer version from the same source disables the old version and retains its bytes. Goals use pinned IDs/digests. Removing an extension excludes it from new selections, retains pinned content, and disables required dependents. Disabling a package needed by enabled dependents is rejected with their IDs.
 
-Repository catalogs are static JSON and can be hosted in an ordinary GitHub repository. The initial product does not require a centralized marketplace service. Official and user-added sources use the same format; an entry's publisher field alone does not establish ownership of a namespace.
+Complete export preserves the manifest and declared files. Selected-network export uses a derived package ID and records original IDs, digest, and source in provenance; external dependencies retain exact references. Export excludes workspace targets, histories, evidence, and saved MCP credentials. The output does not overwrite existing files. Preserve licenses when redistributing content.
 
-## Contract and identity
+## MCP runtime
 
-The [authoring contract](tools/skills/create-reverselab-extension/references/contract.md) defines draft manifests, catalog entries, method/network records, and ZIP contents. Its draft identifier is `open-reverselab.extension/v1-draft`; a production importer must not silently treat that identifier as a stable v1 contract.
+The independent client supports stdio and Streamable HTTP, initialization, paginated tools/resources, qualified `connectionId/toolName` tools, and explicit tool/resource requests. **Verified** means discovery succeeded. That session closes; each later request opens a fresh session.
 
-Use independent versions for the extension contract, catalog contract, pack content, application, and negotiated MCP protocol. A pack owns a namespace and stable method/document/network IDs. IDs survive translations, renamed files, and title edits. References resolve against a lock containing source identity, pack ID, exact version, and digest. Two sources claiming the same pack ID do not silently replace each other.
+The client rediscovers schemas before invocation and can reject an expected-schema mismatch before dispatch. It does not automatically replay a call with unknown outcome. Cancellation and an explicit caller budget terminate the subprocess tree. Installing a preset does not install external executables or run hooks; prepare its documented prerequisites separately.
 
-Methods describe signals, prerequisites, required evidence, expected outputs, tool capabilities, and supporting documents. Networks refer to those methods and express typed relations: `depends_on`, `enables`, `composes_with`, `defends`, `detects`, `verifies`, and `conflicts`. Domains and entrypoints come from package data rather than a built-in list of four boards.
+Knowledge stays readable without MCP, and generic MCP connections work without a knowledge pack. Bindings associate methods with capabilities and discovered tools. Package metadata and articles remain task data, not host instructions.
 
-Conditions use declarative `all`, `any`, `not`, and evidence predicates. Missing evidence evaluates to unknown, not success or failure. The planner resolves unknown prerequisites before selecting an executable action. Documentation may include scripts and code examples; importing or reading a pack does not execute them.
+## Author and verify
 
-Knowledge graphs may have feedback cycles. An execution round materializes a dependency DAG using the current evidence and selected methods; that DAG must be acyclic. A feedback edge becomes a later round after the prerequisite evidence changes. Parallel branches, joins, cross-domain routes, conflicting results, and defense coverage gaps remain explicit.
+Use [create-reverselab-extension](tools/skills/create-reverselab-extension/SKILL.md) for packs, MCP descriptors, and catalogs. Its portable helper copies the runtime validator and uses Python 3.11+ without external dependencies:
 
-## Updates, export, and runtime evidence
+```sh
+python scripts/misc/extension_protocol.py check path/to/source
+python scripts/misc/extension_protocol.py build path/to/source path/to/extension.zip
+python scripts/misc/extension_protocol.py check path/to/extension.zip
+python scripts/misc/extension_protocol.py migrate path/to/draft.zip path/to/v1.zip
+```
 
-Import stages files, validates the supported contract and references, resolves dependencies, builds an index, then activates the new version atomically. Failure or cancellation leaves the previous active version available. Archive paths must stay inside the staging directory; reject absolute paths, traversal, links, duplicate entries, and names that collide on supported filesystems. Expose progress and cancellation rather than silently truncating large packs.
+`desktop_extensions.py` accepts one stdin JSON request with `operation`: `list`, `inspect`, `install`, `enable`, `remove`, `export`, `sources/list`, `sources/add`, `sources/remove`, `sources/refresh`, `pin`, `catalog`, `graph`, `get`, `read`, `resolve`, or `neighbors`. Selected-network export adds `networkIds` to `export`. `desktop_mcp.py` supports `list`, `configure`, `remove`, `connect`, `disconnect`, `call`, and `read`. Each returns one JSON result.
 
-Each Goal pins the resolved pack versions and tool inventory/schema fingerprints. Updating a pack affects new Goals; switching an active Goal requires a recorded replan at an execution boundary. Retain versions referenced by unfinished or replayable runs. Disabled packs leave the selected search catalog; removing one reports dependent packages and retained run references.
-
-Support both complete-pack export and selected-subgraph export. The latter carries its documents, prerequisites, relations, and dependency closure, and receives a derived pack ID with original IDs recorded as provenance. It must not claim to be the original complete pack. Include redistributable dependencies or exact locked references; missing required dependencies prevent activation. Optional unresolved links remain visible as unavailable.
-
-Knowledge exports contain authored knowledge. Workspace evidence, task histories, targets, and model credentials remain workspace data. MCP configuration exports contain input names and credential references, not resolved credential values.
-
-Execution evidence records the Goal/target revision, method ID, pack digest, invocation ID, observation source, and result status. Expected outputs are distinct from observed results. Reports preserve verified, unverified, unobservable, and conflicting evidence. Replanning compares method, inputs, evidence revision, tool version, and previous failure before repeating an unchanged action. There is no protocol-level cap on concurrent branches or Goal duration.
-
-Unknown optional extension fields survive round trips; unknown required capabilities or unsupported contract versions prevent activation. Production schemas will use [JSON Schema 2020-12](https://json-schema.org/draft/2020-12), supplemented by reference and semantic checks. The current helper checks a documented authoring subset; it is not the future desktop validator.
-
-## MCP integration
-
-MCP retains its standard wire protocol. Open ReverseLab adds package metadata and knowledge semantics around it. Clients use the server's advertised capabilities, paginated [tool discovery](https://modelcontextprotocol.io/specification/2025-11-25/server/tools), input/output schemas, cancellation, and change notifications. Connections use standard [stdio or Streamable HTTP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports). A catalog can later adapt the official registry's [`server.json` metadata](https://modelcontextprotocol.io/registry/about), without copying its wire protocol or promising that every package manager is already supported.
-
-There are two independent directions:
-
-1. **Desktop as MCP client.** Add a server, collect its configuration, connect, and discover its tools/resources. Resolve tools as `connection_id/tool_name`; the same tool name on two servers must not collide. Refresh changed schemas before invocation. A lost connection with an unknown action outcome must not trigger an automatic replay of that action. Adding a repository or knowledge pack never starts an MCP process; connecting/installing a selected MCP entry is a distinct user action.
-2. **KnowledgeStore as MCP server.** Proposed `kb_search`, `kb_get`, `kb_neighbors`, `kb_resolve`, and `kb_list_packs` return the same IDs, version locks, and provenance as the desktop and CLI. Existing `kb_router` and `kb_read_file` remain compatibility adapters. Versioned [resources](https://modelcontextprotocol.io/specification/2025-11-25/server/resources) expose documents and networks. Import/export management uses explicit operations and cancellable jobs, separate from search and reading.
-
-Knowledge bindings describe capability requirements and schema-compatible argument/evidence mappings. A missing binding does not prohibit generic MCP use. A missing tool marks the associated method unavailable and allows the planner to choose another route. Packages supply task data; they do not replace the user's Goal or the host's runtime instructions.
-
-## Authoring skill
-
-Use [create-reverselab-extension](tools/skills/create-reverselab-extension/SKILL.md) to create or extend a knowledge pack, an MCP descriptor, or a repository catalog. It includes a working synthetic knowledge template, contract reference, and a standard-library Python helper for checking and packaging explicit files.
-
-The skill should produce both a reviewable source directory and a ZIP from the same manifest. GitHub publishing is a separate action under the user's requested repository and ref. The helper is usable now; an application import test must wait for the importer implementation and must not be reported as passed from an offline package check.
-
-## Migration and delivery batches
-
-| Batch | Work and completion evidence |
-| --- | --- |
-| 1. Contract and compatibility | Schemas, stable IDs, legacy Markdown/index adapter, source-qualified references, migration round trip; a new third-party domain needs no application edit |
-| 2. Knowledge package manager | GitHub and ZIP import, dependency resolution, atomic updates, full/subgraph export, source catalog UI; cancellation and malformed archive cases preserve installed data |
-| 3. MCP extensions | Independent server manager, stdio/HTTP adapters, configuration inputs, tool/resource discovery, mappings, reconnect/cancel behavior; knowledge usable without MCP and MCP usable without a pack |
-| 4. Network composition | Move complete attack/defense networks and routing metadata into packs; synthetic cross-domain parallel/join/conflict/replan and blue coverage-gap examples drive both planner and canvas |
-| 5. Independent releases | Desktop runtime allowlist for both NSIS and portable ZIP; separately versioned knowledge artifacts, import/export instructions, source catalogs, and a new desktop release tag |
-
-Current migration points are `scripts/misc/kb_layout.py`, `desktop_kb.py`, `kb_router.py`, `kb/catalog/`, `desktop/src/engine/pipeline/kbSelection.ts`, `KbRoutingStage.ts`, and `harnessGraph.ts`. Current document IDs depend on board/filename, and routing still contains fixed board/path assumptions. Preserve legacy aliases while migrating to stable source-qualified IDs.
-
-`scripts/misc/package_desktop_release.py` currently includes `kb` in installer resources and copies the tracked source into the portable archive. Both paths must change to an explicit runtime manifest; removing Markdown from only one archive is insufficient. Packs can initially remain in this monorepo with independent artifacts/tags, then move to separate repositories without changing their IDs or contract.
-
-Issue #24 stays open until the corresponding runtime, migration, and acceptance cases exist. This proposal and authoring helper do not complete those implementation items.
+Check structure, then test actual import/export/reimport and relevant MCP behavior separately. A descriptor check does not demonstrate server reachability or successful tool execution. Publishing a package, desktop release, or source catalog remains a separate action.

@@ -1,5 +1,5 @@
 {
-  "protocol": "open-reverselab.registry/v1-draft",
+  "protocol": "open-reverselab.registry/v1",
   "id": "example.extensions",
   "title": "Extension authoring examples",
   "entries": [

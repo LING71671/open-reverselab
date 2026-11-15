@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Check and package the local Open ReverseLab v1 draft authoring subset."""
+"""Canonical, standard-library-only Open ReverseLab extension v1 validator.
+
+The JSON schemas describe wire shapes; this module additionally validates paths,
+references, portable archives, declared features and content hashes. No package
+code, installation command or hook is ever executed by this module.
+"""
 
 from __future__ import annotations
 
@@ -12,10 +17,15 @@ import re
 import stat
 import sys
 import zipfile
+from urllib.parse import urlsplit
 
 MANIFEST = "reverselab.extension.json"
 LOCK = "reverselab.lock.json"
-PROTOCOL = "open-reverselab.extension/v1-draft"
+PROTOCOL = "open-reverselab.extension/v1"
+REGISTRY_PROTOCOL = "open-reverselab.registry/v1"
+LOCK_PROTOCOL = "open-reverselab.lock/v1"
+REGISTRY = "reverselab.registry.json"
+SUPPORTED_FEATURES = frozenset({"knowledge", "mcp", "conditions/v1", "typed-relations/v1", "source-qualified-ids/v1"})
 TRACKS = {"red", "blue", "shared"}
 RELATIONS = {"depends_on", "enables", "composes_with", "defends", "detects", "verifies", "conflicts"}
 NAMESPACE = r"[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+"
@@ -73,6 +83,7 @@ def unique_paths(names: list[str]) -> None:
 
 def read_local(root: Path, name: str) -> bytes:
     safe_path(name)
+    require(not root.is_symlink() and not getattr(root, "is_junction", lambda: False)(), "Package root must not be a link")
     candidate = root.joinpath(*name.split("/"))
     require(candidate.resolve().is_relative_to(root.resolve()), f"Path leaves package: {name}")
     current = candidate
@@ -91,7 +102,10 @@ def load(source: Path) -> tuple[dict[str, bytes], bool]:
         names = manifest.get("files")
         require(strings(names), "files must be an array of paths")
         unique_paths([MANIFEST, LOCK, *names])
-        return {MANIFEST: raw, **{name: read_local(root, name) for name in names}}, False
+        payload = {MANIFEST: raw, **{name: read_local(root, name) for name in names}}
+        if (root / LOCK).exists():
+            payload[LOCK] = read_local(root, LOCK)
+        return payload, False
 
     with zipfile.ZipFile(source) as archive:
         entries = archive.infolist()
@@ -112,9 +126,9 @@ def load(source: Path) -> tuple[dict[str, bytes], bool]:
         return result, True
 
 
-def validate(payload: dict[str, bytes], archive: bool) -> dict:
+def validate(payload: dict[str, bytes], archive: bool = False, *, check_features: bool = True) -> dict:
     manifest = object_json(payload[MANIFEST], MANIFEST)
-    require(manifest.get("protocol") == PROTOCOL, "Unsupported authoring contract")
+    require(manifest.get("protocol") == PROTOCOL, "Unsupported extension protocol; v1-draft requires explicit migration")
     require(manifest.get("kind") in {"knowledge", "mcp"}, "kind must be knowledge or mcp")
     for field in ("id", "version", "title", "description", "license"):
         require(string(manifest.get(field)), f"Missing manifest field: {field}")
@@ -126,7 +140,8 @@ def validate(payload: dict[str, bytes], archive: bool) -> dict:
     require(strings(names), "files must be an array of paths")
     unique_paths([MANIFEST, LOCK, *names])
     expected = {MANIFEST, *names}
-    require(set(payload) == expected | ({LOCK} if archive else set()), "Package file set differs from manifest")
+    require(set(payload) == expected | ({LOCK} if LOCK in payload else set()), "Package file set differs from manifest")
+    require(not archive or LOCK in payload, "Package ZIP is missing reverselab.lock.json")
     dependencies = manifest.get("requires", [])
     require(isinstance(dependencies, list), "requires must be an array")
     dependency_ids = set()
@@ -135,11 +150,15 @@ def validate(payload: dict[str, bytes], archive: bool) -> dict:
         for field in ("id", "version", "source"):
             require(string(dep.get(field)), f"Missing dependency {field}")
         require(re.fullmatch(NAMESPACE, dep["id"]) is not None, "Invalid dependency namespace")
+        require(re.fullmatch(SEMVER, dep["version"]) is not None, "Dependencies require exact SemVer versions")
         require(isinstance(dep.get("optional"), bool), "Dependency optional must be boolean")
         require(dep["id"] not in dependency_ids | {manifest["id"]}, "Duplicate/self dependency")
         dependency_ids.add(dep["id"])
     if "requiredFeatures" in manifest:
         require(strings(manifest["requiredFeatures"]), "requiredFeatures must be strings")
+        if check_features:
+            require(set(manifest["requiredFeatures"]).issubset(SUPPORTED_FEATURES), "Unsupported requiredFeatures: " + ", ".join(sorted(set(manifest["requiredFeatures"]) - SUPPORTED_FEATURES)))
+    require(not any(key in manifest for key in ("install", "postinstall", "hooks")), "Installation hooks are not supported")
     content_path = manifest.get(manifest["kind"])
     require(isinstance(content_path, str) and content_path in names, "Missing listed knowledge/mcp file")
     content = object_json(payload[content_path], content_path)
@@ -147,9 +166,20 @@ def validate(payload: dict[str, bytes], archive: bool) -> dict:
         validate_knowledge(manifest, content, payload, dependency_ids)
     else:
         validate_mcp(content)
-    if archive:
+    if LOCK in payload:
         locked = object_json(payload[LOCK], LOCK)
-        require(locked == make_lock(manifest, {name: payload[name] for name in expected}), "Archive lock or content digest mismatch")
+        expected_lock = make_lock(manifest, {name: payload[name] for name in expected})
+        require(all(locked.get(key) == value for key, value in expected_lock.items()), "Archive lock or content digest mismatch")
+        lock_dependencies = locked.get("dependencies", [])
+        require(isinstance(lock_dependencies, list), "Lock dependencies must be an array")
+        seen_dependencies = set()
+        declared = {item["id"]: item for item in dependencies}
+        for item in lock_dependencies:
+            require(isinstance(item, dict) and item.get("id") in declared, "Lock contains an undeclared dependency")
+            require(item["id"] not in seen_dependencies, "Duplicate locked dependency")
+            seen_dependencies.add(item["id"])
+            require(item.get("version") == declared[item["id"]]["version"] and item.get("source") == declared[item["id"]]["source"], "Lock dependency differs from manifest")
+            require(isinstance(item.get("digest"), str) and re.fullmatch(r"[0-9a-f]{64}", item["digest"]) is not None, "Invalid dependency digest")
     return manifest
 
 
@@ -171,6 +201,9 @@ def validate_knowledge(manifest: dict, data: dict, payload: dict, dependencies: 
             require(string(item.get("title")) and item.get("track") in TRACKS, f"Invalid title/track: {item_id}")
             if group != "networks":
                 require(item.get("domain") in domains, f"Unknown domain: {item_id}")
+            for optional_list in ("aliases", "mcp_tools"):
+                if optional_list in item:
+                    require(strings(item[optional_list]), f"{optional_list} must be strings")
             groups[group][item_id] = item
 
     def reference(ref: object, group: str) -> None:
@@ -187,6 +220,8 @@ def validate_knowledge(manifest: dict, data: dict, payload: dict, dependencies: 
         reference(item.get("document"), "documents")
         for field in ("signals", "requiresEvidence", "produces", "toolRequirements"):
             require(strings(item.get(field)), f"Method {field} must be strings")
+        if "when" in item:
+            validate_condition(item["when"])
     for network in groups["networks"].values():
         require(strings(network.get("nodes")) and strings(network.get("entrypoints")), "Network nodes and entrypoints must be arrays")
         require(len(set(network["nodes"])) == len(network["nodes"]), "Duplicate network node")
@@ -197,6 +232,8 @@ def validate_knowledge(manifest: dict, data: dict, payload: dict, dependencies: 
         for relation in network["relations"]:
             require(isinstance(relation, dict) and relation.get("type") in RELATIONS, "Unknown relation type")
             require(relation.get("from") in network["nodes"] and relation.get("to") in network["nodes"], "Relation endpoint is not a network node")
+            if "when" in relation:
+                validate_condition(relation["when"])
     bindings = data.get("bindings", [])
     require(isinstance(bindings, list), "bindings must be an array")
     for binding in bindings:
@@ -204,6 +241,7 @@ def validate_knowledge(manifest: dict, data: dict, payload: dict, dependencies: 
         reference(binding.get("method"), "methods")
         require(all(string(binding.get(f)) for f in ("capability", "server", "tool")), "Incomplete tool binding")
         require(isinstance(binding.get("inputMapping"), dict), "Binding inputMapping must be an object")
+        require("outputMapping" not in binding or isinstance(binding["outputMapping"], dict), "Binding outputMapping must be an object")
 
 
 def validate_mcp(data: dict) -> None:
@@ -227,6 +265,10 @@ def validate_mcp(data: dict) -> None:
         require(string(url) and (url.startswith("https://") or url.startswith("http://") or INPUT_REF.fullmatch(url)), "HTTP connection requires URL or input reference")
         require("command" not in data and "args" not in data and "env" not in data, "stdio fields on HTTP connection")
         values.append(url)
+        if not INPUT_REF.fullmatch(url):
+            parsed = urlsplit(url)
+            require(bool(parsed.hostname) and parsed.username is None and parsed.password is None, "MCP URL must not contain credentials")
+            require(not parsed.query and not parsed.fragment, "MCP URL query/fragment must be supplied through a local input")
     for field in ("env", "headers"):
         mapping = data.get(field, {})
         require(isinstance(mapping, dict), f"{field} must be an object")
@@ -240,38 +282,148 @@ def validate_mcp(data: dict) -> None:
 
 
 def make_lock(manifest: dict, payload: dict[str, bytes]) -> dict:
-    return {"protocol": "open-reverselab.lock/v1-draft", "id": manifest["id"], "version": manifest["version"],
-            "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in sorted(payload.items())}}
+    return {"protocol": LOCK_PROTOCOL, "id": manifest["id"], "version": manifest["version"],
+            "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in sorted(payload.items()) if name != LOCK}}
+
+
+def json_bytes(value: dict) -> bytes:
+    return (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
+
+
+def package_digest(payload: dict[str, bytes]) -> str:
+    """Content identity excludes lock provenance, includes names and exact bytes."""
+    hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in sorted(payload.items()) if name != LOCK}
+    return hashlib.sha256(json_bytes(hashes)).hexdigest()
+
+
+def validate_condition(value: object) -> None:
+    require(isinstance(value, dict), "Condition must be an object")
+    if set(value) in ({"all"}, {"any"}):
+        children = next(iter(value.values()))
+        require(isinstance(children, list), "Condition children must be an array")
+        for child in children:
+            validate_condition(child)
+    elif set(value) == {"not"}:
+        validate_condition(value["not"])
+    else:
+        require(set(value) == {"evidence", "state"} and string(value.get("evidence")) and value.get("state") in {"observed", "absent", "unobservable"}, "Invalid evidence condition")
+
+
+def evaluate_condition(condition: dict, evidence: dict) -> bool | None:
+    """Kleene three-valued logic: an unrecorded key is unknown (None)."""
+    validate_condition(condition)
+    if "evidence" in condition:
+        state = evidence.get(condition["evidence"])
+        if isinstance(state, dict):
+            state = state.get("state", state.get("status"))
+        return None if state is None or state == "unknown" else state == condition["state"]
+    if "not" in condition:
+        value = evaluate_condition(condition["not"], evidence)
+        return None if value is None else not value
+    operation = "all" if "all" in condition else "any"
+    values = [evaluate_condition(item, evidence) for item in condition[operation]]
+    decisive = False if operation == "all" else True
+    if decisive in values:
+        return decisive
+    return None if None in values else operation == "all"
+
+
+def validate_registry(data: dict) -> dict:
+    require(data.get("protocol") == REGISTRY_PROTOCOL, "Unsupported registry protocol")
+    require(string(data.get("id")) and string(data.get("title")), "Registry requires id and title")
+    require(isinstance(data.get("entries"), list), "Registry entries must be an array")
+    ids = set()
+    for item in data["entries"]:
+        require(isinstance(item, dict), "Invalid registry entry")
+        require(string(item.get("id")) and re.fullmatch(NAMESPACE, item["id"]) is not None, "Invalid registry entry ID")
+        require(item["id"] not in ids, "Duplicate registry entry ID")
+        ids.add(item["id"])
+        require(item.get("kind") in {"knowledge", "mcp"} and string(item.get("title")), "Invalid registry kind/title")
+        require(string(item.get("version")) and re.fullmatch(SEMVER, item["version"]) is not None, "Invalid registry version")
+        require(("path" in item) != ("artifact" in item), "Registry entry needs exactly one path or artifact")
+        if "path" in item:
+            if item["path"] != ".":
+                safe_path(item["path"])
+        else:
+            validate_https(item["artifact"])
+            require(isinstance(item.get("sha256"), str) and re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) is not None, "Artifact requires SHA256")
+    return data
+
+
+def validate_https(url: str) -> str:
+    require(string(url), "Expected HTTPS URL")
+    parsed = urlsplit(url)
+    require(parsed.scheme == "https" and bool(parsed.hostname), "Remote source must use HTTPS")
+    require(parsed.username is None and parsed.password is None and not parsed.query and not parsed.fragment, "Source URLs must not contain credentials, query strings or fragments")
+    return url
+
+
+def migrate_draft(payload: dict[str, bytes]) -> dict[str, bytes]:
+    """Explicit offline migration. Existing hashes are checked before conversion."""
+    manifest = object_json(payload[MANIFEST], MANIFEST)
+    require(manifest.get("protocol") == "open-reverselab.extension/v1-draft", "Only v1-draft can be migrated")
+    if LOCK in payload:
+        lock = object_json(payload[LOCK], LOCK)
+        expected = make_lock(manifest, payload)
+        expected["protocol"] = "open-reverselab.lock/v1-draft"
+        require(all(lock.get(key) == value for key, value in expected.items()), "Draft lock mismatch")
+    result = dict(payload)
+    manifest["protocol"] = PROTOCOL
+    manifest.setdefault("extensions", {})["migratedFrom"] = "open-reverselab.extension/v1-draft"
+    result[MANIFEST] = json_bytes(manifest)
+    result.pop(LOCK, None)
+    validate(result)
+    result[LOCK] = json_bytes(make_lock(manifest, result))
+    return result
+
+
+def zip_bytes(payload: dict[str, bytes]) -> bytes:
+    manifest = validate(payload)
+    payload = dict(payload)
+    payload.setdefault(LOCK, json_bytes(make_lock(manifest, payload)))
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as output:
+        for name, raw in sorted(payload.items()):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = (stat.S_IFREG | 0o644) << 16
+            output.writestr(info, raw)
+    return buffer.getvalue()
+
+
+def pack(source: str | Path, output: str | Path) -> dict:
+    source, output = Path(source), Path(output)
+    require(not output.resolve().is_relative_to(source.resolve()), "Write output outside the package source")
+    payload, archive = load(source)
+    manifest = validate(payload, archive)
+    raw = zip_bytes(payload)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("xb") as handle:
+        handle.write(raw)
+    return {"path": str(output), "sha256": hashlib.sha256(raw).hexdigest(), "id": manifest["id"], "version": manifest["version"]}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("operation", choices=("check", "build"))
+    parser.add_argument("operation", choices=("check", "build", "migrate"))
     parser.add_argument("source", type=Path)
     parser.add_argument("output", type=Path, nargs="?")
     args = parser.parse_args()
     try:
         payload, archive = load(args.source)
+        if args.operation == "migrate":
+            payload = migrate_draft(payload)
         manifest = validate(payload, archive)
-        if args.operation == "build":
-            require(args.source.is_dir(), "Build from a source directory")
+        if args.operation in {"build", "migrate"}:
             require(args.output is not None, "Build requires an output ZIP path")
             require(not args.output.resolve().is_relative_to(args.source.resolve()), "Write output outside the package source")
-            payload[LOCK] = (json.dumps(make_lock(manifest, payload), ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
-            buffer = io.BytesIO()
-            with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as output:
-                for name, raw in sorted(payload.items()):
-                    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-                    info.compress_type = zipfile.ZIP_DEFLATED
-                    info.external_attr = (stat.S_IFREG | 0o644) << 16
-                    output.writestr(info, raw)
+            output = zip_bytes(payload)
             with args.output.open("xb") as destination:
-                destination.write(buffer.getvalue())
-            print(f"ZIP SHA256: {hashlib.sha256(buffer.getvalue()).hexdigest()}")
+                destination.write(output)
+            print(f"ZIP SHA256: {hashlib.sha256(output).hexdigest()}")
         else:
             require(args.output is None, "check takes no output path")
-        print(f"Draft authoring checks passed: {manifest['id']}@{manifest['version']} ({manifest['kind']})")
-        print("Desktop import and live MCP execution are not checked by this helper.")
+        print(f"Extension v1 checks passed: {manifest['id']}@{manifest['version']} ({manifest['kind']})")
         return 0
     except (ValueError, OSError, KeyError, TypeError, zipfile.BadZipFile, RuntimeError) as error:
         print(f"ERROR: {error}", file=sys.stderr)

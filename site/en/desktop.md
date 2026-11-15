@@ -23,6 +23,16 @@ Goals and ready actions have no default concurrency cap. Time and token budgets 
 
 The transcript presents analysis progress, with expandable plans, scripts, tool output, and verification details. The canvas shows actual dependencies and evidence links, with card details, zoom, execution follow, and full-screen mode.
 
+## Install knowledge and MCP
+
+The desktop runtime and knowledge packs are distributed independently. Open **Extensions**, enter `https://github.com/LING71671/open-reverselab`, read the catalog, and install the official knowledge pack. Other repositories, local folders, and ZIPs work too. Sources stores catalogs for later browsing.
+
+Knowledge packs can be enabled, disabled, removed, and exported. Selected-network export includes referenced methods and documents; the ZIP can be imported again. Running Goals retain pinned versions when packs are updated.
+
+Under MCP, import a descriptor or add a standalone connection, configure a stdio command or Streamable HTTP endpoint, then verify the connection to discover tools and resources. Connection values stay local and are excluded from knowledge exports.
+
+[Extension protocol and usage](https://github.com/LING71671/open-reverselab/blob/main/EXTENSIONS.md) · [Extension authoring skill](https://github.com/LING71671/open-reverselab/tree/main/tools/skills/create-reverselab-extension)
+
 ## Application updates
 
 Choose a channel in Settings → Application updates. Beta builds default to the Beta channel, which accepts beta and production releases. Stable accepts production releases only. Both channels offer only higher versions; changing channels does not downgrade the application.

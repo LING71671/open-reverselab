@@ -1,13 +1,13 @@
 ---
 name: create-reverselab-extension
-description: 创建或扩充 Open ReverseLab 知识包、攻击网、防御网、MCP 连接描述和 GitHub 扩展目录，按附带草案协议生成可审阅源码与 ZIP。
+description: 创建或扩充 Open ReverseLab 知识包、攻击网、防御网、MCP 连接描述和 GitHub 扩展目录，按稳定 v1 协议生成可审阅源码与 ZIP。
 ---
 
 # 创建 Open ReverseLab 扩展
 
 [English](SKILL.md)
 
-完成用户请求的扩展，保留已有知识和稳定 ID。附带格式属于**作者协议草案**，当前桌面端尚不能导入这种包。离线校验结果与应用兼容性分别说明。
+完成用户请求的扩展，保留已有知识和稳定 ID，使用桌面“扩展”页面支持的**稳定 v1 协议**。分别说明结构检查、实际导入导出检查和真实 MCP 检查结果。
 
 ## 选择输出
 
@@ -37,10 +37,11 @@ MCP 绑定应依据服务实际文档中的传输方式、安装版本要求和�
 python scripts/package_extension.py check path/to/pack
 python scripts/package_extension.py build path/to/pack path/to/extension.zip
 python scripts/package_extension.py check path/to/extension.zip
+python scripts/package_extension.py migrate path/to/draft.zip path/to/v1.zip
 ```
 
-工具检查本地草案结构、显式文件清单、ID、本地引用、网络入口、MCP 描述结构和 ZIP 摘要。它不解析远程依赖，不验证真实 MCP 服务，不求值方法条件，也不证明桌面导入兼容。根据错误修正制品，不削弱检查来通过异常包。
+工具复制桌面的规范实现 `scripts/misc/extension_protocol.py`，检查稳定协议结构、显式文件清单、ID、引用、条件、必需能力、MCP 描述和 ZIP 摘要。依赖使用精确版本，工具还提供三值 `evaluate_condition` 供本地检查。依赖激活与真实 MCP 行为由运行时服务负责。根据错误修正制品，不削弱检查。v1-draft 包必须显式迁移，转换前校验已有锁文件。
 
 另行检查知识语义：引用证据是否支持方法、关系方向是否正确，检测方法不能写成预防能力。可运行示例按任务指定环境验证。真实任务证据、历史不进入复用包，仓库目录需检查 JSON、指定 commit 下的相对路径，以及引用包的标识、版本和摘要。
 
-交付源码目录、ZIP、计算得到的 SHA256 和实际检查结果，沿用适用的发布许可。发布仓库、Release 或对外消息按用户对应指令执行，编写扩展本身不代表已获发布授权。若目标检出已实现导入器，再针对该实现检查 GitHub、ZIP 导入和导出后重新导入。
+交付源码目录、ZIP、计算得到的 SHA256 和实际检查结果，沿用适用许可。发布仓库、Release 或对外消息按用户对应指令执行，编写扩展本身不代表发布授权。检查桌面的本地源码/ZIP 导入与导出后重新导入；存在用户指定的真实来源时再检查 GitHub 导入，不编造发布链接。导入器接受本地包目录，包括源码检出的 `kb` 包；克隆仓库不会自动将知识安装到桌面。

@@ -1,13 +1,13 @@
 ---
 name: create-reverselab-extension
-description: Create or extend Open ReverseLab knowledge packs, attack and defense networks, MCP connection descriptors, and GitHub extension catalogs. Prepare reviewable source and ZIP artifacts against the bundled draft contract.
+description: Create or extend Open ReverseLab knowledge packs, attack and defense networks, MCP connection descriptors, and GitHub extension catalogs. Prepare reviewable source and ZIP artifacts against the stable v1 contract.
 ---
 
 # Create Open ReverseLab extensions
 
 [简体中文](SKILL.zh-CN.md)
 
-Build the extension the user requested, preserving existing knowledge and stable IDs. The bundled format is a **draft authoring contract**. The current desktop does not yet import these packages. Report offline validation separately from application compatibility.
+Build the requested extension, preserving existing knowledge and stable IDs. Use the **stable v1 contract** accepted by the desktop Extensions page. Report structural checks, actual import/export checks, and live MCP checks separately.
 
 ## Choose the output
 
@@ -37,10 +37,11 @@ The helper is relative to this skill directory and requires Python 3.11+ with no
 python scripts/package_extension.py check path/to/pack
 python scripts/package_extension.py build path/to/pack path/to/extension.zip
 python scripts/package_extension.py check path/to/extension.zip
+python scripts/package_extension.py migrate path/to/draft.zip path/to/v1.zip
 ```
 
-It validates the local draft structure, explicit file list, IDs, local references, network entries, MCP descriptor shape, and archive digests. It does not resolve remote dependencies, validate a live MCP server, evaluate method conditions, or prove compatibility with a desktop importer. Read the helper's errors and fix the affected artifact; do not weaken its checks to make a malformed pack pass.
+The helper copies the desktop's canonical `scripts/misc/extension_protocol.py`. It validates the stable structure, explicit file list, IDs, references, conditions, required features, MCP descriptors, and archive hashes. Dependencies use exact versions. It also provides three-valued `evaluate_condition` for local checks. Dependency activation and live MCP behavior belong to the runtime services. Fix the affected artifact when checks fail; do not weaken validation. A v1-draft package requires explicit migration, including validation of any existing lock before conversion.
 
 Review domain semantics separately: referenced evidence must support the method, relationship direction must be correct, and a detection method must not be described as prevention. Test runnable examples only within the task's requested environment. Keep real task evidence and histories outside the reusable package. For catalogs, parse JSON, resolve relative paths at the selected commit, and check entry identity/version/digest against the referenced package.
 
-Deliver the source directory, ZIP, computed SHA256, and an accurate account of checks performed. Use an existing publisher license where applicable. Publishing a repository, release, or external message requires the user's corresponding instruction; authoring alone does not imply it. If the importer exists in the target checkout, additionally test GitHub and ZIP import plus export/reimport against that actual implementation.
+Deliver the source directory, ZIP, computed SHA256, and the checks performed. Use an existing publisher license where applicable. Publishing a repository, release, or external message requires the user's corresponding instruction; authoring alone does not imply it. Test the desktop importer through local source/ZIP and export/reimport; test GitHub import when a real requested source exists. Do not invent a published URL to claim that check. The importer can read a local package directory, including a source checkout's `kb` package; merely cloning a repository does not install its knowledge in the desktop.

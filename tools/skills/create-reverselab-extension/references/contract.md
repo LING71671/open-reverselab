@@ -1,8 +1,8 @@
-# Extension authoring contract: v1 draft
+# Extension authoring contract: v1
 
 [简体中文](contract.zh-CN.md)
 
-This contract is proposed, not a released desktop import API. Use the exact draft identifiers below. The bundled helper implements the structural subset described in its `check` operation; runtime dependency resolution, conditions, and tool execution are separate work.
+This stable contract is accepted by the desktop Extensions importer. The bundled helper copies the runtime validator. Its `check` validates local structure and semantics; installed dependency resolution and MCP tool execution are runtime operations. Existing v1-draft packages need explicit `migrate` conversion.
 
 ## Common manifest
 
@@ -10,7 +10,7 @@ The root file is `reverselab.extension.json`:
 
 ```json
 {
-  "protocol": "open-reverselab.extension/v1-draft",
+  "protocol": "open-reverselab.extension/v1",
   "kind": "knowledge",
   "id": "example.integrity",
   "version": "0.1.0",
@@ -25,7 +25,7 @@ The root file is `reverselab.extension.json`:
 
 `kind` is `knowledge` or `mcp`. Use a lowercase dotted pack namespace and a SemVer content version. `files` explicitly lists every payload file, excluding the manifest and generated `reverselab.lock.json`. Paths are relative POSIX paths. Only listed files are packaged; do not glob an entire workspace. The manifest and all payload files must be UTF-8 when textual. Optional extension metadata uses `extensions`; unknown optional values remain intact.
 
-`requires` entries contain `id`, `version` (exact or a SemVer range), `source` (repository URL), and `optional` (boolean). A host lock resolves ranges to exact version, digest, commit, and subdirectory before activation. The authoring helper checks the entry shape but does not fetch or resolve it. A `requiredFeatures` array can name capabilities required by future implementations; unknown values prevent activation.
+`requires` entries contain `id`, `version` (exact SemVer), `source` (source identity or repository URL), and `optional` (boolean). Version ranges are rejected. Install required dependencies before activation; the store resolves their installation IDs and digests and validates external references. The helper checks dependency shape without fetching content. Supported `requiredFeatures` are `knowledge`, `mcp`, `conditions/v1`, `typed-relations/v1`, and `source-qualified-ids/v1`; unknown required features prevent activation.
 
 ## Knowledge records
 
@@ -51,7 +51,7 @@ Relations contain `from`, `to`, `type`, and optional `when`. Direction matters:
 | `verifies` | The source method checks a claim/result associated with the target |
 | `conflicts` | The methods or their results cannot jointly support the same claim under the recorded conditions |
 
-Optional `when` is one of `{"all": [condition]}`, `{"any": [condition]}`, `{"not": condition}`, or `{"evidence": "key", "state": "observed|absent|unobservable"}`. Unknown is distinct from recorded absence. An empty `all` is true; an empty `any` is false. Unknown propagates through `not`; for `all`/`any`, a decisive false/true wins, otherwise unknown propagates. The draft helper does not evaluate these conditions.
+Optional `when` is one of `{"all": [condition]}`, `{"any": [condition]}`, `{"not": condition}`, or `{"evidence": "key", "state": "observed|absent|unobservable"}`. Unknown is distinct from recorded absence. An empty `all` is true; an empty `any` is false. Unknown propagates through `not`; for `all`/`any`, a decisive false/true wins, otherwise unknown propagates. `evaluate_condition(condition, evidence)` returns `True`, `False`, or `None`. Conditions and relation ordering are data, not a claim that the desktop automatically schedules every declared graph.
 
 `provenance` names sources and versions; `validation` describes what was actually tested and in which environment. `produces` describes expected evidence only. Record observations in the workspace with method/pack IDs, invocation and evidence references; never label an expected output as an observed result in a reusable pack.
 
@@ -61,7 +61,7 @@ Knowledge feedback cycles are allowed. A planner must resolve selected methods i
 
 An MCP extension uses the same manifest with `kind: "mcp"`, `mcp: "connection.json"`, and that file in `files`. It describes how the user can connect an existing server; it does not redefine JSON-RPC, MCP negotiation, or tool schemas.
 
-`connection.json` has `transport`, `inputs`, and either `command`/`args` for `stdio`, or `url` for `streamable-http`. `inputs` is an array of `{name, type, required}` where `type` is `string`, `url`, `path`, or `secret`. `${inputs.name}` references are resolved locally. Optional `env` and `headers` map names to input references; credential values are never bundled. `args` is an argument array, not a shell command string. Server prerequisites and pinned installation instructions belong in a listed document; the application separately connects or installs the selected entry.
+`connection.json` has `transport`, `inputs`, and either `command`/`args` for `stdio`, or `url` for `streamable-http`. `inputs` is an array of `{name, type, required}` where `type` is `string`, `url`, `path`, or `secret`. Input `value` and `default` fields are rejected. `${inputs.name}` references resolve locally. Optional `env` and `headers` values must be input references; credentials are never bundled. `args` is an argument array. Server prerequisites and pinned installation instructions belong in a listed document; the desktop does not execute install hooks or package-manager commands. It saves configuration and explicitly verifies the selected connection, with a fresh session for later calls.
 
 For example, an HTTP preset can require a user-supplied endpoint without pretending a sample server exists:
 
@@ -83,7 +83,7 @@ Local source checks do not require a lock; building generates one from the exact
 
 ## GitHub repository catalog
 
-A root `reverselab.registry.json` uses `protocol: "open-reverselab.registry/v1-draft"`, `id`, `title`, and `entries`. Each entry has `id`, `kind`, `title`, `version`, and exactly one location:
+A root `reverselab.registry.json` uses `protocol: "open-reverselab.registry/v1"`, `id`, `title`, and `entries`. Each entry has `id`, `kind`, `title`, `version`, and exactly one location:
 
 - `path`: relative path to an extension directory in the same resolved commit, or
 - `artifact`: HTTPS ZIP URL plus `sha256` computed from the actual artifact.

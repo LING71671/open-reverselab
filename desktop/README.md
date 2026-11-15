@@ -17,7 +17,7 @@ pnpm dev
 
 For the native desktop app, use `pnpm tauri dev`. Python 3.11+ must be available as `python`. Native builds also need Rust and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/), including WebView2 on Windows. Install analysis tools separately. Browser preview uses local development services for workspace and Python operations; native proxy routing, process monitoring, and update installation require the desktop app.
 
-`REVERSELAB_ROOT` can point to the repository containing the knowledge base and scripts. See the [development guide](DEV_GUIDE.md) for build and verification commands.
+`REVERSELAB_ROOT` can point to a source checkout or a packaged runtime containing the desktop scripts. Knowledge packs and MCP servers are installed separately through **Extensions**. See the [development guide](DEV_GUIDE.md) for build and verification commands.
 
 ## Create a Goal
 
@@ -40,9 +40,9 @@ The **Canvas** shows actual actions, dependencies, evidence handoffs, and joins.
 
 `red` and `blue` use separate strategies and knowledge routes. In `both`, each side can create parallel actions and share evidence with the other side; the graph includes those cross-links. Each branch is checked separately before the combined objective is verified.
 
-Knowledge lives in [`kb/red/`](../kb/red), [`kb/blue/`](../kb/blue), and [`kb/shared/`](../kb/shared). Red uses attack networks, blue uses defense networks, and both can retrieve shared references. The knowledge view reads the actual index and links paired articles.
+Knowledge lives in [`kb/red/`](../kb/red), [`kb/blue/`](../kb/blue), and [`kb/shared/`](../kb/shared). Red uses attack networks, blue uses defense networks, and both can retrieve shared references. Import the official pack from `https://github.com/LING71671/open-reverselab` in **Extensions**. The knowledge view reads enabled packs and links paired articles. Goals pin the selected versions so updates and removal do not change their existing references. See the [extension protocol](../EXTENSIONS.md).
 
-Health monitoring groups observed events by Goal, Agent, model, knowledge base, tool, and storage. A service with no observation remains unknown. The current execution adapters provide target triage and Python execution; scripts can use installed libraries and command-line tools. Dedicated debugger, device-control, and hardening adapters require their own integration. BLA / REA acceptance work is tracked in the [adversarial validation plan](ADVERSARIAL_PROFILES.md).
+Health monitoring groups observed events by Goal, Agent, model, knowledge base, tool, and storage. A service with no observation remains unknown. Execution adapters provide target triage, Python, and discovered MCP tools; scripts can use installed libraries and command-line tools. MCP presets and standalone connections support stdio and Streamable HTTP. Dedicated debugger, device-control, and hardening adapters require their own integration. BLA / REA acceptance work is tracked in the [adversarial validation plan](ADVERSARIAL_PROFILES.md).
 
 ## Settings
 

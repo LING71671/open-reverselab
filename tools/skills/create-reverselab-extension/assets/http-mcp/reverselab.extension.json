@@ -1,5 +1,5 @@
 {
-  "protocol": "open-reverselab.extension/v1-draft",
+  "protocol": "open-reverselab.extension/v1",
   "kind": "mcp",
   "id": "example.http-mcp",
   "version": "0.1.0",

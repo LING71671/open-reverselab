@@ -23,6 +23,16 @@ Goal 与就绪动作的并发数量默认不设上限。时间和 Token 预算�
 
 正文展示分析进展，计划、脚本、工具输出与核验明细按需展开。流程画板展示真实依赖与证据连线，支持卡片详情、缩放、跟随流程和全屏。
 
+## 安装知识库与 MCP
+
+桌面运行时与知识包独立分发。打开侧栏**扩展**，输入 `https://github.com/LING71671/open-reverselab`，读取目录后安装官方知识包。也可导入其他仓库、文件夹或 ZIP；市场源用于保存和浏览扩展目录。
+
+知识包可启用、停用、移除和导出。选择网络导出时会带上引用的方法与文档，ZIP 可再次导入。进行中的 Goal 使用固定版本，后续更新不会替换已有引用。
+
+在 MCP 页导入描述包或添加独立连接，配置 stdio 命令或 Streamable HTTP 地址，验证连接后即可发现工具与资源。连接参数保存在本机，不进入知识包导出。
+
+[扩展协议与导入说明](https://github.com/LING71671/open-reverselab/blob/main/EXTENSIONS.zh-CN.md) · [创建扩展的 skill](https://github.com/LING71671/open-reverselab/tree/main/tools/skills/create-reverselab-extension)
+
 ## 应用更新
 
 在设置 → 应用更新中选择渠道。测试版默认选择“测试版”渠道，接收 beta 与正式版本；“稳定版”只接收正式版本。两个渠道都只提供更高版本，切换渠道不会降级。

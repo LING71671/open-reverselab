@@ -18,7 +18,7 @@ This document describes current contracts and implementation boundaries. A succe
 
 Both strategies can create action forks and joins. They exchange observations while executing, and later actions can depend on evidence produced by the other strategy. Passing both scoped assessments is followed by [verification of the original combined objective](src/engine/tracks/verifyBothGoal.ts).
 
-Knowledge selection uses indexed track metadata: red reads `kb/red/` and `kb/shared/`; blue reads `kb/blue/` and `kb/shared/`. Each strategy in both retrieves its own references. A paired-document link helps locate related material without changing the receiving strategy.
+Knowledge selection uses pinned installed-pack metadata. A Goal snapshots pack IDs, versions, digests, and the relevant graph before splitting into red/blue branches. Resume and objective changes keep those references. The source articles use these track paths: red reads `kb/red/` and `kb/shared/`; blue reads `kb/blue/` and `kb/shared/`. Each strategy in both retrieves its own references. A paired-document link helps locate related material without changing the receiving strategy.
 
 ## Goal ownership and revisions
 

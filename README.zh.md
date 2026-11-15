@@ -55,11 +55,11 @@
 
 桌面端以 Windows x64 为打包目标，Python、Ghidra、Frida、x64dbg 等外部工具需另行安装。macOS/Linux 可使用源码形式的 CLI/MCP 工作流，暂未提供桌面安装包。安装版提供“测试版”和“稳定版”更新渠道，beta 构建初始选择测试版渠道，详见[应用更新](desktop/UPDATES.zh-CN.md)。
 
-桌面端执行目标初筛与 Python 动作，默认不设工具时限。知识库中的 MCP 工具名不会自动成为调试器、设备或加固执行适配器。工作区文件保存在本地，模型辅助任务会把任务上下文和所选证据发送到配置的模型端点；Python 动作继承当前用户权限。配置、数据流向和能力范围见[桌面端说明](desktop/README.zh-CN.md)。
+桌面端执行目标初筛、Python 动作，以及已配置 MCP 连接发现的工具调用，默认不设任务总时限。MCP 服务和外部工具按需安装与配置。工作区文件保存在本地，模型辅助任务会把任务上下文和所选证据发送到配置的模型端点；Python 动作继承当前用户权限。配置、数据流向和能力范围见[桌面端说明](desktop/README.zh-CN.md)。
 
 ## 知识库与 MCP
 
-独立知识包、MCP 扩展及 GitHub/ZIP 导入方案见[扩展设计](EXTENSIONS.zh-CN.md)。[创建 skill](tools/skills/create-reverselab-extension/SKILL.zh-CN.md) 提供草案模板与离线 ZIP 检查工具，应用导入器仍待开发。
+**扩展**页面支持从 GitHub 仓库、目录清单、本地文件夹或 ZIP 导入知识包和 MCP 描述包。输入 `https://github.com/LING71671/open-reverselab` 即可选择官方知识包，桌面运行时独立分发。知识包支持启停、完整导出和按网络导出关联文档；MCP 支持 stdio 与 Streamable HTTP 连接。详见 [v1 协议与使用说明](EXTENSIONS.zh-CN.md)和[创建 skill](tools/skills/create-reverselab-extension/SKILL.zh-CN.md)。
 
 知识库覆盖 Web/CTF、Android/APK、Windows/PE，以及密码学、协议等通用主题。文档用 `track: red | blue | both` 标记所属轨道，其中 `both` 表示共享。攻击与防御文档通过索引元数据和 `defends` 关联；实际目录为准，并非每篇文章都存在一对一对应项。
 
