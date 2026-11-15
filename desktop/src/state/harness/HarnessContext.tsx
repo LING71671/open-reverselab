@@ -5,18 +5,21 @@ import { diagnosticService } from "../../services/diagnostics/diagnosticService"
 import { flushWorkspaces, loadWorkspaceRuntime, type WorkspaceRuntime } from "../../services/goals/workspaceRuntime";
 import type { Workspace } from "../../core/contracts/workspace";
 import { nativeBridge } from "../../services/native/nativeBridge";
+import { readWorkspaceSelection, saveWorkspaceSelection } from "./workspacePresentation";
 
 let storage: Storage | undefined;
 try { storage = window.localStorage; } catch { /* Allow a session without browser persistence. */ }
+function preference(key: string) { try { return storage?.getItem(key); } catch { return undefined; } }
 function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: Workspace) => Promise<void>) {
   const goalManager = runtime.manager;
   const { sessions, records, persistenceError } = useSyncExternalStore(goalManager.subscribe, goalManager.getSnapshot);
-  const [track, setActiveTrack] = useState<SecurityTrack>(() => {
-    const saved = storage?.getItem("reverselab_track");
-    return isSecurityTrack(saved) ? saved : "blue";
+  const [initialSelection] = useState(() => {
+    const saved = preference("reverselab_track");
+    return readWorkspaceSelection(runtime.workspace.root, sessions, isSecurityTrack(saved) ? saved : "blue", storage);
   });
-  const [activeSessionId, setActiveSessionId] = useState("");
-  const trackSelections = useRef<Partial<Record<SecurityTrack, string>>>({});
+  const [track, setActiveTrack] = useState<SecurityTrack>(initialSelection.track);
+  const [activeSessionId, setActiveSessionId] = useState(initialSelection.byTrack[initialSelection.track] || "");
+  const trackSelections = useRef(initialSelection.byTrack);
   const [viewMode, setViewMode] = useState<HarnessView>("chat");
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [isToolMonitorOpen, setToolMonitorOpen] = useState(false);
@@ -28,7 +31,9 @@ function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: W
   const queuedCount = sessions.filter(s => s.status === "queued").length;
   useEffect(() => {
     try { storage?.setItem("reverselab_track", track); } catch { /* Keep in memory. */ }
-  }, [track]);
+    trackSelections.current[track] = activeSessionId;
+    saveWorkspaceSelection(runtime.workspace.root, { track, byTrack: trackSelections.current }, storage);
+  }, [track, activeSessionId, runtime.workspace.root]);
   useEffect(() => {
     window.addEventListener("pagehide", flushWorkspaces);
     return () => window.removeEventListener("pagehide", flushWorkspaces);
@@ -76,7 +81,14 @@ function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: W
     newSession, selectSession,
     archiveSession: (id: string) => goalManager.archive(id),
     renameSession: (id: string, title: string) => goalManager.rename(id, title),
-    deleteSession: (id: string) => { goalManager.remove(id); if (id === activeSessionId) setActiveSessionId(""); },
+    deleteSession: (id: string) => {
+      goalManager.remove(id);
+      for (const candidate of Object.keys(trackSelections.current) as SecurityTrack[]) {
+        if (trackSelections.current[candidate] === id) delete trackSelections.current[candidate];
+      }
+      saveWorkspaceSelection(runtime.workspace.root, { track, byTrack: trackSelections.current }, storage);
+      if (id === activeSessionId) setActiveSessionId("");
+    },
     selectStep,
     setViewMode, setToolMonitorOpen,
     setTrack: (next: SecurityTrack) => {
@@ -109,7 +121,7 @@ export function HarnessProvider({ children }: { children: ReactNode }) {
     setError("");
     void (async () => {
       const list = await nativeBridge.workspace<Workspace[]>({ action: "list" });
-      const selected = list.find(w => w.root === storage?.getItem("reverselab_workspace")) || list[0];
+      const selected = list.find(w => w.root === preference("reverselab_workspace")) || list[0];
       const workspace = selected ? await nativeBridge.workspace<Workspace>({ action: "open", root: selected.root }) : await nativeBridge.workspace<Workspace>({ action: "default" });
       const result = await loadWorkspaceRuntime(workspace);
       if (!cancelled) setRuntime(result);

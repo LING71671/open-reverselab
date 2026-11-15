@@ -35,6 +35,8 @@ A URL can be used directly as a Goal target. External files and directories can 
 
 [workspaceRuntime](src/services/goals/workspaceRuntime.ts) holds a separate GoalManager for each loaded workspace. Switching views keeps its runners alive. A runtime passes its bound report path to the pipeline and storage adapter. Reports for the same target remain separate by Goal ID, strategy, and attempt.
 
+Each workspace remembers the selected Goal for red, blue, and both. Unsent targets, objectives, additional instructions, and optional budgets are saved per Goal in local WebView storage. Switching workspaces or reloading restores these drafts; deleting a Goal removes its draft. If local storage is unavailable, drafts remain in memory until the application closes. Drafts are not included when copying a workspace directory.
+
 The Tauri `workspace_operation` command and development `POST /api/workspace` endpoint use the same [Python implementation](../scripts/misc/desktop_workspace.py). JSON requests select an `action`:
 
 | Action | Input | Result |

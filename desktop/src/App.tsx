@@ -8,12 +8,11 @@ import "./workspace.css";
 import { ResizeHandle, usePaneSize } from "./views/controls/ResizeHandle";
 import { SamplesView } from "./views/samples/SamplesView";
 import { RetainedView } from "./views/shell/RetainedView";
-import type { ComposerDraft } from "./views/prompt/PromptConsole";
+import { EMPTY_COMPOSER_DRAFT as emptyDraft, type ComposerDraft } from "./core/contracts/composer";
+import { readWorkspaceDrafts, saveWorkspaceDrafts } from "./state/harness/workspacePresentation";
 import { updateService } from "./services/updates/updateService";
 import { PerformanceMonitor } from "./views/shell/PerformanceMonitor";
 import { ExtensionsView } from "./views/extensions/ExtensionsView";
-
-const emptyDraft: ComposerDraft = { target: "", prompt: "", instruction: "", minutes: "", tokens: "", limitsOpen: false };
 
 function AppContent() {
   const state = useHarness();
@@ -47,7 +46,8 @@ function AppContent() {
     const repeat = setInterval(() => void updateService.check(false), 60 * 60 * 1000);
     return () => { clearTimeout(timer); clearInterval(repeat); };
   }, []);
-  const [drafts, setDrafts] = useState<Record<string, ComposerDraft>>({});
+  const [drafts, setDrafts] = useState(() => readWorkspaceDrafts(state.workspace.root));
+  useEffect(() => { saveWorkspaceDrafts(state.workspace.root, drafts); }, [state.workspace.root, drafts]);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try { return localStorage.getItem("reverselab_theme") === "dark" ? "dark" : "light"; } catch { return "light"; }
   });
@@ -59,8 +59,7 @@ function AppContent() {
   const statuses = { idle: "待开始", queued: "等待执行", running: "运行中", completed: "已完成", failed: "执行失败", blocked: "已阻塞", exhausted: "已达运行上限", cancelled: "已停止" };
   const running = state.sessions.filter(s => s.status === "running" || s.status === "queued");
   const composerVisible = state.viewMode === "canvas" || state.viewMode === "chat";
-  const workspaceDraftKey = (id: string) => `${state.workspace.root}:${id}`;
-  const draftKey = workspaceDraftKey(state.activeSessionId || `new:${state.track}`);
+  const draftKey = state.activeSessionId || `new:${state.track}`;
   const baseTarget = state.currentSession?.target || "";
   const basePrompt = state.messages.find(message => message.role === "user")?.content || "";
   const draft = drafts[draftKey] || { ...emptyDraft, target: baseTarget, prompt: basePrompt };
@@ -69,7 +68,7 @@ function AppContent() {
   }, [draftKey, baseTarget, basePrompt]);
   const createDraft = (changes: Partial<ComposerDraft> = {}) => {
     const id = state.newSession();
-    setDrafts(previous => ({ ...previous, [workspaceDraftKey(id)]: { ...emptyDraft, ...changes } }));
+    setDrafts(previous => ({ ...previous, [id]: { ...emptyDraft, ...changes } }));
   };
   return (
     <div className="desktop-app" data-track={state.track} data-canvas-fullscreen={canvasFullscreen}>
@@ -77,7 +76,7 @@ function AppContent() {
       <div className="desktop-body">
       <div className="workspace-layout" hidden={settingsOpen} style={{ "--sidebar-width": `${sidebarWidth}px`, "--composer-height": `${composerHeight}px` } as CSSProperties}>
         <div className="sidebar-region">
-        <Sidebar workspaceName={state.workspace.name} workspaceRoot={state.workspace.root} onOpenWorkspace={() => openSettings("workspace")} sessions={state.sessions} activeSessionId={state.activeSessionId} track={state.track} onTrackChange={state.setTrack} isRunning={state.isRunning} theme={theme} onThemeChange={() => setTheme(theme === "light" ? "dark" : "light")} onSelectSession={state.selectSession} onNewSession={() => createDraft()} onRenameSession={state.renameSession} onArchiveSession={state.archiveSession} onDeleteSession={id => { state.deleteSession(id); setDrafts(previous => { const next = { ...previous }; delete next[workspaceDraftKey(id)]; return next; }); }} onOpenTools={() => openSettings("tools")} onOpenSettings={() => openSettings()} activeView={state.viewMode} onToggleView={state.setViewMode} />
+        <Sidebar workspaceName={state.workspace.name} workspaceRoot={state.workspace.root} onOpenWorkspace={() => openSettings("workspace")} sessions={state.sessions} activeSessionId={state.activeSessionId} track={state.track} onTrackChange={state.setTrack} isRunning={state.isRunning} theme={theme} onThemeChange={() => setTheme(theme === "light" ? "dark" : "light")} onSelectSession={state.selectSession} onNewSession={() => createDraft()} onRenameSession={state.renameSession} onArchiveSession={state.archiveSession} onDeleteSession={id => { state.deleteSession(id); setDrafts(previous => { const next = { ...previous }; delete next[id]; return next; }); }} onOpenTools={() => openSettings("tools")} onOpenSettings={() => openSettings()} activeView={state.viewMode} onToggleView={state.setViewMode} />
         <ResizeHandle label="调整侧栏宽度" axis="x" size={sidebarWidth} min={180} max={360} initial={224} onChange={setSidebarWidth} />
         </div>
         <main className="workspace-main">
@@ -111,7 +110,7 @@ function AppContent() {
           <div className="workspace-composer" hidden={!composerVisible}>
             <ResizeHandle label="调整输入区高度" axis="y" reverse size={composerHeight} min={170} max={480} initial={210} onChange={setComposerHeight} />
             {state.progress && <div className="run-progress" role="status"><span>{state.progress.reason || `第 ${state.progress.attempts} 条路径`}</span><span>{Math.round(state.progress.elapsedMs / 1000)}s · {state.progress.usageEstimated ? "约 " : ""}{state.progress.tokensUsed.toLocaleString()} tokens</span></div>}
-            <PromptConsole key={draftKey} active={!settingsOpen && composerVisible} isRunning={state.isRunning} draft={draft} onDraftChange={updateDraft} onSteer={state.steerGoal} onExecute={async (target, prompt, mode, budget) => { const id = await state.executeHarness(target, prompt, mode, budget); setDrafts(previous => { const next = { ...previous, [workspaceDraftKey(id)]: draft }; if (!state.activeSessionId) delete next[draftKey]; return next; }); }} onStop={state.stopHarness} onSettings={() => openSettings()} />
+            <PromptConsole key={draftKey} active={!settingsOpen && composerVisible} isRunning={state.isRunning} draft={draft} onDraftChange={updateDraft} onSteer={state.steerGoal} onExecute={async (target, prompt, mode, budget) => { const id = await state.executeHarness(target, prompt, mode, budget); setDrafts(previous => { const next = { ...previous, [id]: draft }; if (!state.activeSessionId) delete next[draftKey]; return next; }); }} onStop={state.stopHarness} onSettings={() => openSettings()} />
           </div>
           <PerformanceMonitor />
         </main>

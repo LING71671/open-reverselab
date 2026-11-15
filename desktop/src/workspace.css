@@ -57,7 +57,7 @@ input[type="checkbox"]:not([role="switch"]):checked::after { content: ""; width:
 .target-field input:focus { border-bottom-color: transparent; }
 .objective-field { flex: 1; min-height: 48px; }
 .objective-field textarea { height: 100%; min-height: 48px; max-height: none; padding: 8px 0; resize: none; }
-.objective-field textarea:focus-visible { outline: 0; box-shadow: none; }
+.objective-field textarea:focus-visible { outline: 0; box-shadow: inset 0 -1px var(--focus); }
 .composer-actions { padding: 4px 0 0; gap: 8px; }
 .composer-actions > .text-button:first-child { margin-left: -10px; }
 .budget-fields { padding: 8px 0; border: 0; }
@@ -155,8 +155,10 @@ input[type="checkbox"]:not([role="switch"]):checked::after { content: ""; width:
 .goal-view-tabs button { display: flex; align-items: center; gap: 7px; padding: 7px 10px; font-size: 14px; border-radius: 6px; color: var(--text-secondary); }
 .goal-view-tabs button:hover { background: var(--bg-elevated); }
 .goal-view-tabs button[aria-selected="true"] { color: var(--text-primary); background: var(--selection); font-weight: 550; }
+.running-tasks-menu { max-width: calc(100vw - 40px); }
+.running-tasks-menu button > span { overflow-wrap: anywhere; }
 .target-field > span, .target-field input { font-size: var(--type-control); }
-.target-field input:focus-visible { outline: none; }
+.target-field input:focus-visible { outline: none; border-bottom-color: var(--focus); }
 .target-field:has(input:focus-visible) > span { color: var(--text-primary); font-weight: 550; }
 .objective-field textarea { font-size: 16px; line-height: 1.7; }
 .budget-fields label, .composer-error, .settings-feedback, .settings-page .settings-fields label, .settings-fields small, .tools-toolbar { font-size: 14px; }

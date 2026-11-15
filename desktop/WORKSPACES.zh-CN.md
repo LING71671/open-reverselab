@@ -35,6 +35,8 @@ URL 可以直接作为 Goal target，外部文件和目录也可以直接引用�
 
 [workspaceRuntime](src/services/goals/workspaceRuntime.ts) 为每个已加载工作区保留独立 GoalManager，切换视图后其执行器继续运行。运行时将绑定的报告路径传给 pipeline 和存储适配器。同一 target 的报告按 Goal ID、策略和尝试次数分开。
 
+每个工作区分别记住 red、blue、both 上次选中的 Goal。未发送的目标、任务描述、补充要求和可选预算按 Goal 保存在本机 WebView 存储中，切换工作区或刷新后可恢复；删除 Goal 时一并删除其草稿。本机存储不可用时，草稿在本次应用会话中保留。复制工作区目录不包含这些草稿。
+
 Tauri 的 `workspace_operation` 命令与开发服务的 `POST /api/workspace` 接口使用同一份 [Python 实现](../scripts/misc/desktop_workspace.py)。JSON 请求通过 `action` 选择操作：
 
 | Action | 输入 | 结果 |
