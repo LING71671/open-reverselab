@@ -2,7 +2,7 @@
 
 [简体中文](RELEASING.zh-CN.md)
 
-The `v2.0.0-beta.1` packages were withdrawn on 2026-11-14 while desktop and knowledge-base distribution are separated. The procedure below stages only desktop runtime files; knowledge packs and MCP servers are separate artifacts. Publish the replacement under a new version and tag.
+The `v2.0.0-beta1` distribution packages only the desktop runtime. Knowledge packs and MCP servers are independent extensions. The earlier `v2.0.0-beta.1` tag remains unchanged.
 
 Python 3.11+, WebView2, and external analysis tools are separate dependencies; see the [desktop guide](site/en/desktop.md).
 
@@ -58,7 +58,7 @@ The portable ZIP expands to `OpenReverseLab-<VERSION>/`; its launcher is `OpenRe
 
 ## Publish and update channels
 
-Use tag `v<VERSION>` at the same commit used for staging and building. Create a draft GitHub Release, pass the notes through `--notes-file`, and upload the complete asset set. Confirm that the manifest version, platform entry, installer URL, signature, and checksums match those assets. Publish it with the **prerelease** flag, without marking it as the latest production release.
+Use tag `v<VERSION>` at the same commit used for staging and building. Create a draft GitHub Release, pass the notes through `--notes-file`, and upload the complete asset set. Confirm that the manifest version, platform entry, installer URL, signature, and checksums match those assets. For `v2.0.0-beta1`, publish without GitHub's prerelease flag and mark it Latest so the repository sidebar displays the current desktop download. Keep beta in the version and release title; the desktop Stable channel still excludes this SemVer prerelease.
 
 The desktop discovers releases through the public GitHub Releases API:
 
@@ -66,7 +66,7 @@ The desktop discovers releases through the public GitHub Releases API:
 - **Beta** selects public beta and production releases. A beta build initially selects Beta; a production build selects Stable. A user's explicit choice is retained.
 - Both channels select only higher SemVer versions and read the `latest.json` attached to the selected Release. Drafts and bare tags do not provide an installable update.
 
-The current channels do not rely on one fixed `releases/latest/download/latest.json` endpoint. Older clients that use that endpoint still follow GitHub's latest production release; a beta should not replace it.
+The current channels do not rely on one fixed `releases/latest/download/latest.json` endpoint. Older clients using that endpoint follow GitHub's Latest selection, including this beta.
 
 After the Release and assets are public, publish the corresponding root README and website download entries. Website publication does not itself publish an installer. Keep published tags and artifact/signature pairs immutable.
 

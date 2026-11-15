@@ -4,9 +4,32 @@
 
 Notable changes to Open ReverseLab.
 
+## [2.0.0-beta1] - 2026-11-15
+
+### Desktop and extension distribution
+
+- Windows x64 installer and portable ZIP contain the desktop runtime without bundled knowledge articles or MCP server sources. Python 3.11+, WebView2, and external analysis tools remain separate dependencies.
+- Official knowledge is maintained in [open-reverselab-knowledge](https://github.com/LING71671/open-reverselab-knowledge). Import it from the application's Extensions page; the main repository links its source through the `kb` submodule.
+- Extension protocol v1 supports knowledge packs and MCP descriptors imported from GitHub repositories, catalogs, local folders, or ZIP files. Packs can be enabled, disabled, removed, and exported; MCP connections support stdio and Streamable HTTP.
+- Multiple knowledge packs retain separate installation identities, document and method references, and attack/defense networks. GitHub installations support update checks. Running Goals keep their pinned content versions; selected-network exports include referenced documents and methods.
+- Added bilingual extension authoring documentation and a reusable creation skill.
+
+### Execution and usability
+
+- Both strategies exchange tool evidence during execution. New peer evidence can reopen a blocked branch, while repeated observations do not restart an unchanged route. Verification and action reuse track the measured target content version.
+- Goal and ready-action concurrency remain unlimited by default, with optional time and token budgets. Running Goals accept revised requirements while retaining their history and evidence.
+- Per-workspace and per-Goal drafts, selected strategies, and selected tasks survive navigation and reload. Improved long Chinese titles, keyboard operation, composition handling, responsive layout, canvas expansion, and cursor stability.
+- Health reporting follows the responsible failure across Goal, Agent, model, tool, knowledge, and storage layers. Optional local performance warnings and Sentry diagnostics remain off by default.
+- Proxy configuration and connection checks use consistent validation and failure reporting. Application updates recognize installed editions without a bundled knowledge directory, isolate download retries, and verify signed download contents and versions.
+
+### Validation scope
+
+- Regression checks cover execution and evidence handoffs, workspace persistence, proxy routing, update states and signed downloads, and diagnostics. Browser checks cover drafts, concurrent local SHA256 Goals, health views, themes, resizing, and keyboard use.
+- Full replacement and restart between installed desktop versions has not yet been validated. BLA/REA evaluation is outside this release's validation scope.
+
 ## [2.0.0-beta.1] - 2026-11-13 (withdrawn)
 
-Withdrawn on 2026-11-14 while desktop and knowledge-base distribution are separated. A replacement package is not yet published.
+Withdrawn on 2026-11-14 while desktop and knowledge-base distribution were separated. Superseded by `v2.0.0-beta1`.
 
 ### Desktop and Agent execution
 

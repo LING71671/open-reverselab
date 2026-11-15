@@ -2,7 +2,7 @@
 
 [English](RELEASING.md)
 
-`v2.0.0-beta.1` 桌面包已于 2026-11-14 撤下，正在调整为桌面端与知识库独立分发。以下流程仅暂存桌面运行文件，知识包与 MCP 服务独立分发。替代安装包使用新的版本号与标签。
+`v2.0.0-beta1` 仅打包桌面运行时，知识包与 MCP 服务作为扩展独立分发。此前的 `v2.0.0-beta.1` 标签保持不变。
 
 Python 3.11+、WebView2 与外部分析工具另行安装，详见[桌面端说明](site/desktop.md)。
 
@@ -58,7 +58,7 @@ python scripts/misc/package_desktop_release.py package --installer <NSIS-EXE> --
 
 ## 发布与更新渠道
 
-将 `v<VERSION>` 标签指向暂存和构建使用的同一提交。先创建草稿 GitHub Release，通过 `--notes-file` 提供说明并上传完整资产；确认清单版本、平台、安装包地址、签名及校验值对应这些资产。公开时标记为**预发布**，不设为最新正式版本。
+将 `v<VERSION>` 标签指向暂存和构建使用的同一提交。先创建草稿 GitHub Release，通过 `--notes-file` 提供说明并上传完整资产；确认清单版本、平台、安装包地址、签名及校验值对应这些资产。`v2.0.0-beta1` 取消 GitHub 预发布标记并设为 Latest，使仓库侧栏展示当前桌面下载；版本和标题仍保留 beta 测试版标识，桌面的稳定版渠道仍按 SemVer 排除该测试版。
 
 桌面通过公开 GitHub Releases API 查找发布：
 
@@ -66,7 +66,7 @@ python scripts/misc/package_desktop_release.py package --installer <NSIS-EXE> --
 - **测试版**选择公开测试版与正式版。beta 构建初始选择测试版渠道，正式构建初始选择稳定版，用户的手动选择会保留。
 - 两个渠道只选择更高的 SemVer 版本，并读取所选 Release 附带的 `latest.json`。草稿和单独的标签不提供可安装更新。
 
-当前渠道不依赖单一固定的 `releases/latest/download/latest.json` 地址。仍使用这个旧入口的客户端跟随 GitHub 最新正式 Release，beta 不应替换该入口。
+当前渠道不依赖单一固定的 `releases/latest/download/latest.json` 地址。使用旧入口的客户端跟随 GitHub 的 Latest 选择，包括本次 beta。
 
 Release 和资产公开后，再发布根 README 与官网对应下载入口。发布官网本身不会发布安装包；已发布标签及安装包／签名组合保持不变。
 
