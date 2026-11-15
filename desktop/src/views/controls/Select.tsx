@@ -11,11 +11,12 @@ interface SelectProps {
   disabled?: boolean;
   id?: string;
   className?: string;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /** Shared menu, including keyboard navigation, typeahead and focus restoration. */
-export function Select({ value, onChange, options, label, placeholder = "请选择", disabled, id, className = "" }: SelectProps) {
-  return <Primitive.Root value={value} onValueChange={onChange} disabled={disabled}>
+export function Select({ value, onChange, options, label, placeholder = "请选择", disabled, id, className = "", onOpenChange }: SelectProps) {
+  return <Primitive.Root value={value} onValueChange={onChange} disabled={disabled} onOpenChange={onOpenChange}>
     <Primitive.Trigger id={id} className={`select-trigger ${className}`} aria-label={label}>
       <Primitive.Value placeholder={placeholder} />
       <Primitive.Icon asChild><ChevronDown size={15} /></Primitive.Icon>

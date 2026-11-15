@@ -42,6 +42,7 @@ export class LlmService {
   private providers: ProviderConfig[] = [];
   private activeProviderId: string = "";
   private defaultModel: string;
+  private modelCatalogs = new Map<string, { baseUrl: string; apiKey?: string; models: string[] }>();
 
   constructor() {
     const savedModel = localStorage.getItem("reverselab_model");
@@ -130,6 +131,7 @@ export class LlmService {
   }
 
   public removeProvider(id: string): void {
+    this.modelCatalogs.delete(id);
     this.providers = this.providers.filter((p) => p.id !== id);
     this.saveProviders();
     if (this.activeProviderId === id) {
@@ -173,6 +175,12 @@ export class LlmService {
     }
   }
 
+  public getCachedModels(providerId = this.getActiveProviderId()): string[] {
+    const provider = this.providers.find(item => item.id === providerId);
+    const cached = this.modelCatalogs.get(providerId);
+    return provider && cached && cached.baseUrl === provider.baseUrl && cached.apiKey === provider.apiKey ? [...cached.models] : [];
+  }
+
   public async fetchModels(providerId?: string): Promise<string[]> {
     const provider = providerId
       ? this.providers.find((p) => p.id === providerId)
@@ -182,6 +190,7 @@ export class LlmService {
       return [];
     }
 
+    const baseUrl = provider.baseUrl, apiKey = provider.apiKey;
     try {
       const url = this.resolveUrl("/models", provider.baseUrl);
       const headers: Record<string, string> = {};
@@ -193,8 +202,9 @@ export class LlmService {
       const res = await modelFetch(url, { headers, signal: AbortSignal.timeout(10000) });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data.data) ? data.data.map((m: any) => m.id) : [];
-        if (list.length > 0) return list;
+        const list: string[] = Array.isArray(data.data) ? [...new Set<string>(data.data.map((m: any) => m?.id).filter((id: unknown): id is string => typeof id === "string" && Boolean(id.trim())))] : [];
+        this.modelCatalogs.set(provider.id, { baseUrl, apiKey, models: list });
+        return list;
       }
     } catch {
       // live fetch error, return empty

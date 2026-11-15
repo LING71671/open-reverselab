@@ -56,3 +56,29 @@ test("a saved model takes precedence over build environment configuration", asyn
   const { llmService } = await load(t, { VITE_LLM_MODEL: "env-model" }, [["reverselab_model", "saved-model"]]);
   assert.equal(llmService.getModel(), "saved-model");
 });
+
+test("model catalogs are shared with the composer but isolated by provider, endpoint and credentials", async t => {
+  const { llmService, requests, values } = await load(t);
+  llmService.addProvider({ id: "first", name: "First", baseUrl: "https://first.example.test/v1", apiKey: "fixture-key" });
+  assert.deepEqual(llmService.getCachedModels(), []);
+  await llmService.fetchModels();
+  assert.deepEqual(llmService.getCachedModels(), ["fixture-model"]);
+  llmService.getCachedModels().push("must-not-mutate-cache");
+  assert.deepEqual(llmService.getCachedModels(), ["fixture-model"]);
+  llmService.setModel("fixture-model");
+  assert.equal(values.get("reverselab_model"), "fixture-model");
+  assert.equal(requests.length, 1, "choosing a cached model does not send a completion");
+  llmService.addProvider({ id: "second", name: "Second", baseUrl: "https://second.example.test/v1" });
+  assert.deepEqual(llmService.getCachedModels(), []);
+  llmService.setActiveProviderId("first");
+  assert.deepEqual(llmService.getCachedModels(), ["fixture-model"]);
+  llmService.setBaseUrl("https://changed.example.test/v1");
+  assert.deepEqual(llmService.getCachedModels(), []);
+  await llmService.fetchModels();
+  llmService.setApiKey("changed-fixture-key");
+  assert.deepEqual(llmService.getCachedModels(), []);
+  await llmService.fetchModels();
+  llmService.removeProvider("first");
+  llmService.addProvider({ id: "first", name: "First", baseUrl: "https://changed.example.test/v1", apiKey: "changed-fixture-key" });
+  assert.deepEqual(llmService.getCachedModels(), []);
+});

@@ -52,7 +52,7 @@ export function SettingsView({ isOpen, onClose, initialTab = "model", theme, onT
       <div className="settings-content-inner">
         <header className="settings-heading"><h2>{tabs.find(([key]) => key === tab)?.[1]}</h2></header>
         <div hidden={tab !== "workspace"}><WorkspacePane active={isOpen && tab === "workspace"} onOpened={onClose} /></div>
-        <div hidden={tab !== "model"}><ModelPane /></div>
+        <div hidden={tab !== "model"}><ModelPane active={isOpen && tab === "model"} /></div>
         <div hidden={tab !== "network"}><ProxyPane /></div>
         <div hidden={tab !== "performance"}><PerformancePane /></div>
         <div hidden={tab !== "tools"}><ToolsPane active={isOpen && tab === "tools"} /></div>
@@ -62,7 +62,7 @@ export function SettingsView({ isOpen, onClose, initialTab = "model", theme, onT
   </div>;
 }
 
-function ModelPane() {
+function ModelPane({ active }: { active: boolean }) {
   const [providers, setProviders] = useState(llmService.getProviders());
   const [providerId, setProviderId] = useState(llmService.getActiveProviderId());
   const [url, setUrl] = useState(llmService.getBaseUrl());
@@ -73,6 +73,13 @@ function ModelPane() {
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [models, setModels] = useState<string[]>([]);
+  const lastSavedModel = useRef(llmService.getModel());
+  useEffect(() => {
+    if (!active) return;
+    const saved = llmService.getModel();
+    if (saved !== lastSavedModel.current) { setModel(saved); lastSavedModel.current = saved; }
+    setModels(llmService.getCachedModels(providerId));
+  }, [active]);
   const selectProvider = (id: string) => {
     const provider = providers.find(item => item.id === id);
     setProviderId(provider?.id || ""); setUrl(provider?.baseUrl || ""); setName(provider?.name || ""); setApiKey(provider?.apiKey || ""); setModels([]); setResult(""); setError("");
