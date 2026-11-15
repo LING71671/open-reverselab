@@ -14,12 +14,13 @@ function toolRoute() {
   return nativeRoute(route);
 }
 
-async function tryTauriInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T | null> {
+async function tryTauriInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T | undefined> {
   if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
     const { invoke } = await import("@tauri-apps/api/core");
     return await invoke<T>(cmd, args);
   }
-  return null;
+  // JSON null is a valid native result (for example, a workspace without history).
+  return undefined;
 }
 
 async function tryTauriExecution<T>(cmd: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T | null> {
@@ -142,10 +143,12 @@ export class NativeBridge {
 
   public async workspace<T>(request: Record<string, unknown>): Promise<T> {
     const native = await tryTauriInvoke<T>("workspace_operation", { request });
-    if (native !== null) return native;
+    if (native !== undefined) return native;
     const response = await fetch("/api/workspace", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
-    const payload = await response.json();
-    if (!response.ok || payload?.error) throw new Error(payload.error || `Workspace HTTP ${response.status}`);
+    let payload;
+    try { payload = await response.json(); }
+    catch { throw new Error(`工作区服务响应无效（HTTP ${response.status}），请确认本地服务已启动`); }
+    if (!response.ok || payload?.error) throw new Error(payload?.error || `Workspace HTTP ${response.status}`);
     return payload as T;
   }
   /**
@@ -227,7 +230,7 @@ export class NativeBridge {
    */
   public async listKb(track: SecurityTrack = "blue"): Promise<KbTechnique[]> {
     const tauriRes = await tryTauriInvoke<KbTechnique[]>("list_kb_techniques", { track });
-    if (tauriRes !== null) return tauriRes;
+    if (tauriRes !== undefined) return tauriRes;
 
     const res = await fetch(`/api/kb/techniques?track=${encodeURIComponent(track)}`);
     if (!res.ok) throw new Error(`Knowledge base unavailable (HTTP ${res.status})`);
@@ -240,8 +243,8 @@ export class NativeBridge {
    * Read a repository knowledge base document.
    */
   public async readKb(relativePath: string): Promise<string | null> {
-    const tauriRes = await tryTauriInvoke<string>("read_kb_doc", { relativePath });
-    if (tauriRes !== null) {
+    const tauriRes = await tryTauriInvoke<string | null>("read_kb_doc", { relativePath });
+    if (tauriRes !== undefined) {
       return tauriRes;
     }
 

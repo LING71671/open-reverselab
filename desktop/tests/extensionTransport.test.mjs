@@ -3,8 +3,9 @@ import { after, afterEach, test } from "node:test";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
+import { spawnSync } from "node:child_process";
 
 const temporary = await mkdtemp(path.join(tmpdir(), "reverselab-extension-transport-"));
 const compile = source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
@@ -23,6 +24,50 @@ const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 afterEach(() => { if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow); else delete globalThis.window; });
 after(async () => { assert.ok(path.resolve(temporary).startsWith(path.resolve(tmpdir()) + path.sep)); await rm(temporary, { recursive: true, force: true }); });
 function native(invoke) { Object.defineProperty(globalThis, "window", { value: { __TAURI_INTERNALS__: { invoke, transformCallback: () => 1, unregisterCallback() {} } }, configurable: true }); }
+
+test("a new native workspace opens with no history and later restores saved goals without HTTP", async t => {
+  const http = t.mock.method(globalThis, "fetch", async () => new Response("<!doctype html><html></html>"));
+  native(async (command, { request }) => {
+    assert.equal(command, "workspace_operation");
+    const result = spawnSync("python", [fileURLToPath(new URL("../../scripts/misc/desktop_workspace.py", import.meta.url))], {
+      input: JSON.stringify(request), encoding: "utf8",
+      env: { ...process.env, REVERSELAB_DATA_DIR: path.join(temporary, "registry") },
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    return JSON.parse(result.stdout);
+  });
+  const root = path.join(temporary, "workspace-新建");
+  const created = await nativeBridge.workspace({ action: "create", root });
+  assert.equal(created.root, root);
+  assert.equal(await nativeBridge.workspace({ action: "load", root }), null);
+  assert.equal((await nativeBridge.workspace({ action: "open", root })).id, created.id);
+  assert.equal(await nativeBridge.workspace({ action: "load", root }), null);
+  const snapshot = { sessions: [{ id: "draft", title: "新任务" }], records: {} };
+  await nativeBridge.workspace({ action: "save", root, snapshot });
+  assert.deepEqual(await nativeBridge.workspace({ action: "load", root }), snapshot);
+  assert.equal(http.mock.callCount(), 0);
+});
+
+test("native workspace failures do not retry through HTTP", async t => {
+  const http = t.mock.method(globalThis, "fetch", async () => assert.fail("Unexpected HTTP fallback"));
+  native(async () => { throw new Error("Workspace is busy"); });
+  await assert.rejects(nativeBridge.workspace({ action: "open", root: "fixture" }), /Workspace is busy/);
+  assert.equal(http.mock.callCount(), 0);
+});
+
+test("an absent native knowledge document is also a valid null result", async t => {
+  t.mock.method(globalThis, "fetch", async () => assert.fail("Unexpected HTTP fallback"));
+  native(async command => { assert.equal(command, "read_kb_doc"); return null; });
+  assert.equal(await nativeBridge.readKb("missing.md"), null);
+});
+
+test("browser workspace transport accepts empty history and explains a missing JSON service", async t => {
+  delete globalThis.window;
+  t.mock.method(globalThis, "fetch", async () => Response.json(null));
+  assert.equal(await nativeBridge.workspace({ action: "load", root: "fixture" }), null);
+  t.mock.method(globalThis, "fetch", async () => new Response("<!doctype html><html></html>"));
+  await assert.rejects(nativeBridge.workspace({ action: "load", root: "fixture" }), /工作区服务响应无效/);
+});
 
 test("browser extension requests preserve Unicode, credentials and an omitted deadline", async t => {
   delete globalThis.window;
