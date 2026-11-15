@@ -2,11 +2,13 @@
 
 [简体中文](EXTENSIONS.zh-CN.md)
 
-The source desktop includes an **Extensions** page for installing knowledge packs and MCP descriptors independently. Desktop installer and portable resources use a runtime allowlist that excludes knowledge content and MCP servers. A replacement desktop release has not been published.
+The desktop includes an **Extensions** page for installing knowledge packs and MCP descriptors independently. Desktop installer and portable resources use a runtime allowlist that excludes knowledge content and MCP servers.
 
 ## Install and manage
 
 Open **Extensions** in the sidebar. **Knowledge** and **MCP** show installed entries; **Sources** stores catalogs to browse later.
+
+Current source builds include **Open ReverseLab official knowledge** under **Sources**, pointing to `https://github.com/LING71671/open-reverselab-knowledge`. Choose **Browse**, then **Install**. The address is available offline and is also added to existing profiles; knowledge is downloaded only when requested. Removing the source is remembered, and it can be added again. In the published `v2.0.0-beta1`, add the same address manually.
 
 1. Paste a GitHub repository, tree/folder, manifest, or release ZIP link and choose **Read**, or choose **Import ZIP**. Local package directories and ZIP paths also work.
 2. Select an inspected entry and install it. Reading a source or installing an MCP descriptor does not start its server.

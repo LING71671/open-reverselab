@@ -158,7 +158,9 @@ test("extension and MCP JSON endpoints preserve service errors and keep credenti
   assert.equal(listed.status, 200);
   assert.deepEqual(listed.body.entries, []);
   const sources = await request("/api/extensions", { request: { operation: "sources/list" } });
-  assert.deepEqual(sources.body.sources, []);
+  assert.equal(sources.body.sources.length, 1);
+  assert.equal(sources.body.sources[0].source, "https://github.com/LING71671/open-reverselab-knowledge");
+  assert.equal(sources.body.sources[0].title, "Open ReverseLab 官方知识库");
   const invalid = await request("/api/extensions", { request: { operation: "missing-operation" } });
   assert.equal(invalid.status, 400);
   assert.equal(invalid.body.ok, false);

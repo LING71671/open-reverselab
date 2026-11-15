@@ -100,3 +100,9 @@ def test_installer_and_portable_share_runtime_without_knowledge_or_tool_sources(
         result = subprocess.run([sys.executable, str(runtime / "scripts/misc" / command)], input='{"operation":"list"}', env=env, capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
         assert json.loads(result.stdout)["ok"] is True
+    result = subprocess.run([sys.executable, str(runtime / "scripts/misc/desktop_extensions.py")], input='{"operation":"sources/list"}', env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    sources = json.loads(result.stdout)["sources"]
+    assert len(sources) == 1
+    assert sources[0]["source"] == "https://github.com/LING71671/open-reverselab-knowledge"
+    assert not (runtime / "kb").exists()

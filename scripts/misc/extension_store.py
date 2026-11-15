@@ -36,6 +36,19 @@ def _hash(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+OFFICIAL_KNOWLEDGE_URL = "https://github.com/LING71671/open-reverselab-knowledge"
+OFFICIAL_KNOWLEDGE_SOURCE = {
+    "sourceId": _hash(OFFICIAL_KNOWLEDGE_URL.encode())[:24],
+    "source": OFFICIAL_KNOWLEDGE_URL,
+    "identity": OFFICIAL_KNOWLEDGE_URL.lower(),
+    "title": "Open ReverseLab 官方知识库",
+}
+
+
+def _is_official_knowledge_source(source: str) -> bool:
+    return source.rstrip("/").lower().removesuffix(".git") == OFFICIAL_KNOWLEDGE_URL.lower()
+
+
 def compare_versions(left: str, right: str) -> int:
     """SemVer precedence; build metadata does not create an upgrade."""
     def parts(version: str):
@@ -785,8 +798,19 @@ class ExtensionStore:
             handle.write(raw)
         return {"path": str(path), "filename": path.name, "sha256": _hash(raw), **extra}
 
+    def _sources_state(self) -> dict:
+        # A source address is available offline; no content is downloaded until
+        # the user browses it. Existing profiles receive the same default.
+        state = _load_json(self.root / "sources.json", {"sources": []})
+        existing = next((item for item in state["sources"] if _is_official_knowledge_source(item.get("source", ""))), None)
+        if existing is not None:
+            existing.setdefault("title", OFFICIAL_KNOWLEDGE_SOURCE["title"])
+        elif OFFICIAL_KNOWLEDGE_SOURCE["sourceId"] not in state.get("removedDefaults", []):
+            state["sources"].insert(0, copy.deepcopy(OFFICIAL_KNOWLEDGE_SOURCE))
+        return state
+
     def sources_list(self) -> list[dict]:
-        return _load_json(self.root / "sources.json", {"sources": []})["sources"]
+        return self._sources_state()["sources"]
 
     def sources_add(self, source: str) -> dict:
         if source.startswith("https://"):
@@ -795,19 +819,29 @@ class ExtensionStore:
         else:
             identity = "local:sha256:" + _hash(Path(source).resolve(strict=True).as_uri().encode())
         record = {"sourceId": _hash(source.encode())[:24], "source": source, "identity": identity}
+        official = _is_official_knowledge_source(source)
+        if official:
+            record = copy.deepcopy(OFFICIAL_KNOWLEDGE_SOURCE)
         with _file_lock(self.lock_path):
-            sources = self.sources_list()
-            previous = next((item for item in sources if item["sourceId"] == record["sourceId"]), None)
+            state = self._sources_state()
+            sources = state["sources"]
+            previous = next((item for item in sources if item["sourceId"] == record["sourceId"] or (official and _is_official_knowledge_source(item.get("source", "")))), None)
             if previous:
                 return previous
-            _atomic_json(self.root / "sources.json", {"sources": [*sources, record]})
+            if official:
+                state["removedDefaults"] = [item for item in state.get("removedDefaults", []) if item != record["sourceId"]]
+            _atomic_json(self.root / "sources.json", {**state, "sources": [*sources, record]})
         return record
 
     def sources_remove(self, source_id: str) -> dict:
         with _file_lock(self.lock_path):
-            sources = self.sources_list()
-            protocol.require(any(item["sourceId"] == source_id for item in sources), "Unknown sourceId")
-            _atomic_json(self.root / "sources.json", {"sources": [item for item in sources if item["sourceId"] != source_id]})
+            state = self._sources_state()
+            sources = state["sources"]
+            removed = next((item for item in sources if item["sourceId"] == source_id), None)
+            protocol.require(removed is not None, "Unknown sourceId")
+            if _is_official_knowledge_source(removed.get("source", "")):
+                state["removedDefaults"] = list(dict.fromkeys([*state.get("removedDefaults", []), OFFICIAL_KNOWLEDGE_SOURCE["sourceId"]]))
+            _atomic_json(self.root / "sources.json", {**state, "sources": [item for item in sources if item["sourceId"] != source_id]})
         return {"removed": source_id}
 
     def sources_refresh(self, source_id: str) -> dict:
@@ -815,11 +849,12 @@ class ExtensionStore:
         protocol.require(source is not None, "Unknown sourceId")
         inspection = self.inspect(source["source"])
         with _file_lock(self.lock_path):
-            sources = self.sources_list()
+            state = self._sources_state()
+            sources = state["sources"]
             source = next((item for item in sources if item["sourceId"] == source_id), None)
             protocol.require(source is not None, "Source removed during refresh")
             source.update(inspectionId=inspection["inspectionId"], entries=inspection["entries"], resolved=inspection["source"])
-            _atomic_json(self.root / "sources.json", {"sources": sources})
+            _atomic_json(self.root / "sources.json", {**state, "sources": sources})
         return {**inspection, "source": source}
 
     def pin(self) -> list[dict]:

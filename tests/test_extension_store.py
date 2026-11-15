@@ -264,7 +264,52 @@ def test_local_catalog_and_sources_refresh_preserve_install(tmp_path):
     refreshed = store.sources_refresh(saved["sourceId"])
     assert refreshed["entries"][0]["id"] == "example.integrity"
     store.sources_remove(saved["sourceId"])
-    assert store.sources_list() == [] and store.get(item["installationId"])["enabled"]
+    assert [entry["source"] for entry in store.sources_list()] == [store_module.OFFICIAL_KNOWLEDGE_URL]
+    assert store.get(item["installationId"])["enabled"]
+
+
+def test_official_source_available_offline_without_installing_or_writing(tmp_path, monkeypatch):
+    def offline(*args, **kwargs):
+        pytest.fail("Listing sources must not access the network")
+    monkeypatch.setattr(store_module, "_read_url", offline)
+    store = ExtensionStore(tmp_path / "store")
+    assert store.sources_list() == [store_module.OFFICIAL_KNOWLEDGE_SOURCE]
+    assert store.list() == [] and store.catalog() == []
+    assert not store.root.exists()
+
+
+@pytest.mark.parametrize("already_added", [False, True])
+def test_official_source_merges_existing_profiles_without_duplicates(tmp_path, already_added):
+    store = ExtensionStore(tmp_path / "store")
+    custom = {"sourceId": "custom", "source": "https://github.com/example/knowledge", "title": "My catalog"}
+    existing = {"sourceId": "legacy", "source": store_module.OFFICIAL_KNOWLEDGE_URL + ".git/", "inspectionId": "retained"}
+    state = {"sources": [custom, existing] if already_added else [custom]}
+    store_module._atomic_json(store.root / "sources.json", state)
+    sources = store.sources_list()
+    assert custom in sources and len(sources) == 2
+    official = next(item for item in sources if item != custom)
+    assert official["title"] == store_module.OFFICIAL_KNOWLEDGE_SOURCE["title"]
+    assert store.sources_add(store_module.OFFICIAL_KNOWLEDGE_URL) == official
+    assert store.sources_add(store_module.OFFICIAL_KNOWLEDGE_URL.lower() + "/") == official
+    assert len(ExtensionStore(store.root).sources_list()) == 2
+    if already_added:
+        assert official["sourceId"] == "legacy" and official["inspectionId"] == "retained"
+
+
+def test_removed_official_source_stays_removed_and_can_be_added_again(tmp_path, monkeypatch):
+    store = ExtensionStore(tmp_path / "store")
+    official = store.sources_list()[0]
+    store.sources_remove(official["sourceId"])
+    store = ExtensionStore(store.root)
+    assert store.sources_list() == []
+    custom = store.sources_add("https://github.com/example/knowledge")
+    monkeypatch.setattr(store, "inspect", lambda source: {"inspectionId": "inspected", "entries": [], "source": {"identity": source}})
+    store.sources_refresh(custom["sourceId"])
+    assert len(ExtensionStore(store.root).sources_list()) == 1
+    store.sources_remove(custom["sourceId"])
+    assert ExtensionStore(store.root).sources_list() == []
+    assert store.sources_add(store_module.OFFICIAL_KNOWLEDGE_URL + "/") == official
+    assert ExtensionStore(store.root).sources_list() == [official]
 
 
 @pytest.mark.parametrize("catalog_source", ["github", "folder", "zip"])
