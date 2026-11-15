@@ -13,7 +13,7 @@ desktop_kb = load_script_module("scripts/misc/desktop_kb.py", "desktop_kb_test")
 
 @pytest.fixture(scope="module")
 def catalog():
-    return desktop_kb.build_catalog()
+    return desktop_kb.build_legacy_catalog()
 
 
 def test_catalog_includes_nested_jwt_and_unique_canonical_paths(catalog):
@@ -34,9 +34,9 @@ def test_catalog_includes_nested_jwt_and_unique_canonical_paths(catalog):
 
 def test_catalog_uses_index_tracks_and_filters_shared_articles(catalog, monkeypatch):
     monkeypatch.setenv("REVERSELAB_MODE", "blue")
-    assert desktop_kb.build_catalog() == catalog
+    assert desktop_kb.build_legacy_catalog() == catalog
     for track in ("red", "blue"):
-        filtered = desktop_kb.build_catalog(track)
+        filtered = desktop_kb.build_legacy_catalog(track)
         assert filtered
         assert {item["path"] for item in filtered} == {
             item["path"] for item in catalog if item["track"] in (track, "both")
@@ -72,7 +72,7 @@ def test_cross_board_references_and_unclassified_docs(tmp_path):
     _write_board(tmp_path, "ctf-website", [
         {"id": "alias", "track": "both", "files": ["../../general/techniques/nested/sample.md"], "signals": ["alias"]},
     ], {})
-    items = {item["path"]: item for item in desktop_kb.build_catalog(repo_root=tmp_path)}
+    items = {item["path"]: item for item in desktop_kb.build_legacy_catalog(repo_root=tmp_path)}
     sample = items["kb/general/techniques/nested/sample.md"]
     assert sample["board"] == "general"
     assert sample["track"] == "red"
@@ -112,7 +112,7 @@ def test_document_reader_rejects_symlink_escape(tmp_path):
 
 def test_catalog_rejects_unknown_track():
     with pytest.raises(ValueError, match="red, blue, or both"):
-        desktop_kb.build_catalog("invalid")
+        desktop_kb.build_legacy_catalog("invalid")
 
 
 def test_migration_keeps_legacy_reads_and_track_directories(catalog):

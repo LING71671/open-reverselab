@@ -49,6 +49,11 @@ export function KbNavigator({ track, onTrackChange, onSelectTechnique }: KbNavig
   }, [active?.path, reading]);
   const refresh = () => { cache.current.clear(); setDocument({ path: "" }); setRevision(n => n + 1); };
   useEffect(() => {
+    const changed = () => { cache.current.clear(); setDocument({ path: "" }); setRevision(n => n + 1); };
+    window.addEventListener("reverselab-extensions-changed", changed);
+    return () => window.removeEventListener("reverselab-extensions-changed", changed);
+  }, []);
+  useEffect(() => {
     let cancelled = false;
     setDocError("");
     if (!active || cache.current.has(active.path)) return;
@@ -69,7 +74,11 @@ export function KbNavigator({ track, onTrackChange, onSelectTechnique }: KbNavig
     return () => { cancelled = true; };
   }, [active?.path, revision]);
   const related = active ? catalog.filter(item => active.related_paths.includes(item.path)) : [];
-  const openDocument = (path: string) => {
+  const openDocument = async (path: string, href?: string) => {
+    if (href) {
+      try { path = (await nativeBridge.extensions<{ path: string }>({ operation: "resolve", uri: path, href })).path; }
+      catch (error) { setDocError(error instanceof Error ? error.message : String(error)); return; }
+    }
     const item = catalog.find(item => item.path === path);
     if (!item) { setDocError(`文档未收录：${path}`); return; }
     if (!matchesTrack(item.track, track)) onTrackChange(item.track);

@@ -152,3 +152,24 @@ test("already exhausted budgets do not execute scripts", async () => {
   assert.match(result.body.error, /time budget exhausted/);
   await assert.rejects(readFile(marker), { code: "ENOENT" });
 });
+
+test("extension and MCP JSON endpoints preserve service errors and keep credentials out of responses", async () => {
+  const listed = await request("/api/extensions", { request: { operation: "list" } });
+  assert.equal(listed.status, 200);
+  assert.deepEqual(listed.body.entries, []);
+  const sources = await request("/api/extensions", { request: { operation: "sources/list" } });
+  assert.deepEqual(sources.body.sources, []);
+  const invalid = await request("/api/extensions", { request: { operation: "missing-operation" } });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.body.ok, false);
+  assert.match(invalid.body.error, /Unknown extension operation/);
+  const configured = await request("/api/mcp", { request: { operation: "configure", connection: {
+    id: "unicode-fixture", name: "工具连接 𠮷", transport: "stdio", command: "python", args: [], env: { FIXTURE_SECRET: "synthetic-secret-value" },
+  } } });
+  assert.equal(configured.status, 200);
+  assert.equal(configured.body.connection.name, "工具连接 𠮷");
+  assert.equal(JSON.stringify(configured.body).includes("synthetic-secret-value"), false);
+  assert.equal(configured.body.connection.connected, false);
+  const badEnvelope = await request("/api/extensions", { operation: "list" });
+  assert.equal(badEnvelope.status, 400);
+});

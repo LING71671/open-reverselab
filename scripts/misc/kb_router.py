@@ -24,6 +24,16 @@ assert _SPEC and _SPEC.loader
 layout = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(layout)
 BOARDS: tuple[str, ...] = ("general", "pe-reverse", "apk-reverse", "ctf-website")
+
+
+def discover_boards(root: Path = ROOT) -> tuple[str, ...]:
+    """Discover source domains; installed domains come from their manifests."""
+    boards = {p.stem for p in (root / "kb" / "catalog").glob("*.json")}
+    for layer in ("red", "blue", "shared", ""):
+        base = root / "kb" / layer
+        if base.is_dir():
+            boards.update(p.name for p in base.iterdir() if (p / "techniques").is_dir())
+    return tuple(sorted(boards))
 VALID_TRACKS: tuple[str, ...] = ("blue", "red", "both")
 DEFAULT_TRACK = "blue"
 TRACK_ENV_VAR = "REVERSELAB_MODE"
@@ -156,7 +166,7 @@ def _build_pair_map(entries: list[dict[str, Any]]) -> dict[tuple[str, str], list
 
 
 def load_index(board: str = "all") -> list[dict[str, Any]]:
-    boards = BOARDS if board in ("all", "") else (board,)
+    boards = discover_boards() if board in ("all", "") else (board,)
     entries: list[dict[str, Any]] = []
     for b in boards:
         idx = index_path_for(b)
@@ -167,6 +177,16 @@ def load_index(board: str = "all") -> list[dict[str, Any]]:
             item = dict(entry)
             item.setdefault("_board", b)
             entries.append(item)
+    # Shared store supplies arbitrary installed domains and immutable references.
+    import sys
+    if str(Path(__file__).resolve().parent) not in sys.path:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from extension_store import ExtensionStore
+    installed = ExtensionStore().catalog("both")
+    for item in installed:
+        if board not in ("all", "", item["board"]):
+            continue
+        entries.append({**item, "_board": item["board"], "files": [item["path"]]})
     return entries
 
 
@@ -213,7 +233,7 @@ def search(query: str, entries: list[dict[str, Any]], track: str = "") -> list[d
 def main(argv: list[str] | None = None, default_board: str = "all") -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("query", help="Signal or keyword to search")
-    parser.add_argument("--board", default=default_board, choices=("all", *BOARDS))
+    parser.add_argument("--board", default=default_board)
     parser.add_argument("--track", default="auto", choices=("auto", *VALID_TRACKS))
     parser.add_argument("--json", action="store_true", help="Print JSON output")
     args = parser.parse_args(argv)
@@ -231,7 +251,7 @@ def main(argv: list[str] | None = None, default_board: str = "all") -> int:
             "board": args.board,
             "track": active_track,
             "total": len(results),
-            "results": results[:10],
+            "results": results,
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
@@ -241,7 +261,7 @@ def main(argv: list[str] | None = None, default_board: str = "all") -> int:
         return 0
 
     print(f"\nResults for '{args.query}' (track={active_track}, {len(results)} found):\n")
-    for i, entry in enumerate(results[:10], 1):
+    for i, entry in enumerate(results, 1):
         board = entry.get("_board", "general")
         e_track = entry.get("_track", entry_track(entry))
         print(
@@ -250,6 +270,9 @@ def main(argv: list[str] | None = None, default_board: str = "all") -> int:
         )
         print(f"     Signals: {', '.join(entry.get('signals', [])[:5])}")
         for f in entry.get("files", []):
+            if f.startswith("reverselab://"):
+                print(f"     {f}")
+                continue
             full = layout.resolve_file(f, board, ROOT)
             exists = "✓" if full.is_file() else "✗"
             print(f"     {exists} {full.relative_to(ROOT).as_posix()}")

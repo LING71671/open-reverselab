@@ -49,7 +49,7 @@ export class KbRoutingStage implements PipelineStage {
         const available = catalog.filter((item: { path: string }) => !attempted.has(item.path));
         const peerPaths = (ctx.state.readPeerMessages?.() || []).flatMap((message: { payload: { evidenceRefs?: Array<{ path?: string }> } }) => message.payload.evidenceRefs?.map((ref) => ref.path) || []);
         const preferred = available.filter((item) => ctx.state.preferredKbPaths?.includes(item.path) || item.related_paths.some((path) => peerPaths.includes(path)));
-        const selected = preferred.length ? preferred.slice(0, 4) : selectKbTechniques(available, ctx.track, query, board);
+        const selected = preferred.length ? preferred : selectKbTechniques(available, ctx.track, query, board);
         if (!selected.length) {
           // Documents inform analysis; exhausting search results does not
           // exhaust observations or prevent repairing a failed action.
@@ -62,7 +62,7 @@ export class KbRoutingStage implements PipelineStage {
         const results = await Promise.allSettled(selected.map(async (item) => {
           const content = await nativeBridge.readKb(item.path);
           if (!content) throw new Error(`Document unavailable: ${item.path}`);
-          return { path: item.path, content: `### ${item.title} [${item.track}]\nSource: ${item.path}\n${content.slice(0, 3000)}` };
+          return { path: item.path, content: `### ${item.title} [${item.track}]\nSource: ${item.path}\n${content}` };
         }));
         for (const result of results) {
           if (result.status === "fulfilled") loaded.push(result.value);
@@ -71,16 +71,15 @@ export class KbRoutingStage implements PipelineStage {
       }
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
-      ctx.state.pathsExhausted = true;
-      ctx.state.blockedReason = `知识库服务不可用：${errors[0]}`;
+      ctx.state.knowledgeError = `知识库服务不可用：${errors[0]}`;
     }
 
     const documents: Array<{ path: string; content: string }> = [...(ctx.state.kbDocuments || []), ...loaded];
     ctx.state.kbDocuments = documents;
-    const references = documents.slice(-4);
+    const references = documents;
     const content = references.map((doc) => doc.content).join("\n\n");
     const matchedTechniques = references.map((doc) => doc.path);
-    const kbPath = `kb/catalog/${board || "general"}.json`;
+    const kbPath = matchedTechniques[0] || "";
     ctx.kbRouting = {
       board: board || "general",
       track: ctx.track,

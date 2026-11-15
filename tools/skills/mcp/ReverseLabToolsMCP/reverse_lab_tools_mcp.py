@@ -1127,6 +1127,30 @@ def kb_catalog(board: str = "", track: str = "") -> dict[str, Any]:
 
 
 @mcp.tool()
+def kb_graph(track: str = "both", pinned: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Read installed knowledge networks and methods at exact package editions."""
+    return _safe_call(kb.kb_graph, track, pinned)
+
+
+@mcp.tool()
+def kb_get(entity: str, pinned: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Resolve a knowledge URI or stable entity ID without guessing its source."""
+    return _safe_call(kb.kb_get, entity, pinned)
+
+
+@mcp.tool()
+def kb_neighbors(entity: str, pinned: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Read typed relations involving a knowledge method."""
+    return _safe_call(kb.kb_neighbors, entity, pinned)
+
+
+@mcp.tool()
+def kb_pin() -> dict[str, Any]:
+    """Record installed knowledge editions for repeatable retrieval."""
+    return _safe_call(kb.kb_pin)
+
+
+@mcp.tool()
 def ctf_new_challenge(name: str, url: str = "") -> dict[str, Any]:
     """创建新的 CTF 题目 case 目录，从模板初始化。"""
     return _red_call("ctf_new_challenge", web_ctf.ctf_new_challenge, name, url)

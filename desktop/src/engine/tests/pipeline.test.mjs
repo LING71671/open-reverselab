@@ -33,6 +33,7 @@ const load = async (relative) => import(pathToFileURL(await compile(path.join(ro
 const { selectKbTechniques } = await load("engine/pipeline/kbSelection.ts");
 const { HarnessPipeline } = await load("engine/pipeline/HarnessPipeline.ts");
 const { nativeBridge } = await load("services/native/nativeBridge.ts");
+nativeBridge.mcp = async () => ({ ok: true, connections: [] });
 const { llmService } = await load("services/llm/llmService.ts");
 const { parseAcceptancePlan, verifyGoalWithModel } = await load("engine/pipeline/goalVerifier.ts");
 const { verifyTargetEvidence } = await load("engine/tracks/evidence.ts");
@@ -45,7 +46,7 @@ const { StaticTriageStage } = await load("engine/pipeline/stages/StaticTriageSta
 const { LlmStreamStage } = await load("engine/pipeline/stages/LlmStreamStage.ts");
 const { HealthFault } = await load("core/contracts/health.ts");
 const { presentAgentContent } = await load("views/chat/agentContent.ts");
-const { buildAnalysisMessages, estimateMessageTokens } = await load("engine/pipeline/analysisPrompt.ts");
+const { buildAnalysisMessages, estimateMessageTokens, refreshMcpTools, relevantKnowledgeGraph } = await load("engine/pipeline/analysisPrompt.ts");
 after(async () => { await rm(temporary, { recursive: true, force: true }); });
 
 const item = (track, name, related = []) => ({ id: name, board: "pe-reverse", title: name, category: "memory", signals: ["hook"], mcp_tools: [], path: `kb/pe-reverse/${name}.md`, track, related_paths: related });
@@ -879,4 +880,164 @@ test("runtime health classifies a provider authentication failure without invent
   assert.equal(result.runProgress.status, "blocked");
   assert(events.some((event) => event.goalId === "health-goal" && event.layer === "model" && event.code === "MODEL_AUTH" && event.status === "failed"));
   assert.equal(events.some((event) => event.layer === "kb" && event.status === "healthy"), false);
+});
+
+const mcpDefinition = (connectionId = "fixture") => ({ id: `${connectionId}/inspect`, name: "inspect", connectionId,
+  inputSchema: { type: "object", properties: { target: { type: "string" } } }, schemaHash: "synthetic-schema" });
+const mcpAction = (id = "inspect") => ({ id, title: "Inspect with MCP", kind: "mcp", dependsOn: [], connectionId: "fixture", tool: "fixture/inspect", arguments: { target: "fixture.bin" } });
+
+test("MCP plans use discovered connection-qualified tools and coexist with Python", () => {
+  const python = { id: "check", title: "Verify output", dependsOn: ["inspect"], script: "print(REVERSELAB_INPUTS)" };
+  assert.deepEqual(parseActionPlan(JSON.stringify({ actions: [mcpAction(), python] })), [mcpAction(), python]);
+  for (const invalid of [{ ...mcpAction(), tool: "inspect" }, { ...mcpAction(), arguments: [] }, { ...mcpAction(), script: "print(1)" }, { ...python, kind: "shell" }]) {
+    assert.throws(() => parseActionPlan(JSON.stringify({ actions: [invalid] })));
+  }
+});
+
+test("MCP execution records the real result and passes it to dependent Python", async () => {
+  const original = nativeBridge.mcp;
+  const requests = [], events = [];
+  let pythonScript;
+  try {
+    nativeBridge.mcp = async (request, options) => {
+      requests.push({ request, options });
+      return { ok: true, invocationId: "observed-invocation", outcome: "completed", catalog: { schemaHash: "synthetic-schema" },
+        result: { content: [{ type: "text", text: "observed bytes" }], structuredContent: { measured: 17 } } };
+    };
+    const ctx = context({ state: { mcpTools: [mcpDefinition()], executeAction: async (_key, script) => {
+      pythonScript = script; return { success: true, stdout: "verified observation", stderr: "" };
+    } } });
+    const output = await executeActionPlan([mcpAction(), { id: "verify", title: "Verify", dependsOn: ["inspect"], script: "print(REVERSELAB_INPUTS)" }], ctx, { onToolCall: event => events.push(event) });
+    assert.equal(output.success, true);
+    assert.equal(requests[0].request.expectedSchemaHash, "synthetic-schema");
+    assert.equal(requests[0].request.tool, "fixture/inspect");
+    assert(requests[0].options.signal instanceof AbortSignal);
+    assert.equal(ctx.state.executionEvidence["actions.inspect.mcp"].result.structuredContent.measured, 17);
+    assert.equal(ctx.state.mcpObservations[0].invocationId, "observed-invocation");
+    assert.match(pythonScript, /observed bytes/);
+    assert(events.some(event => event.tool === "fixture/inspect" && event.status === "done"));
+    assert.equal(JSON.parse(output.stdout).actions[0].output.mcp.result.structuredContent.measured, 17);
+  } finally { nativeBridge.mcp = original; }
+});
+
+test("unknown MCP outcome prevents replay even after changed peer evidence and schema", async () => {
+  const original = nativeBridge.mcp;
+  let calls = 0;
+  try {
+    nativeBridge.mcp = async () => { calls++; return { ok: false, error: { code: "connection-lost", message: "response lost", outcome: "unknown" } }; };
+    const ctx = context({ state: { mcpTools: [mcpDefinition()] } });
+    const first = await executeActionPlan([mcpAction()], ctx, {});
+    assert.equal(first.success, false);
+    assert.equal(ctx.state.mcpObservations[0].outcome, "unknown");
+    assert.equal(ctx.state.unknownMcpInvocations.length, 1);
+    ctx.state.mcpTools[0].schemaHash = "changed-schema";
+    ctx.state.readPeerEvidence = () => ({ messages: [{ from: "red", type: "evidence", payload: { content: "changed evidence" } }], parentIds: [] });
+    const second = await executeActionPlan([mcpAction("different_id")], ctx, {});
+    assert.equal(second.success, false);
+    assert.match(second.stderr, /结果未知/);
+    assert.equal(calls, 1);
+  } finally { nativeBridge.mcp = original; }
+});
+
+test("MCP timeout and abort transport exceptions remain unknown, while missing tools never dispatch", async () => {
+  const original = nativeBridge.mcp;
+  let calls = 0;
+  try {
+    nativeBridge.mcp = async () => { calls++; throw new DOMException("Aborted", "AbortError"); };
+    const missing = await executeActionPlan([mcpAction()], context(), {});
+    assert.equal(missing.success, false);
+    assert.equal(calls, 0);
+    const ctx = context({ state: { mcpTools: [mcpDefinition()] } });
+    assert.equal((await executeActionPlan([mcpAction()], ctx, {})).success, false);
+    assert.equal(ctx.state.mcpObservations[0].outcome, "unknown");
+    assert.equal(calls, 1);
+  } finally { nativeBridge.mcp = original; }
+});
+
+test("concurrent branches share the same in-flight MCP invocation", async () => {
+  const original = nativeBridge.mcp;
+  let calls = 0, release;
+  const wait = new Promise(resolve => { release = resolve; });
+  try {
+    nativeBridge.mcp = async () => { calls++; await wait; return { ok: true, outcome: "completed", result: { content: [] } }; };
+    const shared = { mcpTools: [mcpDefinition()], mcpInFlight: new Map(), unknownMcpInvocations: [] };
+    const red = executeActionPlan([mcpAction()], context({ track: "red", state: { ...shared } }), {});
+    const blue = executeActionPlan([mcpAction()], context({ track: "blue", state: { ...shared } }), {});
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(calls, 1);
+    release();
+    assert((await Promise.all([red, blue])).every(output => output.success));
+  } finally { release(); nativeBridge.mcp = original; }
+});
+
+test("MCP catalog refresh exposes schemas without launching unconfigured servers", async () => {
+  const original = nativeBridge.mcp;
+  const requests = [];
+  try {
+    nativeBridge.mcp = async request => { requests.push(request); return { ok: true, connections: [
+      { id: "fixture", enabled: true, tools: [mcpDefinition()], schemaHash: "schema-1" },
+      { id: "other", enabled: true, tools: [mcpDefinition("other")], schemaHash: "schema-2" },
+      { id: "disabled", enabled: false, tools: [mcpDefinition("disabled")], schemaHash: "schema-3" },
+    ] }; };
+    const ctx = context({ kbRouting: { matchedTechniques: ["fixture.pack/doc"] }, state: { knowledgePins: [{ id: "fixture.pack", digest: "retained" }], knowledgeGraph: { methods: [{ id: "fixture.pack/observe", document: "fixture.pack/doc" }], networks: [] } } });
+    await refreshMcpTools(ctx);
+    assert.deepEqual(requests, [{ operation: "list" }]);
+    assert.deepEqual(ctx.state.mcpTools.map(tool => tool.id), ["fixture/inspect", "other/inspect"]);
+    assert.equal(ctx.state.mcpTools[0].schemaHash, "schema-1");
+    const prompt = buildAnalysisMessages(ctx).at(-1).content;
+    assert.match(prompt, /fixture.pack\/observe/);
+    assert.match(prompt, /inputSchema/);
+    nativeBridge.mcp = async () => { throw new Error("MCP list unavailable"); };
+    await refreshMcpTools(ctx);
+    assert.equal(ctx.state.mcpTools.length, 0);
+    assert.equal(ctx.state.mcpDiscoveryError, "MCP list unavailable");
+    assert.match(buildAnalysisMessages(ctx)[0].content, /Python/);
+  } finally { nativeBridge.mcp = original; }
+});
+
+test("knowledge catalogs and MCP replay guards remain in the Goal checkpoint", async () => {
+  const original = nativeBridge.extensions;
+  const requests = [];
+  const pins = [{ installationId: "fixture", id: "fixture.pack", version: "1.0.0", digest: "pinned-digest", source: "fixture-source" }];
+  try {
+    nativeBridge.extensions = async request => {
+      requests.push(request);
+      if (request.operation === "pin") return { pins };
+      if (request.operation === "catalog") return { documents: [{ ...item("blue", "fixture"), packVersion: "1.0.0" }] };
+      return { methods: [{ id: "fixture.pack/observe" }], networks: [] };
+    };
+    const pipeline = new HarnessPipeline([{ ...stage("kb-routing", async ctx => {
+      assert.equal(ctx.state.kbCatalog[0].packVersion, "1.0.0");
+      assert.equal(ctx.state.knowledgeGraph.methods[0].id, "fixture.pack/observe");
+      ctx.state.routeVerified = true;
+    }), category: "kb" }]);
+    const ctx = await pipeline.run("fixture.bin", "inspect", [], {}, undefined, "pin-fixture", "blue", {}, { unknownMcpInvocations: ["unknown-invocation"] });
+    assert.deepEqual(requests.map(request => request.operation), ["pin", "catalog", "graph"]);
+    assert.deepEqual(requests[1].pinned, pins);
+    assert.deepEqual(ctx.runProgress.checkpoint.knowledgePins, pins);
+    assert.deepEqual(ctx.runProgress.checkpoint.unknownMcpInvocations, ["unknown-invocation"]);
+    requests.length = 0;
+    await pipeline.run("fixture.bin", "inspect updated objective", [], {}, undefined, "pin-fixture", "blue", {}, { knowledgePins: pins });
+    assert.deepEqual(requests.map(request => request.operation), ["catalog", "graph"]);
+    assert.deepEqual(requests[0].pinned, pins);
+  } finally { nativeBridge.extensions = original; }
+});
+
+test("planning uses matched track methods, adjacent relations and complete prerequisites without unrelated networks", () => {
+  const method = (id, track = "blue") => ({ id, track, domain: "fixture", document: id + "/doc", requiresEvidence: [id + ".input"], when: { evidence: id + ".input", state: "observed" } });
+  const graph = { methods: [method("entry"), method("matched"), method("neighbor"), method("dependency"), method("nested"), method("other"), method("red", "red")], documents: [], bindings: [{ method: "matched", tool: "fixture/inspect" }, { method: "other", tool: "unrelated/tool" }], networks: [
+    { id: "fixture/network", nodes: ["entry", "matched", "neighbor", "dependency", "nested", "red"], entrypoints: ["entry"], relations: [
+      { from: "matched", to: "neighbor", type: "enables" }, { from: "neighbor", to: "dependency", type: "depends_on" },
+      { from: "dependency", to: "nested", type: "depends_on" }, { from: "red", to: "matched", type: "defends" },
+    ] }, { id: "unrelated/network", nodes: ["other"], entrypoints: ["other"], relations: [] },
+  ] };
+  const ctx = context({ kbRouting: { matchedTechniques: ["matched/doc"] }, state: { knowledgeGraph: graph } });
+  const selected = relevantKnowledgeGraph(ctx);
+  assert.deepEqual(selected.methods.map(method => method.id), ["entry", "matched", "neighbor", "dependency", "nested"]);
+  assert.deepEqual(selected.methods.find(method => method.id === "matched").when, { evidence: "matched.input", state: "observed" });
+  assert.deepEqual(selected.networks.map(network => network.id), ["fixture/network"]);
+  assert.deepEqual(selected.networks[0].entrypoints, ["entry"]);
+  assert.deepEqual(selected.relatedMethods.map(method => method.id), ["red"]);
+  assert.equal(selected.bindings.length, 1);
+  assert.equal(graph.methods.length, 7);
 });

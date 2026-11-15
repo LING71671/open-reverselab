@@ -7,8 +7,14 @@ use tauri::Manager;
 mod updates;
 mod network;
 mod performance;
+mod extensions;
 
 static RESOURCE_ROOT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+fn is_runtime_root(path: &Path) -> bool {
+    path.join("scripts/misc/desktop_workspace.py").is_file()
+        && (path.join("RELEASE.json").is_file() || path.join("AI-USAGE.md").is_file())
+}
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -19,7 +25,7 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 fn get_repo_root() -> Result<PathBuf, String> {
     if let Some(root) = std::env::var_os("REVERSELAB_ROOT") {
         let root = PathBuf::from(root);
-        if root.join("kb").is_dir() && root.join("scripts").is_dir() {
+        if is_runtime_root(&root) {
             return root.canonicalize().map_err(|e| e.to_string());
         }
         return Err("REVERSELAB_ROOT must point to an open-reverselab workspace".to_string());
@@ -34,7 +40,7 @@ fn get_repo_root() -> Result<PathBuf, String> {
     ];
     for location in locations.into_iter().flatten() {
         for ancestor in location.ancestors() {
-            if ancestor.join("kb").is_dir() && ancestor.join("scripts").is_dir() {
+            if is_runtime_root(ancestor) {
                 return ancestor.canonicalize().map_err(|e| e.to_string());
             }
         }
@@ -462,6 +468,8 @@ pub fn run() {
             updates::update_install,
             greet,
             workspace_operation,
+            extensions::extensions_operation,
+            extensions::mcp_operation,
             get_env_snapshot,
             triage_target,
             list_kb_techniques,

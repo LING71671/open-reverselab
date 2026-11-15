@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Plus, ScrollText, Gauge, BookOpen, Settings, Archive, ArchiveRestore, Trash2, Pencil, MessageSquare, Sun, Moon, Loader2, FolderOpen, Files, ChevronsUpDown } from "lucide-react";
+import { Plus, ScrollText, Gauge, BookOpen, Settings, Archive, ArchiveRestore, Trash2, Pencil, MessageSquare, Sun, Moon, Loader2, FolderOpen, Files, ChevronsUpDown, Blocks } from "lucide-react";
 import { HarnessView, SessionItem, SecurityTrack, SECURITY_TRACKS, useI18n, matchesTrack } from "../../../core";
 
 interface SidebarProps {
@@ -43,6 +43,7 @@ export function Sidebar(props: SidebarProps) {
     { id: "chat" as const, label: "Goal", icon: MessageSquare },
     { id: "samples" as const, label: "样本", icon: Files },
     { id: "kb" as const, label: t.sidebar.kb, icon: BookOpen },
+    { id: "extensions" as const, label: zh ? "扩展" : "Extensions", icon: Blocks },
     { id: "console" as const, label: t.sidebar.logs, icon: ScrollText },
   ];
   const sessions = props.sessions.filter(s => matchesTrack(s.track, props.track) && !!s.isArchived === archived);

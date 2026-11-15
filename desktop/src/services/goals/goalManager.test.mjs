@@ -341,3 +341,24 @@ test("health subscribers receive live accepted events without replaying history 
   assert.equal(received.length, 1);
   unsubscribe(); manager.flush();
 });
+
+test("adjusted goals retain MCP unknown outcomes, action identities and knowledge pins", async () => {
+  const gate = deferred();
+  const requests = [];
+  const checkpoint = { target: "fixture.bin", objective: "Inspect", track: "blue", visitedPaths: [], actionFingerprints: ["already-executed"], blockedReasons: [],
+    unknownMcpInvocations: ["unknown-tool-call"], knowledgePins: [{ id: "fixture.pack", version: "1.0.0", digest: "retained" }],
+    mcpSnapshot: [{ connectionId: "fixture", schemaHash: "schema1" }] };
+  const manager = new GoalManager(async (request, callbacks) => {
+    requests.push(request);
+    if (!request.revision) { await gate.promise; callbacks.onRunProgress({ ...progress("running"), checkpoint }); }
+    else callbacks.onRunProgress(progress());
+  }, storage());
+  const id = manager.submit("fixture.bin", "Inspect", "blue");
+  manager.steer(id, "Verify the previous call outcome before continuing");
+  gate.resolve();
+  await tick();
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests[1].executionCheckpoint, checkpoint);
+  assert.deepEqual(requests[1].knowledgePins, checkpoint.knowledgePins);
+  manager.flush();
+});

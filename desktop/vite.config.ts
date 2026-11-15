@@ -11,7 +11,7 @@ import { executionTimeout } from "./src/core/contracts/execution.ts";
 const host = process.env.TAURI_DEV_HOST;
 const repoRoot = resolve(import.meta.dirname, "..");
 
-function executePython(args: string[], timeoutMs: number | undefined, res: import("node:http").ServerResponse, complete: (result: { success: boolean; stdout: string; stderr: string; durationMs: number; executionTimeMs: number }) => void) {
+function executePython(args: string[], timeoutMs: number | undefined, res: import("node:http").ServerResponse, complete: (result: { success: boolean; stdout: string; stderr: string; durationMs: number; executionTimeMs: number; stopped: boolean }) => void, input?: string) {
   const limit = executionTimeout(timeoutMs);
   const start = performance.now();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -27,8 +27,10 @@ function executePython(args: string[], timeoutMs: number | undefined, res: impor
     await termination;
     if (res.destroyed) return;
     const durationMs = Math.round(performance.now() - start);
-    complete({ success: !err && !stopped, stdout: stdout || "", stderr: stopped ? `${stderr || ""}\nExecution cancelled or time budget exhausted` : stderr || err?.message || "", durationMs, executionTimeMs: durationMs });
+    complete({ success: !err && !stopped, stdout: stdout || "", stderr: stopped ? `${stderr || ""}\nExecution cancelled or time budget exhausted` : stderr || err?.message || "", durationMs, executionTimeMs: durationMs, stopped });
   });
+  child.stdin?.on("error", () => { /* Process completion reports stdin failures. */ });
+  child.stdin?.end(input);
   const terminate = () => {
     if (stopped || finished) return;
     stopped = true;
@@ -57,6 +59,32 @@ function reverseLabNativePlugin(): Plugin {
   return {
     name: "reverselab-native-backend",
     configureServer(server) {
+      for (const service of ["extensions", "mcp"]) {
+        server.middlewares.use(`/api/${service}`, (req, res, next) => {
+          if (req.method !== "POST") return next();
+          req.setEncoding("utf8");
+          let body = "";
+          let oversized = false;
+          req.on("data", chunk => {
+            if (oversized) return;
+            body += chunk;
+            if (body.length > 192 * 1024 * 1024) { oversized = true; body = ""; res.statusCode = 413; res.end(JSON.stringify({ error: "ZIP 文件超过上传大小限制" })); }
+          });
+          req.on("end", () => {
+            if (oversized || res.destroyed) return;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            try {
+              const { request, timeoutMs } = JSON.parse(body || "{}");
+              if (!request || typeof request !== "object" || Array.isArray(request)) throw new Error("Invalid request");
+              executePython([resolve(repoRoot, `scripts/misc/desktop_${service}.py`)], timeoutMs, res, result => {
+                if (result.stopped) { res.statusCode = 408; res.end(JSON.stringify({ error: { code: "execution-stopped", message: "操作已停止，执行结果未知；请查看当前状态", outcome: "unknown" } })); return; }
+                try { const payload = JSON.parse(result.stdout); if (!result.success) res.statusCode = 400; res.end(JSON.stringify(payload)); }
+                catch { res.statusCode = 500; res.end(JSON.stringify({ error: result.success ? "扩展服务响应无效" : "扩展服务失败或操作已取消" })); }
+              }, JSON.stringify(request));
+            } catch (error) { res.statusCode = 400; res.end(JSON.stringify({ error: error instanceof Error ? error.message : "Invalid request" })); }
+          });
+        });
+      }
       server.middlewares.use("/api/workspace", (req, res, next) => {
         if (req.method !== "POST") return next();
         req.setEncoding("utf8");

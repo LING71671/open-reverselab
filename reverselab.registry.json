@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "org.open-reverselab.knowledge",
+      "kind": "knowledge",
+      "path": "kb",
+      "title": "Open ReverseLab knowledge",
+      "version": "1.0.0"
+    }
+  ],
+  "id": "org.open-reverselab.registry",
+  "protocol": "open-reverselab.registry/v1",
+  "title": "Open ReverseLab extensions"
+}

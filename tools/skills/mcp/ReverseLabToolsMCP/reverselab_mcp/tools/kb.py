@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,14 @@ _LAYOUT_SPEC = importlib.util.spec_from_file_location(
 assert _LAYOUT_SPEC and _LAYOUT_SPEC.loader
 layout = importlib.util.module_from_spec(_LAYOUT_SPEC)
 _LAYOUT_SPEC.loader.exec_module(layout)
+
+
+def _extensions():
+    module_dir = str(REVERSE_ROOT / "scripts" / "misc")
+    if module_dir not in sys.path:
+        sys.path.insert(0, module_dir)
+    from extension_store import ExtensionStore
+    return ExtensionStore()
 
 SCORE_SIGNAL = 10
 SCORE_SIGNAL_EXACT = 30
@@ -262,16 +271,26 @@ def kb_router(query: str, board: str = "", track: str = "") -> dict[str, Any]:
     except ValueError as exc:
         return {"error": str(exc), "valid_tracks": list(track_mod.VALID_TRACKS)}
 
-    if board and board not in KB_ROOTS:
+    installed = _extensions().catalog(active_track)
+    installed_boards = {item["board"] for item in installed}
+    if board and board not in KB_ROOTS and board not in installed_boards:
         return {
             "error": f"Unknown board '{board}'. Valid boards: {', '.join(KB_ROOTS.keys())}",
             "valid_boards": list(KB_ROOTS.keys()),
         }
 
-    boards = [board] if board else list(KB_ROOTS.keys())
+    boards = [board] if board else list(dict.fromkeys([*KB_ROOTS, *sorted(installed_boards)]))
     all_results: list[dict[str, Any]] = []
     for b in boards:
-        all_results.extend(_search_kb(query, b, active_track))
+        if b in KB_ROOTS:
+            all_results.extend(_search_kb(query, b, active_track))
+    for item in installed:
+        if item["board"] not in boards:
+            continue
+        score = _score_entry(query.lower().strip(), {**item, "files": [item["path"], item["title"]]})
+        if score:
+            all_results.append({**item, "score": score, "priority": 0, "files": [item["path"]],
+                                "paired_files": item.get("related_paths", [])})
 
     all_results.sort(
         key=lambda r: (
@@ -283,10 +302,10 @@ def kb_router(query: str, board: str = "", track: str = "") -> dict[str, Any]:
     )
 
     by_board: dict[str, list[dict[str, Any]]] = {}
-    for r in all_results[:15]:
+    for r in all_results:
         by_board.setdefault(r["board"], []).append(r)
 
-    top = all_results[:10]
+    top = all_results
     payload: dict[str, Any] = {
         "query": query,
         "track": active_track,
@@ -334,6 +353,10 @@ def kb_read_file(technique_path: str, board: str = "") -> dict[str, Any]:
 
     支持板块：ctf-website / apk-reverse / pe-reverse / general。
     """
+    if technique_path.startswith("reverselab://"):
+        store = _extensions()
+        content = store.read_document(technique_path)
+        return {"path": technique_path, "content": content, "size": len(content), "lines": content.count("\n"), "truncated": False}
     normalized = technique_path.replace("\\", "/")
     if Path(normalized).is_absolute():
         roots = [root for b in KB_ROOTS for root in _technique_roots(b)]
@@ -392,13 +415,15 @@ def kb_catalog(board: str = "", track: str = "") -> dict[str, Any]:
     if filter_track == "auto":
         filter_track = track_mod.get_track()
 
-    if board and board not in KB_ROOTS:
+    installed = _extensions().catalog(filter_track or "both")
+    installed_boards = {item["board"] for item in installed}
+    if board and board not in KB_ROOTS and board not in installed_boards:
         return {
             "error": f"Unknown board '{board}'. Valid boards: {', '.join(KB_ROOTS.keys())}",
             "valid_boards": list(KB_ROOTS.keys()),
         }
 
-    boards = [board] if board else list(KB_ROOTS.keys())
+    boards = [board] if board else list(dict.fromkeys([*KB_ROOTS, *sorted(installed_boards)]))
     all_catalogs: dict[str, Any] = {}
 
     for b in boards:
@@ -450,8 +475,35 @@ def kb_catalog(board: str = "", track: str = "") -> dict[str, Any]:
             },
         }
 
+    for domain in boards:
+        documents = [item for item in installed if item["board"] == domain]
+        if documents:
+            summary = all_catalogs.setdefault(domain, {})
+            summary.pop("error", None)
+            summary["installed_documents"] = documents
+            summary["installed_files"] = len(documents)
     return {
         "active_track": track_mod.get_track(),
         "track_filter": filter_track or "all",
         "boards": all_catalogs,
     }
+
+
+def kb_graph(track: str = "both", pinned: list | None = None) -> dict:
+    """Return installed networks, methods, documents and bindings at exact editions."""
+    return _extensions().graph(track, pinned)
+
+
+def kb_get(entity: str, pinned: list | None = None) -> dict:
+    """Resolve an immutable URI or unambiguous stable entity ID."""
+    return _extensions().resolve(entity, pinned)
+
+
+def kb_neighbors(entity: str, pinned: list | None = None) -> dict:
+    """Read typed relations touching a method in the selected editions."""
+    return _extensions().neighbors(entity, pinned)
+
+
+def kb_pin() -> dict:
+    """Record exact active package editions for a task or report."""
+    return {"pins": _extensions().pin()}

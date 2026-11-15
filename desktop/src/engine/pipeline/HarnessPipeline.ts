@@ -16,6 +16,8 @@ import { runBothTracks } from "../tracks/both";
 import { llmService } from "../../services/llm/llmService";
 import { classifyFailure } from "../../services/health/healthMonitor";
 import type { HealthLayer, HealthStatus, ClassifiedFailure } from "../../core/contracts/health";
+import { nativeBridge, type KbTechnique } from "../../services/native/nativeBridge";
+import type { KnowledgePin } from "../../core/contracts/pipeline";
 
 export class HarnessPipeline {
   private stages: PipelineStage[] = [];
@@ -94,6 +96,26 @@ export class HarnessPipeline {
       model: llmService.getModel(),
       provider: { id: llmService.getActiveProviderId(), name: llmService.getActiveProvider()?.name || "Custom", baseUrl: llmService.getBaseUrl(), apiKey: llmService.getApiKey() },
     };
+    // Resolve once before splitting both tracks. Superseding/disabling a pack
+    // cannot change the catalog or network used by an in-flight Goal.
+    if (!initialState.knowledgeSnapshot && this.stages.some(stage => stage.id === "kb-routing" && stage.enabled)) {
+      try {
+        const pins = initialState.knowledgePins ?? (await nativeBridge.extensions<{ pins: KnowledgePin[] }>({ operation: "pin" }, { signal })).pins;
+        const [catalog, graph] = await Promise.all([
+          nativeBridge.extensions<{ documents: KbTechnique[] }>({ operation: "catalog", track: "both", pinned: pins }, { signal }),
+          nativeBridge.extensions<Record<string, unknown>>({ operation: "graph", track: "both", pinned: pins }, { signal }),
+        ]);
+        initialState = { ...initialState, knowledgePins: pins, knowledgeSnapshot: true,
+          kbCatalog: catalog.documents, knowledgeGraph: graph };
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        // Optional extensions must not prevent an ordinary task. A requested
+        // retained edition failing to resolve is an error, never a live fallback.
+        if (initialState.knowledgePins?.length) throw error;
+        initialState = { ...initialState, knowledgeSnapshot: true, knowledgeError: String(error) };
+      }
+    }
+    initialState = { ...initialState, unknownMcpInvocations: initialState.unknownMcpInvocations || [], mcpInFlight: initialState.mcpInFlight || new Map() };
     if (track === "both") {
       return runBothTracks(target, prompt, budget, callbacks, signal,
         (branch, branchBudget, branchCallbacks, state, branchSignal) => this.run(target, prompt, history, branchCallbacks, branchSignal, `${sessionId}:${branch}`, branch, branchBudget, { ...initialState, ...state, modelSnapshot }), sessionId);
@@ -144,6 +166,9 @@ export class HarnessPipeline {
           visitedPaths: ctx.state.attemptedKbPaths || [],
           actionFingerprints: ctx.state.executedActionFingerprints || [],
           blockedReasons: (ctx.state.routeHistory || []).map((entry: { reason: string }) => entry.reason),
+          knowledgePins: ctx.state.knowledgePins,
+          unknownMcpInvocations: ctx.state.unknownMcpInvocations,
+          mcpSnapshot: ctx.state.mcpSnapshot,
         },
       };
       callbacks.onRunProgress?.(ctx.runProgress);

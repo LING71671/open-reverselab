@@ -24,8 +24,7 @@ export function selectKbTechniques(
 ): KbTechnique[] {
   const text = normalize(query);
   const eligible = catalog.filter((item) =>
-    (track === "both" || item.track === "both" || item.track === track) &&
-    (!board || item.board === board),
+    (track === "both" || item.track === "both" || item.track === track),
   );
   const ranked = eligible.map((item) => {
     const signals = item.signals.filter((signal) => containsSignal(text, signal));
@@ -33,7 +32,8 @@ export function selectKbTechniques(
       .split(/[^\p{L}\p{N}]+/u)
       .filter((word) => word.length > 2 && !/^[0-9]+$/.test(word) && word !== "defense");
     const titleScore = [...new Set(titleWords)].filter((word) => containsSignal(text, word)).length * 4;
-    return { item, score: Math.min(signals.length * 5, 50) + titleScore };
+    const relevance = Math.min(signals.length * 5, 50) + titleScore;
+    return { item, score: relevance ? relevance + (item.board === board ? 2 : 0) : 0 };
   }).filter(({ score }) => score > 0)
     .sort((left, right) => right.score - left.score || left.item.path.localeCompare(right.item.path));
 
@@ -41,12 +41,11 @@ export function selectKbTechniques(
   const byPath = new Map(eligible.map((item) => [item.path, item]));
   for (const { item } of ranked) {
     if (selected.has(item.path)) continue;
-    if (selected.size >= (track === "both" ? 8 : 4)) break;
     selected.set(item.path, item);
     if (track === "both") {
       for (const path of item.related_paths) {
         const paired = byPath.get(path);
-        if (paired && selected.size < 8) selected.set(path, paired);
+        if (paired) selected.set(path, paired);
       }
     }
   }

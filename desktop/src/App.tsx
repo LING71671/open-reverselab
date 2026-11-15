@@ -11,6 +11,7 @@ import { RetainedView } from "./views/shell/RetainedView";
 import type { ComposerDraft } from "./views/prompt/PromptConsole";
 import { updateService } from "./services/updates/updateService";
 import { PerformanceMonitor } from "./views/shell/PerformanceMonitor";
+import { ExtensionsView } from "./views/extensions/ExtensionsView";
 
 const emptyDraft: ComposerDraft = { target: "", prompt: "", instruction: "", minutes: "", tokens: "", limitsOpen: false };
 
@@ -54,7 +55,7 @@ function AppContent() {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem("reverselab_theme", theme); } catch { /* Theme remains usable without storage. */ }
   }, [theme]);
-  const names = { canvas: "Goal", chat: "Goal", kb: "知识库", console: "日志", diagnostics: "健康监控", samples: "样本" };
+  const names = { canvas: "Goal", chat: "Goal", kb: "知识库", console: "日志", diagnostics: "健康监控", samples: "样本", extensions: "扩展" };
   const statuses = { idle: "待开始", queued: "等待执行", running: "运行中", completed: "已完成", failed: "执行失败", blocked: "已阻塞", exhausted: "已达运行上限", cancelled: "已停止" };
   const running = state.sessions.filter(s => s.status === "running" || s.status === "queued");
   const composerVisible = state.viewMode === "canvas" || state.viewMode === "chat";
@@ -99,6 +100,7 @@ function AppContent() {
             {composerVisible && state.currentSession && <span className="goal-status" role="status">{statuses[state.currentSession.status]}</span>}
           </header>
           <div className="workspace-stage">
+            <RetainedView active={state.viewMode === "extensions"}><ExtensionsView active={!settingsOpen && state.viewMode === "extensions"} /></RetainedView>
             <RetainedView active={state.viewMode === "samples"}><SamplesView onSelect={target => createDraft({ target })} /></RetainedView>
             <RetainedView active={state.viewMode === "canvas"}><CanvasGraph key={state.activeSessionId} active={!settingsOpen && state.viewMode === "canvas"} fullscreen={canvasFullscreen} onToggleFullscreen={toggleCanvasFullscreen} steps={state.steps} selectedStep={state.selectedStep} onSelectStep={step => { setCanvasFullscreen(false); state.selectStep(step); }} /></RetainedView>
             <RetainedView active={state.viewMode === "chat"}><AgentChatView key={state.activeSessionId} /></RetainedView>

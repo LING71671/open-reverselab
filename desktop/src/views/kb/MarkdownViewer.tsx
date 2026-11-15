@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import remarkFrontmatter from "remark-frontmatter";
 import { Check, Copy } from "lucide-react";
 
-interface MarkdownViewerProps { content: string; docPath?: string; onNavigate?: (path: string) => void }
+interface MarkdownViewerProps { content: string; docPath?: string; onNavigate?: (path: string, href?: string) => void }
 function textContent(value: ReactNode): string {
   return Children.toArray(value).map(child => isValidElement<{ children?: ReactNode }>(child) ? textContent(child.props.children) : String(child)).join("");
 }
@@ -23,6 +23,7 @@ export function MarkdownViewer({ content, docPath, onNavigate }: MarkdownViewerP
     a: ({ href, children }) => {
       const localDoc = href && !/^[a-z]+:/i.test(href) && !href.startsWith("//") && /\.md(?:#.*)?$/.test(href);
       if (localDoc && docPath && onNavigate) {
+        if (docPath.startsWith("reverselab://")) return <a href={href} onClick={event => { event.preventDefault(); onNavigate(docPath, href); }}>{children}</a>;
         const path = new URL(href!, `https://kb.invalid/${docPath}`).pathname.slice(1);
         return <a href={href} onClick={event => { event.preventDefault(); onNavigate(decodeURIComponent(path)); }}>{children}</a>;
       }

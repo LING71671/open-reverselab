@@ -11,6 +11,7 @@ import {
 import { defaultHarnessPipeline, HarnessPipeline } from "./pipeline";
 import type { SecurityTrack } from "../core/contracts/track";
 import type { HealthEvent } from "../core/contracts/health";
+import type { KnowledgePin } from "../core/contracts/pipeline";
 
 export interface AgentRunCallbacks {
   shouldYield?: () => boolean;
@@ -41,6 +42,8 @@ export async function runOpenSourceAgent(
   goalId?: string,
   workspaceRoot?: string,
   revision = 0,
+  knowledgePins?: KnowledgePin[],
+  executionCheckpoint?: RunProgress["checkpoint"],
 ): Promise<string> {
   const pipelineCallbacks: PipelineCallbacks = {
     shouldYield: callbacks.shouldYield,
@@ -64,7 +67,9 @@ export async function runOpenSourceAgent(
     goalId,
     track,
     budget,
-    { workspaceRoot, reportNamespace: revision && goalId ? `${goalId}-revision-${revision}` : goalId }
+    { workspaceRoot, knowledgePins, executedActionFingerprints: executionCheckpoint?.actionFingerprints,
+      unknownMcpInvocations: executionCheckpoint?.unknownMcpInvocations, mcpSnapshot: executionCheckpoint?.mcpSnapshot,
+      reportNamespace: revision && goalId ? `${goalId}-revision-${revision}` : goalId }
   );
 
   return resultCtx.state.fullContent || "";

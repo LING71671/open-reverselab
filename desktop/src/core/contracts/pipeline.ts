@@ -12,6 +12,14 @@ export interface RunBudget {
   maxTokens?: number;
 }
 
+export interface KnowledgePin {
+  installationId: string;
+  id: string;
+  version: string;
+  digest: string;
+  source: string;
+}
+
 export interface AcceptancePlan {
   target: string;
   objective: string;
@@ -33,6 +41,9 @@ export interface RunProgress extends RunBudget {
     visitedPaths: string[];
     actionFingerprints: string[];
     blockedReasons: string[];
+    knowledgePins?: KnowledgePin[];
+    unknownMcpInvocations?: string[];
+    mcpSnapshot?: Array<{ connectionId: string; schemaHash: string; protocolVersion?: string; lastChecked?: string }>;
   };
 }
 

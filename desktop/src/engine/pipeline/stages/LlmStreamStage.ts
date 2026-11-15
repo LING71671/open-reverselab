@@ -1,7 +1,7 @@
 import { PipelineStage, PipelineContext, PipelineCallbacks, StageDiagnostic } from "../../../core";
 import { llmService } from "../../../services/llm/llmService";
 import { modelFetch, usesNativeNetwork } from "../../../services/network/networkService";
-import { buildAnalysisMessages, estimateMessageTokens } from "../analysisPrompt";
+import { buildAnalysisMessages, estimateMessageTokens, refreshMcpTools } from "../analysisPrompt";
 import { parseAcceptancePlan } from "../goalVerifier";
 
 export class LlmStreamStage implements PipelineStage {
@@ -44,6 +44,7 @@ export class LlmStreamStage implements PipelineStage {
     }
 
     const cleanBase = baseUrl.replace(/\/+$/, "");
+    await refreshMcpTools(ctx);
     const messagesPayload = buildAnalysisMessages(ctx);
     const inputEstimate = estimateMessageTokens(messagesPayload);
     if (ctx.state.refreshTokenBudget) ctx.budget.maxTokens = ctx.state.refreshTokenBudget();

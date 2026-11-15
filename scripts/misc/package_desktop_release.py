@@ -16,7 +16,23 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 STAGE = ROOT / 'desktop/src-tauri/release-resources'
 OUTPUT = ROOT / 'dist/release'
-RUNTIME_DIRS = {'kb', 'scripts', 'tools', 'schemas', 'fixtures', 'boards', 'templates'}
+RUNTIME_FILES = frozenset({
+    'LICENSE', 'DISCLAIMER.md', 'DISCLAIMER.zh.md',
+    'scripts/misc/desktop_workspace.py', 'scripts/misc/triage_target.py',
+    'scripts/misc/desktop_kb.py', 'scripts/misc/kb_layout.py', 'scripts/misc/kb_router.py',
+    'scripts/misc/extension_protocol.py', 'scripts/misc/extension_store.py',
+    'scripts/misc/desktop_extensions.py', 'scripts/misc/desktop_mcp.py', 'scripts/misc/mcp_client.py',
+})
+
+
+def runtime_entries(archive: zipfile.ZipFile):
+    """Both distributions use the same explicit runtime file set."""
+    available = set(archive.namelist())
+    missing = RUNTIME_FILES - available
+    if missing:
+        raise ValueError('Missing runtime files: ' + ', '.join(sorted(missing)))
+    for name in sorted(RUNTIME_FILES):
+        yield name, archive.read(name)
 
 
 def git(*args: str) -> bytes:
@@ -46,18 +62,17 @@ def stage() -> None:
         if destination.exists():
             shutil.rmtree(destination)
         destination.mkdir(parents=True)
-        for entry in archive.infolist():
-            path = PurePosixPath(entry.filename)
-            if entry.is_dir() or (len(path.parts) > 1 and path.parts[0] not in RUNTIME_DIRS):
-                continue
+        for name, raw in runtime_entries(archive):
+            path = PurePosixPath(name)
             if path.is_absolute() or '..' in path.parts:
                 raise SystemExit('Invalid path in Git archive.')
             out = destination.joinpath(*path.parts)
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_bytes(archive.read(entry))
+            out.write_bytes(raw)
     (destination / 'RELEASE.json').write_text(json.dumps({
         'version': version(), 'commit': git('rev-parse', 'HEAD').decode().strip(),
-        'platform': 'windows-x86_64',
+        'platform': 'windows-x86_64', 'distribution': 'desktop-runtime',
+        'extensions': 'external',
     }, indent=2) + '\n', encoding='utf-8')
     print('Staged committed runtime resources.')
 
@@ -97,11 +112,10 @@ def package(installer: Path, notes: Path) -> None:
     portable = OUTPUT / f'OpenReverseLab-v{release_version}-windows-x64.zip'
     prefix = f'OpenReverseLab-{release_version}/'
     with source_archive() as source, zipfile.ZipFile(portable, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as dest:
-        for entry in source.infolist():
-            if not entry.is_dir():
-                dest.writestr(prefix + entry.filename, source.read(entry))
+        for name, raw in runtime_entries(source):
+            dest.writestr(prefix + 'runtime/' + name, raw)
         dest.write(binary, prefix + 'OpenReverseLab.exe')
-        dest.write(STAGE / 'RELEASE.json', prefix + 'RELEASE.json')
+        dest.write(STAGE / 'RELEASE.json', prefix + 'runtime/RELEASE.json')
     latest = {
         'version': release_version,
         'notes': notes.read_text(encoding='utf-8').strip(),

@@ -36,10 +36,21 @@ async function tryTauriExecution<T>(cmd: string, args: Record<string, unknown>, 
     const result = await invoke<T>(cmd, { ...args, onStarted });
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     return result;
+  } catch (error) {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    throw error;
   } finally { signal?.removeEventListener("abort", cancel); }
 }
 
 export interface KbTechnique {
+  entityId?: string;
+  installationId?: string;
+  packId?: string;
+  packVersion?: string;
+  digest?: string;
+  methodIds?: string[];
+  networkIds?: string[];
+  aliases?: string[];
   id: string;
   board: string;
   title: string;
@@ -103,6 +114,32 @@ export interface PythonExecResult {
 }
 
 export class NativeBridge {
+  /** Local package and MCP services share their cancellable JSON protocol in both hosts. */
+  private async extensionService<T>(service: "extensions" | "mcp", request: Record<string, unknown>, options: ExecutionOptions = {}): Promise<T> {
+    if (options.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    const executionId = options.executionId || crypto.randomUUID();
+    const timeoutMs = executionTimeout(options.timeoutMs);
+    let payload = await tryTauriExecution<unknown>(`${service}_operation`, { request, executionId, timeoutMs }, options.signal);
+    if (payload === null) {
+      const response = await fetch(`/api/${service}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request, timeoutMs }), signal: options.signal,
+      });
+      try { payload = await response.json(); }
+      catch { throw new Error(`${service} 服务响应无效（HTTP ${response.status}）`); }
+      if (!response.ok && !(payload as { error?: unknown })?.error) throw new Error(`${service} 服务不可用（HTTP ${response.status}）`);
+    }
+    const error = (payload as { error?: string | { message?: string; code?: string; outcome?: string } })?.error;
+    if (error) {
+      if (typeof error === "string") throw new Error(error);
+      throw Object.assign(new Error(error.message || "扩展操作失败"), { code: error.code, outcome: error.outcome });
+    }
+    return payload as T;
+  }
+
+  public extensions<T>(request: Record<string, unknown>, options: ExecutionOptions = {}): Promise<T> { return this.extensionService<T>("extensions", request, options); }
+  public mcp<T>(request: Record<string, unknown>, options: ExecutionOptions = {}): Promise<T> { return this.extensionService<T>("mcp", request, options); }
+
   public async workspace<T>(request: Record<string, unknown>): Promise<T> {
     const native = await tryTauriInvoke<T>("workspace_operation", { request });
     if (native !== null) return native;

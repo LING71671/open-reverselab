@@ -15,6 +15,8 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 _SPEC = importlib.util.spec_from_file_location("desktop_kb_router", Path(__file__).with_name("kb_router.py"))
 assert _SPEC and _SPEC.loader
 router = importlib.util.module_from_spec(_SPEC)
@@ -71,6 +73,9 @@ def _canonical_doc(repo_root: Path, candidate: Path) -> Path:
 
 
 def read_document(relative_path: str, repo_root: Path = ROOT) -> str:
+    if relative_path.startswith("reverselab://"):
+        from extension_store import ExtensionStore
+        return ExtensionStore().read_document(relative_path)
     # Require the canonical form sent by the catalog. Resolve again to reject links
     # that point outside kb/, including Windows junctions and symbolic links.
     parts = relative_path.split("/")
@@ -87,7 +92,7 @@ def read_document(relative_path: str, repo_root: Path = ROOT) -> str:
     return path.read_text(encoding="utf-8-sig")
 
 
-def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str, Any]]:
+def build_legacy_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str, Any]]:
     if track not in router.VALID_TRACKS:
         raise ValueError("Track must be red, blue, or both")
     repo_root = repo_root.resolve(strict=True)
@@ -96,7 +101,7 @@ def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str,
     owners: dict[str, list[dict[str, Any]]] = defaultdict(list)
     documents: dict[str, Path] = {}
 
-    for board in router.BOARDS:
+    for board in router.discover_boards(repo_root):
         index_path = router.layout.index_path(board, repo_root)
         if not index_path.is_file():
             continue
@@ -170,16 +175,24 @@ def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str,
     return [item for item in items.values() if router.entry_matches_track(item, track)]
 
 
+def build_catalog(track: str = "both", repo_root: Path = ROOT) -> list[dict[str, Any]]:
+    if track not in router.VALID_TRACKS:
+        raise ValueError("Track must be red, blue, or both")
+    from extension_store import ExtensionStore
+    return ExtensionStore().catalog(track)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     catalog = commands.add_parser("list")
     catalog.add_argument("--track", default="both")
+    catalog.add_argument("--source", action="store_true", help="Inspect source articles for authoring without installing them")
     reader = commands.add_parser("read")
     reader.add_argument("--path", required=True)
     args = parser.parse_args(argv)
     try:
-        result = build_catalog(args.track) if args.command == "list" else {"content": read_document(args.path)}
+        result = (build_legacy_catalog(args.track) if args.source else build_catalog(args.track)) if args.command == "list" else {"content": read_document(args.path)}
     except (OSError, ValueError) as error:
         status = 404 if isinstance(error, FileNotFoundError) else 400
         print(json.dumps({"error": str(error), "status": status}, ensure_ascii=True))

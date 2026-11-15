@@ -133,6 +133,9 @@ export async function runBothTracks(
     visitedPaths: [...new Set(Object.values(results).flatMap((ctx) => ctx.state.attemptedKbPaths || []))] as string[],
     actionFingerprints: [...new Set(Object.values(results).flatMap((ctx) => ctx.state.executedActionFingerprints || []))] as string[],
     blockedReasons: Object.values(results).flatMap((ctx) => (ctx.state.routeHistory || []).map((route: { reason: string }) => route.reason)),
+    knowledgePins: results.red?.state.knowledgePins || results.blue?.state.knowledgePins,
+    unknownMcpInvocations: [...new Set(Object.values(results).flatMap((ctx) => ctx.state.unknownMcpInvocations || []))] as string[],
+    mcpSnapshot: results.red?.state.mcpSnapshot || results.blue?.state.mcpSnapshot,
   };
   const runProgress: RunProgress = { ...budget, status, reason, elapsedMs, tokensUsed, attempts: sumAttempts(), usageEstimated: combined?.context.budget.usageEstimated ?? Object.values(results).some((ctx) => ctx.budget.usageEstimated), checkpoint };
   callbacks.onRunProgress?.(runProgress);
