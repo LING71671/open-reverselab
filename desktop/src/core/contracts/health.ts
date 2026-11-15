@@ -66,6 +66,8 @@ export interface HealthLayerSnapshot {
   readonly status: HealthStatus;
   readonly observedEvents: number;
   readonly lastEvent?: HealthEvent;
+  /** Latest observation with the aggregate status, used to explain that status. */
+  readonly statusEvent?: HealthEvent;
 }
 
 export interface HealthSnapshot {

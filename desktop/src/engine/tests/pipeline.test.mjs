@@ -42,6 +42,7 @@ const { KbRoutingStage } = await load("engine/pipeline/stages/KbRoutingStage.ts"
 const { TargetDiscoveryStage } = await load("engine/pipeline/stages/TargetDiscoveryStage.ts");
 const { parseActionPlan, executeActionPlan } = await load("engine/pipeline/actionPlan.ts");
 const { runBothTracks } = await load("engine/tracks/both.ts");
+const { verifyBothGoal } = await load("engine/tracks/verifyBothGoal.ts");
 const { StaticTriageStage } = await load("engine/pipeline/stages/StaticTriageStage.ts");
 const { LlmStreamStage } = await load("engine/pipeline/stages/LlmStreamStage.ts");
 const { HealthFault } = await load("core/contracts/health.ts");
@@ -1040,4 +1041,136 @@ test("planning uses matched track methods, adjacent relations and complete prere
   assert.deepEqual(selected.relatedMethods.map(method => method.id), ["red"]);
   assert.equal(selected.bindings.length, 1);
   assert.equal(graph.methods.length, 7);
+});
+
+test("both reopens a blocked branch for late evidence, forks and joins, then verifies the combined objective", { timeout: 5000 }, async () => {
+  const savedBridge = { execPython: nativeBridge.execPython, triage: nativeBridge.triage, saveReport: nativeBridge.saveReport };
+  const savedComplete = llmService.complete;
+  let redSettled;
+  const redGate = new Promise(resolve => { redSettled = resolve; });
+  const executions = [], reports = [], graph = new Map(), assessments = [];
+  try {
+    nativeBridge.triage = async () => ({ targetPath: "fixture.bin", board: "general", fileType: "fixture", sha256: "a".repeat(64) });
+    nativeBridge.saveReport = async report => { reports.push(report); return { status: "saved", report_path: `reports/${report.goalId}.md` }; };
+    nativeBridge.execPython = async script => {
+      const action = script.split("\n").at(-1);
+      const decode = line => JSON.parse(JSON.parse(line.slice(line.indexOf(".loads(") + 7, -1)));
+      const inputs = decode(script.split("\n")[0]);
+      const peers = decode(script.split("\n")[1]);
+      executions.push({ action, inputs, peers });
+      if (action.startsWith("blue-")) await redGate;
+      return { success: true, stdout: `observed ${action}`, stderr: "", executionTimeMs: 1 };
+    };
+    llmService.complete = async messages => {
+      const payload = JSON.parse(messages[1].content);
+      assessments.push(payload);
+      const passed = !Object.hasOwn(payload.evidence, "actions.red_probe.stdout");
+      return { content: JSON.stringify({ status: passed ? "verified" : "continue", reason: passed ? "matched observations" : "need peer correlation",
+        checks: payload.plan.checks.map(check => {
+          const prefix = payload.plan.scope === "goal" ? check.id.split(".")[0] + "." : "";
+          const ref = Object.keys(payload.evidence).find(key => key.startsWith(prefix) && key.endsWith(".stdout"));
+          return { id: check.id, passed, evidenceRef: ref, evidenceQuote: payload.evidence[ref] };
+        }) }), usage: { totalTokens: 10 } };
+    };
+    const pipeline = new HarnessPipeline([new TargetDiscoveryStage(), stage("plan", async ctx => {
+      const track = ctx.track;
+      if (track === "blue") await redGate;
+      const names = track === "red" && !ctx.state.cooperationRound ? ["red_probe"] : [`${track}_first`, `${track}_second`, `${track}_join`];
+      const actions = names.map((id, index) => ({ id, title: id, dependsOn: index === 2 ? names.slice(0, 2) : [], script: id.replaceAll("_", "-") }));
+      ctx.state.fullContent = JSON.stringify({ checks: [{ id: "C1", criterion: "correlate observations", expected: "matching evidence" }], actions });
+    }), new ForensicsDeliverablesStage()]);
+    const result = await pipeline.run("fixture.bin", "correlate request and defensive evidence", [], {
+      onStepNode: node => graph.set(node.id, node),
+      onHealthEvent: event => { if (event.branchId === "red" && event.layer === "goal" && event.status === "degraded") redSettled(); },
+    }, undefined, "joint-fixture", "both");
+    assert.equal(result.runProgress.status, "completed");
+    assert.equal(result.budget.tokensUsed, 40);
+    assert.equal(result.state.branches.red.state.cooperationRound, 1);
+    assert.equal(result.state.branches.blue.state.cooperationRound, 0);
+    assert.equal(executions.length, 7);
+    assert.equal(executions.find(item => item.action === "red-probe").peers.length, 0);
+    assert(executions.find(item => item.action === "blue-first").peers.some(message => message.from === "red"));
+    assert(executions.find(item => item.action === "red-first").peers.some(message => message.from === "blue"));
+    assert.deepEqual(Object.keys(executions.find(item => item.action === "red-join").inputs), ["red_first", "red_second"]);
+    assert([...graph.values()].some(node => node.id.startsWith("red:") && node.id.includes(":exchange-1:") && node.parentIds.some(id => id.startsWith("blue:"))));
+    assert([...graph.values()].some(node => node.id.startsWith("blue:") && node.parentIds?.some(id => id.startsWith("red:"))));
+    assert.equal(new Set(reports.map(report => report.goalId)).size, 3);
+    assert.equal(assessments.at(-1).plan.scope, "goal");
+    assert.deepEqual(assessments.at(-1).plan.checks.map(check => check.id), ["red.C1", "blue.C1"]);
+    assert.equal(result.state.branches.red.state.routeHistory.length, 1);
+  } finally { redSettled(); Object.assign(nativeBridge, savedBridge); llmService.complete = savedComplete; }
+});
+
+test("unchanged peer observations settle without mutual waiting or repeated cooperation", async () => {
+  const calls = { red: 0, blue: 0 };
+  const result = await runBothTracks("fixture.bin", "inspect", {}, {}, undefined, async (track, _budget, _callbacks, state) => {
+    calls[track]++;
+    if (track === "blue") await new Promise(resolve => setImmediate(resolve));
+    state.publishEvidence(`${track}-${calls[track]}`, `changed label ${calls[track]}`, { success: true, stdout: "unchanged observation", stderr: "", executionTimeMs: calls[track] });
+    state.notifyPeer(`changed blocker ${calls[track]}`);
+    return context({ track, state, runProgress: { status: "blocked", reason: "no new route" } });
+  }, "settle-fixture");
+  assert.equal(result.runProgress.status, "blocked");
+  assert.deepEqual(calls, { red: 2, blue: 1 });
+});
+
+test("revision arriving with late evidence cancels cooperation and retains the incomplete objective", async () => {
+  let yielding = false;
+  const calls = [];
+  const result = await runBothTracks("fixture.bin", "old objective", {}, { shouldYield: () => yielding }, undefined, async (track, _budget, _callbacks, state) => {
+    calls.push(track);
+    if (track === "blue") {
+      await new Promise(resolve => setImmediate(resolve));
+      state.publishEvidence("late", "observation", { success: true, stdout: "late observation", stderr: "" });
+      yielding = true;
+    }
+    return context({ track, state, runProgress: { status: "blocked" } });
+  }, "revision-fixture");
+  assert.deepEqual(calls, ["red", "blue"]);
+  assert.equal(result.runProgress.status, "running");
+  assert.equal(result.state.routeVerified, false);
+});
+
+test("cooperation consumes the remaining shared budget and retains estimated prior usage", async () => {
+  const allocations = [];
+  const result = await runBothTracks("fixture.bin", "inspect", { maxTokens: 900 }, {}, undefined, async (track, budget, _callbacks, state) => {
+    allocations.push([track, budget.maxTokens]);
+    if (track === "blue") {
+      await new Promise(resolve => setImmediate(resolve));
+      state.publishEvidence("observed", "observation", { success: true, stdout: "new evidence", stderr: "" });
+    }
+    const ctx = context({ track, state, runProgress: { status: "blocked" } });
+    ctx.budget.tokensUsed = state.cooperationRound ? 50 : 100;
+    ctx.budget.usageEstimated = !state.cooperationRound;
+    if (state.cooperationRound) assert.equal(state.refreshTokenBudget(), 400);
+    return ctx;
+  }, "cooperation-budget");
+  assert.deepEqual(allocations, [["red", 300], ["blue", 300], ["red", 400]]);
+  assert.equal(result.budget.tokensUsed, 250);
+  assert.equal(result.budget.attempts, 3);
+  assert.equal(result.state.branches.red.budget.tokensUsed, 150);
+  assert.equal(result.state.branches.red.budget.usageEstimated, true);
+});
+
+test("action reuse includes the observed target content version", async () => {
+  let calls = 0;
+  const ctx = context({ triage: { sha256: "a".repeat(64) }, state: { executeAction: async () => { calls++; return { success: true, stdout: "observed", stderr: "" }; } } });
+  const actions = [{ id: "read", title: "read", dependsOn: [], script: "read_target()" }];
+  assert.equal((await executeActionPlan(actions, ctx, {})).success, true);
+  assert.equal((await executeActionPlan(actions, ctx, {})).success, false);
+  ctx.triage.sha256 = "b".repeat(64);
+  assert.equal((await executeActionPlan(actions, ctx, {})).success, true);
+  assert.equal(calls, 2);
+  assert.equal(ctx.state.verificationProgram.actions.read.targetVersion, `sha256:${"b".repeat(64)}`);
+});
+
+test("combined verification rejects different observed target versions before a model call", async () => {
+  const original = llmService.complete;
+  try {
+    llmService.complete = async () => assert.fail("different versions must not be combined");
+    const branches = Object.fromEntries(["red", "blue"].map((track, index) => [track, context({ track, triage: { sha256: String(index).repeat(64) } })]));
+    const result = await verifyBothGoal(branches, "fixture.bin", "inspect", {}, performance.now(), "versions", undefined, {});
+    assert.equal(result.verification.goalVerified, false);
+    assert.match(result.verification.reason, /目标内容版本不同/);
+  } finally { llmService.complete = original; }
 });

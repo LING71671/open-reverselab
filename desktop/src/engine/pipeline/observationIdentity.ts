@@ -1,5 +1,11 @@
 import type { AgentMessage } from "../runtime/agentMessages";
 import type { PythonExecResult } from "../../services/native/nativeBridge";
+import type { PipelineContext } from "../../core/contracts/pipeline";
+
+/** Bind reusable observations to the content version when discovery measured one. */
+export function targetVersion(ctx: PipelineContext): string | undefined {
+  return ctx.triage?.sha256 ? `sha256:${ctx.triage.sha256.toLowerCase()}` : undefined;
+}
 
 /** Sort object keys, but preserve arrays and every value in the observed data. */
 export function stableJson(value: unknown): string {
@@ -22,7 +28,7 @@ export function peerObservationIdentity(messages: AgentMessage[]) {
     try {
       const value = JSON.parse(message.payload.content);
       const output = value.output || value.execution;
-      if (output && typeof output.success === "boolean" && typeof output.stdout === "string" && typeof output.stderr === "string") content = observationIdentity(output);
+      if (output && typeof output.success === "boolean" && typeof output.stdout === "string" && typeof output.stderr === "string") content = { ...observationIdentity(output), ...(value.targetVersion ? { targetVersion: value.targetVersion } : {}) };
     } catch { /* Document references and prose remain literal. */ }
     return stableJson({ from: message.from, type: message.type, content, paths: message.payload.evidenceRefs?.flatMap(ref => ref.path ? [ref.path] : []).sort() || [] });
   });

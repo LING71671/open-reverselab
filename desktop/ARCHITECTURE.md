@@ -42,6 +42,8 @@ Views dispatch user actions through the state adapter. `GoalManager` accepts an 
 
 Each strategy can generate several actions with forks and joins. Before starting an action, the runtime binds its parent outputs and the peer evidence available at that point. Published evidence carries graph-node references; the canvas draws those cross-strategy links. A peer's conclusion remains evidence for assessment rather than directly changing the other strategy's result.
 
+The coordinator retains distinct peer tool observations independently of display-history retention. After the current runners settle, a blocked strategy with unseen observations receives another planning round. It keeps its fixed acceptance plan, previous routes, and action fingerprints, and adds to the same Goal budget. No new observation means no additional cooperation round. A measured target SHA256 participates in action reuse and combined-verification compatibility.
+
 The scheduler runs a validated, immutable DAG. A later planning round creates another DAG and retains earlier graph records. Manual graph editing, adding arbitrary nodes to an already running DAG, and arbitrary user-defined Agent roles are not exposed by the current desktop UI.
 
 ## Ownership and persistence

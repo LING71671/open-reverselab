@@ -18,6 +18,10 @@ This document describes current contracts and implementation boundaries. A succe
 
 Both strategies can create action forks and joins. They exchange observations while executing, and later actions can depend on evidence produced by the other strategy. Passing both scoped assessments is followed by [verification of the original combined objective](src/engine/tracks/verifyBothGoal.ts).
 
+Red evaluates how observed findings combine, including prerequisite compatibility and evidence passed between steps. Blue assesses prevention, detection, and response across those multi-step paths, including coverage when an individual control fails. Dependent checks use the actual parent outputs; isolated findings or controls do not substitute for verification of the combined objective.
+
+When one strategy becomes blocked before its peer produces useful observations, the coordinator reopens that strategy after the current work settles. The new round receives the peer observations and retains its acceptance plan, route history, and action fingerprints. It creates separate graph nodes and reports while accumulating prior token use. Repeated output, changed receipt IDs, rewritten blocker messages, and new KB references alone cannot reopen a branch. With no new observations, the run settles as blocked; neither strategy waits indefinitely for a peer reply.
+
 Knowledge selection uses pinned installed-pack metadata. A Goal snapshots pack IDs, versions, digests, and the relevant graph before splitting into red/blue branches. Resume and objective changes keep those references. The source articles use these track paths: red reads `kb/red/` and `kb/shared/`; blue reads `kb/blue/` and `kb/shared/`. Each strategy in both retrieves its own references. A paired-document link helps locate related material without changing the receiving strategy.
 
 ## Goal ownership and revisions
@@ -47,7 +51,8 @@ Planning may return an acceptance plan and an `action-plan` containing:
 | `id` | Unique action identifier within the round |
 | `title` | Human-readable action title |
 | `dependsOn` | IDs of prerequisite actions |
-| `script` | Python source for this action |
+| `script` | Python source for a Python action |
+| `kind`, `connectionId`, `tool`, `arguments` | An MCP action addresses a discovered, connection-qualified tool and its arguments |
 
 [actionPlan.ts](src/engine/pipeline/actionPlan.ts) validates the entire graph before executing tools. Duplicate IDs, missing dependencies, cycles, and malformed explicit plans are rejected. An invalid explicit DAG is not silently treated as a single-script plan. Older single Python script responses remain supported when no explicit action plan is present.
 
@@ -74,13 +79,13 @@ The scheduler supports exclusive `resourceKeys` and an injected `DagResourcePool
 
 [AgentMessageBus](src/engine/runtime/agentMessages.ts) routes messages between registered agents of one Goal. Messages carry sender, recipient, type, optional correlation ID, and evidence references. Supported types are `evidence`, `question`, `answer`, `blocked`, and `result`. Accepted payloads are copied and frozen; duplicate IDs are not redelivered.
 
-Both publishes action observations, KB references, blocking reasons, and branch results. Planning reads peer messages, and actions read available peer observations at execution time. Evidence-node references become cross-links in the canvas. Matching action fingerprints can share one execution Promise within the both run; each strategy still evaluates the output independently.
+Both publishes action observations, KB references, blocking reasons, and branch results. Planning reads peer messages, and actions read available peer observations at execution time. Distinct tool observations remain available throughout the Goal even after the message display history rotates. Evidence-node references become cross-links in the canvas. Matching action fingerprints can share one execution Promise within the both run; each strategy still evaluates the output independently.
 
-Action fingerprints include target, script, parent observations, and peer observations. [Observation identity](src/engine/pipeline/observationIdentity.ts) normalizes JSON key order and excludes transport receipt IDs, graph-node IDs, and runner durations from peer-observation identity. The same script and inputs are not re-executed merely because another KB document was selected. Single-script plans also normalize comments and blank lines for duplicate detection.
+Action fingerprints include target, the content SHA256 when measured by discovery, script, parent observations, and peer observations. The executed program records its target version and actual input bindings. [Observation identity](src/engine/pipeline/observationIdentity.ts) normalizes JSON key order and excludes transport receipt IDs, graph-node IDs, and runner durations from peer-observation identity. The same script and inputs are not re-executed merely because another KB document was selected. Single-script plans also normalize comments and blank lines for duplicate detection.
 
 The route ledger compares failure category, observation fingerprint, and selected references. A repeated unchanged failure on the same route stops that loop. A similar symptom on a different candidate route remains visible while other candidates can still be attempted. A new document, timestamp, or rewritten summary alone is not evidence of progress.
 
-This is input-based repeat detection, not semantic equivalence analysis. Changed but equivalent programs can still evade exact comparison; general target-version and evidence-freshness tracking remains incomplete.
+Repeat detection compares inputs rather than program semantics. Changed but equivalent programs can still evade exact comparison. Content versions cover targets with a measured SHA256; URL and device state without a content measurement need observations supplied by their adapters. The discovery measurement does not continuously monitor external target changes.
 
 ## Independent Goal verification
 
@@ -98,7 +103,7 @@ The runtime requires exactly the planned check IDs. A passing check must cite a 
 
 Quoted evidence and the collection program are assessed together; model instructions treat target content, KB text, and stdout as data. These inputs do not change the bound objective or acceptance plan. Valid quotation checks establish provenance within the supplied output; the model's semantic assessment still requires appropriate live acceptance tests.
 
-For both, scoped verdicts retain separate responsibilities. Combined verification prefixes each strategy's check and evidence IDs and assesses full-objective coverage. One branch's success cannot stand in for the other branch.
+For both, scoped verdicts retain separate responsibilities. Combined verification prefixes each strategy's check and evidence IDs and assesses full-objective coverage. One branch's success cannot stand in for the other branch. If the two branches measured different target hashes, the coordinator requires observations of the same version before combined verification can succeed.
 
 ## Budgets and terminal states
 
@@ -135,10 +140,10 @@ Workspace runtime connects new accepted health events to the optional diagnostic
 ## Current implementation boundaries
 
 - The direct execution adapters provide target triage and Python processes. Scripts can invoke installed libraries and CLI tools with the current user's permissions. Dedicated debugger sessions, device control, and hardening adapters require integration with the same execution and cancellation contracts.
-- Agent mailboxes currently retain 128 history entries and 64 entries per inbox, accept up to 512 messages per bus, and allow 8 correlated hops. The limits are configurable in the bus API; they are not Goal or action concurrency caps.
+- Agent mailboxes retain 128 display-history entries and 64 entries per inbox, with 8 correlated reply hops by default. Distinct tool observations are retained separately for cooperation. Total message count has no default budget; callers may explicitly configure one. These retention settings do not limit Goal or action concurrency.
 - Model evidence input uses excerpts: independent verification currently divides 16,000 characters among available stdout sources. Full tool records and saved scripts have a separate role from the verifier's selected input.
 - Dynamic planning occurs between DAG executions. The UI does not edit arbitrary active graphs or create arbitrary Agent roles.
-- Runtime snapshots restore history and interruption status, not live execution. Universal evidence freshness, semantic action deduplication, and cross-tool hypothesis search are still incomplete.
+- Runtime snapshots restore history and interruption status, not live execution. Adapter-independent evidence freshness and semantic action deduplication are not inferred from the current observations.
 - BLA / REA profiles define acceptance work; completed upstream adversarial validation is not claimed. See [ADVERSARIAL_PROFILES.md](ADVERSARIAL_PROFILES.md).
 
 ## Verification when changing the runtime
@@ -148,6 +153,8 @@ Use the existing [development checks](DEV_GUIDE.md), and cover the behavior affe
 - Concurrent Goals and action forks remain isolated; cancelling one leaves unrelated work running.
 - Invalid DAGs never start tools; joins receive all parent outcomes; resource locks remain held until cancellation settles.
 - Both preserves scoped verdicts, cross-strategy evidence, and one shared budget.
+- Late evidence can reopen a blocked strategy, fork independent checks, join their observations, and reach combined verification without replaying unchanged cooperation rounds.
+- Target content versions distinguish action reuse; different measured versions cannot be combined as one verified result.
 - Revisions retain history and budget use; an obsolete result cannot complete the revised objective.
 - Duplicate actions, unchanged failures, malformed plans, false success output, and unsupported evidence cannot silently pass.
 - Model, KB, tool, and storage failures remain identifiable; missing usage is marked estimated.

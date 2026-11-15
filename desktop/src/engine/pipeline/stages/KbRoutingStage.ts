@@ -61,7 +61,7 @@ export class KbRoutingStage implements PipelineStage {
         ctx.state.attemptedKbPaths = [...attempted];
         const results = await Promise.allSettled(selected.map(async (item) => {
           const content = await nativeBridge.readKb(item.path);
-          if (!content) throw new Error(`Document unavailable: ${item.path}`);
+          if (!content) throw new Error(`Document not found: ${item.path}`);
           return { path: item.path, content: `### ${item.title} [${item.track}]\nSource: ${item.path}\n${content}` };
         }));
         for (const result of results) {

@@ -2,6 +2,7 @@ import type { PipelineCallbacks, PipelineContext, RunBudget } from "../../core/c
 import type { TrackVerification } from "./contract";
 import { isHashObjective, verifyTargetEvidence } from "./evidence";
 import { verifyGoalWithModel } from "../pipeline/goalVerifier";
+import { targetVersion } from "../pipeline/observationIdentity";
 
 /** A final assessment of the original objective, after both scoped assessments. */
 export async function verifyBothGoal(
@@ -18,6 +19,10 @@ export async function verifyBothGoal(
   };
   const initial: TrackVerification = { executionSucceeded: true, evidenceAccepted: false, goalVerified: false,
     reason: "尚未核验完整目标", goal: { objective, status: "in_progress", passRate: "0/1", assertions: [], timestamp: Date.now() } };
+  const versions = contexts.map(targetVersion);
+  if (versions[0] && versions[1] && versions[0] !== versions[1]) {
+    return { verification: { ...initial, reason: "red 与 blue 观察的目标内容版本不同，需要针对同一版本重新取证" }, context: combined };
+  }
   if (isHashObjective(objective) && contexts.every(ctx => {
     const output = ctx.deliverables?.executionOutput;
     return ctx.state.builtinHash && output && verifyTargetEvidence(ctx, { ...output, stdout: output.stdout || "", stderr: output.stderr || "" }).goalVerified;

@@ -114,6 +114,17 @@ test("bounded total delivery stops ping-pong that invents uncorrelated message I
   assert.equal(bus.dispatch(message("start")), false);
 });
 
+test("an omitted message budget does not stop a long-running Goal", () => {
+  const bus = makeBus();
+  let delivered = 0;
+  bus.subscribe("blue", () => delivered++);
+  for (let index = 0; index < 1000; index++) bus.dispatch(message(`observation-${index}`));
+  assert.equal(delivered, 1000);
+  assert.equal(bus.readHistory().length, 128);
+  assert.equal(bus.readInbox("blue").length, 64);
+  assert.equal(bus.dispatch(message("observation-0")), false);
+});
+
 test("a failing subscriber does not prevent other subscribers receiving accepted messages", () => {
   const bus = makeBus();
   let delivered = false;

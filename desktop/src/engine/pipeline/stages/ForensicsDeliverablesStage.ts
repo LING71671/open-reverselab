@@ -4,8 +4,9 @@ import { trackPolicies } from "../../tracks";
 import { parseAcceptancePlan, verifyGoalWithModel } from "../goalVerifier";
 import { classifyFailure } from "../../../services/health/healthMonitor";
 import { parseActionPlan, executeActionPlan, type AnalysisAction } from "../actionPlan";
-import { fingerprint, observationIdentity } from "../observationIdentity";
+import { fingerprint, observationIdentity, targetVersion } from "../observationIdentity";
 import { HealthFault } from "../../../core/contracts/health";
+import type { ClassifiedFailure } from "../../../core/contracts/health";
 
 export function normalizeFailure(value: string): string {
   return value.toLowerCase().replace(/0x[\da-f]+/g, "<address>")
@@ -31,9 +32,9 @@ export class ForensicsDeliverablesStage implements PipelineStage {
     ctx.state.acceptancePlan ||= parsedPlan;
     const canonicalScript = script.split("\n").map((line) => line.trimEnd()).filter((line) => line.trim() && !line.trim().startsWith("#")).join("\n");
     const executedScripts: string[] = ctx.state.executedScripts || [];
-    const fingerprintBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${ctx.target}\n${canonicalScript}`));
-    const actionFingerprint = [...new Uint8Array(fingerprintBytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    const actionFingerprint = await fingerprint({ target: ctx.target, targetVersion: targetVersion(ctx), script: canonicalScript });
     let executionOutput: PythonExecResult | undefined;
+    let executionFailure: ClassifiedFailure | undefined;
     let blockedReason = planError;
     ctx.state.verificationParentIds = undefined;
     ctx.state.executionEvidence = undefined;
@@ -47,7 +48,7 @@ export class ForensicsDeliverablesStage implements PipelineStage {
       if (!executionOutput.success) blockedReason = executionOutput.stderr || "部分观察动作未完成";
     }
     else if (!script) blockedReason = "模型未提供可执行的取证脚本";
-    else if (executedScripts.includes(canonicalScript)) blockedReason = "已阻止重复执行相同脚本";
+    else if ((ctx.state.executedActionFingerprints || []).includes(actionFingerprint)) blockedReason = "已阻止重复执行相同脚本与目标版本";
     else if (ctx.signal?.aborted || performance.now() >= ctx.budget.monotonicDeadline) blockedReason = "执行前时间预算已耗尽或任务已取消";
     else {
       ctx.state.executedScripts = [...executedScripts, canonicalScript];
@@ -64,11 +65,15 @@ export class ForensicsDeliverablesStage implements PipelineStage {
         else if (!output.stdout.trim()) blockedReason = "取证脚本未返回可核查输出";
       } catch (error) {
         if (error instanceof HealthFault && error.code === "TOOL_UNAVAILABLE") ctx.state.globalBlocker = true;
+        executionFailure = classifyFailure(error, "tool");
         blockedReason = error instanceof Error ? error.message : String(error);
         executionOutput = { success: false, stdout: "", stderr: blockedReason };
       }
       callbacks.onToolCall?.({ id: actionFingerprint, tool: "python", title: "执行观察", status: executionOutput?.success ? "done" : "failed", detail: blockedReason, output: executionOutput, durationMs: Date.now() - startTime });
-      callbacks.onHealthEvent?.({ eventId: `${ctx.sessionId}:exec-end:${ctx.budget.attempts}`, goalId: ctx.sessionId, layer: "tool", status: executionOutput?.success ? "healthy" : "failed", timestamp: Date.now(), branchId: ctx.track, nodeId: actionFingerprint, ...(executionOutput?.success ? {} : classifyFailure(blockedReason, "tool")) });
+      const failure = executionOutput?.success ? undefined : executionFailure || classifyFailure(blockedReason, "tool");
+      callbacks.onHealthEvent?.({ eventId: `${ctx.sessionId}:exec-end:${ctx.budget.attempts}`, goalId: ctx.sessionId,
+        ...failure, layer: "tool", status: executionOutput?.success ? "healthy" : failure?.code === "USER_CANCELLED" ? "cancelled" : "failed",
+        timestamp: Date.now(), branchId: ctx.track, nodeId: actionFingerprint, durationMs: Date.now() - startTime });
     }
     if (callbacks.shouldYield?.()) {
       ctx.state.lastExecutionOutput = executionOutput;
@@ -98,7 +103,9 @@ export class ForensicsDeliverablesStage implements PipelineStage {
       goalVerification: verification.goal,
     };
     let saveError = "";
+    let saveAttempted = false;
     if (fullContent && !ctx.signal?.aborted && performance.now() < ctx.budget.monotonicDeadline) {
+      saveAttempted = true;
       try {
         const saved = await nativeBridge.saveReport({
           target: ctx.target,
@@ -120,7 +127,7 @@ export class ForensicsDeliverablesStage implements PipelineStage {
       }
     }
     ctx.deliverables = deliverables;
-    callbacks.onHealthEvent?.({
+    if (saveAttempted) callbacks.onHealthEvent?.({
       eventId: `${ctx.sessionId}:storage:${ctx.budget.attempts}`, goalId: ctx.sessionId, layer: "storage",
       status: deliverables.savedArtifacts ? "healthy" : "degraded", timestamp: Date.now(), branchId: ctx.track, nodeId: this.id,
       ...(deliverables.savedArtifacts ? {} : classifyFailure(saveError || "Report was not saved", "storage")),

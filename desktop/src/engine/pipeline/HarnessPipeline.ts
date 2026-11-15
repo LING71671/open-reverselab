@@ -118,7 +118,7 @@ export class HarnessPipeline {
     initialState = { ...initialState, unknownMcpInvocations: initialState.unknownMcpInvocations || [], mcpInFlight: initialState.mcpInFlight || new Map() };
     if (track === "both") {
       return runBothTracks(target, prompt, budget, callbacks, signal,
-        (branch, branchBudget, branchCallbacks, state, branchSignal) => this.run(target, prompt, history, branchCallbacks, branchSignal, `${sessionId}:${branch}`, branch, branchBudget, { ...initialState, ...state, modelSnapshot }), sessionId);
+        (branch, branchBudget, branchCallbacks, state, branchSignal) => this.run(target, prompt, history, branchCallbacks, branchSignal, `${sessionId}:${branch}${state.cooperationRound ? `:exchange-${state.cooperationRound}` : ""}`, branch, branchBudget, { ...initialState, ...state, reportNamespace: state.reportNamespace || initialState.reportNamespace, modelSnapshot }), sessionId);
     }
     const startedAt = Date.now();
     const startedMonotonic = performance.now();
@@ -147,9 +147,28 @@ export class HarnessPipeline {
       state: { ...initialState, modelSnapshot },
     };
     let healthSequence = 0;
-    const health = (layer: HealthLayer, status: Exclude<HealthStatus, "unknown">, nodeId: string, failure?: ClassifiedFailure) => callbacks.onHealthEvent?.({
-      eventId: `${sessionId}:health-${++healthSequence}`, goalId: sessionId, layer, status, nodeId, branchId: track, timestamp: Date.now(), ...failure,
-    });
+    const health = (layer: HealthLayer, status: Exclude<HealthStatus, "unknown">, nodeId: string, failure?: ClassifiedFailure) => {
+      if (status !== "running" && controller.signal.aborted) {
+        failure = classifyFailure(signal?.aborted ? "用户已停止运行" : "时间预算已耗尽", "goal", {
+          code: signal?.aborted ? "USER_CANCELLED" : "BUDGET_TIME",
+        });
+      }
+      const eventId = `${sessionId}:health-${++healthSequence}`;
+      const timestamp = Date.now();
+      const settledStatus = failure?.code === "USER_CANCELLED" ? "cancelled" : status;
+      const { layer: failureLayer, code, ...detail } = failure || {};
+      const relatedLayer = failureLayer && failureLayer !== layer;
+      // Always settle the operation that emitted "running", even when its
+      // cause belongs to another layer (for example a verifier's model error).
+      callbacks.onHealthEvent?.({
+        eventId, goalId: sessionId, layer, status: settledStatus, nodeId, branchId: track, timestamp, ...detail,
+        ...(relatedLayer ? { correlationId: `${eventId}:cause` } : { code }),
+      });
+      if (relatedLayer) callbacks.onHealthEvent?.({
+        ...failure!, eventId: `${eventId}:cause`, goalId: sessionId, layer: failureLayer,
+        status: settledStatus, nodeId, branchId: track, timestamp, correlationId: eventId,
+      });
+    };
     const progress = (status: RunProgress["status"], reason?: string) => {
       ctx.runProgress = {
         ...budget,

@@ -3,7 +3,7 @@ import { DagScheduler } from "../runtime/dagScheduler";
 import { nativeBridge, type PythonExecResult } from "../../services/native/nativeBridge";
 import { classifyFailure } from "../../services/health/healthMonitor";
 import { structuredPlanCandidates } from "./structuredPlans";
-import { fingerprint, observationIdentity, peerObservationIdentity, stableJson } from "./observationIdentity";
+import { fingerprint, observationIdentity, peerObservationIdentity, stableJson, targetVersion } from "./observationIdentity";
 import { HealthFault } from "../../core/contracts/health";
 
 interface ActionBase {
@@ -133,9 +133,9 @@ export async function executeActionPlan(actions: AnalysisAction[], ctx: Pipeline
       const script = action.kind === "mcp" ? JSON.stringify({ kind: action.kind, connectionId: action.connectionId, tool: action.tool, arguments: action.arguments, schemaHash: definition.schemaHash })
         : pythonData("REVERSELAB_INPUTS", inputs) + pythonData("REVERSELAB_PEER_EVIDENCE", peer.messages) + action.script;
       scripts.set(action.id, script);
-      programs[action.id] = { ...(action.kind === "mcp" ? { kind: "mcp", connectionId: action.connectionId, tool: action.tool, arguments: action.arguments, schemaHash: definition.schemaHash } : { script: action.script }), dependsOn: action.dependsOn,
+      programs[action.id] = { target: ctx.target, targetVersion: targetVersion(ctx), ...(action.kind === "mcp" ? { kind: "mcp", connectionId: action.connectionId, tool: action.tool, arguments: action.arguments, schemaHash: definition.schemaHash } : { script: action.script }), dependsOn: action.dependsOn,
         bindings: { REVERSELAB_INPUTS: bind(inputs), REVERSELAB_PEER_EVIDENCE: bind(peer.messages) } };
-      const actionFingerprint = await fingerprint({ target: ctx.target, ...(action.kind === "mcp" ? { mcp: invocationIdentity, schemaHash: definition.schemaHash } : { script: action.script.trim() }),
+      const actionFingerprint = await fingerprint({ target: ctx.target, targetVersion: targetVersion(ctx), ...(action.kind === "mcp" ? { mcp: invocationIdentity, schemaHash: definition.schemaHash } : { script: action.script.trim() }),
         inputs: Object.fromEntries([...parentResults].map(([id, result]) => [id, result.value ? observationIdentity(result.value) : { status: result.status }])),
         peers: peerObservationIdentity(peer.messages) });
       const fingerprints: string[] = ctx.state.executedActionFingerprints || [];
@@ -170,7 +170,7 @@ export async function executeActionPlan(actions: AnalysisAction[], ctx: Pipeline
       }
       ctx.state.actionResults = { ...(ctx.state.actionResults || {}), [actionFingerprint]: output };
       if (output.success) ctx.state.executionEvidence[`actions.${action.id}.stdout`] = output.stdout;
-      ctx.state.publishEvidence?.(idFor(action.id), action.title, summarizeOutput(output));
+      ctx.state.publishEvidence?.(idFor(action.id), action.title, summarizeOutput(output), targetVersion(ctx));
       callbacks.onToolCall?.({ id: idFor(action.id), tool: toolId, title: action.title, status: output.success ? "done" : "failed", output, detail: output.stderr, durationMs: output.executionTimeMs });
       if (!output.success) throw new Error(output.stderr || "动作执行失败");
       return output;

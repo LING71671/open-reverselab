@@ -6,7 +6,7 @@ Execution emits [HealthEvent](src/core/contracts/health.ts) records, aggregated 
 
 Events contain `eventId`, `goalId`, `layer`, `status`, and a timestamp. Optional fields identify a branch, agent, node, or correlation, and record duration, error code, recovery advice, and details. Each monitor accepts events for its own Goal. Its default retained history is 256 events, configurable through `maxHistory`; total observation counts remain separate from the retained window.
 
-Snapshots combine the latest event of each branch/agent/node trace within the retained window. A recovered trace does not hide another trace's failure. If a layer has no remaining events in that window, the snapshot uses its last recorded event.
+Snapshots combine the latest event of each branch/agent/node trace within the retained window. A recovered trace does not hide another trace's failure. `statusEvent` identifies the latest observation responsible for the displayed severity, while `lastEvent` remains the latest chronological observation. The health card shows the former's error code, so a later successful branch cannot hide the reason for an unresolved failure. If a layer has no remaining events in that window, the snapshot uses its last recorded event.
 
 ## Error codes
 
@@ -54,5 +54,9 @@ Sources can raise `HealthFault` with an explicit code. Classification prefers an
 | `cancelled` | The observed operation was cancelled |
 
 Tool execution, evidence acceptance, and Goal completion are recorded separately. Model stages, knowledge reads, Python execution, report writes, and Goal stop reasons emit their own events. Local tool detection invokes Python to inspect the runtime, modules, and PATH. Asynchronous workspace persistence failures appear separately in the health view; in-memory records remain available.
+
+An operation always receives its terminal observation in the layer where it started. When the cause belongs to another layer, such as a model failure inside Agent verification, a second classified event links back through `correlationId`. User cancellation settles the affected operation as `cancelled`; expiry of an explicitly configured deadline uses `BUDGET_TIME`. A report write skipped after cancellation produces no storage-failure event. Missing knowledge documents use `KB_DOC_MISSING`, while an unavailable execution service retains `TOOL_UNAVAILABLE` through script handling.
+
+[Health pipeline tests](tests/healthPipeline.test.mjs) run the knowledge, streaming, execution, verification, and persistence stages against synthetic services. They cover all six layers, cross-layer causes, cancellation, deadlines, missing documents, and independent tool/storage failures. They do not contact a live model provider.
 
 Restored events describe the earlier run. The health monitor does not periodically probe external service readiness. Optional native performance sampling and Sentry reporting have their own switches and lifecycle, described in [DIAGNOSTICS.md](DIAGNOSTICS.md). Storage and recovery behavior is described in [WORKSPACES.md](WORKSPACES.md).

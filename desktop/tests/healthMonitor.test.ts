@@ -66,10 +66,15 @@ test("aggregates concurrent branches and preserves correlation and duration", ()
   monitor.record(event("red-failure", { branchId: "red", agentId: "r", nodeId: "n1", status: "failed", code: "MODEL_TIMEOUT", timestamp: 2 }));
   monitor.record(event("blue-ok", { branchId: "blue", agentId: "b", nodeId: "n1", status: "healthy", timestamp: 3 }));
   assert.equal(monitor.snapshot().layers.model.status, "failed");
+  assert.equal(monitor.snapshot().layers.model.lastEvent?.eventId, "blue-ok");
+  assert.equal(monitor.snapshot().layers.model.statusEvent?.eventId, "red-failure");
+  assert.equal(monitor.snapshot().layers.model.statusEvent?.code, "MODEL_TIMEOUT");
+  assert.equal(monitor.snapshot().layers.model.statusEvent?.branchId, "red");
   monitor.record(event("red-recovery", { branchId: "red", agentId: "r", nodeId: "n1", status: "healthy", timestamp: 4, correlationId: "red-failure", durationMs: 15 }));
   assert.equal(monitor.snapshot().layers.model.status, "healthy");
   assert.equal(monitor.snapshot().layers.model.lastEvent?.correlationId, "red-failure");
   assert.equal(monitor.snapshot().layers.model.lastEvent?.durationMs, 15);
+  assert.equal(monitor.snapshot().layers.model.statusEvent?.eventId, "red-recovery");
   monitor.record(event("delayed-start", { branchId: "red", agentId: "r", nodeId: "n1", status: "running", timestamp: 1 }));
   assert.equal(monitor.snapshot().layers.model.status, "healthy");
 });
@@ -86,8 +91,22 @@ test("retains bounded immutable history with cumulative per-layer counts", () =>
   assert.equal(monitor.snapshot().retainedEvents, 2);
   assert.equal(monitor.snapshot().layers.kb.observedEvents, 1);
   assert.equal(monitor.snapshot().layers.kb.status, "healthy");
+  assert.equal(monitor.snapshot().layers.kb.statusEvent?.eventId, "m1");
   assert.ok(Object.isFrozen(monitor.readHistory()));
   assert.ok(Object.isFrozen(monitor.readHistory()[0]));
   assert.ok(Object.isFrozen(monitor.snapshot().layers));
   assert.throws(() => monitor.record(event("bad", { durationMs: -1 })), /duration/);
+});
+
+test("aggregate explanations follow the latest unresolved observation at the displayed severity", () => {
+  const monitor = new HealthMonitor({ goalId: "goal-a" });
+  monitor.record(event("first", { nodeId: "a", status: "failed", code: "MODEL_TIMEOUT", timestamp: 1 }));
+  monitor.record(event("second", { nodeId: "b", status: "failed", code: "MODEL_AUTH", timestamp: 2 }));
+  monitor.record(event("progress", { nodeId: "c", status: "running", timestamp: 3 }));
+  assert.equal(monitor.snapshot().layers.model.statusEvent?.eventId, "second");
+  monitor.record(event("recovered", { nodeId: "b", status: "healthy", timestamp: 4 }));
+  assert.equal(monitor.snapshot().layers.model.statusEvent?.eventId, "first");
+  monitor.record(event("recovered-first", { nodeId: "a", status: "healthy", timestamp: 5 }));
+  assert.equal(monitor.snapshot().layers.model.status, "running");
+  assert.equal(monitor.snapshot().layers.model.statusEvent?.eventId, "progress");
 });

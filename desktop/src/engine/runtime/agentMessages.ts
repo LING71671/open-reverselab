@@ -57,7 +57,7 @@ export class AgentMessageBus {
   private readonly maxInbox: number;
   private readonly maxMessages: number;
   private readonly maxHops: number;
-  // Retain bounded receipt metadata even after display history expires, so old
+  // Retain receipt metadata even after display history expires, so old
   // message IDs cannot be replayed and correlations keep their original hop count.
   private readonly receipts = new Map<string, number>();
   private readonly inboxes = new Map<string, AgentMessage[]>();
@@ -74,7 +74,7 @@ export class AgentMessageBus {
     this.agents = new Set(options.agents);
     this.maxHistory = positiveLimit(options.maxHistory ?? 128, "maxHistory");
     this.maxInbox = positiveLimit(options.maxInbox ?? 64, "maxInbox");
-    this.maxMessages = positiveLimit(options.maxMessages ?? 512, "maxMessages");
+    this.maxMessages = options.maxMessages === undefined ? Infinity : positiveLimit(options.maxMessages, "maxMessages");
     this.maxHops = positiveLimit(options.maxHops ?? 8, "maxHops", true);
   }
 

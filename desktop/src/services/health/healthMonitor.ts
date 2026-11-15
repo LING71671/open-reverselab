@@ -149,11 +149,12 @@ export class HealthMonitor {
         if (!previous || event.timestamp >= previous.timestamp) traces.set(key, event);
       }
       const lastEvent = this.latest.get(layer);
-      let status: HealthStatus = traces.size ? "unknown" : lastEvent?.status ?? "unknown";
+      let statusEvent = traces.size ? undefined : lastEvent;
       for (const event of traces.values()) {
-        if (statusPriority[event.status] > statusPriority[status]) status = event.status;
+        if (!statusEvent || statusPriority[event.status] > statusPriority[statusEvent.status] ||
+          (event.status === statusEvent.status && event.timestamp >= statusEvent.timestamp)) statusEvent = event;
       }
-      layers[layer] = Object.freeze({ layer, status, observedEvents: this.counts.get(layer) ?? 0, lastEvent });
+      layers[layer] = Object.freeze({ layer, status: statusEvent?.status ?? "unknown", observedEvents: this.counts.get(layer) ?? 0, lastEvent, statusEvent });
     }
     return Object.freeze({
       goalId: this.goalId, observedEvents: this.observedEvents,

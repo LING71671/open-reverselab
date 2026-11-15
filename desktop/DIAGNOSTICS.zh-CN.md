@@ -44,3 +44,5 @@ CPU 与内存范围包括 Open ReverseLab 及其 WebView、Python 等子进程�
 需要提供远程诊断的发行构建，通过 `VITE_SENTRY_DSN` 配置项目的公开接收 DSN。Sentry 管理令牌与认证令牌不得写入 `VITE_*` 或前端代码。保持 `remote.enabled` 为 false，由用户自行开启。
 
 本地[诊断策略测试](tests/diagnostics.test.ts)覆盖默认值、持续异常、偏好处理与历史事件隔离；[SDK 传输测试](tests/telemetryTransport.test.mjs)使用已安装的 Sentry SDK 和合成传输，检查实际序列化数据、脱敏、取消与开关竞态。真实项目送达及服务端保存字段需要针对构建配置的诊断端点单独检查。
+
+[性能生命周期测试](tests/performanceMonitor.test.mjs)覆盖 CPU、内存与帧延迟的持续异常、关闭提醒与恢复、迟到样本、窗口可见性和关闭后释放。[提醒组件测试](tests/performanceNotice.test.mjs)渲染实际 React 组件，检查状态播报、关闭按钮及正常状态下不占用界面。[原生采样测试](src-tauri/src/performance.rs)实际启动子进程，检查汇总范围、采样缓存、释放和重启后的 CPU 基线。这些检查分别覆盖采样器与呈现，打包后的原生窗口提醒观感仍需桌面检查。
