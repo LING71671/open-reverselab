@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use semver::Version;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
+use std::path::Path;
 use tauri::{ipc::Channel, AppHandle, State};
 use tauri_plugin_updater::{Update, UpdaterExt};
 
@@ -27,12 +28,18 @@ fn classify(error: tauri_plugin_updater::Error, stage: &'static str) -> UpdateEr
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstallationInfo { version: String, mode: &'static str }
+fn installed_runtime(root: &Path) -> bool {
+    // Knowledge packages live outside the application since extension decoupling.
+    // The uninstaller and desktop runtime entry points identify an NSIS install.
+    root.join("uninstall.exe").is_file()
+        && root.join("runtime/RELEASE.json").is_file()
+        && root.join("runtime/scripts/misc/desktop_workspace.py").is_file()
+        && root.join("runtime/scripts/misc/desktop_extensions.py").is_file()
+}
 fn installation_mode() -> &'static str {
     if cfg!(debug_assertions) { return "development"; }
     if !cfg!(all(target_os = "windows", target_arch = "x86_64")) { return "unsupported"; }
-    let installed = std::env::current_exe().ok().and_then(|exe| exe.parent().map(|root| {
-        root.join("uninstall.exe").is_file() && root.join("runtime/kb").is_dir() && root.join("runtime/scripts").is_dir()
-    })).unwrap_or(false);
+    let installed = std::env::current_exe().ok().and_then(|exe| exe.parent().map(installed_runtime)).unwrap_or(false);
     if installed { "installed" } else { "portable" }
 }
 
@@ -117,6 +124,14 @@ struct Slot { update: Option<Update>, bytes: Option<Vec<u8>> }
 #[derive(Default)]
 pub struct UpdateState(tauri::async_runtime::Mutex<Slot>);
 
+async fn download_verified(update: &Update, mut progress: impl FnMut(DownloadProgress)) -> Result<Vec<u8>, UpdateError> {
+    let mut downloaded = 0_u64;
+    update.download(|chunk, total| {
+        downloaded = downloaded.saturating_add(chunk as u64);
+        progress(DownloadProgress { downloaded, total });
+    }, || {}).await.map_err(|e| classify(e, "UPDATE_DOWNLOAD"))
+}
+
 #[tauri::command]
 pub fn update_installation_info(app: AppHandle) -> InstallationInfo {
     InstallationInfo { version: app.package_info().version.to_string(), mode: installation_mode() }
@@ -152,11 +167,7 @@ pub async fn update_download(state: State<'_, UpdateState>, on_progress: Channel
     let mut update = slot.update.clone().ok_or_else(|| fault("UPDATE_NOT_READY", "Check for an update first"))?;
     slot.bytes = None;
     update.timeout = Some(Duration::from_secs(600));
-    let mut downloaded = 0_u64;
-    let bytes = update.download(|chunk, total| {
-        downloaded = downloaded.saturating_add(chunk as u64);
-        let _ = on_progress.send(DownloadProgress { downloaded, total });
-    }, || {}).await.map_err(|e| classify(e, "UPDATE_DOWNLOAD"))?;
+    let bytes = download_verified(&update, |progress| { let _ = on_progress.send(progress); }).await?;
     // Tauri returns bytes only after verifying the Minisign signature.
     slot.bytes = Some(bytes);
     Ok(())
@@ -183,6 +194,94 @@ pub async fn update_install(state: State<'_, UpdateState>) -> Result<(), UpdateE
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::time::{Instant, SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn detached_knowledge_is_not_required_for_installer_detection() {
+        let root = std::env::temp_dir().join(format!("reverselab-update-layout-{}-{}", std::process::id(), SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir_all(root.join("runtime/scripts/misc")).unwrap();
+        for file in ["uninstall.exe", "runtime/RELEASE.json", "runtime/scripts/misc/desktop_workspace.py", "runtime/scripts/misc/desktop_extensions.py"] {
+            std::fs::write(root.join(file), "synthetic fixture").unwrap();
+        }
+        assert!(!root.join("runtime/kb").exists());
+        assert!(installed_runtime(&root));
+        std::fs::remove_file(root.join("uninstall.exe")).unwrap();
+        assert!(!installed_runtime(&root), "portable distributions have no uninstaller");
+        std::fs::write(root.join("uninstall.exe"), "synthetic fixture").unwrap();
+        std::fs::remove_file(root.join("runtime/scripts/misc/desktop_extensions.py")).unwrap();
+        assert!(!installed_runtime(&root), "incomplete runtime is not an installable distribution");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    // Exercise the official updater against signed plain text. No installer is launched.
+    async fn fixture_download(version: &str, payload: &[u8], status: &str) -> (Result<Vec<u8>, UpdateError>, Vec<DownloadProgress>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let manifest = serde_json::json!({
+            "version": version,
+            "platforms": { "fixture": {
+                "url": format!("{origin}/payload.txt"),
+                "signature": include_str!("../../tests/fixtures/updates/payload.txt.sig").trim(),
+            }},
+        }).to_string();
+        let payload = payload.to_vec();
+        let status = status.to_string();
+        let server = std::thread::spawn(move || {
+            for index in 0..2 {
+                let deadline = Instant::now() + Duration::from_secs(10);
+                let mut socket = loop {
+                    match listener.accept() {
+                        Ok((socket, _)) => break socket,
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock && Instant::now() < deadline => std::thread::sleep(Duration::from_millis(5)),
+                        Err(error) => panic!("updater fixture request did not arrive: {error}"),
+                    }
+                };
+                socket.set_nonblocking(false).unwrap();
+                socket.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+                let mut request = Vec::new();
+                let mut byte = [0];
+                while !request.ends_with(b"\r\n\r\n") { socket.read_exact(&mut byte).unwrap(); request.push(byte[0]); }
+                let request = String::from_utf8(request).unwrap();
+                assert!(request.starts_with(if index == 0 { "GET /latest.json " } else { "GET /payload.txt " }));
+                let (status, body) = if index == 0 { ("200 OK", manifest.as_bytes()) } else { (status.as_str(), payload.as_slice()) };
+                write!(socket, "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len()).unwrap();
+                socket.write_all(body).unwrap();
+            }
+        });
+        let mut context = tauri::test::mock_context(tauri::test::noop_assets());
+        context.config_mut().plugins.0.insert("updater".into(), serde_json::json!({
+            "pubkey": include_str!("../../tests/fixtures/updates/public-key.txt").trim(),
+            "requireSignedVersion": true,
+            "dangerousInsecureTransportProtocol": true,
+        }));
+        let app = tauri::test::mock_builder().plugin(tauri_plugin_updater::Builder::new().build()).build(context).unwrap();
+        let update = app.updater_builder().target("fixture").no_proxy().timeout(Duration::from_secs(5))
+            .endpoints(vec![format!("{origin}/latest.json").parse().unwrap()]).unwrap().build().unwrap()
+            .check().await.unwrap().unwrap();
+        let mut progress = Vec::new();
+        let result = download_verified(&update, |event| progress.push(event)).await;
+        server.join().unwrap();
+        (result, progress)
+    }
+
+    #[tokio::test]
+    async fn signed_download_verifies_actual_bytes_and_announced_version() {
+        let payload = include_bytes!("../../tests/fixtures/updates/payload.txt");
+        let (valid, progress) = fixture_download("9.9.9", payload, "200 OK").await;
+        assert_eq!(valid.unwrap(), payload);
+        assert_eq!(progress.last().unwrap().downloaded, payload.len() as u64);
+        assert_eq!(progress.last().unwrap().total, Some(payload.len() as u64));
+        let (tampered, _) = fixture_download("9.9.9", b"modified contents", "200 OK").await;
+        assert_eq!(tampered.unwrap_err().code, "UPDATE_SIGNATURE");
+        let (wrong_version, _) = fixture_download("9.9.10", payload, "200 OK").await;
+        assert_eq!(wrong_version.unwrap_err().code, "UPDATE_SIGNATURE");
+        let (missing, progress) = fixture_download("9.9.9", b"not found", "404 Not Found").await;
+        assert_eq!(missing.unwrap_err().code, "UPDATE_NETWORK");
+        assert!(progress.is_empty());
+    }
     fn published(version: &str, prerelease: bool, manifest: bool) -> PublishedRelease {
         let tag = format!("v{version}");
         let mut assets = vec![PublishedAsset { name: "setup.exe".into(), browser_download_url: format!("https://github.com/LING71671/open-reverselab/releases/download/{tag}/setup.exe"), state: "uploaded".into() }];

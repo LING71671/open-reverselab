@@ -221,3 +221,29 @@ test("switching channel emits no old ready package and ignores delayed IPC progr
   assert.equal(snapshots[0].release, undefined);
   assert.equal(snapshots[0].progress.downloaded, 0);
 });
+
+test("retrying a failed download ignores late progress from the previous attempt", async () => {
+  const emissions: Parameters<UpdateAdapter["download"]>[0][] = [];
+  let finish!: () => void;
+  const { controller } = setup({ adapter: { download: async progress => {
+    emissions.push(progress);
+    progress({ downloaded: emissions.length });
+    if (emissions.length === 1) throw { code: "UPDATE_DOWNLOAD", message: "connection closed" };
+    await new Promise<void>(resolve => { finish = resolve; });
+  } } });
+  await controller.check(); await controller.download();
+  assert.equal(controller.getSnapshot().phase, "available");
+  const retry = controller.download();
+  emissions[0]({ downloaded: 999 });
+  assert.equal(controller.getSnapshot().progress.downloaded, 2);
+  finish(); await retry;
+  assert.equal(controller.getSnapshot().phase, "ready");
+});
+
+test("an incomplete available release cannot expose download or installation", async () => {
+  const { controller, calls } = setup({ adapter: { check: async () => ({ status: "available" }) } });
+  await controller.check(); await controller.download(); await controller.install();
+  assert.equal(controller.getSnapshot().phase, "error");
+  assert.equal(controller.getSnapshot().error?.code, "UPDATE_MANIFEST");
+  assert.equal(calls.download + calls.install, 0);
+});

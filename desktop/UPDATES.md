@@ -26,7 +26,7 @@ The Windows x64 installer edition uses the official Tauri updater:
 
 Downloading can proceed while Goals run. Installation waits for all work to finish. Default workspace data, model settings, and update preferences live outside the program directory and survive upgrades. Keep custom workspaces outside the installer-managed `runtime/` directory.
 
-Portable packages and source builds can check versions and read release notes; upgrade them manually from the release page. In-app installation is enabled only for Windows x64 NSIS installations containing `runtime/kb/`, `runtime/scripts/`, and `uninstall.exe`. Browser preview explicitly disables checks and installation.
+Portable packages and source builds can check versions and read release notes; upgrade them manually from the release page. In-app installation is enabled only for Windows x64 NSIS installations containing `uninstall.exe`, `runtime/RELEASE.json`, and the desktop workspace and extension runtime scripts. Knowledge packages are installed separately and are not required to identify the installer edition. Browser preview explicitly disables checks and installation.
 
 ## Responsibilities and states
 
@@ -59,7 +59,7 @@ Update diagnostics are independent of individual Goal health events and appear i
 
 Keep `package.json`, the Cargo package and lockfile, and `tauri.conf.json` aligned. Windows releases provide an installer, its `.sig`, `latest.json`, and SHA256 checksums. A portable ZIP can also be included.
 
-The installer bundles `src-tauri/release-resources/` as `runtime/`. This ignored staging directory must not be committed. Build it from the final release commit's `git archive`, including complete `kb/` and `scripts/` trees and their referenced root configuration, board documentation, and tool indexes. Do not recursively package a development workspace. External analysis tools, Python, and private data are not bundled.
+The installer bundles `src-tauri/release-resources/` as `runtime/`. This ignored staging directory must not be committed. Use `scripts/misc/package_desktop_release.py stage` to select the explicit desktop runtime allowlist from the final release commit's `git archive`. Knowledge content and MCP servers are separate extension packages. Do not recursively package a development workspace. External analysis tools, Python, and private data are not bundled. See the [release procedure](../RELEASING.md).
 
 Keep the signing private key on the maintainer's machine or in CI secrets. Put the public key in `plugins.updater.pubkey`. Set `TAURI_SIGNING_PRIVATE_KEY` to the local private-key file and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` to its password, or an empty value for an unencrypted key. Then build:
 
@@ -95,7 +95,9 @@ node --experimental-strip-types --test tests/updateController.test.ts
 cargo test --locked --manifest-path src-tauri/Cargo.toml --lib updates::tests
 ```
 
-State-machine and native selection tests cover channel migration, draft filtering, version ordering, missing releases, download and signature failures, concurrent actions, workload guards, persistence failures, and the final pre-install check. They use synthetic release records and mock adapters.
+State-machine and native selection tests cover channel migration, draft filtering, version ordering, missing releases, download failures, concurrent actions, workload guards, persistence failures, and the final pre-install check. Download retries ignore delayed progress from earlier attempts. Installation detection is tested without bundled knowledge content.
+
+The native download test serves signed plain text from a loopback server and uses the official Tauri updater to verify the actual bytes. It checks successful download and progress, modified content, a signature bound to another version, and HTTP failure. The fixture key is independent of the release key, and the test never invokes installation. Other state transitions use mock adapters.
 
 Run actual public metadata discovery separately:
 

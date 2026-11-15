@@ -39,6 +39,7 @@ export class UpdateController {
   private storage?: UpdateStorage;
   private workload: () => number;
   private persist: () => Promise<void>;
+  private downloadAttempt = 0;
   constructor(adapter: UpdateAdapter, version: string, storage: UpdateStorage | undefined, workload: () => number, persist: () => Promise<void>) {
     this.adapter = adapter; this.storage = storage; this.workload = workload; this.persist = persist;
     let preferences: UpdatePreferences = { automatic: true, channel: defaultChannel(version), skippedVersion: "", lastChecked: 0 };
@@ -86,10 +87,11 @@ export class UpdateController {
   async download() {
     if (this.state.phase !== "available" || this.state.info.mode !== "installed") return;
     const release = this.state.release;
+    const attempt = ++this.downloadAttempt;
     this.change({ phase: "downloading", progress: { downloaded: 0 }, error: undefined });
     try {
       await this.adapter.download(progress => {
-        if (this.state.phase === "downloading" && this.state.release === release) this.change({ progress });
+        if (this.state.phase === "downloading" && this.state.release === release && attempt === this.downloadAttempt) this.change({ progress });
       });
       this.change({ phase: "ready" });
     } catch (error) { this.change({ phase: "available", error: failure(error, "UPDATE_DOWNLOAD") }); }

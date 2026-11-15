@@ -22,8 +22,22 @@ Python receives proxy variables only in its own child environment, plus an expli
 
 Changes apply to subsequent requests and executions. Existing streams and child processes retain the route they started with. Browser preview allows editing; proxy testing and enforced routing require the desktop app. The browser uses its own network settings in system mode.
 
+The node editor validates addresses and credentials when you select **Done**. Saving validates both routing policies together. Before disabling or removing a fixed node, select another enabled node or change that policy explicitly. A failed save retains the previously active route. Tests that finish after a node's address or credentials change do not overwrite its new health state.
+
 ## Data and failure handling
 
 Nodes and credentials are saved in local WebView storage, without OS-keychain encryption. They are not included in Goal prompts, reports, or workspace records. Child process output redacts configured proxy credentials; avoid printing sensitive environment variables from custom scripts. Node tests report only status and latency. Network errors use stable `PROXY_*` / `NETWORK_*` codes; see [error codes](ERROR_CODES.md).
 
 Background performance warnings and optional remote diagnostics are configured separately in **Settings → Diagnostics**. See [Diagnostics](DIAGNOSTICS.md), or return to the [desktop guide](README.md).
+
+## Verification
+
+From `desktop/`:
+
+```sh
+node --experimental-strip-types --test tests/proxyPool.test.ts
+node --test tests/networkTransport.test.mjs
+cargo test --locked --manifest-path src-tauri/Cargo.toml --lib network::tests
+```
+
+The tests cover add/edit/enable/disable/remove persistence, invalid saves, independent routing policies, failover without direct fallback, cancellation, credential redaction, and stale probe results. Native loopback fixtures exercise HTTP proxy authentication and streaming, SOCKS5h authentication and remote DNS, and a real Python urllib request using only its child-process proxy environment. They do not contact a model provider or a target service.

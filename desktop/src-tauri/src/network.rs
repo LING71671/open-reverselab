@@ -22,8 +22,13 @@ pub fn validate_route(route: &Route) -> Result<(), Failure> {
             let url = Url::parse(route.url.as_deref().unwrap_or("")).map_err(|_| failure("PROXY_CONFIG", "代理地址无效", false))?;
             if !["http", "https", "socks5", "socks5h"].contains(&url.scheme()) || url.host_str().is_none()
                 || !url.username().is_empty() || url.password().is_some() || url.query().is_some() || url.fragment().is_some()
-                || !["", "/"].contains(&url.path()) {
+                || !["", "/"].contains(&url.path()) || (url.scheme().starts_with("socks") && url.port().is_none()) {
                 return Err(failure("PROXY_CONFIG", "代理地址只允许协议、主机和端口", false));
+            }
+            let username = route.username.as_deref().unwrap_or("");
+            let password = route.password.as_deref().unwrap_or("");
+            if username.encode_utf16().count() > 512 || password.encode_utf16().count() > 512 || (!password.is_empty() && username.is_empty()) {
+                return Err(failure("PROXY_CONFIG", "代理认证信息无效，密码需要配合用户名", false));
             }
             Ok(())
         }
@@ -157,6 +162,81 @@ mod tests {
         (address, handle)
     }
     fn route(url: String) -> Route { Route { mode: "proxy".into(), url: Some(url), username: Some("test-user".into()), password: Some("test-password".into()) } }
+
+    #[test]
+    fn native_route_validation_matches_editor_credentials_and_socks_ports() {
+        assert!(validate_route(&route("socks5h://localhost".into())).is_err());
+        let mut missing_user = route("http://localhost:8080".into());
+        missing_user.username = None;
+        assert!(validate_route(&missing_user).is_err());
+        let mut oversized = route("http://localhost:8080".into());
+        oversized.password = Some("x".repeat(513));
+        assert!(validate_route(&oversized).is_err());
+        assert!(validate_route(&route("socks5h://localhost:1080".into())).is_ok());
+    }
+
+    #[tokio::test]
+    async fn socks_remote_dns_and_credentials_reach_the_configured_node() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("socks5h://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+            let mut greeting = [0; 2];
+            socket.read_exact(&mut greeting).unwrap();
+            assert_eq!(greeting[0], 5);
+            let mut methods = vec![0; greeting[1] as usize];
+            socket.read_exact(&mut methods).unwrap();
+            assert!(methods.contains(&2));
+            socket.write_all(&[5, 2]).unwrap();
+            let mut auth = [0; 2];
+            socket.read_exact(&mut auth).unwrap();
+            assert_eq!(auth[0], 1);
+            let mut username = vec![0; auth[1] as usize];
+            socket.read_exact(&mut username).unwrap();
+            let mut length = [0];
+            socket.read_exact(&mut length).unwrap();
+            let mut password = vec![0; length[0] as usize];
+            socket.read_exact(&mut password).unwrap();
+            assert_eq!(username, b"test-user");
+            assert_eq!(password, b"test-password");
+            socket.write_all(&[1, 0]).unwrap();
+            let mut connect = [0; 4];
+            socket.read_exact(&mut connect).unwrap();
+            assert_eq!(connect, [5, 1, 0, 3], "SOCKS5h must send the hostname to the proxy");
+            socket.read_exact(&mut length).unwrap();
+            let mut hostname = vec![0; length[0] as usize];
+            socket.read_exact(&mut hostname).unwrap();
+            assert_eq!(hostname, b"target.invalid");
+            let mut port = [0; 2];
+            socket.read_exact(&mut port).unwrap();
+            assert_eq!(u16::from_be_bytes(port), 80);
+            socket.write_all(&[5, 0, 0, 1, 127, 0, 0, 1, 0, 80]).unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") { socket.read_exact(&mut length).unwrap(); request.push(length[0]); }
+            let request = String::from_utf8(request).unwrap();
+            assert!(request.starts_with("GET /observe HTTP/1.1"));
+            assert!(!request.to_lowercase().contains("proxy-authorization"), "SOCKS credentials must not reach the target HTTP headers");
+            socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK").unwrap();
+        });
+        let response = network_probe("http://target.invalid/observe".into(), route(url)).await;
+        server.join().unwrap();
+        assert_eq!(response.unwrap_or_else(|error| panic!("{}: {}", error.code, error.message)).status, 200);
+    }
+
+    #[test]
+    fn python_urllib_actually_uses_the_child_proxy_and_authentication() {
+        let (url, server) = proxy("200 OK", "synthetic observation");
+        let mut command = std::process::Command::new("python");
+        let source = configure_python(&mut command, &route(url)).unwrap();
+        let script = format!("{source}\nprint(_rl_http.urlopen('http://target.invalid/observe', timeout=5).read().decode())");
+        let output = command.arg("-c").arg(script).output().expect("Python is required by the desktop runtime");
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "synthetic observation");
+        let request = server.join().unwrap();
+        assert!(request.starts_with("GET http://target.invalid/observe HTTP/1.1"));
+        assert!(request.to_ascii_lowercase().contains("proxy-authorization: basic "));
+    }
 
     #[tokio::test]
     async fn sends_through_proxy_with_auth_and_streams_response() {

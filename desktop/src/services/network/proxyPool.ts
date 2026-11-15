@@ -9,20 +9,25 @@ export interface ProxySnapshot { config: ProxyConfig; health: Record<string, Pro
 export const defaultProxyConfig = (): ProxyConfig => ({ nodes: [], model: { mode: "system", nodeId: "" }, tools: { mode: "system", nodeId: "" } });
 const modes = new Set(["system", "direct", "fixed", "failover", "round-robin"]);
 
+export function validateProxyNode(node: ProxyNode): ProxyNode {
+  if (!node.id) throw new Error("代理节点 ID 无效");
+  let url: URL;
+  try { url = new URL(node.url.trim()); } catch { throw new Error("请输入完整代理地址，如 http://127.0.0.1:8080"); }
+  if (!["http:", "https:", "socks5:", "socks5h:"].includes(url.protocol) || !url.hostname || (url.protocol.startsWith("socks") && !url.port)) throw new Error("代理地址需包含 HTTP、HTTPS 或 SOCKS5 协议和端口");
+  if (url.username || url.password || url.search || url.hash || (url.pathname && url.pathname !== "/")) throw new Error("地址只填写协议、主机和端口；认证使用单独的账号字段");
+  if (typeof node.username !== "string" || typeof node.password !== "string" || node.username.length > 512 || node.password.length > 512) throw new Error("代理认证信息无效");
+  if (node.password && !node.username) throw new Error("填写代理密码时也需要用户名");
+  if (!node.name?.trim() || node.name.length > 80) throw new Error("请填写不超过 80 字的节点名称");
+  return { ...node, name: node.name.trim(), url: url.href.replace(/\/$/, ""), enabled: Boolean(node.enabled) };
+}
+
 export function validateProxyConfig(value: ProxyConfig): ProxyConfig {
   if (!value || !Array.isArray(value.nodes)) throw new Error("代理节点列表无效");
   const ids = new Set<string>();
   const nodes = value.nodes.map(node => {
     if (!node.id || ids.has(node.id)) throw new Error("代理节点 ID 重复");
     ids.add(node.id);
-    let url: URL;
-    try { url = new URL(node.url.trim()); } catch { throw new Error("请输入完整代理地址，如 http://127.0.0.1:8080"); }
-    if (!["http:", "https:", "socks5:", "socks5h:"].includes(url.protocol) || !url.hostname || (url.protocol.startsWith("socks") && !url.port)) throw new Error("代理地址需包含 HTTP、HTTPS 或 SOCKS5 协议和端口");
-    if (url.username || url.password || url.search || url.hash || (url.pathname && url.pathname !== "/")) throw new Error("地址只填写协议、主机和端口；认证使用单独的账号字段");
-    if (typeof node.username !== "string" || typeof node.password !== "string" || node.username.length > 512 || node.password.length > 512) throw new Error("代理认证信息无效");
-    if (node.password && !node.username) throw new Error("填写代理密码时也需要用户名");
-    if (!node.name?.trim() || node.name.length > 80) throw new Error("请填写不超过 80 字的节点名称");
-    return { ...node, name: node.name.trim(), url: url.href.replace(/\/$/, ""), enabled: Boolean(node.enabled) };
+    return validateProxyNode(node);
   });
   for (const scope of ["model", "tools"] as const) {
     const policy = value[scope];

@@ -13,7 +13,7 @@ const source = transpile(await readFile(new URL("../src/services/network/network
   .replaceAll('"./proxyPool"', '"./proxyPool.mjs"')
   .replaceAll('"@tauri-apps/api/core"', JSON.stringify(import.meta.resolve("@tauri-apps/api/core")));
 await writeFile(path.join(temporary, "networkService.mjs"), source);
-const { modelFetch, proxyPool } = await import(pathToFileURL(path.join(temporary, "networkService.mjs")).href);
+const { modelFetch, proxyPool, testProxy, redactProxyOutput } = await import(pathToFileURL(path.join(temporary, "networkService.mjs")).href);
 after(async () => { await rm(temporary, { recursive: true, force: true }); });
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 afterEach(() => {
@@ -102,4 +102,49 @@ test("user deadlines and body cancellation stop native streams", async t => {
 test("already stopped requests never reach the native service", async t => {
   setup(t, async () => assert.fail("Native request was dispatched"));
   await assert.rejects(modelFetch("https://model.example.test/", { signal: AbortSignal.abort() }), { name: "AbortError" });
+});
+
+test("failed pools report failure without a direct request, and proxy authentication can fail over", async t => {
+  const routes = [];
+  setup(t, async (_, { request }) => {
+    routes.push(request.route);
+    throw { code: "PROXY_AUTH", message: "Proxy authentication rejected", retryable: true };
+  });
+  await assert.rejects(modelFetch("https://model.example.test/"), { code: "PROXY_AUTH" });
+  assert.equal(routes.length, 2);
+  assert.ok(routes.every(route => route.mode === "proxy"));
+  await assert.rejects(modelFetch("https://model.example.test/"), { code: "PROXY_UNAVAILABLE" });
+  assert.equal(routes.length, 2);
+});
+
+test("node tests keep saved credentials out of health output and ignore stale results", async t => {
+  let finish;
+  setup(t, async (command, args) => {
+    assert.equal(command, "network_probe");
+    assert.equal(args.route.username, "fixture-user");
+    assert.equal(args.route.password, "fixture-password");
+    await new Promise(resolve => { finish = resolve; });
+    return { latencyMs: 42, status: 200 };
+  });
+  const config = structuredClone(proxyPool.getSnapshot().config);
+  config.nodes[0].username = "fixture-user"; config.nodes[0].password = "fixture-password";
+  proxyPool.save(config);
+  const probe = testProxy("first", "https://example.test/");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(proxyPool.getSnapshot().health.first.state, "checking");
+  config.nodes[0].url = "http://changed.invalid:8080";
+  proxyPool.save(config);
+  finish(); await probe;
+  assert.equal(proxyPool.getSnapshot().health.first, undefined);
+  const next = testProxy("first", "https://example.test/");
+  await new Promise(resolve => setImmediate(resolve));
+  finish(); await next;
+  assert.deepEqual(Object.keys(proxyPool.getSnapshot().health.first).sort(), ["checkedAt", "latencyMs", "state"]);
+  assert.equal(proxyPool.getSnapshot().health.first.latencyMs, 42);
+});
+
+test("configured credentials are redacted in raw and URL encoded process output", () => {
+  const route = { mode: "proxy", node: { username: "fixture@user", password: "fixture/p:word" } };
+  const output = `${route.node.username} ${route.node.password} ${encodeURIComponent(route.node.username)} ${encodeURIComponent(route.node.password)}`;
+  assert.equal(redactProxyOutput(output, route), "[redacted] [redacted] [redacted] [redacted]");
 });

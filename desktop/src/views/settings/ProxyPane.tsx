@@ -2,7 +2,7 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { proxyPool, testProxy } from "../../services/network/networkService";
-import type { NetworkScope, ProxyConfig, ProxyMode, ProxyNode } from "../../services/network/proxyPool";
+import { validateProxyNode, type NetworkScope, type ProxyConfig, type ProxyMode, type ProxyNode } from "../../services/network/proxyPool";
 import "./network.css";
 import { Select } from "../controls/Select";
 
@@ -31,11 +31,8 @@ export function ProxyPane() {
     if (!editor) return;
     // Validate the node independently while a policy is still being edited.
     try {
-      const config = { ...draft, nodes: draft.nodes.some(node => node.id === editor.id) ? draft.nodes.map(node => node.id === editor.id ? editor : node) : [...draft.nodes, editor] };
-      // Full configuration validation is performed by Save below.
-      let url: URL;
-      try { url = new URL(editor.url); } catch { throw new Error("请填写有效代理地址，例如 http://127.0.0.1:8080"); }
-      if (!editor.name.trim() || !["http:", "https:", "socks5:", "socks5h:"].includes(url.protocol) || !url.hostname || url.username || url.password || url.search || url.hash || !["", "/"].includes(url.pathname)) throw new Error("请填写节点名称和有效代理地址，账号密码单独填写");
+      const valid = validateProxyNode(editor);
+      const config = { ...draft, nodes: draft.nodes.some(node => node.id === valid.id) ? draft.nodes.map(node => node.id === valid.id ? valid : node) : [...draft.nodes, valid] };
       update(config); closeEditor();
     } catch (err) { setError(err instanceof Error ? err.message : "节点配置无效"); }
   };

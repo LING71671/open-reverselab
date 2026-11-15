@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultProxyConfig, ProxyPool, validateProxyConfig } from "../src/services/network/proxyPool.ts";
+import { defaultProxyConfig, ProxyPool, validateProxyConfig, validateProxyNode } from "../src/services/network/proxyPool.ts";
 import type { ProxyConfig, ProxyNode } from "../src/services/network/proxyPool.ts";
 const node = (id: string, url = "http://127.0.0.1:8080"): ProxyNode => ({ id, name: id, url, username: "", password: "", enabled: true });
 const config = (): ProxyConfig => ({ ...defaultProxyConfig(), nodes: [node("a"), node("b")], model: { mode: "failover", nodeId: "" } });
@@ -80,4 +80,39 @@ test("old requests cannot mark an edited or removed proxy unhealthy", () => {
   pool.save({ ...edited, nodes: [edited.nodes[1]] });
   pool.observe(current.id, { state: "failed", checkedAt: Date.now() }, current);
   assert.equal(pool.getSnapshot().health[current.id], undefined);
+});
+
+test("adding, editing, disabling, re-enabling and removing nodes survives reload", () => {
+  let saved = "";
+  const storage = { getItem: () => saved || null, setItem: (_: string, value: string) => { saved = value; } };
+  const pool = new ProxyPool(storage);
+  const added = { ...defaultProxyConfig(), nodes: [node("first")] };
+  pool.save(added);
+  const edited = structuredClone(pool.getSnapshot().config);
+  edited.nodes[0] = { ...edited.nodes[0], name: " Work proxy ", url: " https://localhost:8443/ ", username: "fixture-user", password: "fixture-password" };
+  edited.model = { mode: "fixed", nodeId: "first" };
+  pool.save(edited);
+  const restored = new ProxyPool(storage);
+  assert.deepEqual(restored.routes("model")[0].node, { ...edited.nodes[0], name: "Work proxy", url: "https://localhost:8443" });
+
+  const disabled = structuredClone(restored.getSnapshot().config);
+  disabled.nodes[0].enabled = false;
+  assert.throws(() => restored.save(disabled), /已启用/);
+  assert.equal(restored.routes("model")[0].node?.enabled, true, "an invalid edit must not silently change the active route");
+  disabled.model = { mode: "system", nodeId: "" };
+  restored.save(disabled);
+  assert.equal(new ProxyPool(storage).getSnapshot().config.nodes[0].enabled, false);
+  disabled.nodes[0].enabled = true;
+  disabled.model = { mode: "fixed", nodeId: "first" };
+  restored.save(disabled);
+  assert.equal(new ProxyPool(storage).routes("model")[0].node?.id, "first");
+  restored.save(defaultProxyConfig());
+  assert.deepEqual(new ProxyPool(storage).getSnapshot().config.nodes, []);
+});
+
+test("node editor validates credentials and SOCKS ports before closing", () => {
+  assert.throws(() => validateProxyNode(node("socks", "socks5h://localhost")), /端口/);
+  assert.throws(() => validateProxyNode({ ...node("auth"), password: "fixture-password" }), /用户名/);
+  assert.throws(() => validateProxyNode({ ...node("long"), name: "a".repeat(81) }), /80/);
+  assert.equal(validateProxyNode({ ...node("auth"), username: "fixture-user", password: "fixture-password" }).password, "fixture-password");
 });

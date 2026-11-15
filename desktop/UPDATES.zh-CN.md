@@ -22,11 +22,11 @@ Windows x64 安装版使用 Tauri 官方 updater：
 2. 用户点击下载后获取 NSIS 安装包，显示实际接收字节数；服务未提供总长度时显示已下载大小。
 3. Tauri 使用应用内置的公开密钥验证 Minisign 签名，同时验证签名绑定的版本。验证失败的包不能进入安装状态。
 4. 用户点击“安装并重新打开”后，检查所有已打开工作区的运行和排队 Goal，等待工作区保存完成，再检查一次任务状态。
-5. 原生侧确认没有 Python 执行，锁住新执行并启动安装程序。安装器关闭当前应用、替换程序与随包资源，然后重新打开应用。
+5. 原生侧确认没有 Python 执行或活动网络请求，锁住新执行并启动安装程序。安装器关闭当前应用、替换程序与随包资源，然后重新打开应用。
 
 更新不会自动停止任务。可以在任务运行时下载，安装按钮须等待所有任务结束。默认工作区、模型设置和更新偏好位于程序目录外，升级保留这些数据。不要把自定义工作区放在安装程序管理的 `runtime/` 目录内。
 
-便携版和源码构建可以检查版本、阅读版本说明；升级通过发布页下载新包完成。只有通过 NSIS 安装、包含 `runtime/kb/`、`runtime/scripts/` 和 `uninstall.exe` 的 Windows x64 版本开放应用内安装。浏览器开发预览会明确显示不支持安装。
+便携版和源码构建可以检查版本、阅读版本说明；升级通过发布页下载新包完成。只有通过 NSIS 安装、包含 `uninstall.exe`、`runtime/RELEASE.json` 以及桌面工作区和扩展运行脚本的 Windows x64 版本开放应用内安装。知识包独立安装，识别安装版不依赖随包知识内容。浏览器开发预览会明确显示不支持安装。
 
 ## 模块职责
 
@@ -59,7 +59,7 @@ Windows x64 安装版使用 Tauri 官方 updater：
 
 `package.json`、Cargo 包及 lockfile、`tauri.conf.json` 的版本必须一致。Windows 发布同时提供安装包、安装包 `.sig`、`latest.json` 和 SHA256 校验值；可继续附带便携 ZIP。
 
-安装包包含 `src-tauri/release-resources/`，映射到安装目录的 `runtime/`。该暂存目录已忽略，不得提交。应从最终发布 commit 的 `git archive` 构建允许公开的资源，至少包含完整 `kb/` 与 `scripts/` 及它们引用的根配置、板块文档和工具索引；不直接递归打包开发工作区。外部逆向工具、Python 和私人数据不在资源包内。
+安装包包含 `src-tauri/release-resources/`，映射到安装目录的 `runtime/`。该暂存目录已忽略，不得提交。使用 `scripts/misc/package_desktop_release.py stage` 从最终发布 commit 的 `git archive` 按桌面运行时白名单暂存。知识内容与 MCP 服务作为扩展独立分发，不直接递归打包开发工作区。外部逆向工具、Python 和私人数据不在资源包内。详见[发布流程](../RELEASING.zh-CN.md)。
 
 签名私钥只保存在维护者本机或 CI secret，公开密钥写入 `plugins.updater.pubkey`。构建进程的 `TAURI_SIGNING_PRIVATE_KEY` 环境变量指向本机私钥文件，`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 提供私钥密码；无密码时为空。随后运行：
 
@@ -95,7 +95,9 @@ node --experimental-strip-types --test tests/updateController.test.ts
 cargo test --manifest-path src-tauri/Cargo.toml --lib updates::tests
 ```
 
-状态机和原生选择测试覆盖渠道迁移、草稿过滤、版本比较、缺失发布、下载失败与签名失败、并发点击、任务保护、保存失败和安装前二次检查。测试使用合成发布信息和模拟适配器。
+状态机和原生选择测试覆盖渠道迁移、草稿过滤、版本比较、缺失发布、下载失败、并发点击、任务保护、保存失败和安装前二次检查。下载重试会忽略上一次尝试延迟到达的进度。安装版识别测试使用不包含知识内容的目录。
+
+原生下载测试从本地回环服务器提供签名纯文本，调用 Tauri 官方 updater 验证实际下载字节，覆盖成功下载与进度、内容篡改、签名绑定另一版本以及 HTTP 失败。测试密钥与发布密钥独立，测试不会调用安装。其他状态切换使用模拟适配器。
 
 实际公开元数据读取可单独运行：
 

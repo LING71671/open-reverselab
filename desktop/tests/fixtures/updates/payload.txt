@@ -1,0 +1,1 @@
+Open ReverseLab updater transport fixture. This is plain text, never an installer.
