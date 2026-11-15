@@ -340,10 +340,13 @@ def validate_registry(data: dict) -> dict:
         ids.add(item["id"])
         require(item.get("kind") in {"knowledge", "mcp"} and string(item.get("title")), "Invalid registry kind/title")
         require(string(item.get("version")) and re.fullmatch(SEMVER, item["version"]) is not None, "Invalid registry version")
-        require(("path" in item) != ("artifact" in item), "Registry entry needs exactly one path or artifact")
+        require(sum(key in item for key in ("path", "artifact", "repository")) == 1, "Registry entry needs exactly one path, artifact or repository")
         if "path" in item:
             if item["path"] != ".":
                 safe_path(item["path"])
+        elif "repository" in item:
+            validate_https(item["repository"])
+            require(urlsplit(item["repository"]).hostname == "github.com", "Repository entries require a GitHub URL")
         else:
             validate_https(item["artifact"])
             require(isinstance(item.get("sha256"), str) and re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) is not None, "Artifact requires SHA256")

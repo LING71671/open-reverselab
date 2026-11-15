@@ -85,6 +85,13 @@ def test_update_keeps_old_pin_and_sources_do_not_collide(tmp_path):
     assert store.catalog(pinned=pins)[0]["version"] == "1.0.0"
     with pytest.raises(ValueError, match="ambiguous"):
         store.resolve("example.integrity/read")
+    graph = store.graph()
+    assert len(graph["networks"]) == 2
+    assert len({network["id"] for network in graph["networks"]}) == 2
+    for network in graph["networks"]:
+        prefix = "reverselab://" + network["installationId"] + "/"
+        assert all(node.startswith(prefix) for node in network["nodes"])
+        assert all(edge[end].startswith(prefix) for edge in network["relations"] for end in ("from", "to"))
 
 
 def test_missing_dependencies_and_unknown_features_never_activate(tmp_path):
@@ -108,6 +115,8 @@ def test_external_references_and_dependency_history(tmp_path):
     dependent = make_package(tmp_path / "dependent", requires=[{"id": "example.base", "version": "1.0.0", "source": base["source"]["identity"], "optional": False}])
     data = json.loads((dependent / "knowledge.json").read_text())
     data["methods"][0]["document"] = "example.base/docs/read"
+    data["networks"][0]["nodes"].append("example.base/read")
+    data["networks"][0]["relations"].append({"from": "example.integrity/check", "to": "example.base/read", "type": "verifies"})
     (dependent / "knowledge.json").write_bytes(protocol.json_bytes(data))
     item = install(store, dependent)
     with pytest.raises(ValueError, match="Required by enabled"):
@@ -118,6 +127,9 @@ def test_external_references_and_dependency_history(tmp_path):
     graph = store.graph()
     dependency_method = next(method for method in graph["methods"] if method["installationId"] == item["installationId"] and method["entityId"].endswith("/read"))
     assert dependency_method["document"] in {document["id"] for document in graph["documents"]}
+    network = next(network for network in graph["networks"] if network["installationId"] == item["installationId"])
+    assert {"from": store.uri(item["installationId"], "example.integrity/check"),
+            "to": store.uri(base["installationId"], "example.base/read"), "type": "verifies"} in network["relations"]
     result = store.remove(base["installationId"])
     assert item["installationId"] in result["disabledDependents"]
 
@@ -211,7 +223,8 @@ def test_github_catalog_is_metadata_only_and_pins_slash_ref(tmp_path, monkeypatc
     registry = {"protocol": protocol.REGISTRY_PROTOCOL, "id": "example.catalog", "title": "Catalog", "entries": [{"id": "example.integrity", "kind": "knowledge", "title": "Integrity", "version": "1.0.0", "path": "packs/integrity"}]}
     calls = []
 
-    def fetch(url, *, optional=False):
+    def fetch(url, *, optional=False, github_recursive=False):
+        protocol.validate_https(url)
         calls.append(url)
         if url == "https://api.github.com/repos/example/extensions":
             return protocol.json_bytes({"default_branch": "main"})
@@ -219,7 +232,7 @@ def test_github_catalog_is_metadata_only_and_pins_slash_ref(tmp_path, monkeypatc
             return None
         if "/commits/feature%2Ftopic" in url:
             return protocol.json_bytes({"sha": commit})
-        if url.endswith("/git/trees/" + commit + "?recursive=1"):
+        if url.endswith("/git/trees/" + commit):
             return protocol.json_bytes({"tree": [{"path": "catalog/packs/integrity/" + name, "type": "blob", "mode": "100644"} for name in payload]})
         prefix = f"https://raw.githubusercontent.com/example/extensions/{commit}/catalog/"
         if url == prefix + protocol.REGISTRY:
@@ -252,6 +265,103 @@ def test_local_catalog_and_sources_refresh_preserve_install(tmp_path):
     assert refreshed["entries"][0]["id"] == "example.integrity"
     store.sources_remove(saved["sourceId"])
     assert store.sources_list() == [] and store.get(item["installationId"])["enabled"]
+
+
+@pytest.mark.parametrize("catalog_source", ["github", "folder", "zip"])
+def test_catalog_repository_uses_destination_identity_and_pinned_commit(tmp_path, monkeypatch, catalog_source):
+    payload, _ = protocol.load(make_package(tmp_path / "pack"))
+    commit = "c" * 40
+    registry = {"protocol": protocol.REGISTRY_PROTOCOL, "id": "example.catalog", "title": "Catalog",
+                "entries": [{"id": "example.integrity", "kind": "knowledge", "title": "Integrity", "version": "1.0.0",
+                             "repository": "https://github.com/example/knowledge"}]}
+    calls = []
+
+    def fetch(url, *, optional=False, github_recursive=False):
+        protocol.validate_https(url)
+        calls.append(url)
+        if url in {"https://api.github.com/repos/example/app", "https://api.github.com/repos/example/knowledge"}:
+            return protocol.json_bytes({"default_branch": "main"})
+        if url.endswith("/commits/main"):
+            return protocol.json_bytes({"sha": commit})
+        if url == f"https://raw.githubusercontent.com/example/app/{commit}/{protocol.REGISTRY}":
+            return protocol.json_bytes(registry)
+        if url == f"https://api.github.com/repos/example/knowledge/git/trees/{commit}":
+            if github_recursive:
+                return protocol.json_bytes({"truncated": True, "tree": []})
+            return protocol.json_bytes({"tree": [{"path": name, "type": "blob", "mode": "100644"} for name in payload if "/" not in name]
+                + [{"path": "docs", "type": "tree", "sha": "d" * 40}]})
+        if url == "https://api.github.com/repos/example/knowledge/git/trees/" + "d" * 40:
+            return protocol.json_bytes({"tree": [{"path": name[5:], "type": "blob", "mode": "100644"} for name in payload if name.startswith("docs/")]})
+        prefix = f"https://raw.githubusercontent.com/example/knowledge/{commit}/"
+        if url.startswith(prefix):
+            return payload.get(url.removeprefix(prefix))
+        raise AssertionError(url)
+
+    monkeypatch.setattr(store_module, "_read_url", fetch)
+    store = ExtensionStore(tmp_path / "store")
+    if catalog_source == "github":
+        inspected = store.inspect("https://github.com/example/app")
+    else:
+        folder = tmp_path / "catalog"
+        folder.mkdir()
+        (folder / protocol.REGISTRY).write_bytes(protocol.json_bytes(registry))
+        if catalog_source == "zip":
+            archive = tmp_path / "catalog.zip"
+            with zipfile.ZipFile(archive, "w") as output:
+                output.writestr("catalog/" + protocol.REGISTRY, protocol.json_bytes(registry))
+            inspected = store.inspect(str(archive))
+        else:
+            inspected = store.inspect(str(folder))
+    entry = inspected["entries"][0]
+    assert entry["source"]["identity"] == "https://github.com/example/knowledge"
+    assert entry["source"]["commit"] == commit
+    assert not any(url.endswith("knowledge.json") for url in calls)
+    calls.clear()
+    installed = store.install(inspected["inspectionId"], entry["id"])
+    assert not any("/commits/" in url for url in calls)  # Do not re-resolve a moving branch.
+    direct = install(store, "https://github.com/example/knowledge")
+    assert direct["installationId"] == installed["installationId"]
+    assert len(store.list()) == 1
+
+
+@pytest.mark.parametrize("location", [
+    {"repository": "https://example.com/knowledge"},
+    {"repository": "https://github.com/example/knowledge?ref=main"},
+    {"repository": "https://github.com/example/knowledge", "path": "kb"},
+    {"repository": "https://github.com/example/knowledge", "artifact": "https://example.com/kb.zip", "sha256": "a" * 64},
+])
+def test_catalog_rejects_ambiguous_or_invalid_repository_locations(location):
+    registry = {"protocol": protocol.REGISTRY_PROTOCOL, "id": "example.catalog", "title": "Catalog",
+                "entries": [{"id": "example.integrity", "kind": "knowledge", "title": "Integrity", "version": "1.0.0", **location}]}
+    with pytest.raises(ValueError):
+        protocol.validate_registry(registry)
+
+
+def test_recursive_github_tree_query_is_added_only_by_transport(monkeypatch):
+    tree_url = "https://api.github.com/repos/example/knowledge/git/trees/" + "a" * 40
+    requests = []
+
+    class Response:
+        url = tree_url + "?recursive=1"
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self):
+            return b'{"tree": []}'
+
+    class Opener:
+        def open(self, request, timeout):
+            requests.append(request.full_url)
+            return Response()
+
+    monkeypatch.setattr(store_module, "build_opener", lambda *args: Opener())
+    assert store_module._read_url(tree_url, github_recursive=True) == b'{"tree": []}'
+    assert requests == [tree_url + "?recursive=1"]
+    with pytest.raises(ValueError):
+        store_module._read_url(tree_url + "?recursive=1")
+    with pytest.raises(ValueError):
+        store_module._read_url("https://example.com/tree", github_recursive=True)
 
 
 def test_mcp_install_is_descriptor_only_and_export_contains_no_local_inputs(tmp_path):
@@ -324,7 +434,7 @@ def test_source_archive_respects_root_catalog_and_ignores_undeclared_examples(tm
 
 
 def test_github_payload_rejects_symlinks(tmp_path, monkeypatch):
-    monkeypatch.setattr(store_module, "_read_url", lambda url: protocol.json_bytes({"tree": [
+    monkeypatch.setattr(store_module, "_read_url", lambda url, **kwargs: protocol.json_bytes({"tree": [
         {"path": "docs/read.md", "type": "blob", "mode": "120000"}
     ]}))
     with pytest.raises(ValueError, match="regular Git file"):

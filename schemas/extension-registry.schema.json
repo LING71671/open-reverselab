@@ -1,25 +1,132 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/LING71671/open-reverselab/main/schemas/extension-registry.schema.json",
-  "title": "Open ReverseLab extension registry v1",
-  "type": "object", "required": ["protocol", "id", "title", "entries"],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
-    "protocol": {"const": "open-reverselab.registry/v1"},
-    "id": {"type": "string", "minLength": 1},
-    "title": {"type": "string", "minLength": 1},
     "entries": {
-      "type": "array", "items": {
-        "type": "object", "required": ["id", "kind", "title", "version"],
+      "items": {
+        "oneOf": [
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "artifact"
+                  ]
+                },
+                {
+                  "required": [
+                    "repository"
+                  ]
+                }
+              ]
+            },
+            "required": [
+              "path"
+            ]
+          },
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "path"
+                  ]
+                },
+                {
+                  "required": [
+                    "repository"
+                  ]
+                }
+              ]
+            },
+            "required": [
+              "artifact",
+              "sha256"
+            ]
+          },
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "path"
+                  ]
+                },
+                {
+                  "required": [
+                    "artifact"
+                  ]
+                }
+              ]
+            },
+            "required": [
+              "repository"
+            ]
+          }
+        ],
         "properties": {
-          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$"},
-          "kind": {"enum": ["knowledge", "mcp"]}, "title": {"type": "string", "minLength": 1},
-          "version": {"$ref": "extension-manifest.schema.json#/$defs/version"},
-          "path": {"type": "string", "minLength": 1},
-          "artifact": {"type": "string", "pattern": "^https://"},
-          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          "artifact": {
+            "pattern": "^https://",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "knowledge",
+              "mcp"
+            ]
+          },
+          "path": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "repository": {
+            "pattern": "^https://github\\.com/",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "version": {
+            "$ref": "extension-manifest.schema.json#/$defs/version"
+          }
         },
-        "oneOf": [{"required": ["path"], "not": {"required": ["artifact"]}}, {"required": ["artifact", "sha256"], "not": {"required": ["path"]}}]
-      }
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "version"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "protocol": {
+      "const": "open-reverselab.registry/v1"
+    },
+    "title": {
+      "minLength": 1,
+      "type": "string"
     }
-  }
+  },
+  "required": [
+    "protocol",
+    "id",
+    "title",
+    "entries"
+  ],
+  "title": "Open ReverseLab extension registry v1",
+  "type": "object"
 }

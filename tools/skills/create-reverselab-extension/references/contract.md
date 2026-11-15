@@ -87,6 +87,7 @@ A root `reverselab.registry.json` uses `protocol: "open-reverselab.registry/v1"`
 
 - `path`: relative path to an extension directory in the same resolved commit, or
 - `artifact`: HTTPS ZIP URL plus `sha256` computed from the actual artifact.
+- `repository`: GitHub URL pointing directly to a package directory in another repository. Use a commit URL to pin a catalog release. The importer resolves the destination commit during inspection, validates the package identity/version during installation, and uses the destination repository as its source identity. This field does not recursively follow another catalog.
 
 Optional entry metadata includes `description`, `domains`, `tracks`, and `license`. One repository can list knowledge and MCP entries together. Entry identity and version must match the referenced manifest. Catalog resolution records source repository, commit, and path. Refreshing a catalog discovers versions; it does not update installed extensions without an installation/update action.
 

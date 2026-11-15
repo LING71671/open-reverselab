@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor
 import copy
 import hashlib
 import io
@@ -109,8 +110,13 @@ class _SourceRedirects(HTTPRedirectHandler):
         return redirected
 
 
-def _read_url(url: str, *, optional: bool = False) -> bytes | None:
+def _read_url(url: str, *, optional: bool = False, github_recursive: bool = False) -> bytes | None:
     protocol.validate_https(url)
+    if github_recursive:
+        parsed = urlsplit(url)
+        protocol.require(parsed.hostname == "api.github.com" and bool(re.fullmatch(r"/repos/[^/]+/[^/]+/git/trees/[0-9a-fA-F]{40}", parsed.path)), "Recursive tree query requires a GitHub tree endpoint")
+        # Transport-generated query; user source URLs still disallow queries.
+        url += "?recursive=1"
     headers = {"User-Agent": "Open-ReverseLab-Extensions/1", "Accept": "application/vnd.github+json"}
     # Credentials are consulted locally and never persisted in provenance or exports.
     if urlsplit(url).hostname in {"api.github.com", "raw.githubusercontent.com"}:
@@ -173,21 +179,21 @@ def _github_raw(source: dict, path: str, *, optional: bool = False) -> bytes | N
 def _github_regular_files(source: dict, paths: list[str], optional: list[str] = ()) -> None:
     """Check Git modes before fetching a payload; raw URLs hide symlink modes."""
     api = f"https://api.github.com/repos/{source['owner']}/{source['repo']}/git/trees/"
-    tree = protocol.object_json(_read_url(api + source["commit"] + "?recursive=1"), "GitHub tree")
     wanted = set(paths) | set(optional)
+    tree = protocol.object_json(_read_url(api + source["commit"], github_recursive=True), "GitHub tree")
     entries = {item["path"]: item for item in tree.get("tree", [])}
-    if tree.get("truncated"):
+    pending = [(source["commit"], "")] if tree.get("truncated") else []
+    if pending:
         entries = {}
-        pending = [(source["commit"], "")]
-        while pending:
-            sha, prefix = pending.pop()
-            branch = protocol.object_json(_read_url(api + sha), "GitHub directory tree")
-            protocol.require(not branch.get("truncated"), "GitHub returned an incomplete directory tree")
-            for item in branch.get("tree", []):
-                path = prefix + item["path"]
-                entries[path] = item
-                if item.get("type") == "tree" and any(name.startswith(path + "/") for name in wanted):
-                    pending.append((item["sha"], path + "/"))
+    while pending:
+        sha, prefix = pending.pop()
+        branch = protocol.object_json(_read_url(api + sha), "GitHub directory tree")
+        protocol.require(not branch.get("truncated"), "GitHub returned an incomplete directory tree")
+        for item in branch.get("tree", []):
+            path = prefix + item["path"]
+            entries[path] = item
+            if item.get("type") == "tree" and any(name.startswith(path + "/") for name in wanted):
+                pending.append((item["sha"], path + "/"))
     for path in wanted:
         item = entries.get(path)
         if item is None and path in optional:
@@ -272,6 +278,15 @@ class ExtensionStore:
     def _summary(manifest: dict) -> dict:
         return {key: copy.deepcopy(manifest[key]) for key in ("id", "kind", "title", "version", "description", "license", "requires", "requiredFeatures") if key in manifest}
 
+    @staticmethod
+    def _remote_catalog_entry(entry: dict, source: dict) -> dict:
+        if "repository" in entry:
+            source = resolve_github(entry["repository"])
+            locator = {"github": source, "path": source["path"]}
+        else:
+            locator = {"artifact": entry["artifact"], "sha256": entry["sha256"]}
+        return {**entry, "source": source, "locator": locator}
+
     def _inspect_local(self, path: Path, stage: Path, migrate: bool) -> tuple[list, dict, list]:
         path = path.resolve(strict=True)
         if path.is_file() and path.name in {protocol.MANIFEST, protocol.REGISTRY}:
@@ -283,8 +298,8 @@ class ExtensionStore:
             if registry_path.exists():
                 registry = protocol.validate_registry(protocol.object_json(protocol.read_local(path, protocol.REGISTRY), protocol.REGISTRY))
                 for entry in registry["entries"]:
-                    if "artifact" in entry:
-                        entries.append({**entry, "source": source, "locator": {"artifact": entry["artifact"], "sha256": entry["sha256"]}})
+                    if "artifact" in entry or "repository" in entry:
+                        entries.append(self._remote_catalog_entry(entry, source))
                     else:
                         relative = entry["path"]
                         folder = path if relative == "." else path.joinpath(*relative.split("/"))
@@ -332,8 +347,8 @@ class ExtensionStore:
             registry = protocol.validate_registry(protocol.object_json(files[registry_name], protocol.REGISTRY))
             manifests = []
             for entry in registry["entries"]:
-                if "artifact" in entry:
-                    entries.append({**entry, "source": source, "locator": {"artifact": entry["artifact"], "sha256": entry["sha256"]}})
+                if "artifact" in entry or "repository" in entry:
+                    entries.append(self._remote_catalog_entry(entry, source))
                 else:
                     relative = entry["path"]
                     filename = archive_prefix + (relative + "/" if relative != "." else "") + protocol.MANIFEST
@@ -370,8 +385,11 @@ class ExtensionStore:
             registry = protocol.validate_registry(protocol.object_json(raw_registry, protocol.REGISTRY))
             entries = []
             for entry in registry["entries"]:
-                locator = {"artifact": entry["artifact"], "sha256": entry["sha256"]} if "artifact" in entry else {"github": source, "path": prefix + (entry["path"] if entry["path"] != "." else "")}
-                entries.append({**entry, "source": source, "locator": locator})
+                if "path" in entry:
+                    locator = {"github": source, "path": prefix + (entry["path"] if entry["path"] != "." else "")}
+                    entries.append({**entry, "source": source, "locator": locator})
+                else:
+                    entries.append(self._remote_catalog_entry(entry, source))
             return entries, source, []
         raw_manifest = _github_raw(source, prefix + protocol.MANIFEST, optional=True)
         candidates = [prefix + protocol.MANIFEST] if raw_manifest is not None else []
@@ -460,8 +478,11 @@ class ExtensionStore:
             protocol.unique_paths([protocol.MANIFEST, protocol.LOCK, *manifest["files"]])
             _github_regular_files(source, [prefix + name for name in [protocol.MANIFEST, *manifest["files"]]], [prefix + protocol.LOCK])
             payload = {protocol.MANIFEST: raw}
-            for name in manifest["files"]:
-                payload[name] = _github_raw(source, prefix + name)
+            def fetch_file(name: str) -> tuple[str, bytes]:
+                return name, _github_raw(source, prefix + name)
+
+            with ThreadPoolExecutor(max_workers=8, thread_name_prefix="extension-download") as downloads:
+                payload.update(downloads.map(fetch_file, manifest["files"]))
             locked = _github_raw(source, prefix + protocol.LOCK, optional=True)
             if locked is not None:
                 payload[protocol.LOCK] = locked

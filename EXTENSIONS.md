@@ -17,7 +17,7 @@ Browser development and the native application call the same Python services. Br
 
 A source can contain one extension or a static `reverselab.registry.json` catalog containing both kinds. Add it under **Sources**, then **Browse**. Refreshing metadata does not replace an installed version. There is no centralized marketplace account or private-repository credential editor.
 
-The importer resolves GitHub branch/tag paths, including slash-containing refs, records the commit and subdirectory, and validates selected files. Catalog entries reference a directory at the same commit or an HTTPS artifact with SHA256. Ordinary Markdown must first be authored into a declared document collection; importing does not invent methods or relationships.
+The importer resolves GitHub branch/tag paths, including slash-containing refs, records the commit and subdirectory, and validates selected files. Catalog entries reference a directory at the same commit, a separate GitHub package repository through `repository`, or an HTTPS artifact with SHA256. Repository entries resolve to the target repository identity and commit; installing through a catalog or directly uses the same identity. Ordinary Markdown must first be authored into a declared document collection; importing does not invent methods or relationships.
 
 ## Stable v1 contract
 
