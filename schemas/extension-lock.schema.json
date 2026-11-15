@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/LING71671/open-reverselab/main/schemas/extension-lock.schema.json",
+  "title": "Open ReverseLab package content lock v1",
+  "type": "object", "required": ["protocol", "id", "version", "files"],
+  "properties": {
+    "protocol": {"const": "open-reverselab.lock/v1"},
+    "id": {"type": "string", "minLength": 1},
+    "version": {"$ref": "extension-manifest.schema.json#/$defs/version"},
+    "files": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+    "provenance": {"type": "object"},
+    "dependencies": {"type": "array", "items": {
+      "type": "object", "required": ["id", "version", "source", "digest"],
+      "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "source": {"type": "string"}, "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    }}
+  }
+}

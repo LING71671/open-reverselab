@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/LING71671/open-reverselab/main/schemas/extension-manifest.schema.json",
+  "title": "Open ReverseLab extension v1",
+  "type": "object",
+  "required": ["protocol", "kind", "id", "version", "title", "description", "license", "files"],
+  "properties": {
+    "protocol": {"const": "open-reverselab.extension/v1"},
+    "kind": {"enum": ["knowledge", "mcp"]},
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$"},
+    "version": {"$ref": "#/$defs/version"},
+    "title": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "license": {"type": "string", "minLength": 1},
+    "files": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "knowledge": {"type": "string", "minLength": 1},
+    "mcp": {"type": "string", "minLength": 1},
+    "requires": {"type": "array", "items": {"$ref": "#/$defs/dependency"}},
+    "requiredFeatures": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "extensions": {"type": "object"},
+    "install": false,
+    "postinstall": false,
+    "hooks": false
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "knowledge"}}}, "then": {"required": ["knowledge"]}},
+    {"if": {"properties": {"kind": {"const": "mcp"}}}, "then": {"required": ["mcp"]}}
+  ],
+  "$defs": {
+    "version": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"},
+    "dependency": {
+      "type": "object", "required": ["id", "version", "source", "optional"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$"},
+        "version": {"$ref": "#/$defs/version"},
+        "source": {"type": "string", "minLength": 1},
+        "optional": {"type": "boolean"}
+      }
+    }
+  }
+}

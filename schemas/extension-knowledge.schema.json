@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/LING71671/open-reverselab/main/schemas/extension-knowledge.schema.json",
+  "title": "Open ReverseLab knowledge records v1",
+  "type": "object",
+  "required": ["domains", "documents", "methods", "networks"],
+  "properties": {
+    "domains": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+    "documents": {"type": "array", "items": {"$ref": "#/$defs/document"}},
+    "methods": {"type": "array", "items": {"$ref": "#/$defs/method"}},
+    "networks": {"type": "array", "items": {"$ref": "#/$defs/network"}},
+    "bindings": {"type": "array", "items": {"$ref": "#/$defs/binding"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1},
+    "strings": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+    "entity": {
+      "type": "object", "required": ["id", "title", "track"],
+      "properties": {"id": {"$ref": "#/$defs/text"}, "title": {"$ref": "#/$defs/text"}, "track": {"enum": ["red", "blue", "shared"]}}
+    },
+    "document": {
+      "allOf": [{"$ref": "#/$defs/entity"}], "required": ["path", "domain"],
+      "properties": {"path": {"type": "string", "pattern": "\\.md$"}, "domain": {"$ref": "#/$defs/text"}, "aliases": {"$ref": "#/$defs/strings"}}
+    },
+    "method": {
+      "allOf": [{"$ref": "#/$defs/entity"}], "required": ["document", "domain", "signals", "requiresEvidence", "produces", "toolRequirements"],
+      "properties": {
+        "document": {"$ref": "#/$defs/text"}, "domain": {"$ref": "#/$defs/text"},
+        "signals": {"$ref": "#/$defs/strings"}, "requiresEvidence": {"$ref": "#/$defs/strings"},
+        "produces": {"$ref": "#/$defs/strings"}, "toolRequirements": {"$ref": "#/$defs/strings"},
+        "when": {"$ref": "#/$defs/condition"}
+      }
+    },
+    "network": {
+      "allOf": [{"$ref": "#/$defs/entity"}], "required": ["entrypoints", "nodes", "relations"],
+      "properties": {
+        "entrypoints": {"$ref": "#/$defs/strings"},
+        "nodes": {"allOf": [{"$ref": "#/$defs/strings"}], "uniqueItems": true},
+        "relations": {"type": "array", "items": {"$ref": "#/$defs/relation"}}
+      }
+    },
+    "relation": {
+      "type": "object", "required": ["from", "to", "type"],
+      "properties": {
+        "from": {"$ref": "#/$defs/text"}, "to": {"$ref": "#/$defs/text"},
+        "type": {"enum": ["depends_on", "enables", "composes_with", "defends", "detects", "verifies", "conflicts"]},
+        "when": {"$ref": "#/$defs/condition"}
+      }
+    },
+    "condition": {
+      "oneOf": [
+        {"type": "object", "required": ["all"], "properties": {"all": {"type": "array", "items": {"$ref": "#/$defs/condition"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["any"], "properties": {"any": {"type": "array", "items": {"$ref": "#/$defs/condition"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["not"], "properties": {"not": {"$ref": "#/$defs/condition"}}, "additionalProperties": false},
+        {"type": "object", "required": ["evidence", "state"], "properties": {"evidence": {"$ref": "#/$defs/text"}, "state": {"enum": ["observed", "absent", "unobservable"]}}, "additionalProperties": false}
+      ]
+    },
+    "binding": {
+      "type": "object", "required": ["method", "capability", "server", "tool", "inputMapping"],
+      "properties": {"method": {"$ref": "#/$defs/text"}, "capability": {"$ref": "#/$defs/text"}, "server": {"$ref": "#/$defs/text"}, "tool": {"$ref": "#/$defs/text"}, "inputMapping": {"type": "object"}, "outputMapping": {"type": "object"}}
+    }
+  }
+}

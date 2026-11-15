@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/LING71671/open-reverselab/main/schemas/extension-registry.schema.json",
+  "title": "Open ReverseLab extension registry v1",
+  "type": "object", "required": ["protocol", "id", "title", "entries"],
+  "properties": {
+    "protocol": {"const": "open-reverselab.registry/v1"},
+    "id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "entries": {
+      "type": "array", "items": {
+        "type": "object", "required": ["id", "kind", "title", "version"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$"},
+          "kind": {"enum": ["knowledge", "mcp"]}, "title": {"type": "string", "minLength": 1},
+          "version": {"$ref": "extension-manifest.schema.json#/$defs/version"},
+          "path": {"type": "string", "minLength": 1},
+          "artifact": {"type": "string", "pattern": "^https://"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "oneOf": [{"required": ["path"], "not": {"required": ["artifact"]}}, {"required": ["artifact", "sha256"], "not": {"required": ["path"]}}]
+      }
+    }
+  }
+}

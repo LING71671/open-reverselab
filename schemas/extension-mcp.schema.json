@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/LING71671/open-reverselab/main/schemas/extension-mcp.schema.json",
+  "title": "Open ReverseLab MCP connection descriptor v1",
+  "type": "object", "required": ["transport", "inputs"],
+  "properties": {
+    "transport": {"enum": ["stdio", "streamable-http"]},
+    "command": {"type": "string", "minLength": 1},
+    "args": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "url": {"type": "string", "minLength": 1},
+    "inputs": {"type": "array", "items": {
+      "type": "object", "required": ["name", "type", "required"],
+      "properties": {"name": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$"}, "type": {"enum": ["string", "url", "path", "secret"]}, "required": {"type": "boolean"}, "value": false, "default": false}
+    }},
+    "env": {"$ref": "#/$defs/inputs"}, "headers": {"$ref": "#/$defs/inputs"}
+  },
+  "oneOf": [
+    {"properties": {"transport": {"const": "stdio"}, "url": false, "headers": false}, "required": ["command", "args"]},
+    {"properties": {"transport": {"const": "streamable-http"}, "command": false, "args": false, "env": false}, "required": ["url"]}
+  ],
+  "$defs": {"inputs": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^\\$\\{inputs\\.[A-Za-z][A-Za-z0-9_]*\\}$"}}}
+}
