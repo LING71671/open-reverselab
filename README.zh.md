@@ -31,6 +31,8 @@
   </tr>
 </table>
 
+**合作推荐：[模真真](https://mozhenzhen.com/go/open-reverselab)。** 买 AI 前，先查模真真。2000+ 模型、35 万+ 渠道比价，查模型真假、看用户点评，全部免费。
+
 <p align="center"><sub>完整赞助名单与合作方式见 <a href="SPONSORS_zh.md">赞助说明</a></sub></p>
 
 ## 桌面端
