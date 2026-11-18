@@ -89,6 +89,33 @@ Withdrawn on 2026-11-14 while desktop and knowledge-base distribution were separ
 
 The binary target was Windows x64. Python and external reverse-engineering tools were separate dependencies. Model-assisted analysis sent context and evidence to the configured endpoint. BLA/REA acceptance and native debugger adapters remained outstanding.
 
+## [Unreleased]
+
+### Added — tool profiles, native format fallbacks, and IDA-first static analysis
+
+- `feat(mcp)`：新增操作注册表与工具 profile（`legacy` / `common` / `ctf` / `pe` / `apk` /
+  `general`），通过 `REVERSELAB_PROFILE` 或 `--profile` 选择；`legacy` 保持旧目录不变。
+  新增 `--profile-report` 与 `--list-tools` 用于离线查看。
+- `feat(mcp)`：新增统一结果信封（`reverselab.envelope.v1`）：`findings` / `coverage` /
+  `unknowns` / 结构化 `error`。
+- `feat(fallback)`：新增原生 `.NET`（`dotnet_metadata` 无依赖解析 CLI 元数据，
+  `dotnet_list_types` / `dotnet_decompile_type` 走 ilspycmd）、PCAP（`pcap_summary` /
+  `pcap_extract_http` 走 tshark）、WASM（`wasm_info` 走 WABT）工具。
+- `feat(static)`：新增 IDAPython 适配器与 `static_headless_analyze`，默认 IDA 优先、
+  失败回退 Ghidra；新增统一的 `static_summary_*` 读取接口，保留 `ghidra_summary_*`
+  兼容名。IDA 使用独立数据库目录，不覆盖原样本。
+- `feat(scripts)`：新增 `scripts/misc/gen_capability_matrix.py`（生成
+  `docs/capability-matrix.md`）、`scripts/misc/install_engines.ps1` 与
+  `scripts/misc/verify_engines.py`；`lab_healthcheck.py` 输出 profile 与可选工具摘要。
+- `docs`：新增 `docs/static-analysis-backends.md`。
+- `fix(healthcheck)`：`lab_healthcheck.py` 仅对源码目录做 Python 语法检查，忽略
+  `tmp/`、`runs/`、`exports/`、`cases/` 等工作区产物，避免本地案例被误报为发布失败。
+- `test(mcp)`：新增 `tests/test_reverselab_registry.py`、`test_reverselab_fallbacks.py`
+  与 `test_static_analysis.py`。
+- `feat(cli)`：新增 `tools/bin/verify_engines`、`capability_matrix` wrapper；
+  `tools/ai-tool-registry.json` 增加 tshark/ilspycmd/WABT 条目（标记 `optional`），
+  `ai_toolcheck.py` 对可选工具记 SKIPPED/WARN 而非 FAIL，并固定子进程输出为 UTF-8。
+
 ## [1.2.1] - 2026-09-07
 
 A single `v1.2.1` release tag. Documentation and branding changes did not alter platform artifacts or require reinstalling the toolchain.

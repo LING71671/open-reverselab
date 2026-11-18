@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .config import ALLOWED_ROOTS, GENERATED_ROOTS, GHIDRA_EXPORTS_DIR, PATCHES_DIR
 from .errors import ToolError
+from .static_config import IDA_EXPORTS_DIR
 
 
 def is_relative_to(path: Path, root: Path) -> bool:
@@ -69,18 +70,18 @@ def resolve_summary(summary_path: str = "") -> Path:
         resolved = Path(summary_path).expanduser().resolve(strict=True)
     else:
         candidates = sorted(
-            GHIDRA_EXPORTS_DIR.glob("*-ghidra-summary.json"),
+            [*GHIDRA_EXPORTS_DIR.glob("*-ghidra-summary.json"), *IDA_EXPORTS_DIR.glob("*-ida-summary.json")],
             key=lambda item: item.stat().st_mtime,
             reverse=True,
         )
         if not candidates:
-            raise ToolError(f"no Ghidra summary found under: {GHIDRA_EXPORTS_DIR}")
+            raise ToolError(f"no static summary found under: {GHIDRA_EXPORTS_DIR} or {IDA_EXPORTS_DIR}")
         resolved = candidates[0].resolve(strict=True)
 
     if not resolved.is_file():
         raise ToolError(f"not a file: {resolved}")
     if resolved.suffix.lower() != ".json":
         raise ToolError(f"not a JSON summary: {resolved}")
-    if not is_relative_to(resolved, GHIDRA_EXPORTS_DIR.resolve()):
-        raise ToolError(f"summary path is outside exports\\windows\\ghidra: {resolved}")
+    if not any(is_relative_to(resolved, root.resolve()) for root in [GHIDRA_EXPORTS_DIR, IDA_EXPORTS_DIR]):
+        raise ToolError(f"summary path is outside configured Ghidra/IDA export roots: {resolved}")
     return resolved

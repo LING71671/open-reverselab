@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -250,6 +251,24 @@ def check_file(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """Kill the probe and any children it spawned.
+
+    A wrapper (`.bat`, venv launcher) may start the real tool as a grandchild; killing only the
+    direct child leaves the tool running and holding inherited handles.
+    """
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return
+    proc.kill()
+
+
 def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]:
     command = str(tool["command"])
     command_path = repo_path(command)
@@ -260,32 +279,49 @@ def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]
     env["PATH"] = str(ROOT / "tools" / "bin") + os.pathsep + str(ROOT / "tools" / "ctf-website" / "bin") + os.pathsep + env.get("PATH", "")
     try:
         argv = command_argv(command, args)
-        proc = subprocess.run(
-            argv,
-            cwd=str(ROOT),
-            env=env,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=timeout,
-            shell=False,
-        )
     except FileNotFoundError as exc:
         return {"status": "MISSING", "detail": str(exc), "path": str(command_path)}
-    except PermissionError as exc:
-        return {"status": "FAIL", "detail": str(exc), "path": str(command_path)}
-    except subprocess.TimeoutExpired:
-        return {"status": "TIMEOUT", "detail": f"probe timed out after {timeout:.1f}s", "path": str(command_path)}
-    output = one_line((proc.stdout or "") + " " + (proc.stderr or ""), limit=1500)
-    if proc.returncode != 0 and not allow_nonzero:
-        return {"status": "FAIL", "detail": f"exit={proc.returncode} {output}", "path": str(command_path)}
-    if proc.returncode != 0 and allow_nonzero:
+    # Capture into a file rather than a pipe. A grandchild that inherits a pipe handle keeps it
+    # open after the direct child exits, and the read then blocks forever - one misbehaving probe
+    # would stall the whole check instead of reporting TIMEOUT.
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as sink:
+        try:
+            proc = subprocess.Popen(
+                argv,
+                cwd=str(ROOT),
+                env=env,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                stdin=subprocess.DEVNULL,
+                stdout=sink,
+                stderr=subprocess.STDOUT,
+                shell=False,
+            )
+        except FileNotFoundError as exc:
+            return {"status": "MISSING", "detail": str(exc), "path": str(command_path)}
+        except PermissionError as exc:
+            return {"status": "FAIL", "detail": str(exc), "path": str(command_path)}
+        try:
+            returncode = proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_tree(proc)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            return {"status": "TIMEOUT", "detail": f"probe timed out after {timeout:.1f}s", "path": str(command_path)}
+        sink.seek(0)
+        output = one_line(sink.read(), limit=1500)
+    if returncode != 0 and not allow_nonzero:
+        return {"status": "FAIL", "detail": f"exit={returncode} {output}", "path": str(command_path)}
+    if returncode != 0 and allow_nonzero:
         return {
             "status": "FOUND_WITH_WARN",
-            "detail": f"exit={proc.returncode} (nonzero allowed) {output}",
+            "detail": f"exit={returncode} (nonzero allowed) {output}",
             "path": str(command_path),
         }
-    return {"status": "FOUND", "detail": f"exit={proc.returncode} {output}", "path": str(command_path)}
+    return {"status": "FOUND", "detail": f"exit={returncode} {output}", "path": str(command_path)}
 
 
 def check_tool(tool: dict[str, Any]) -> dict[str, Any]:
@@ -408,6 +444,16 @@ def main(argv: list[str]) -> int:
         tools = [t for t in tools if t.get("board") in boards]
 
     results = [check_tool(t) for t in tools]
+    # Optional external tools (tshark, ilspycmd, WABT) must not fail the core toolcheck.
+    for tool, result in zip(tools, results):
+        if not tool.get("optional"):
+            continue
+        if result["status"] == "MISSING":
+            result["status"] = "SKIPPED"
+            result["detail"] = f"optional: {result.get('detail', '')}".strip()
+        elif result["status"] in {"FAIL", "TIMEOUT"}:
+            result["status"] = "FOUND_WITH_WARN"
+            result["detail"] = f"optional: {result.get('detail', '')}".strip()
     bad_status = {"MISSING", "FAIL", "TIMEOUT"}
     warn_status = {"FOUND_WITH_WARN"}
     found_status = {"FOUND", *warn_status}

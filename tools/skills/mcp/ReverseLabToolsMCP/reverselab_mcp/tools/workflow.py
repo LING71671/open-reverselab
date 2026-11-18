@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -17,6 +18,7 @@ from . import (
     ioc_extract,
     procmon_filters,
     sigma_stub,
+    static_analysis,
     triage,
     yara_stub,
 )
@@ -55,6 +57,8 @@ def _artifact_paths(result: dict[str, Any]) -> list[str]:
         "battleplan_path",
         "headless_log_path",
         "script_log_path",
+        "summary_path",
+        "database_path",
     }
     for key, value in result.items():
         if not isinstance(value, str):
@@ -155,7 +159,7 @@ def _write_battleplan_report(
                 f"| {index} | `{item.get('entry', '')}` | `{item.get('name', '')}` | `{reasons}` | `{item.get('score', '')}` |"
             )
     else:
-        lines.append("- 没有 Ghidra focus queue。可运行 `ghidra_headless_analyze` 后重跑此工作流。")
+        lines.append("- 没有静态分析 focus queue。可运行 `static_headless_analyze`（IDA 优先，Ghidra 备用）后重跑此工作流。")
 
     lines.extend(["", "## 4. Dynamic Plan", ""])
     debug_step = steps.get("x64dbg_breakpoints", {})
@@ -201,6 +205,8 @@ def sample_full_workup(
     overwrite_note: bool = True,
     report_path: str = "",
     ghidra_timeout_seconds: int = 1800,
+    static_backend: str = "",
+    run_static: bool = True,
 ) -> dict[str, Any]:
     """Run an evidence-producing reverse-engineering workflow for one sample."""
     sample = str(resolve_file(sample_path))
@@ -209,11 +215,14 @@ def sample_full_workup(
     steps["triage"] = _safe_step("triage", triage.triage_pe, sample, True)
 
     effective_summary = summary_path
-    if run_ghidra:
-        steps["ghidra_headless"] = _safe_step(
-            "ghidra_headless",
-            ghidra_headless.ghidra_headless_analyze,
+    selected_backend = "ghidra" if run_ghidra else (static_backend or os.environ.get("REVERSELAB_STATIC_BACKEND", "auto"))
+    if run_ghidra or (run_static and not effective_summary):
+        analysis_step = "ghidra_headless" if run_ghidra else "static_analysis"
+        steps[analysis_step] = _safe_step(
+            analysis_step,
+            static_analysis.static_headless_analyze,
             sample,
+            selected_backend,
             "",
             True,
             600,
@@ -222,13 +231,13 @@ def sample_full_workup(
             600,
             500,
         )
-        effective_summary = _summary_path_from_step(steps["ghidra_headless"], effective_summary)
+        effective_summary = _summary_path_from_step(steps[analysis_step], effective_summary)
 
     if effective_summary:
         steps["ghidra_overview"] = _safe_step("ghidra_overview", ghidra_summary.ghidra_summary_overview, effective_summary)
         steps["ghidra_call_focus"] = _safe_step("ghidra_call_focus", ghidra_summary.ghidra_summary_call_focus, effective_summary, "", "", 32, 40)
     else:
-        steps["ghidra_call_focus"] = {"status": "skipped", "reason": "no summary_path and run_ghidra=False"}
+        steps["ghidra_call_focus"] = {"status": "skipped", "reason": "no usable static summary"}
 
     steps["analysis_note"] = _safe_step(
         "analysis_note",
@@ -298,6 +307,7 @@ def sample_full_workup(
 
     manifest_path = battleplan.with_suffix(".json")
     manifest = {
+        "static_backend": selected_backend,
         "sample_path": sample,
         "summary_path": effective_summary,
         "battleplan_path": str(battleplan),
@@ -311,6 +321,7 @@ def sample_full_workup(
 
     return {
         "sample_path": sample,
+        "static_backend": selected_backend,
         "summary_path": effective_summary,
         "battleplan_path": str(battleplan),
         "manifest_path": str(manifest_path),
@@ -472,14 +483,15 @@ def _build_action_queue(manifest: dict[str, Any], max_actions: int) -> list[dict
     if not summary_path:
         actions.append(
             _action(
-                "run_ghidra_full_workup",
+                "run_static_full_workup",
                 "sample_full_workup",
                 100,
-                "No Ghidra summary is attached; function-level automation needs one.",
+                "No static summary is attached; use IDA first and Ghidra as fallback.",
                 {
                     "sample_path": sample_path,
                     "summary_path": "",
-                    "run_ghidra": True,
+                    "run_static": True,
+                    "static_backend": manifest.get("static_backend", ""),
                     "generate_rules": True,
                     "overwrite_note": True,
                 },
@@ -494,7 +506,7 @@ def _build_action_queue(manifest: dict[str, Any], max_actions: int) -> list[dict
                     "make_focus_function_breakpoints",
                     "make_x64dbg_breakpoint_script",
                     95,
-                    "Ghidra summary has focus functions; generate module-relative function breakpoints.",
+                    "Static summary has focus functions; generate module-relative function breakpoints.",
                     {
                         "sample_path": sample_path,
                         "summary_path": summary_path,

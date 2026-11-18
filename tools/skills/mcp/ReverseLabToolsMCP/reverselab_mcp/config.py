@@ -110,11 +110,16 @@ except FileNotFoundError:
     RZ_HASH_EXE = CUTTER_ROOT / ("rz-hash.exe" if IS_WINDOWS else "rz-hash")
     RZ_ASM_EXE = CUTTER_ROOT / ("rz-asm.exe" if IS_WINDOWS else "rz-asm")
 
-# DiE (version-flexible)
-try:
-    DIE_ROOT = _find_glob(TOOLS_WINDOWS_DIR / "die", "die*/", "DiE")
-except FileNotFoundError:
-    DIE_ROOT = TOOLS_WINDOWS_DIR / "die" / "die"
+# DiE (version-flexible). Current portable bundles place diec.exe directly
+# under tools/windows/die; older bundles used an extra die/ subdirectory.
+_DIE_BASE_DIR = TOOLS_WINDOWS_DIR / "die"
+if (_DIE_BASE_DIR / ("diec.exe" if IS_WINDOWS else "diec")).is_file():
+    DIE_ROOT = _DIE_BASE_DIR
+else:
+    try:
+        DIE_ROOT = _find_glob(_DIE_BASE_DIR, "die*/", "DiE")
+    except FileNotFoundError:
+        DIE_ROOT = _DIE_BASE_DIR / "die"
 try:
     DIEC_EXE = _find_exe(DIE_ROOT, ["diec.exe", "diec"], "diec")
 except FileNotFoundError:

@@ -14,6 +14,9 @@
 - `ai_tool.py` — AI 工具路由器
 - `ai_context.py` — 任务上下文生成
 - `ai_finding.py` — 发现记录管理
+- `install_engines.ps1` — 可选外部工具（Wireshark / ilspycmd / WABT）干跑检查与安装
+- `gen_capability_matrix.py` — 从 registry 生成 `docs/capability-matrix.md`（`--check` 检测漂移）
+- `verify_engines.py` — 验收：profile、原生格式回退与 .NET 元数据兜底
 
 ## macOS/Linux quick start
 

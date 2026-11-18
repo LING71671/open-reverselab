@@ -6,6 +6,7 @@ from typing import Any
 from ..config import GHIDRA_EXPORTS_DIR
 from ..errors import ToolError
 from ..paths import resolve_summary
+from ..static_config import IDA_EXPORTS_DIR
 from ..utils import contains, match_any
 from .procmon_filters import PRESET_FILTERS
 
@@ -21,13 +22,15 @@ def load_summary(summary_path: str = "") -> tuple[Any, dict[str, Any]]:
 def ghidra_summary_list(limit: int = 20) -> dict[str, Any]:
     GHIDRA_EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
     items = []
-    for path in sorted(GHIDRA_EXPORTS_DIR.glob("*-ghidra-summary.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+    candidates = [*GHIDRA_EXPORTS_DIR.glob("*-ghidra-summary.json"), *IDA_EXPORTS_DIR.glob("*-ida-summary.json")]
+    for path in sorted(candidates, key=lambda item: item.stat().st_mtime, reverse=True):
         items.append(
             {
                 "path": str(path),
                 "name": path.name,
                 "size": path.stat().st_size,
                 "mtime": path.stat().st_mtime,
+                "backend": "ida" if path.name.endswith("-ida-summary.json") else "ghidra",
             }
         )
     return {
@@ -41,6 +44,7 @@ def ghidra_summary_overview(summary_path: str = "") -> dict[str, Any]:
     return {
         "summary_path": str(path),
         "export_schema": data.get("export_schema", "legacy"),
+        "backend": data.get("backend", "ghidra"),
         "program": data.get("program", {}),
         "memory_blocks": data.get("memory_blocks", []),
         "functions_total": data.get("functions_total", 0),

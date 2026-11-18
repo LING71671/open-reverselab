@@ -7,7 +7,7 @@ from pathlib import Path
 from .config import REVERSE_ROOT
 
 
-def run(args: list[str], timeout: int = 60) -> tuple[int, str, str]:
+def run(args: list[str], timeout: int = 60, env: dict[str, str] | None = None) -> tuple[int, str, str]:
     startupinfo = None
     creationflags = 0
     if os.name == "nt":
@@ -24,6 +24,7 @@ def run(args: list[str], timeout: int = 60) -> tuple[int, str, str]:
         encoding="utf-8",
         errors="replace",
         timeout=timeout,
+        env=env,
         startupinfo=startupinfo,
         creationflags=creationflags,
     )

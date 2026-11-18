@@ -29,6 +29,8 @@ write_wrapper ai_context scripts/misc/ai_context.py
 write_wrapper ai_tool scripts/misc/ai_tool.py
 write_wrapper ai_finding scripts/misc/ai_finding.py
 write_wrapper ai_toolcheck scripts/misc/ai_toolcheck.py
+write_wrapper verify_engines scripts/misc/verify_engines.py
+write_wrapper capability_matrix scripts/misc/gen_capability_matrix.py
 
 echo "ReverseLab POSIX wrappers ready under tools/bin"
 echo "Add to PATH for this shell:"
