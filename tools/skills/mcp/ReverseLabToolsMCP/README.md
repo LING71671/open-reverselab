@@ -70,6 +70,27 @@ uv sync
 | | `toolbox_run` | 运行工具 |
 | | `mcp_self_update` | 更新自身配置 |
 | **项目设置** | `project_skills_status` | 检查 skills/MCP 安装状态 + 推荐安装命令 |
+| **PCAP** | `pcap_summary` | tshark 协议层级与捕获元数据 |
+| | `pcap_extract_http` | 提取 HTTP 请求/响应行 |
+| **.NET** | `dotnet_metadata` | 无依赖读取 CLI 头与元数据版本 |
+| | `dotnet_list_types` | ilspycmd 列出类型 |
+| | `dotnet_decompile_type` | ilspycmd 反编译单个类型 |
+| **WASM** | `wasm_info` | WABT 节区结构 + WAT 预览 |
+
+## 工具 profiles
+
+服务器默认 `legacy`（全部工具，行为不变）。通过 `REVERSELAB_PROFILE` 或 `--profile` 选择：
+
+`legacy` · `common` · `ctf` · `pe` · `apk` · `general`
+
+`common`、`pe`、`apk`、`general` 提供 `kb_router` 和 `kb_read_file`，可检索和读取防御与共享参考文档。
+
+```bash
+python reverse_lab_tools_mcp.py --profile-report pe   # 查看某 profile 会加载哪些工具
+python reverse_lab_tools_mcp.py --profile pe --list-tools
+```
+
+能力矩阵见仓库根目录 `docs/capability-matrix.md`。
 
 ## 路径约定
 
@@ -82,6 +103,10 @@ uv sync
 | `REVERSELAB_HOST_PYTHON` | 宿主机 Python 路径（用于启动 GUI 工具） |
 | `ANDROID_SDK_PLATFORM_TOOLS` | Android SDK platform-tools 路径 |
 | `MUMU_SERIAL` | MuMu 模拟器 ADB 序列号，默认 `127.0.0.1:16384` |
+| `REVERSELAB_PROFILE` | 工具 profile：`legacy`（默认）/`common`/`ctf`/`pe`/`apk`/`general` |
+| `TSHARK_COMMAND` / `CAPINFOS_COMMAND` | tshark/capinfos 的绝对路径（可选） |
+| `ILSPYCMD_COMMAND` | ilspycmd 绝对路径 |
+| `WASM_OBJDUMP` / `WASM2WAT` | WABT 工具绝对路径 |
 
 ## Burp → sqlmap 接入链
 
@@ -89,3 +114,8 @@ uv sync
 2. 调用 `ctf_save_request(raw_request, case_name, filename)`，文件会落到 `exports/ctf-website/<case>/requests/`。
 3. 调用 `run_sqlmap_request(request_path, "--batch --level=3 --risk=2")`。
 4. 用 `burp_status()` 做无弹窗状态检查；只有用户明确要求打开 GUI 时才调用 `burp_launch(launch=True)`。
+
+
+## IDA-first static analysis
+
+The default sample workflow now uses IDA first and falls back to Ghidra. New tools: `static_backend_status`, `static_headless_analyze`, `ida_headless_analyze` and `static_summary_*`. Existing Ghidra-specific tools remain available. See `docs/static-analysis-backends.md` at the repository root for configuration, isolation, legacy arguments and server reload instructions.

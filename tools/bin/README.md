@@ -26,13 +26,13 @@ export PATH="$PWD/tools/bin:$PWD/tools/ctf-website/bin:$PATH"
 - `ai_tool.bat` → `scripts/misc/ai_tool.py`
 - `ai_finding.bat` → `scripts/misc/ai_finding.py`
 - `ai_toolcheck.bat` → `scripts/misc/ai_toolcheck.py`
+- `verify_engines.bat` → `scripts/misc/verify_engines.py`
+- `capability_matrix.bat` → `scripts/misc/gen_capability_matrix.py`
 
 macOS/Linux 同时提供无扩展名 wrapper：
 
-- `ai_context` → `scripts/misc/ai_context.py`
-- `ai_tool` → `scripts/misc/ai_tool.py`
-- `ai_finding` → `scripts/misc/ai_finding.py`
-- `ai_toolcheck` → `scripts/misc/ai_toolcheck.py`
+- `ai_context` / `ai_tool` / `ai_finding` / `ai_toolcheck`
+- `verify_engines` / `capability_matrix`
 
 各 board 的外部工具 wrapper 由 `install_tools.ps1` 创建。验证：
 

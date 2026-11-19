@@ -9,6 +9,9 @@
 - 密码学基础与攻击（AES/DES/RSA/ECC 算法层）
 - 编码与序列化（Base64/Protobuf/MessagePack/ASN.1）
 - 协议分析通用方法（TCP/UDP/SCTP 抓包分析）
+- 抓包初筛（pcap/pcapng → 协议层级 → HTTP/端点）
+- .NET 托管程序集（CLI 头 / 元数据 / ilspycmd）
+- WebAssembly（WABT / 节区 / WAT / 导入导出）
 - 固件/IoT/嵌入式逆向
 - 硬件安全（SPI/I2C/JTAG/UART）
 - 无线电安全（BLE/ZigBee/LoRa/NFC）
@@ -18,6 +21,8 @@
 ## 工具链
 
 - Wireshark / tcpdump — 网络抓包
+- ilspycmd — .NET 反编译（`dotnet tool install -g ilspycmd`）
+- WABT — WebAssembly（wasm-objdump / wasm2wat）
 - binwalk / firmware-mod-kit — 固件分析
 - Ghidra（多架构） — 反编译
 - Rizin / radare2 — 通用反汇编
@@ -34,11 +39,14 @@
 kb/general/
 ├── crypto/         密码学攻击
 ├── protocol/       协议分析
-├── firmware/       固件/IoT
-├── hardware/       硬件安全
-├── radio/          无线电安全
+├── pcap/           抓包初筛
+├── dotnet/         .NET 托管程序集
+├── wasm/           WebAssembly
+├── firmware/       固件/IoT（占位）
+├── hardware/       硬件安全（占位）
+├── radio/          无线电安全（占位）
 ├── methodology/    逆向方法论
-└── ai-security/    AI/LLM 安全
+└── ai-security/    AI/LLM 安全（占位）
 ```
 
 ## 分析流程

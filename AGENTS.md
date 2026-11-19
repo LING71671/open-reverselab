@@ -22,6 +22,18 @@
 - 所有结论必须说明证据来源，不能凭空猜测。
 - 界面设计极简约束（非必要不添加文字）：严禁在空状态堆砌欢迎词、解释段落与示例提示词气泡，界面仅保留核心功能 ID、目标标签与操作控件。
 
+## 工具 profile 与可选工具
+
+MCP 服务器默认 `legacy`（全部工具，行为不变）。按任务设置 `REVERSELAB_PROFILE`：
+`common` / `ctf` / `pe` / `apk` / `general`。
+
+- 遇到 .NET / WASM / pcap，优先使用原生适配器（`dotnet_metadata` / `pcap_summary` /
+  `wasm_info`）；它们需要外部的 ilspycmd / tshark / WABT 时，缺失统一返回
+  `missing_engine` 信封。
+- **不要**把缺失当成空结果，也不要写成“未发现”；否则会把环境问题误判成样本结论。
+- 能力矩阵以 `docs/capability-matrix.md` 为准（由 registry 生成）。
+- 新工具必须声明 profile 与 target format，并返回统一信封；否则不计入能力矩阵。
+
 ## Web CTF 知识库
 
 做 Web/CTF 目标分析时，**必须先查知识库再动手**：
@@ -444,3 +456,11 @@ host: <主机名>
 
 ## 工作区
 ```
+
+
+## 静态分析后端策略：IDA 优先，Ghidra 备用
+
+- 默认调用 `static_headless_analyze`，自动顺序为 IDA → Ghidra；不要为了常规分析直接指定旧 Ghidra 工具。
+- `sample_full_workup` 默认启用此策略；已有 summary 时复用。`run_static=False` 可跳过静态分析，`run_ghidra=True` 是显式强制 Ghidra 的兼容参数。
+- 使用 `static_summary_*` 读取结果；IDA 缺失或分析失败的原因必须保留在 attempts 中。
+- 保留现有 cases/projects；IDA 使用独立新数据库，不覆盖原样本。配置和使用方式见 `docs/static-analysis-backends.md`。

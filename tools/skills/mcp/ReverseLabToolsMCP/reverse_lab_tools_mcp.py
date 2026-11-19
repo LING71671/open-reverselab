@@ -10,33 +10,40 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from typing import Any, Callable
 
 from mcp.server.fastmcp import FastMCP
 
+from reverselab_mcp import registry
 from reverselab_mcp import track as track_mod
 from reverselab_mcp.config import REVERSE_ROOT, SCRIPTS_DIR, SERVER_NAME
-from reverselab_mcp.paths import resolve_file
+from reverselab_mcp.paths import resolve_file, resolve_summary
 from reverselab_mcp.tools import (
     android_mumu,
     analysis_notes,
     crypto_unpack,
     debug_scripts,
+    dotnet,
     ghidra_headless,
     ghidra_summary,
+    ida_headless,
     ioc_extract,
     kb,
     mcp_update,
     mutations,
     patch_reports,
+    pcap,
     procmon_filters,
     python_re_tools,
     rizin_write,
     sample_crud,
     sigma_stub,
+    static_analysis,
     toolbox,
     triage,
     unpack_intake,
+    wasm,
     web_ctf,
     workflow,
     workspace_crud,
@@ -146,6 +153,78 @@ def ghidra_headless_analyze(
         string_limit,
         import_limit,
     )
+
+
+@mcp.tool()
+def static_backend_status() -> dict[str, Any]:
+    """查看 IDA/Ghidra 路径与默认顺序；路径存在不代表许可证和运行时已验证。"""
+    return _safe_call(static_analysis.static_backend_status)
+
+
+@mcp.tool()
+def static_headless_analyze(
+    path: str, backend: str = "", project_name: str = "", overwrite: bool = True,
+    analysis_timeout_seconds: int = 600, process_timeout_seconds: int = 1800,
+    function_limit: int = 300, string_limit: int = 300, import_limit: int = 300,
+) -> dict[str, Any]:
+    """默认 IDA 优先、失败后回退 Ghidra；backend=ida/ghidra 强制指定，不执行样本。"""
+    return _safe_call(static_analysis.static_headless_analyze, path, backend, project_name, overwrite,
+                      analysis_timeout_seconds, process_timeout_seconds, function_limit, string_limit, import_limit)
+
+
+@mcp.tool()
+def ida_headless_analyze(
+    path: str, project_name: str = "", overwrite: bool = True,
+    analysis_timeout_seconds: int = 600, process_timeout_seconds: int = 1800,
+    function_limit: int = 300, string_limit: int = 300, import_limit: int = 300,
+) -> dict[str, Any]:
+    """只用 IDA/IDAPython 分析，生成独立数据库和兼容摘要；不会改写原样本。"""
+    return _safe_call(ida_headless.ida_headless_analyze, path, project_name, overwrite,
+                      analysis_timeout_seconds, process_timeout_seconds, function_limit, string_limit, import_limit)
+
+
+def _static_summary_call(reader: Callable[..., dict[str, Any]], summary_path: str, *args: Any) -> dict[str, Any]:
+    def read() -> dict[str, Any]:
+        path = summary_path or str(resolve_summary(include_ida=True))
+        return reader(path, *args)
+
+    return _safe_call(read)
+
+
+@mcp.tool()
+def static_summary_list(limit: int = 20) -> dict[str, Any]:
+    """列出 IDA 与 Ghidra 摘要，包含后端标记。"""
+    return _safe_call(ghidra_summary.ghidra_summary_list, limit, include_ida=True)
+
+
+@mcp.tool()
+def static_summary_overview(summary_path: str = "") -> dict[str, Any]:
+    """读取 IDA/Ghidra 通用摘要概览。"""
+    return _static_summary_call(ghidra_summary.ghidra_summary_overview, summary_path)
+
+
+@mcp.tool()
+def static_summary_functions(summary_path: str = "", query: str = "", address: str = "", limit: int = 50) -> dict[str, Any]:
+    """按名称、signature 或地址查询 IDA/Ghidra 函数。"""
+    return _static_summary_call(ghidra_summary.ghidra_summary_functions, summary_path, query, address, limit)
+
+
+@mcp.tool()
+def static_summary_function_detail(summary_path: str = "", address: str = "", name: str = "", include_decompile: bool = True, max_decompile_chars: int = 12000) -> dict[str, Any]:
+    """读取函数的调用关系、导入/字符串引用及反编译预览。"""
+    return _static_summary_call(ghidra_summary.ghidra_summary_function_detail, summary_path, address, name, include_decompile, max_decompile_chars)
+
+
+@mcp.tool()
+def static_summary_imports(summary_path: str = "", query: str = "", library: str = "", min_refs: int = 0, limit: int = 50) -> dict[str, Any]:
+    """查询 IDA/Ghidra 摘要的导入符号与引用。"""
+    return _static_summary_call(ghidra_summary.ghidra_summary_imports, summary_path, query, library, min_refs, limit)
+
+
+@mcp.tool()
+def static_summary_strings(summary_path: str = "", query: str = "", min_length: int = 0, limit: int = 50) -> dict[str, Any]:
+    """查询 IDA/Ghidra 摘要的字符串。"""
+    return _static_summary_call(ghidra_summary.ghidra_summary_strings, summary_path, query, min_length, limit)
 
 
 @mcp.tool()
@@ -1076,8 +1155,10 @@ def sample_full_workup(
     overwrite_note: bool = True,
     report_path: str = "",
     ghidra_timeout_seconds: int = 1800,
+    static_backend: str = "",
+    run_static: bool = True,
 ) -> dict[str, Any]:
-    """一键自动逆向工作流：triage、可选 Ghidra、重点函数队列、x64dbg/Procmon 计划、IOC、YARA/Sigma 草案和总控 manifest。"""
+    """一键逆向：默认 IDA 优先/Ghidra 备用；run_static=False 跳过分析，run_ghidra=True 保留旧版强制 Ghidra 行为。"""
     return _safe_call(
         workflow.sample_full_workup,
         sample_path,
@@ -1087,6 +1168,8 @@ def sample_full_workup(
         overwrite_note,
         report_path,
         ghidra_timeout_seconds,
+        static_backend,
+        run_static,
     )
 
 
@@ -1110,7 +1193,10 @@ def http_probe(url: str, timeout: int = 15) -> dict[str, Any]:
 
 @mcp.tool()
 def kb_router(query: str, board: str = "", track: str = "") -> dict[str, Any]:
-    """按信号与轨道搜索知识库（支持 ctf-website/apk-reverse/pe-reverse/general），返回匹配技术文件与配对关系。"""
+    """按信号与轨道搜索知识库（支持 ctf-website/apk-reverse/pe-reverse/general）。
+
+    board 可选: ctf-website|apk-reverse|pe-reverse|general；track 可选: blue|red|both。
+    """
     return _safe_call(kb.kb_router, query, board, track)
 
 
@@ -1240,6 +1326,44 @@ def project_skills_status() -> dict[str, Any]:
             else f"Run install commands above for missing skills ({len(status) - installed} remaining)"
         ),
     }
+
+
+# ── Cross-format engines and fallbacks ──
+
+@mcp.tool()
+def pcap_summary(path: str, display_filter: str = "", max_packets: int = 0) -> dict[str, Any]:
+    """用 tshark 汇总 pcap/pcapng：包数、捕获元数据、协议层级。缺失时返回 missing_engine。"""
+    return _safe_call(pcap.pcap_summary, path, display_filter, max_packets)
+
+
+@mcp.tool()
+def pcap_extract_http(path: str, kind: str = "request", max_rows: int = 500) -> dict[str, Any]:
+    """用 tshark 从抓包中提取 HTTP 请求/响应行（request|response|both）。"""
+    return _safe_call(pcap.pcap_extract_http, path, kind, max_rows)
+
+
+@mcp.tool()
+def dotnet_metadata(path: str) -> dict[str, Any]:
+    """判断 PE 是否为 .NET 托管程序集，并读取 CLI 头与元数据版本（无外部依赖）。"""
+    return _safe_call(dotnet.dotnet_metadata, path)
+
+
+@mcp.tool()
+def dotnet_list_types(path: str, kind: str = "classes") -> dict[str, Any]:
+    """用 ilspycmd 列出 .NET 程序集中的类型（classes|interfaces|structs|enums|delegates）。"""
+    return _safe_call(dotnet.dotnet_list_types, path, kind)
+
+
+@mcp.tool()
+def dotnet_decompile_type(path: str, type_name: str) -> dict[str, Any]:
+    """用 ilspycmd 反编译 .NET 程序集中的一个类型为 C# 源码。"""
+    return _safe_call(dotnet.dotnet_decompile_type, path, type_name)
+
+
+@mcp.tool()
+def wasm_info(path: str, wat_bytes: int = 8192) -> dict[str, Any]:
+    """用 WABT 检查 WebAssembly 模块：节区/指令结构 + WAT 文本预览。"""
+    return _safe_call(wasm.wasm_info, path, wat_bytes)
 
 
 def _self_test(path: str) -> int:
@@ -1698,6 +1822,24 @@ def _android_mumu_test() -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ReverseLab local tools MCP server")
+    parser.add_argument(
+        "--profile",
+        default=os.environ.get(registry.PROFILE_ENV, registry.DEFAULT_PROFILE),
+        choices=list(registry.PROFILES),
+        help="tool profile to expose (default: legacy = every tool)",
+    )
+    parser.add_argument(
+        "--list-tools",
+        action="store_true",
+        help="apply the profile, print the exposed tool list as JSON, and exit",
+    )
+    parser.add_argument(
+        "--profile-report",
+        nargs="?",
+        const="",
+        metavar="PROFILE",
+        help="print a profile summary and exit (defaults to --profile)",
+    )
     parser.add_argument("--self-test", metavar="FILE", help="run tool self-test against a file and exit")
     parser.add_argument("--headless-test", metavar="FILE", help="run Ghidra headless smoke test against a file and exit")
     parser.add_argument("--summary-test", nargs="?", const="", metavar="SUMMARY_JSON", help="run Ghidra summary query smoke test and exit")
@@ -1804,6 +1946,33 @@ def main() -> None:
         raise SystemExit(_sample_autopilot_round_test(args.sample_autopilot_round_test, args.sample_autopilot_execute))
     if args.android_mumu_test:
         raise SystemExit(_android_mumu_test())
+
+    if args.profile_report is not None:
+        print(json.dumps(registry.profile_report(args.profile_report or args.profile), ensure_ascii=False, indent=2))
+        return
+
+    applied = registry.apply_profile(mcp, args.profile)
+    if not applied.get("ok"):
+        raise SystemExit(applied.get("error", "failed to apply profile"))
+
+    if args.profile in {"apk", "pe", "general", "common"}:
+        # Keep the public tool names stable across local sample-analysis profiles.
+        for name, reader in (("kb_router", kb.blue_kb_router), ("kb_read_file", kb.blue_kb_read_file)):
+            mcp.remove_tool(name)
+            mcp.add_tool(reader, name=name)
+
+    if args.list_tools:
+        print(
+            json.dumps(
+                {
+                    "profile": applied,
+                    "tools": sorted(mcp._tool_manager._tools),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return
 
     mcp.run()
 

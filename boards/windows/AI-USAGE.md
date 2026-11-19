@@ -16,7 +16,7 @@
 ## 分析流程
 
 1. 先做文件识别 (DiE/PE-bear)
-2. Ghidra 静态分析，命名函数，标注关键逻辑
+2. 默认使用 static_headless_analyze：IDA 优先，失败后回退 Ghidra；命名函数并标注证据
 3. 需要动态验证时用 x64dbg 或 Frida
 4. Procmon 采集行为日志 → `exports/windows/procmon/`
 5. IOC 提取 → `exports/windows/iocs/`
@@ -88,3 +88,10 @@
 ### 知识库
 
 PE 逆向知识库位于 `kb/pe-reverse/`，当前覆盖 5 个分类 9 篇技术文件（每篇含可运行 C++/Frida 代码）。详见 `kb/shared/pe-reverse/techniques/README.md`。
+
+## 静态分析后端策略：IDA 优先，Ghidra 备用
+
+- 默认调用 `static_headless_analyze`，自动顺序为 IDA → Ghidra；不要为了常规分析直接指定旧 Ghidra 工具。
+- `sample_full_workup` 默认启用此策略；已有 summary 时复用。`run_static=False` 可跳过静态分析，`run_ghidra=True` 是显式强制 Ghidra 的兼容参数。
+- 使用 `static_summary_*` 读取结果；IDA 缺失或分析失败的原因必须保留在 attempts 中。
+- 保留现有 cases/projects；IDA 使用独立新数据库，不覆盖原样本。配置和使用方式见 `docs/static-analysis-backends.md`。

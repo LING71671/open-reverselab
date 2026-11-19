@@ -33,6 +33,7 @@ def ghidra_headless_analyze(
     output_json = GHIDRA_EXPORTS_DIR / f"{sample_slug}-ghidra-summary.json"
     headless_log = GHIDRA_EXPORTS_DIR / f"{sample_slug}-headless.log"
     script_log = GHIDRA_EXPORTS_DIR / f"{sample_slug}-script.log"
+    previous_summary_stamp = output_json.stat().st_mtime_ns if output_json.exists() else None
 
     args = [
         str(GHIDRA_HEADLESS_BAT),
@@ -65,14 +66,17 @@ def ghidra_headless_analyze(
     code, stdout, stderr = run(args, timeout=max(1, process_timeout_seconds))
 
     summary = None
-    if output_json.exists():
+    if code == 0 and output_json.exists() and output_json.stat().st_mtime_ns != previous_summary_stamp:
         summary = json.loads(output_json.read_text(encoding="utf-8", errors="replace"))
 
     headless_log_text = read_text(headless_log)
     script_log_text = read_text(script_log)
+    timed_out = "Analysis timed out" in headless_log_text or "analysis timed out" in stdout
 
     return {
         "tool": "ghidra_analyzeHeadless",
+        "backend": "ghidra",
+        "status": "ok" if code == 0 and isinstance(summary, dict) and not timed_out else "error",
         "returncode": code,
         "target": str(target),
         "project_location": str(GHIDRA_PROJECTS_DIR),
@@ -81,7 +85,7 @@ def ghidra_headless_analyze(
         "headless_log_path": str(headless_log),
         "script_log_path": str(script_log),
         "summary": summary,
-        "analysis_timed_out": "Analysis timed out" in headless_log_text or "analysis timed out" in stdout,
+        "analysis_timed_out": timed_out,
         "stdout": stdout[-12000:],
         "stderr": stderr[-12000:],
         "headless_log_tail": headless_log_text,

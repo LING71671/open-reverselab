@@ -25,7 +25,7 @@ PE 逆向知识库 `kb/pe-reverse/`：24 篇 C++/Frida 可运行技术文件，�
 
 1. 样本放入 `samples/windows/`（恶意样本先进 `samples/_quarantine/`）
 2. 初始识别：DiE → PE-bear → strings
-3. 静态分析：Ghidra 反编译 → 笔记写入 `notes/windows/`
+3. 静态分析：IDA 优先、Ghidra 备用的统一反编译 → 笔记写入 `notes/windows/`
 4. 动态分析：x64dbg/Procmon → 脚本放入 `scripts/windows/`
 5. Patch → 产物放入 `patches/windows/`
 6. IOC/YARA/Sigma → `exports/windows/`
@@ -36,3 +36,6 @@ PE 逆向知识库 `kb/pe-reverse/`：24 篇 C++/Frida 可运行技术文件，�
 - 笔记模板：`templates/notes/windows-pe-analysis.md`
 - 通用分析模板：`templates/notes/sample-analysis.md`
 - AI 操作指南：[AI-USAGE.md](AI-USAGE.md)
+
+
+静态分析后端与配置详见 [IDA-first backend guide](../../docs/static-analysis-backends.md)。

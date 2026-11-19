@@ -75,7 +75,36 @@ python3 scripts/misc/setup_unattended_ctf_runner.py --overwrite
 - Claude Code: 本地 settings 允许 Bash、文件读写、搜索和 Web 工具。
 - 这些文件是本地运行配置，不作为公开制品提交。
 
-## 2.2 公共仓库边界
+## 2.2 工具 profile 与可选工具
+
+MCP 服务器默认加载 `legacy`（全部工具，行为不变）。按任务选择 profile，减少无关 schema：
+
+| profile | 适用场景 |
+|---|---|
+| `legacy` | 现有配置；不裁剪 |
+| `common` | 立案、初筛、工作区、工具状态 |
+| `ctf` | Web / HTTP / CTF |
+| `pe` | PE/ELF 静态、动态、补丁、IOC |
+| `apk` | Android 静态、Frida、加密 |
+| `general` | 加密、协议、pcap、.NET、WASM |
+
+设置方式：`.mcp.json` 的 `env.REVERSELAB_PROFILE`，或启动参数 `--profile <name>`。
+查看某个 profile 会暴露哪些工具：
+
+```bash
+python tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py --profile-report pe
+```
+
+可选外部工具（默认不安装，缺失时返回 `missing_engine`，不要当成空结果）：
+
+- **tshark**：`pcap_summary` / `pcap_extract_http`。
+- **ilspycmd**：`dotnet_list_types` / `dotnet_decompile_type`。
+- **WABT**：`wasm_info`。
+- 可用 `python scripts/misc/install_engines.ps1`（干跑）确认，或运行
+  `python scripts/misc/lab_healthcheck.py` 查看工具状态。
+- 能力矩阵：`docs/capability-matrix.md`（由 registry 生成）。
+
+## 2.3 公共仓库边界
 
 不要把私人工作区的 `cases/`、samples、日志、真实目标、凭据、用户目录或个人信息
 迁入本仓库。通用发现应去标识化后写入 `kb/`；发布前运行
@@ -137,3 +166,11 @@ Playwright     判断是否新增      kb/   技术文档        git commit
 python scripts/misc/lab_healthcheck.py
 python scripts/misc/ai_toolcheck.py
 ```
+
+
+## 静态分析后端策略：IDA 优先，Ghidra 备用
+
+- 默认调用 `static_headless_analyze`，自动顺序为 IDA → Ghidra；不要为了常规分析直接指定旧 Ghidra 工具。
+- `sample_full_workup` 默认启用此策略；已有 summary 时复用。`run_static=False` 可跳过静态分析，`run_ghidra=True` 是显式强制 Ghidra 的兼容参数。
+- 使用 `static_summary_*` 读取结果；IDA 缺失或分析失败的原因必须保留在 attempts 中。
+- 保留现有 cases/projects；IDA 使用独立新数据库，不覆盖原样本。配置和使用方式见 `docs/static-analysis-backends.md`。

@@ -404,6 +404,26 @@ def kb_read_file(technique_path: str, board: str = "") -> dict[str, Any]:
     return result
 
 
+def blue_kb_router(query: str, board: str = "", track: str = "") -> dict[str, Any]:
+    """Search defensive and shared references for a sample-analysis profile."""
+    if track.strip().lower() not in ("", "auto", "blue"):
+        return {"error": "This profile searches the blue knowledge track."}
+    return kb_router(query, board, "blue")
+
+
+def blue_kb_read_file(technique_path: str, board: str = "") -> dict[str, Any]:
+    """Read a defensive or shared reference from the source tree or an installed edition."""
+    if technique_path.startswith("reverselab://"):
+        documents = _extensions().catalog("blue")
+        if any(doc["path"] == technique_path for doc in documents):
+            return kb_read_file(technique_path, board)
+    else:
+        result = kb_read_file(technique_path, board)
+        if "error" in result or result.get("track") in ("blue", "both"):
+            return result
+    return {"error": "This document is outside the blue knowledge track."}
+
+
 def kb_catalog(board: str = "", track: str = "") -> dict[str, Any]:
     """列出知识库所有板块、分类、条目数、文件数与轨道分布。
 

@@ -25,7 +25,9 @@ $wrappers = @(
     @{ Name = "ai_context"; Script = "scripts\misc\ai_context.py" },
     @{ Name = "ai_tool"; Script = "scripts\misc\ai_tool.py" },
     @{ Name = "ai_finding"; Script = "scripts\misc\ai_finding.py" },
-    @{ Name = "ai_toolcheck"; Script = "scripts\misc\ai_toolcheck.py" }
+    @{ Name = "ai_toolcheck"; Script = "scripts\misc\ai_toolcheck.py" },
+    @{ Name = "verify_engines"; Script = "scripts\misc\verify_engines.py" },
+    @{ Name = "capability_matrix"; Script = "scripts\misc\gen_capability_matrix.py" }
 )
 
 foreach ($item in $wrappers) {

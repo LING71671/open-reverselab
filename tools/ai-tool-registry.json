@@ -609,6 +609,89 @@
       },
       "ai_callable": true,
       "notes": "抓包/改包/发包: capture(抓包保存JSON), modify(代理+addon实时改包), replay(重放已抓flow), craft(构造发包). CA证书在%USERPROFILE%/.mitmproxy/."
+    },
+    {
+      "id": "misc.engine_verify",
+      "board": "misc",
+      "name": "Engine integration verifier",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\verify_engines.bat",
+      "args": [
+        "--help"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 120000
+      },
+      "ai_callable": true,
+      "notes": "Acceptance check for profiles and native fallbacks; optional external tools are reported by lab_healthcheck.py."
+    },
+    {
+      "id": "misc.capability_matrix",
+      "board": "misc",
+      "name": "Capability matrix generator",
+      "launch_mode": "cli",
+      "command": "tools\\bin\\capability_matrix.bat",
+      "args": [
+        "--check"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 60000
+      },
+      "ai_callable": true,
+      "notes": "Regenerates docs/capability-matrix.md from the MCP registry."
+    },
+    {
+      "id": "misc.tshark",
+      "board": "misc",
+      "name": "tshark (Wireshark)",
+      "launch_mode": "cli",
+      "command": "tshark",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 20000
+      },
+      "ai_callable": true,
+      "optional": true,
+      "notes": "Optional: enables pcap_summary and pcap_extract_http."
+    },
+    {
+      "id": "misc.ilspycmd",
+      "board": "misc",
+      "name": "ilspycmd",
+      "launch_mode": "cli",
+      "command": "ilspycmd",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 20000
+      },
+      "ai_callable": true,
+      "optional": true,
+      "notes": "Optional: enables dotnet_list_types and dotnet_decompile_type."
+    },
+    {
+      "id": "misc.wabt",
+      "board": "misc",
+      "name": "WABT (wasm-objdump)",
+      "launch_mode": "cli",
+      "command": "wasm-objdump",
+      "args": [
+        "--version"
+      ],
+      "safe_probe": {
+        "type": "command",
+        "timeout_ms": 20000
+      },
+      "ai_callable": true,
+      "optional": true,
+      "notes": "Optional: enables wasm_info and WABT-based inspection."
     }
   ]
 }
