@@ -615,9 +615,9 @@
       "board": "misc",
       "name": "Engine integration verifier",
       "launch_mode": "cli",
-      "command": "tools\\bin\\verify_engines.bat",
+      "command": "python",
       "args": [
-        "--help"
+        "scripts/misc/verify_engines.py"
       ],
       "safe_probe": {
         "type": "command",

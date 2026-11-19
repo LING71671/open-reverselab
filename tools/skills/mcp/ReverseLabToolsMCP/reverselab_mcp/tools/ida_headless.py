@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import uuid
@@ -41,6 +42,7 @@ def ida_headless_analyze(
     staged_input.parent.mkdir()
     shutil.copy2(target, staged_input)
     output = IDA_EXPORTS_DIR / f"{name}-{run_id}-ida-summary.json"
+    private_output = project / "analysis-summary.json"
     log = IDA_EXPORTS_DIR / f"{name}-{run_id}-ida.log"
     database = project / "analysis.i64"
     options = project / "export-options.json"
@@ -49,32 +51,47 @@ def ida_headless_analyze(
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     options.write_text(json.dumps({
-        "target": str(target), "sha256": digest.hexdigest(), "output": str(output),
-        "run_id": run_id, "function_limit": max(0, function_limit),
+        "target": str(target), "sha256": digest.hexdigest(), "run_id": run_id, "output": str(private_output),
+        "analysis_timeout_seconds": max(1, analysis_timeout_seconds),
+        "function_limit": max(0, function_limit),
         "string_limit": max(0, string_limit), "import_limit": max(0, import_limit),
     }, ensure_ascii=False), encoding="utf-8")
     args = [str(executable), "-A", "-c", f"-o{database}", f"-L{log}",
             f'-S"{IDA_SCRIPT}" "{options}"', str(staged_input)]
     timed_out = False
     try:
-        code, stdout, stderr = run(args, timeout=min(max(1, process_timeout_seconds), max(1, analysis_timeout_seconds)))
+        code, stdout, stderr = run(args, timeout=max(1, process_timeout_seconds))
     except subprocess.TimeoutExpired:
         code, stdout, stderr, timed_out = -1, "", "IDA analysis exceeded the configured timeout", True
     summary = None
-    if output.is_file():
+    if private_output.is_file():
         try:
-            summary = json.loads(output.read_text(encoding="utf-8"))
+            candidate = json.loads(private_output.read_text(encoding="utf-8"))
+            if candidate.get("run_id") == run_id and candidate.get("summary_sha256") == digest.hexdigest():
+                summary = candidate
         except (OSError, ValueError) as exc:
             stderr += f"\nInvalid IDA summary: {exc}"
-    error_output = output.with_suffix(".error.json")
+    error_output = private_output.with_suffix(".error.json")
     if summary is None and error_output.is_file():
         try:
             stderr += "\n" + str(json.loads(error_output.read_text(encoding="utf-8")).get("error", "IDA export failed"))
         except (OSError, ValueError):
             stderr += "\nIDA export failed; inspect the headless log"
-    valid = isinstance(summary, dict) and summary.get("run_id") == run_id and not summary.get("error")
+    valid = (
+        isinstance(summary, dict)
+        and summary.get("run_id") == run_id
+        and summary.get("summary_sha256") == digest.hexdigest()
+        and isinstance(summary.get("program"), dict)
+        and all(isinstance(summary.get(key), list) for key in ("functions", "imports", "strings"))
+        and not summary.get("error")
+    )
+    if code == 0 and valid and not timed_out:
+        IDA_EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        temporary = output.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(temporary, output)
     result = {
-        "tool": "ida_headless", "backend": "ida", "returncode": code,
+        "tool": "ida_headless", "backend": "ida", "returncode": code, "run_id": run_id, "target_sha256": digest.hexdigest(),
         "target": str(target), "project_location": str(project), "project_name": project.name,
         "database_path": str(database), "summary_path": str(output), "summary": summary,
         "headless_log_path": str(log), "analysis_timed_out": timed_out,

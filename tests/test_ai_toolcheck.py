@@ -44,6 +44,18 @@ def test_allow_nonzero_command_is_warning_not_failure():
     assert "nonzero allowed" in result["detail"]
 
 
+def test_optional_tool_policy_skips_missing_by_default_but_fails_in_strict_mode():
+    tools = [{"id": "misc.wabt", "optional": True}]
+    default_result = {"status": "MISSING", "detail": "not found"}
+    strict_result = {"status": "MISSING", "detail": "not found"}
+
+    ai_toolcheck.apply_optional_policy(tools, [default_result], strict=False)
+    ai_toolcheck.apply_optional_policy(tools, [strict_result], strict=True)
+
+    assert default_result["status"] == "SKIPPED"
+    assert strict_result["status"] == "MISSING"
+
+
 def test_render_md_includes_board_summary():
     payload = {
         "time": "2026-01-01T00:00:00+00:00",

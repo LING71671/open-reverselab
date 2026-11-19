@@ -39,6 +39,15 @@ COMMON_TOOLS = frozenset(
     {
         "kb_router",
         "kb_read_file",
+        "kb_catalog",
+        "kb_graph",
+        "kb_get",
+        "kb_neighbors",
+        "kb_pin",
+        # Track controls are needed by red-gated tools in every board profile.
+        "get_track_status",
+        "set_track",
+        "route_track",
         "hash_file",
         "triage_pe",
         "die_scan",
@@ -232,7 +241,8 @@ def classify(name: str) -> tuple[str, tuple[str, ...]]:
         return "android", ("apk",)
     if name in PE_TOOLS or name.startswith(PE_PREFIXES):
         return "pe", ("pe",)
-    return "pe", ("pe",)
+    # Unknown future tools stay available in legacy only until explicitly classified.
+    return "other", ("legacy",)
 
 
 def native_specs(path: Path | None = None) -> list[OperationSpec]:

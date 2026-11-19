@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -92,7 +93,7 @@ def _triage_highlights(triage_result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _summary_path_from_step(step: dict[str, Any], fallback: str) -> str:
-    if step.get("status") != "ok":
+    if step.get("status") not in {"ok", "partial"}:
         return fallback
     value = str(step.get("summary_path", "")).strip()
     return value or fallback
@@ -112,7 +113,7 @@ def _write_battleplan_report(
         path.parent.mkdir(parents=True, exist_ok=True)
     else:
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        path = REPORTS_DIR / f"{slug(Path(sample_name).stem)}-battleplan-{stamp}.md"
+        path = REPORTS_DIR / f"{slug(Path(sample_name).stem)}-battleplan-{stamp}-{uuid.uuid4().hex[:8]}.md"
 
     triage_result = steps.get("triage", {})
     highlights = _triage_highlights(triage_result) if triage_result.get("status") == "ok" else {}
@@ -138,7 +139,7 @@ def _write_battleplan_report(
     lines.extend(["", "## 2. Generated Artifacts", ""])
     artifacts: list[str] = []
     for step_name, result in steps.items():
-        if result.get("status") != "ok":
+        if result.get("status") not in {"ok", "partial"}:
             continue
         for artifact in _artifact_paths(result):
             if artifact and artifact not in artifacts:
@@ -224,7 +225,7 @@ def sample_full_workup(
             sample,
             selected_backend,
             "",
-            True,
+            False,
             600,
             ghidra_timeout_seconds,
             500,
@@ -298,11 +299,12 @@ def sample_full_workup(
 
     battleplan = _write_battleplan_report(sample, steps, report_path)
     ok_count = sum(1 for result in steps.values() if result.get("status") == "ok")
+    partial_count = sum(1 for result in steps.values() if result.get("status") == "partial")
     error_count = sum(1 for result in steps.values() if result.get("status") == "error")
     skipped_count = sum(1 for result in steps.values() if result.get("status") == "skipped")
     artifact_paths: list[str] = [str(battleplan)]
     for result in steps.values():
-        if result.get("status") == "ok":
+        if result.get("status") in {"ok", "partial"}:
             artifact_paths.extend(path for path in _artifact_paths(result) if path not in artifact_paths)
 
     manifest_path = battleplan.with_suffix(".json")
@@ -312,6 +314,7 @@ def sample_full_workup(
         "summary_path": effective_summary,
         "battleplan_path": str(battleplan),
         "ok_count": ok_count,
+        "partial_count": partial_count,
         "error_count": error_count,
         "skipped_count": skipped_count,
         "artifact_paths": artifact_paths,
@@ -326,6 +329,7 @@ def sample_full_workup(
         "battleplan_path": str(battleplan),
         "manifest_path": str(manifest_path),
         "ok_count": ok_count,
+        "partial_count": partial_count,
         "error_count": error_count,
         "skipped_count": skipped_count,
         "artifact_paths": artifact_paths,

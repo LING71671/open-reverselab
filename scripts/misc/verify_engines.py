@@ -18,6 +18,7 @@ import argparse
 import json
 import struct
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,6 +28,7 @@ from reverselab_mcp import registry  # noqa: E402
 from reverselab_mcp.tools import dotnet  # noqa: E402
 
 REQUIRED_FILES = [
+    "tests/fixtures/legacy-mcp-tools.txt",
     "docs/capability-matrix.md",
     "docs/static-analysis-backends.md",
     "tools/skills/mcp/ReverseLabToolsMCP/reverselab_mcp/registry.py",
@@ -46,6 +48,7 @@ def _build_managed_pe() -> bytes:
     struct.pack_into("<H", data, 0x46, 1)
     struct.pack_into("<H", data, 0x54, 0xF0)
     struct.pack_into("<H", data, 0x58, 0x20B)
+    struct.pack_into("<I", data, 0x58 + 108, 16)
     directories = 0x58 + 112
     struct.pack_into("<I", data, directories + 14 * 8, 0x1000)
     struct.pack_into("<I", data, directories + 14 * 8 + 4, 0x48)
@@ -90,15 +93,24 @@ def main() -> int:
     missing = [rel for rel in REQUIRED_FILES if not (ROOT / rel).is_file()]
     record("deliverable files", not missing, missing or "all present")
 
-    legacy = registry.profile_report("legacy")
-    record(
-        "profiles",
-        legacy["total"] >= 120,
-        {name: registry.profile_report(name)["total"] for name in registry.PROFILES},
-    )
+    legacy_names = set(registry.profile_report("legacy").get("tools", []))
+    baseline = {
+        line.strip()
+        for line in (ROOT / "tests/fixtures/legacy-mcp-tools.txt").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+    missing_tools = sorted(baseline - legacy_names)
+    record("legacy tool compatibility", not missing_tools, missing_tools or f"all {len(baseline)} baseline names remain")
+    profile_sizes = {name: registry.profile_report(name)["total"] for name in registry.PROFILES}
+    record("profile registry", profile_sizes.get("legacy", 0) >= len(baseline), profile_sizes)
 
-    fixture = _fixture(ROOT / "tmp" / "engine-verify")
-    metadata = dotnet.dotnet_metadata(str(fixture))
+    # Keep the fixture inside the repository so resolve_file() accepts it, but give every run
+    # a fresh directory so a stale fixture can never mask a parser regression.
+    tmp_root = ROOT / "tmp"
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="reverselab-engine-verify-", dir=tmp_root) as fixture_dir:
+        fixture = _fixture(Path(fixture_dir))
+        metadata = dotnet.dotnet_metadata(str(fixture))
     record(
         "dotnet_metadata fallback (no external tool)",
         bool(metadata.get("ok")) and bool(metadata.get("findings", {}).get("is_managed")),
