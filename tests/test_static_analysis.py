@@ -31,15 +31,35 @@ def lab(tmp_path, monkeypatch):
 
 
 def summary_result(folder, backend="ida", **changes):
-    data = {"backend": backend, "program": {"name": "sample.exe"}, "functions": [], "imports": [], "strings": []}
+    data = {
+        "backend": backend,
+        "run_id": "test-run",
+        "target_sha256": "synthetic-test-digest",
+        "analysis_complete": True,
+        "program": {"name": "sample.exe"},
+        "functions": [],
+        "imports": [],
+        "strings": [],
+    }
     path = folder / f"sample-{backend}-summary.json"
     path.write_text(json.dumps(data), encoding="utf-8")
-    return {"returncode": 0, "summary_path": str(path), "summary": data, **changes}
+    return {"returncode": 0, "status": "ok", "run_id": "test-run", "summary_path": str(path), "summary": data, **changes}
+
+
+def _set_test_target_digest(result, sample):
+    import hashlib
+
+    digest = hashlib.sha256(sample.read_bytes()).hexdigest()
+    result["summary"]["target_sha256"] = digest
+    result["target_sha256"] = digest
+    if result.get("summary_path"):
+        Path(result["summary_path"]).write_text(json.dumps(result["summary"]), encoding="utf-8")
+    return result
 
 
 def test_auto_prefers_ida(lab, monkeypatch):
     _, sample, ida, _ = lab
-    monkeypatch.setattr(ida_headless, "ida_headless_analyze", lambda *a: summary_result(ida))
+    monkeypatch.setattr(ida_headless, "ida_headless_analyze", lambda *a: _set_test_target_digest(summary_result(ida), sample))
     monkeypatch.setattr(ghidra_headless, "ghidra_headless_analyze", lambda *a: pytest.fail("Ghidra must not run"))
     result = static_analysis.static_headless_analyze(str(sample))
     assert result["backend"] == "ida" and not result["fallback_used"]
@@ -58,7 +78,7 @@ def test_auto_falls_back_for_ida_failures(lab, monkeypatch, failure):
         if failure == "malformed": Path(result["summary_path"]).write_text("{}")
         return result
     monkeypatch.setattr(ida_headless, "ida_headless_analyze", fail)
-    monkeypatch.setattr(ghidra_headless, "ghidra_headless_analyze", lambda *a: summary_result(ghidra, "ghidra"))
+    monkeypatch.setattr(ghidra_headless, "ghidra_headless_analyze", lambda *a: _set_test_target_digest(summary_result(ghidra, "ghidra"), sample))
     result = static_analysis.static_headless_analyze(str(sample))
     assert result["status"] == "ok" and result["backend"] == "ghidra" and result["fallback_used"]
     assert [a["backend"] for a in result["attempts"]] == ["ida", "ghidra"]
@@ -76,8 +96,8 @@ def test_explicit_ida_never_silently_switches(lab, monkeypatch):
 def test_environment_default_and_explicit_override(lab, monkeypatch):
     _, sample, ida, ghidra = lab
     monkeypatch.setenv("REVERSELAB_STATIC_BACKEND", "ghidra")
-    monkeypatch.setattr(ida_headless, "ida_headless_analyze", lambda *a: summary_result(ida))
-    monkeypatch.setattr(ghidra_headless, "ghidra_headless_analyze", lambda *a: summary_result(ghidra, "ghidra"))
+    monkeypatch.setattr(ida_headless, "ida_headless_analyze", lambda *a: _set_test_target_digest(summary_result(ida), sample))
+    monkeypatch.setattr(ghidra_headless, "ghidra_headless_analyze", lambda *a: _set_test_target_digest(summary_result(ghidra, "ghidra"), sample))
     assert static_analysis.static_headless_analyze(str(sample))["backend"] == "ghidra"
     assert static_analysis.static_headless_analyze(str(sample), "auto")["backend"] == "ida"
 
@@ -88,7 +108,8 @@ def test_both_fail_without_success_or_summary(lab, monkeypatch):
         monkeypatch.setattr(module, name, lambda *a: {"returncode": 9, "stderr": "failed"})
     result = static_analysis.static_headless_analyze(str(sample))
     assert result["status"] == "error" and result["summary"] is None and not result["summary_path"]
-    assert len(result["attempts"]) == 2
+    assert result["ok"] is False and result["schema"] == "reverselab.envelope.v1"
+    assert len(result["findings"]["attempts"]) == 2
 
 
 def test_invalid_input_never_launches(lab, monkeypatch):
@@ -143,7 +164,14 @@ def test_ida_uses_fresh_database_and_preserves_input(lab, monkeypatch, input_nam
         calls.append(args)
         project = Path(next(a[2:] for a in args if a.startswith("-o"))).parent
         options = json.loads((project / "export-options.json").read_text())
-        data = {"run_id": options["run_id"], "program": {}, "functions": [], "imports": [], "strings": []}
+        data = {
+            "run_id": options["run_id"],
+            "summary_sha256": options["sha256"],
+            "program": {},
+            "functions": [],
+            "imports": [],
+            "strings": [],
+        }
         Path(options["output"]).write_text(json.dumps(data))
         return 0, "", ""
     monkeypatch.setattr(ida_headless, "run", run)
@@ -153,6 +181,81 @@ def test_ida_uses_fresh_database_and_preserves_input(lab, monkeypatch, input_nam
     assert a["status"] == b["status"] == "ok" and a["project_location"] != b["project_location"]
     assert sample.read_bytes() == before and Path(calls[0][-1]) != sample
     assert "-A" in calls[0] and "-c" in calls[0]
+
+
+def test_ida_timeout_after_private_write_is_not_published(lab, monkeypatch):
+    root, sample, ida, _ = lab
+    exe = root / "idat.exe"; exe.write_bytes(b"mock")
+    script = root / "export.py"; script.write_text("# mock")
+    monkeypatch.setattr(ida_headless, "find_ida_executable", lambda: exe)
+    monkeypatch.setattr(ida_headless, "IDA_SCRIPT", script)
+    monkeypatch.setattr(ida_headless, "IDA_EXPORTS_DIR", ida)
+    monkeypatch.setattr(ida_headless, "IDA_PROJECTS_DIR", root / "projects")
+
+    def run(args, timeout):
+        project = Path(next(a[2:] for a in args if a.startswith("-o"))).parent
+        options = json.loads((project / "export-options.json").read_text())
+        Path(options["output"]).write_text(json.dumps({
+            "run_id": options["run_id"],
+            "summary_sha256": options["sha256"],
+            "program": {},
+            "functions": [],
+            "imports": [],
+            "strings": [],
+        }))
+        raise subprocess.TimeoutExpired("idat", timeout)
+
+    monkeypatch.setattr(ida_headless, "run", run)
+    result = ida_headless.ida_headless_analyze(str(sample))
+
+    assert result["status"] == "error" and result["analysis_timed_out"] is True
+    assert not Path(result["summary_path"]).exists()
+    assert list(ida.glob("*-ida-summary.json")) == []
+
+
+def test_router_rejects_summary_that_differs_from_disk(lab, monkeypatch):
+    _, sample, ida, _ = lab
+    returned = _set_test_target_digest(summary_result(ida), sample)
+    on_disk = dict(returned["summary"], program={"name": "another.exe"})
+    Path(returned["summary_path"]).write_text(json.dumps(on_disk))
+    monkeypatch.setattr(ida_headless, "ida_headless_analyze", lambda *a: returned)
+    monkeypatch.setattr(ghidra_headless, "ghidra_headless_analyze", lambda *a: pytest.fail("unexpected fallback"))
+
+    result = static_analysis.static_headless_analyze(str(sample), backend="ida")
+
+    assert result["status"] == "error" and result["ok"] is False
+    assert "different summary" in result["findings"]["attempts"][0]["error"]
+
+
+def test_ghidra_runs_use_distinct_outputs_for_same_stem(lab, monkeypatch):
+    root, sample, _, ghidra = lab
+    exe = root / "analyzeHeadless"; exe.write_text("mock")
+    script = root / "ReverseLabExportSummary.java"; script.write_text("mock")
+    monkeypatch.setattr(ghidra_headless, "GHIDRA_EXPORTS_DIR", ghidra)
+    monkeypatch.setattr(ghidra_headless, "GHIDRA_PROJECTS_DIR", root / "gprojects")
+    monkeypatch.setattr(ghidra_headless, "GHIDRA_SCRIPT_DIR", root)
+    monkeypatch.setattr(ghidra_headless, "GHIDRA_HEADLESS_BAT", exe)
+
+    def run(args, timeout):
+        output = Path(args[args.index("-postScript") + 2])
+        output.write_text(json.dumps({
+            "run_id": args[-2],
+            "target_sha256": args[-1],
+            "analysis_complete": True,
+            "program": {"name": sample.name},
+            "functions": [],
+            "imports": [],
+            "strings": [],
+        }))
+        return 0, "", ""
+
+    monkeypatch.setattr(ghidra_headless, "run", run)
+    first = ghidra_headless.ghidra_headless_analyze(str(sample))
+    second = ghidra_headless.ghidra_headless_analyze(str(sample))
+
+    assert first["status"] == second["status"] == "ok"
+    assert first["summary_path"] != second["summary_path"]
+    assert json.loads(Path(first["summary_path"]).read_text()) == first["summary"]
 
 
 def test_failed_export_is_not_published_as_successful_summary(tmp_path, monkeypatch):
@@ -199,13 +302,17 @@ def test_workflow_default_legacy_and_skip_modes(lab, monkeypatch, kwargs, expect
         p = root / "report.md"; p.write_text("test"); return p
     monkeypatch.setattr(workflow, "_write_battleplan_report", report)
     selected = []
+    captured = []
     def safe_step(name, func, *args, **kw):
         if name in ["static_analysis", "ghidra_headless"]:
             selected.append(args[1])
+            captured.append(args)
             return {"status": "ok", "summary_path": "new.json", "backend": args[1]}
         return {"status": "ok"}
     monkeypatch.setattr(workflow, "_safe_step", safe_step)
     result = workflow.sample_full_workup(str(sample), **kwargs)
     assert selected == ([] if expected is None else [expected])
+    if captured and not kwargs.get("run_ghidra"):
+        assert captured[0][3] is False, "default workup must not overwrite an existing project"
     manifest = json.loads(Path(result["manifest_path"]).read_text())
     assert manifest["static_backend"] == result["static_backend"]

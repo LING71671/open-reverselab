@@ -3,6 +3,9 @@
 
 import java.io.File;
 import java.io.FileWriter;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -183,11 +186,12 @@ public class ReverseLabExportSummary extends GhidraScript {
 	@Override
 	public void run() throws Exception {
 		String[] args = getScriptArgs();
-		if (args.length < 1) {
-			throw new IllegalArgumentException("usage: ReverseLabExportSummary.java <output.json> [functionLimit] [stringLimit] [importLimit]");
+		if (args.length < 6) {
+			throw new IllegalArgumentException("usage: ReverseLabExportSummary.java <output.json> <functionLimit> <stringLimit> <importLimit> <runId> <targetSha256>");
 		}
 
 		File outputFile = new File(args[0]);
+		File temporaryFile = new File(outputFile.getPath() + ".tmp");
 		File parent = outputFile.getParentFile();
 		if (parent != null) {
 			parent.mkdirs();
@@ -198,7 +202,7 @@ public class ReverseLabExportSummary extends GhidraScript {
 		int importLimit = parseLimit(args, 3, 300);
 
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		JsonWriter writer = new JsonWriter(new FileWriter(outputFile));
+		JsonWriter writer = new JsonWriter(new FileWriter(temporaryFile));
 		writer.setIndent("  ");
 
 		Listing listing = currentProgram.getListing();
@@ -248,6 +252,8 @@ public class ReverseLabExportSummary extends GhidraScript {
 
 		writer.beginObject();
 		writer.name("export_schema").value("reverselab-ghidra-summary-v2");
+		writer.name("run_id").value(args[4]);
+		writer.name("target_sha256").value(args[5]);
 
 		writer.name("program").beginObject();
 		writer.name("name").value(currentProgram.getName());
@@ -386,10 +392,17 @@ public class ReverseLabExportSummary extends GhidraScript {
 		writer.endArray();
 		writer.name("strings_total").value(stringTotal);
 		writer.name("strings_returned").value(stringCount);
+		writer.name("analysis_complete").value(!monitor.isCancelled());
 
 		writer.endObject();
 		writer.close();
 		decompiler.dispose();
+		try {
+			Files.move(temporaryFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+		}
+		catch (AtomicMoveNotSupportedException e) {
+			Files.move(temporaryFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		}
 
 		println("ReverseLab summary written to " + outputFile.getAbsolutePath());
 	}

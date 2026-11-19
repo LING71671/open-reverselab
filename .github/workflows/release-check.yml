@@ -57,11 +57,12 @@ jobs:
           pip install uv
           uv sync --project tools/skills/mcp/ReverseLabToolsMCP
           uv run --project tools/skills/mcp/ReverseLabToolsMCP python tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py --help
+          uv run --project tools/skills/mcp/ReverseLabToolsMCP python tools/skills/mcp/ReverseLabToolsMCP/reverse_lab_tools_mcp.py --profile pe --list-tools
       - name: Capability matrix drift
         run: python scripts/misc/gen_capability_matrix.py --check
       - name: Registry, fallback, and static analysis tests
         shell: pwsh
-        run: uv run --project tools/skills/mcp/ReverseLabToolsMCP --with pytest python -B -m pytest tests/test_reverselab_registry.py tests/test_reverselab_fallbacks.py tests/test_static_analysis.py -o addopts= -q -p no:cacheprovider
+        run: uv run --project tools/skills/mcp/ReverseLabToolsMCP --with pytest python -B -m pytest tests/test_reverselab_registry.py tests/test_reverselab_fallbacks.py tests/test_static_analysis.py tests/test_mcp_profile_registration.py -o addopts= -q -p no:cacheprovider
       - name: Native fallback verification
         run: python scripts/misc/verify_engines.py --json reports/misc/engine-verification.json
 

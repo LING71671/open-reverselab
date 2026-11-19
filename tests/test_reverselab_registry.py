@@ -25,11 +25,16 @@ class FakeMCP:
         self._tool_manager._tools[name] = fn
 
 
-def test_legacy_covers_every_registered_tool():
+def test_legacy_retains_every_upstream_tool_name():
     discovered = {name for name, _ in registry.discover_native_tools()}
     specs = {spec.name for spec in registry.native_specs()}
+    baseline = {
+        line.strip()
+        for line in (ROOT / "tests/fixtures/legacy-mcp-tools.txt").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
     assert discovered == specs
-    assert len(specs) >= 120
+    assert baseline <= specs, f"removed legacy tools: {sorted(baseline - specs)}"
 
 
 def test_profiles_are_disjoint_by_format():
@@ -51,6 +56,15 @@ def test_profiles_are_disjoint_by_format():
 def test_common_profile_always_has_intake_and_workspace_tools():
     common = registry.allowed_tools("common")
     assert {"hash_file", "triage_pe", "static_backend_status"} <= common
+
+
+@pytest.mark.parametrize("profile", ["common", "ctf", "pe", "apk", "general"])
+def test_every_profile_can_switch_tracks_and_read_knowledge(profile):
+    tools = registry.allowed_tools(profile)
+    assert {
+        "get_track_status", "set_track", "route_track",
+        "kb_router", "kb_read_file", "kb_catalog",
+    } <= tools
 
 
 def test_general_profile_owns_new_format_tools():

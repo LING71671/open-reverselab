@@ -16,6 +16,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -251,22 +252,47 @@ def check_file(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _kill_tree(proc: subprocess.Popen) -> None:
+def _kill_tree(proc: subprocess.Popen) -> str:
     """Kill the probe and any children it spawned.
 
     A wrapper (`.bat`, venv launcher) may start the real tool as a grandchild; killing only the
     direct child leaves the tool running and holding inherited handles.
     """
     if os.name == "nt":
-        subprocess.run(
-            ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return
-    proc.kill()
+        try:
+            result = subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return ""
+            cleanup_error = f"taskkill exited {result.returncode}: {one_line(result.stderr or result.stdout, 240)}"
+        except subprocess.TimeoutExpired:
+            cleanup_error = "taskkill exceeded its 5 second cleanup deadline"
+        except OSError as exc:
+            cleanup_error = f"taskkill failed to start: {exc}"
+        if proc.poll() is None:
+            try:
+                proc.kill()
+            except OSError as exc:
+                cleanup_error += f"; direct process kill failed: {exc}"
+        return cleanup_error
+
+    if proc.poll() is None:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError) as exc:
+            if proc.poll() is None:
+                try:
+                    proc.kill()
+                except OSError as kill_exc:
+                    return f"process-group kill failed: {exc}; direct process kill failed: {kill_exc}"
+            return f"process-group kill failed; used direct process fallback: {exc}"
+    return ""
 
 
 def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]:
@@ -297,6 +323,7 @@ def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]
                 stdout=sink,
                 stderr=subprocess.STDOUT,
                 shell=False,
+                start_new_session=(os.name != "nt"),
             )
         except FileNotFoundError as exc:
             return {"status": "MISSING", "detail": str(exc), "path": str(command_path)}
@@ -305,14 +332,27 @@ def check_command(tool: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any]
         try:
             returncode = proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            _kill_tree(proc)
+            cleanup_error = _kill_tree(proc)
             try:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                pass
-            return {"status": "TIMEOUT", "detail": f"probe timed out after {timeout:.1f}s", "path": str(command_path)}
+                try:
+                    proc.kill()
+                    proc.wait(timeout=1)
+                except (OSError, subprocess.TimeoutExpired) as exc:
+                    cleanup_error = "; ".join(filter(None, [cleanup_error, f"failed to reap probe: {exc}"]))
+            detail = f"probe timed out after {timeout:.1f}s"
+            if cleanup_error:
+                detail += f"; cleanup: {cleanup_error}"
+            return {"status": "TIMEOUT", "detail": detail, "path": str(command_path)}
         sink.seek(0)
-        output = one_line(sink.read(), limit=1500)
+        tail = ""
+        while True:
+            chunk = sink.read(65536)
+            if not chunk:
+                break
+            tail = (tail + chunk)[-65536:]
+        output = one_line(tail, limit=1500)
     if returncode != 0 and not allow_nonzero:
         return {"status": "FAIL", "detail": f"exit={returncode} {output}", "path": str(command_path)}
     if returncode != 0 and allow_nonzero:
@@ -358,6 +398,22 @@ def check_tool(tool: dict[str, Any]) -> dict[str, Any]:
         "ai_callable": bool(tool.get("ai_callable")),
         **result,
     }
+
+
+def apply_optional_policy(tools: list[dict[str, Any]], results: list[dict[str, Any]], *, strict: bool) -> None:
+    """Keep optional-tool failures nonfatal unless the caller requested strict mode."""
+
+    if strict:
+        return
+    for tool, result in zip(tools, results):
+        if not tool.get("optional"):
+            continue
+        if result["status"] == "MISSING":
+            result["status"] = "SKIPPED"
+            result["detail"] = f"optional: {result.get('detail', '')}".strip()
+        elif result["status"] in {"FAIL", "TIMEOUT"}:
+            result["status"] = "FOUND_WITH_WARN"
+            result["detail"] = f"optional: {result.get('detail', '')}".strip()
 
 
 def render_md(payload: dict[str, Any]) -> str:
@@ -412,7 +468,12 @@ def render_md(payload: dict[str, Any]) -> str:
             suggestion = str(s.get("suggestion", "")).replace("|", "\\|")
             lines.append(f"| {s.get('name') or s.get('id')} | {s.get('status')} | {suggestion} |")
     else:
-        lines += ["所有工具状态正常，无需处理。"]
+        skipped = [r for r in payload["results"] if r.get("status") == "SKIPPED"]
+        if skipped:
+            names = ", ".join(str(r.get("name") or r.get("id")) for r in skipped)
+            lines += [f"没有阻断性错误；以下可选工具未安装或未检查：{names}。"]
+        else:
+            lines += ["所有工具状态正常，无需处理。"]
     lines += [
         "",
         "## No-popup rule",
@@ -434,6 +495,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--registry", default=str(REGISTRY))
     ap.add_argument("--out-dir", default=str(REPORT_DIR))
     ap.add_argument("--board", action="append", help="Limit to one board; can repeat")
+    ap.add_argument("--strict", action="store_true", help="treat missing optional tools as failures")
     args = ap.parse_args(argv)
 
     registry_path = Path(args.registry)
@@ -444,16 +506,8 @@ def main(argv: list[str]) -> int:
         tools = [t for t in tools if t.get("board") in boards]
 
     results = [check_tool(t) for t in tools]
-    # Optional external tools (tshark, ilspycmd, WABT) must not fail the core toolcheck.
-    for tool, result in zip(tools, results):
-        if not tool.get("optional"):
-            continue
-        if result["status"] == "MISSING":
-            result["status"] = "SKIPPED"
-            result["detail"] = f"optional: {result.get('detail', '')}".strip()
-        elif result["status"] in {"FAIL", "TIMEOUT"}:
-            result["status"] = "FOUND_WITH_WARN"
-            result["detail"] = f"optional: {result.get('detail', '')}".strip()
+    # Optional external tools (tshark, ilspycmd, WABT) are nonfatal by default.
+    apply_optional_policy(tools, results, strict=args.strict)
     bad_status = {"MISSING", "FAIL", "TIMEOUT"}
     warn_status = {"FOUND_WITH_WARN"}
     found_status = {"FOUND", *warn_status}

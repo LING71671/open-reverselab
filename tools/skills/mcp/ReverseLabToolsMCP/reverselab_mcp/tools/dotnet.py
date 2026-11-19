@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import shutil
 import struct
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -44,18 +45,28 @@ def _layout(data: bytes) -> dict[str, Any]:
     section_count = _u16(data, file_header + 2)
     optional_size = _u16(data, file_header + 16)
     optional = file_header + 20
+    optional_end = optional + optional_size
+    if optional_size < 2 or optional_end > len(data):
+        raise ToolError("PE optional header is truncated")
     magic = _u16(data, optional)
     if magic == 0x10B:
         bits = 32
-        directories = optional + 96
+        number_of_directories_offset = 92
+        directories_offset = 96
     elif magic == 0x20B:
         bits = 64
-        directories = optional + 112
+        number_of_directories_offset = 108
+        directories_offset = 112
     else:
         raise ToolError(f"unsupported PE optional header magic 0x{magic:X}")
+    if optional_size < number_of_directories_offset + 4:
+        raise ToolError("PE optional header does not declare the data-directory count")
+    directory_count = _u32(data, optional + number_of_directories_offset)
+    if directory_count > 14 and optional_size < directories_offset + 15 * 8:
+        raise ToolError("PE declares a COM descriptor outside the optional header")
 
     sections = []
-    table = optional + optional_size
+    table = optional_end
     for index in range(section_count):
         entry = table + index * 40
         if entry + 40 > len(data):
@@ -69,7 +80,12 @@ def _layout(data: bytes) -> dict[str, Any]:
                 "raw_pointer": _u32(data, entry + 20),
             }
         )
-    return {"bits": bits, "directories": directories, "sections": sections}
+    return {
+        "bits": bits,
+        "directories": optional + directories_offset,
+        "directory_count": directory_count,
+        "sections": sections,
+    }
 
 
 def _rva_to_offset(layout: dict[str, Any], rva: int) -> int | None:
@@ -107,6 +123,13 @@ def dotnet_metadata(path: str) -> dict[str, Any]:
     except (ToolError, OSError, struct.error) as exc:
         return fail("dotnet_metadata", kind="invalid_argument", message=str(exc))
 
+    if layout["directory_count"] <= 14:
+        return ok(
+            "dotnet_metadata",
+            target={"path": str(target), "format": "pe"},
+            findings={"is_managed": False, "reason": "COM descriptor data directory is not declared"},
+            coverage=Coverage(scope="cli header", complete=True),
+        )
     cli_rva = _u32(data, layout["directories"] + 14 * 8)
     cli_size = _u32(data, layout["directories"] + 14 * 8 + 4)
     if not cli_rva or not cli_size:
@@ -174,6 +197,15 @@ def _run_ilspy(arguments: list[str], operation: str, target: Path) -> dict[str, 
         )
     try:
         code, out, err = run([ilspy, *arguments], timeout=300)
+    except subprocess.TimeoutExpired as exc:
+        return fail(
+            operation,
+            kind="timeout",
+            message=f"ilspycmd exceeded its 300 second deadline: {exc}",
+            remedy="Try a smaller assembly or retry later.",
+            retryable=True,
+            target={"path": str(target), "format": "dotnet"},
+        )
     except (OSError, RuntimeError, ValueError) as exc:
         return fail(operation, kind="internal", message=f"ilspycmd failed to start: {exc}", retryable=True)
     if code != 0:

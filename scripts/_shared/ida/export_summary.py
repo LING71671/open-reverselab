@@ -5,6 +5,7 @@ does not start a debugger or execute the analyzed program.
 """
 import json
 import os
+import time
 import traceback
 from pathlib import Path
 
@@ -22,8 +23,15 @@ def export(options):
     import idautils
     import idc
 
+    deadline = time.monotonic() + max(1, int(options.get("analysis_timeout_seconds", 600)))
+
+    def check_deadline():
+        if time.monotonic() > deadline:
+            raise TimeoutError("IDA export exceeded analysis_timeout_seconds")
+
     if not ida_auto.auto_wait():
         raise RuntimeError("IDA auto-analysis was cancelled")
+    check_deadline()
     hx = None
     try:
         import ida_hexrays
@@ -51,9 +59,11 @@ def export(options):
 
     imports = {}
     for module in range(ida_nalt.get_import_module_qty()):
+        check_deadline()
         namespace = ida_nalt.get_import_module_name(module) or ""
 
         def capture(ea, name, ordinal, namespace=namespace):
+            check_deadline()
             refs, total = xrefs(ea)
             imports[int(ea)] = {"name": name or f"ordinal_{ordinal}", "address": addr(ea),
                                 "namespace": namespace, "reference_count": total, "xrefs": refs}
@@ -64,12 +74,14 @@ def export(options):
     items = idautils.Strings()
     items.setup(strtypes=[ida_nalt.STRTYPE_C, ida_nalt.STRTYPE_C_16])
     for item in items:
+        check_deadline()
         refs, total = xrefs(item.ea)
         strings[int(item.ea)] = {"address": addr(item.ea), "length": int(item.length),
                                "value": str(item), "reference_count": total, "xrefs": refs}
     starts = list(idautils.Functions())
     functions = []
     for ea in starts[:options["function_limit"]]:
+        check_deadline()
         fn = ida_funcs.get_func(ea)
         callers, callees, import_refs, string_refs = {}, {}, {}, {}
         for x in idautils.XrefsTo(ea, 0):
@@ -143,6 +155,8 @@ def main():
         options = json.loads(Path(idc.ARGV[1]).read_text(encoding="utf-8"))
         output = Path(options["output"])
         result = export(options)
+        result["summary_sha256"] = options["sha256"]
+        result["run_id"] = options["run_id"]
         temporary = output.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temporary, output)

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 from typing import Any
 
 from ..contracts.envelope import Coverage, component_failure, fail, ok
@@ -55,14 +56,22 @@ def pcap_summary(path: str, display_filter: str = "", max_packets: int = 0) -> d
     if not tshark:
         return _missing()
 
-    command = [tshark, "-r", str(target), "-q", "-z", "io,phs"]
-    if display_filter:
-        command += ["-Y", display_filter]
+    stats = "io,phs" if not display_filter else f"io,phs,{display_filter}"
+    command = [tshark, "-r", str(target), "-q", "-z", stats]
     if max_packets:
         command += ["-c", str(max_packets)]
 
     try:
         code, out, err = run(command, timeout=180)
+    except subprocess.TimeoutExpired as exc:
+        return fail(
+            "pcap_summary",
+            kind="timeout",
+            message=f"tshark exceeded its 180 second deadline: {exc}",
+            remedy="Use a smaller capture or retry with a focused display filter.",
+            retryable=True,
+            target={"path": str(target), "format": "pcap"},
+        )
     except (OSError, RuntimeError, ValueError) as exc:
         return fail(
             "pcap_summary",
@@ -92,16 +101,44 @@ def pcap_summary(path: str, display_filter: str = "", max_packets: int = 0) -> d
                 findings["capture"] = info_out
             else:
                 findings["capture_error"] = (info_err or info_out).strip()[:300]
+        except subprocess.TimeoutExpired as exc:
+            findings["capture_error"] = f"capinfos timed out: {exc}"
+            return fail(
+                "pcap_summary",
+                kind="partial",
+                message="Protocol hierarchy completed, but capinfos timed out.",
+                findings=findings,
+                target={"path": str(target), "format": "pcap"},
+                coverage=Coverage(scope="protocol hierarchy", complete=False, reason="capinfos timed out"),
+                retryable=True,
+            )
         except (OSError, RuntimeError, ValueError) as exc:
             findings["capture_error"] = str(exc)
+            return fail(
+                "pcap_summary",
+                kind="partial",
+                message="Protocol hierarchy completed, but capture metadata failed.",
+                findings=findings,
+                target={"path": str(target), "format": "pcap"},
+                coverage=Coverage(scope="protocol hierarchy", complete=False, reason="capture metadata failed"),
+                retryable=True,
+            )
     else:
         findings["capture_error"] = "capinfos not found; packet count omitted"
 
+    complete = not display_filter and max_packets <= 0 and "capture" in findings
+    reasons = []
+    if display_filter:
+        reasons.append("display filter applied")
+    if max_packets > 0:
+        reasons.append(f"limited to {max_packets} packets")
+    if "capture" not in findings:
+        reasons.append("capinfos metadata unavailable")
     return ok(
         "pcap_summary",
         target={"path": str(target), "format": "pcap"},
         findings=findings,
-        coverage=Coverage(scope="capture", complete=not display_filter, reason="display filter applied" if display_filter else ""),
+        coverage=Coverage(scope="capture", complete=complete, reason="; ".join(reasons)),
     )
 
 

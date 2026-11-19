@@ -15,7 +15,7 @@ from reverselab_mcp import runner
 from reverselab_mcp.tools import dotnet, pcap, wasm  # noqa: E402
 
 
-def _build_pe(managed: bool = True) -> bytes:
+def _build_pe(managed: bool = True, directory_count: int = 16) -> bytes:
     data = bytearray(0x400)
     data[0:2] = b"MZ"
     struct.pack_into("<I", data, 0x3C, 0x40)
@@ -24,6 +24,7 @@ def _build_pe(managed: bool = True) -> bytes:
     struct.pack_into("<H", data, 0x46, 1)
     struct.pack_into("<H", data, 0x54, 0xF0)
     struct.pack_into("<H", data, 0x58, 0x20B)
+    struct.pack_into("<I", data, 0x58 + 108, directory_count)
     directories = 0x58 + 112
     struct.pack_into("<I", data, directories + 14 * 8, 0x1000 if managed else 0)
     struct.pack_into("<I", data, directories + 14 * 8 + 4, 0x48 if managed else 0)
@@ -199,3 +200,86 @@ def test_real_tshark_finds_late_http_request(monkeypatch, tmp_path):
     rows = result["findings"]["request"]["rows"]
     assert [(row["frame.number"], row["http.request.uri"]) for row in rows] == [("501", "/fixture")]
     assert result["coverage"]["complete"]
+
+
+def test_dotnet_metadata_treats_undeclared_com_directory_as_absent(tmp_path, monkeypatch):
+    sample = tmp_path / "native.exe"
+    sample.write_bytes(_build_pe(managed=True, directory_count=0))
+    monkeypatch.setattr(dotnet, "resolve_file", lambda path: sample)
+
+    result = dotnet.dotnet_metadata(str(sample))
+
+    assert result["ok"] is True
+    assert result["findings"]["is_managed"] is False
+
+
+def test_dotnet_metadata_returns_structured_error_for_truncated_optional_header(tmp_path, monkeypatch):
+    sample = tmp_path / "truncated.exe"
+    image = bytearray(_build_pe())
+    struct.pack_into("<H", image, 0x54, 0x200)  # SizeOfOptionalHeader exceeds the file
+    sample.write_bytes(bytes(image)[:0x170])
+    monkeypatch.setattr(dotnet, "resolve_file", lambda path: sample)
+
+    result = dotnet.dotnet_metadata(str(sample))
+
+    assert result["ok"] is False
+    assert result["error"]["kind"] == "invalid_argument"
+
+
+def test_dotnet_ilspy_timeout_returns_retryable_envelope(monkeypatch, tmp_path):
+    sample = tmp_path / "managed.exe"
+    sample.write_bytes(_build_pe())
+    monkeypatch.setattr(dotnet, "resolve_file", lambda path: sample)
+    monkeypatch.setattr(dotnet, "_ilspycmd", lambda: "ilspycmd")
+    monkeypatch.setattr(dotnet, "run", lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired("ilspycmd", 300)))
+
+    result = dotnet.dotnet_list_types(str(sample))
+
+    assert result["ok"] is False
+    assert result["error"]["kind"] == "timeout"
+    assert result["error"]["retryable"] is True
+
+
+def test_pcap_summary_uses_statistics_filter(monkeypatch):
+    commands = []
+    monkeypatch.setattr(pcap, "resolve_file", lambda path: Path(__file__))
+    monkeypatch.setattr(pcap, "_tshark", lambda: "tshark")
+    monkeypatch.setattr(pcap, "_capinfos", lambda: None)
+    monkeypatch.setattr(pcap, "run", lambda command, **kwargs: (commands.append(command) or 0, "DNS", ""))
+
+    result = pcap.pcap_summary("anything.pcap", display_filter="dns")
+
+    assert result["ok"] is True
+    assert "io,phs,dns" in commands[0]
+    assert "-Y" not in commands[0]
+    assert result["coverage"]["complete"] is False
+
+
+def test_pcap_summary_timeout_returns_failure_envelope(monkeypatch):
+    monkeypatch.setattr(pcap, "resolve_file", lambda path: Path(__file__))
+    monkeypatch.setattr(pcap, "_tshark", lambda: "tshark")
+    monkeypatch.setattr(pcap, "run", lambda *a, **k: (_ for _ in ()).throw(subprocess.TimeoutExpired("tshark", 180)))
+
+    result = pcap.pcap_summary("anything.pcap")
+
+    assert result["ok"] is False
+    assert result["error"]["kind"] == "timeout"
+
+
+def test_pcap_summary_capinfos_timeout_preserves_partial_hierarchy(monkeypatch):
+    monkeypatch.setattr(pcap, "resolve_file", lambda path: Path(__file__))
+    monkeypatch.setattr(pcap, "_tshark", lambda: "tshark")
+    monkeypatch.setattr(pcap, "_capinfos", lambda: "capinfos")
+
+    def run(command, **kwargs):
+        if command[0] == "capinfos":
+            raise subprocess.TimeoutExpired("capinfos", 120)
+        return 0, "DNS", ""
+
+    monkeypatch.setattr(pcap, "run", run)
+    result = pcap.pcap_summary("anything.pcap")
+
+    assert result["ok"] is False
+    assert result["error"]["kind"] == "partial"
+    assert result["findings"]["protocol_hierarchy"] == "DNS"
+    assert "timed out" in result["findings"]["capture_error"]

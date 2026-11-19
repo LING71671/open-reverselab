@@ -43,9 +43,19 @@ metadata can still be exported; each function explicitly reports an unavailable
 or failed decompilation rather than fabricated pseudocode. This alone does not
 discard otherwise usable IDA metadata or force a Ghidra run.
 
-IDA runs in autonomous mode with the shipped exporter. Both timeouts bound the
-IDA process; the smaller positive analysis/process timeout applies. Automatic
-fallback gives Ghidra its own configured budget.
+IDA runs in autonomous mode with the shipped exporter. `analysis_timeout_seconds`
+sets an exporter deadline checked during long enumeration loops; `process_timeout_seconds`
+independently bounds the IDA process and its cleanup. Ghidra's
+`analysisTimeoutPerFile` uses `analysis_timeout_seconds`, while the subprocess is
+bounded separately by `process_timeout_seconds`. Automatic fallback gives Ghidra
+its own configured budget.
+
+Every Ghidra run uses a per-run summary path and target SHA-256, so two analyses
+of same-named files cannot accept each other's output. IDA writes its summary
+into the private run directory and publishes it under `exports/` only after the
+parent validates the run, so a timeout or failed export is never selected as the
+latest summary. Default workups use unique projects and `overwrite=False`, so an
+existing Ghidra project is preserved; explicit overwrite remains opt-in.
 
 ## MCP tools
 
