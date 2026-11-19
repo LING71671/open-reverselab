@@ -54,8 +54,9 @@ fallback gives Ghidra its own configured budget.
 - `ida_headless_analyze` / `ghidra_headless_analyze`: direct explicit backends.
 - `static_summary_list` / `static_summary_overview` / `static_summary_functions`.
 - `static_summary_function_detail` / `static_summary_imports` / `static_summary_strings`.
-- Existing `ghidra_summary_*` readers remain compatibility names and accept both
-  export roots. Function references, strings, imports and decompilation previews
+- Existing `ghidra_summary_*` readers default to the newest Ghidra export.
+  Explicit summary paths can point to either backend. The `static_summary_*`
+  readers default to the newest export across both backends. Function references, strings, imports and decompilation previews
   retain the existing field contract used by notes, breakpoints and IOC reports.
 
 Reload/reconnect the `reverse_lab_tools` MCP server after updating its source

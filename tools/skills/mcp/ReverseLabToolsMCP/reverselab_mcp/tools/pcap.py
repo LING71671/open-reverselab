@@ -10,10 +10,10 @@ import os
 import shutil
 from typing import Any
 
-from ..contracts.envelope import Coverage, fail, ok
+from ..contracts.envelope import Coverage, component_failure, fail, ok
 from ..errors import ToolError
 from ..paths import resolve_file
-from ..runner import run
+from ..runner import run, run_component
 
 
 def _find_tool(env_name: str, names: list[str]) -> str | None:
@@ -162,30 +162,37 @@ def pcap_extract_http(
         ),
     }
     selected = list(filters) if normalized == "both" else [normalized]
+    limit = max(1, max_rows)
+    truncated = False
     for item in selected:
         display_filter, fields = filters[item]
         command = [tshark, "-r", str(target), "-Y", display_filter, "-T", "fields"]
         for field in fields:
             command += ["-e", field]
-        command += ["-E", "separator=\t", "-E", "occurrence=f", "-c", str(max(1, max_rows))]
-        try:
-            code, out, err = run(command, timeout=180)
-        except (OSError, RuntimeError, ValueError) as exc:
-            findings[item] = {"error": str(exc)}
-            continue
-        if code != 0:
-            findings[item] = {"error": (err or out).strip()[:400], "exit": code}
+        # TShark's -a packets counts displayed matches; -c counts every input frame.
+        command += ["-E", "separator=/t", "-E", "occurrence=f", "-a", f"packets:{limit + 1}"]
+        out, failure = run_component(command, timeout=180)
+        if failure:
+            findings[item] = failure
             continue
         rows = []
         for line in out.splitlines():
+            if len(rows) == limit:
+                truncated = True
+                break
             values = line.split("\t")
             values += [""] * (len(fields) - len(values))
             rows.append(dict(zip(fields, values)))
         findings[item] = {"count": len(rows), "rows": rows}
 
+    descriptor = {"path": str(target), "format": "pcap"}
+    failure = component_failure("pcap_extract_http", descriptor, findings, selected)
+    if failure:
+        return failure
     return ok(
         "pcap_extract_http",
-        target={"path": str(target), "format": "pcap"},
+        target=descriptor,
         findings=findings,
-        coverage=Coverage(scope="http rows", complete=False, reason=f"capped at {max_rows} rows"),
+        coverage=Coverage(scope="http rows", complete=not truncated,
+                          reason=f"capped at {limit} rows per kind" if truncated else ""),
     )

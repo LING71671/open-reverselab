@@ -101,3 +101,20 @@ def test_envelope_ok_and_fail_share_one_shape():
 def test_coverage_dataclass_is_serialized():
     result = ok("x", coverage=Coverage(scope="capture", complete=False, reason="filtered"))
     assert result["coverage"] == {"scope": "capture", "complete": False, "reason": "filtered"}
+
+
+@pytest.mark.parametrize("profile", ["common", "apk", "pe", "general"])
+def test_reference_tools_in_sample_profiles(profile):
+    assert {"kb_router", "kb_read_file"} <= registry.allowed_tools(profile)
+
+
+def test_shared_knowledge_lookup(monkeypatch):
+    from reverselab_mcp.tools import kb
+
+    monkeypatch.setattr(kb, "kb_router", lambda query, board, track: {"track": track, "board": board})
+    assert kb.blue_kb_router("checksum", "general") == {"track": "blue", "board": "general"}
+    assert "error" in kb.blue_kb_router("checksum", track="red")
+    for track in ["blue", "both", "red"]:
+        monkeypatch.setattr(kb, "kb_read_file", lambda *a: {"track": track, "content": "fixture"})
+        result = kb.blue_kb_read_file("fixture")
+        assert ("content" in result) == (track in {"blue", "both"})

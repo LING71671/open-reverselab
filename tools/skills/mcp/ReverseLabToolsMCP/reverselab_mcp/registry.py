@@ -37,6 +37,8 @@ PROFILES = tuple(PROFILE_DESCRIPTIONS)
 # Tools always present in every non-legacy profile.
 COMMON_TOOLS = frozenset(
     {
+        "kb_router",
+        "kb_read_file",
         "hash_file",
         "triage_pe",
         "die_scan",
@@ -71,8 +73,6 @@ COMMON_TOOLS = frozenset(
 WEB_TOOLS = frozenset(
     {
         "http_probe",
-        "kb_router",
-        "kb_read_file",
         "kb_catalog",
         "ctf_new_challenge",
         "ctf_autopilot_round",

@@ -134,3 +134,22 @@ def fail(
         "error": OperationError(kind, message, remedy, retryable).as_dict(),
         "metadata": dict(metadata or {}),
     }
+
+
+def component_failure(
+    operation: str, target: dict[str, Any], findings: dict[str, Any], components: list[str]
+) -> dict[str, Any] | None:
+    """Keep successful outputs when some of the requested components failed."""
+    failed = [name for name in components if "error" in findings[name]]
+    if not failed:
+        return None
+    kinds = {findings[name]["kind"] for name in failed}
+    if len(failed) < len(components):
+        kind = "partial"
+    elif len(kinds) == 1:
+        kind = next(iter(kinds))
+    else:
+        kind = "internal"
+    message = "; ".join(f"{name}: {findings[name]['error']}" for name in failed)
+    return fail(operation, kind=kind, message=message, target=target, findings=findings,
+                retryable=all(findings[name]["kind"] == "timeout" for name in failed))

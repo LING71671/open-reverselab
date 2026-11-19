@@ -5,8 +5,7 @@ from typing import Any
 
 from ..config import GHIDRA_EXPORTS_DIR
 from ..errors import ToolError
-from ..paths import resolve_summary
-from ..static_config import IDA_EXPORTS_DIR
+from ..paths import resolve_summary, summary_candidates
 from ..utils import contains, match_any
 from .procmon_filters import PRESET_FILTERS
 
@@ -19,11 +18,10 @@ def load_summary(summary_path: str = "") -> tuple[Any, dict[str, Any]]:
     return path, data
 
 
-def ghidra_summary_list(limit: int = 20) -> dict[str, Any]:
+def ghidra_summary_list(limit: int = 20, *, include_ida: bool = False) -> dict[str, Any]:
     GHIDRA_EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
     items = []
-    candidates = [*GHIDRA_EXPORTS_DIR.glob("*-ghidra-summary.json"), *IDA_EXPORTS_DIR.glob("*-ida-summary.json")]
-    for path in sorted(candidates, key=lambda item: item.stat().st_mtime, reverse=True):
+    for path in summary_candidates(include_ida=include_ida):
         items.append(
             {
                 "path": str(path),

@@ -10,10 +10,10 @@ import os
 import shutil
 from typing import Any
 
-from ..contracts.envelope import Coverage, fail, ok
+from ..contracts.envelope import Coverage, component_failure, fail, ok
 from ..errors import ToolError
 from ..paths import resolve_file
-from ..runner import run
+from ..runner import run_component
 
 
 def _find(env_name: str, names: list[str]) -> str | None:
@@ -46,37 +46,25 @@ def wasm_info(path: str, wat_bytes: int = 8192) -> dict[str, Any]:
         )
 
     findings: dict[str, Any] = {"path": str(target)}
+    components = []
     if objdump:
-        try:
-            code, out, err = run([objdump, "-x", str(target)], timeout=120)
-        except (OSError, RuntimeError, ValueError) as exc:
-            findings["objdump"] = {"error": str(exc)}
-        else:
-            findings["objdump"] = {"exit": code, "output": (out or err)[:200_000]}
+        components.append("objdump")
+        out, failure = run_component([objdump, "-x", str(target)], timeout=120)
+        findings["objdump"] = failure or {"exit": 0, "output": out[:200_000]}
     if wat:
-        try:
-            code, out, err = run([wat, "--enable-all", str(target)], timeout=120)
-        except (OSError, RuntimeError, ValueError) as exc:
-            findings["wat"] = {"error": str(exc)}
-        else:
-            findings["wat"] = {
-                "exit": code,
-                "preview": (out or err)[: max(0, wat_bytes)],
-                "truncated": len(out or err) > wat_bytes,
-            }
+        components.append("wat")
+        out, failure = run_component([wat, "--enable-all", str(target)], timeout=120)
+        limit = max(0, wat_bytes)
+        findings["wat"] = failure or {"exit": 0, "preview": out[:limit], "truncated": len(out) > limit}
 
-    errors = [value.get("error") for value in findings.values() if isinstance(value, dict) and value.get("error")]
-    if errors and not any(isinstance(value, dict) and value.get("output") for value in findings.values()):
-        return fail(
-            "wasm_info",
-            kind="internal",
-            message="; ".join(str(item) for item in errors)[:500],
-            retryable=True,
-        )
+    descriptor = {"path": str(target), "format": "wasm"}
+    failure = component_failure("wasm_info", descriptor, findings, components)
+    if failure:
+        return failure
 
     return ok(
         "wasm_info",
-        target={"path": str(target), "format": "wasm"},
+        target=descriptor,
         findings=findings,
         coverage=Coverage(scope="module", complete=True),
         metadata={"wabt": {"objdump": objdump, "wasm2wat": wat}},

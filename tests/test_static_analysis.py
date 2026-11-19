@@ -23,9 +23,9 @@ def lab(tmp_path, monkeypatch):
     ghidra = tmp_path / "ghidra"; ghidra.mkdir()
     sample = tmp_path / "sample.exe"; sample.write_bytes(b"synthetic test fixture")
     monkeypatch.setattr(paths, "ALLOWED_ROOTS", [tmp_path])
-    for module in [paths, ghidra_summary]:
-        monkeypatch.setattr(module, "GHIDRA_EXPORTS_DIR", ghidra)
-        monkeypatch.setattr(module, "IDA_EXPORTS_DIR", ida)
+    monkeypatch.setattr(paths, "GHIDRA_EXPORTS_DIR", ghidra)
+    monkeypatch.setattr(paths, "IDA_EXPORTS_DIR", ida)
+    monkeypatch.setattr(ghidra_summary, "GHIDRA_EXPORTS_DIR", ghidra)
     monkeypatch.delenv("REVERSELAB_STATIC_BACKEND", raising=False)
     return tmp_path, sample, ida, ghidra
 
@@ -109,7 +109,11 @@ def test_summary_readers_accept_both_roots_and_reject_escape(lab):
     a = summary_result(ida); g = summary_result(ghidra, "ghidra")
     assert ghidra_summary.ghidra_summary_overview(a["summary_path"])["backend"] == "ida"
     assert paths.resolve_summary(g["summary_path"]).is_file()
-    assert ghidra_summary.ghidra_summary_list()["summaries_total"] == 2
+    assert ghidra_summary.ghidra_summary_list(include_ida=True)["summaries_total"] == 2
+    assert ghidra_summary.ghidra_summary_list()["summaries_total"] == 1
+    os.utime(g["summary_path"], (100, 100))
+    assert ghidra_summary.ghidra_summary_overview()["backend"] == "ghidra"
+    assert paths.resolve_summary(include_ida=True) == Path(a["summary_path"])
     outside = root / "outside.json"; outside.write_text("{}")
     with pytest.raises(ToolError): paths.resolve_summary(str(outside))
 

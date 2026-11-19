@@ -18,7 +18,7 @@ from mcp.server.fastmcp import FastMCP
 from reverselab_mcp import registry
 from reverselab_mcp import track as track_mod
 from reverselab_mcp.config import REVERSE_ROOT, SCRIPTS_DIR, SERVER_NAME
-from reverselab_mcp.paths import resolve_file
+from reverselab_mcp.paths import resolve_file, resolve_summary
 from reverselab_mcp.tools import (
     android_mumu,
     analysis_notes,
@@ -183,40 +183,48 @@ def ida_headless_analyze(
                       analysis_timeout_seconds, process_timeout_seconds, function_limit, string_limit, import_limit)
 
 
+def _static_summary_call(reader: Callable[..., dict[str, Any]], summary_path: str, *args: Any) -> dict[str, Any]:
+    def read() -> dict[str, Any]:
+        path = summary_path or str(resolve_summary(include_ida=True))
+        return reader(path, *args)
+
+    return _safe_call(read)
+
+
 @mcp.tool()
 def static_summary_list(limit: int = 20) -> dict[str, Any]:
     """列出 IDA 与 Ghidra 摘要，包含后端标记。"""
-    return _safe_call(ghidra_summary.ghidra_summary_list, limit)
+    return _safe_call(ghidra_summary.ghidra_summary_list, limit, include_ida=True)
 
 
 @mcp.tool()
 def static_summary_overview(summary_path: str = "") -> dict[str, Any]:
     """读取 IDA/Ghidra 通用摘要概览。"""
-    return _safe_call(ghidra_summary.ghidra_summary_overview, summary_path)
+    return _static_summary_call(ghidra_summary.ghidra_summary_overview, summary_path)
 
 
 @mcp.tool()
 def static_summary_functions(summary_path: str = "", query: str = "", address: str = "", limit: int = 50) -> dict[str, Any]:
     """按名称、signature 或地址查询 IDA/Ghidra 函数。"""
-    return _safe_call(ghidra_summary.ghidra_summary_functions, summary_path, query, address, limit)
+    return _static_summary_call(ghidra_summary.ghidra_summary_functions, summary_path, query, address, limit)
 
 
 @mcp.tool()
 def static_summary_function_detail(summary_path: str = "", address: str = "", name: str = "", include_decompile: bool = True, max_decompile_chars: int = 12000) -> dict[str, Any]:
     """读取函数的调用关系、导入/字符串引用及反编译预览。"""
-    return _safe_call(ghidra_summary.ghidra_summary_function_detail, summary_path, address, name, include_decompile, max_decompile_chars)
+    return _static_summary_call(ghidra_summary.ghidra_summary_function_detail, summary_path, address, name, include_decompile, max_decompile_chars)
 
 
 @mcp.tool()
 def static_summary_imports(summary_path: str = "", query: str = "", library: str = "", min_refs: int = 0, limit: int = 50) -> dict[str, Any]:
     """查询 IDA/Ghidra 摘要的导入符号与引用。"""
-    return _safe_call(ghidra_summary.ghidra_summary_imports, summary_path, query, library, min_refs, limit)
+    return _static_summary_call(ghidra_summary.ghidra_summary_imports, summary_path, query, library, min_refs, limit)
 
 
 @mcp.tool()
 def static_summary_strings(summary_path: str = "", query: str = "", min_length: int = 0, limit: int = 50) -> dict[str, Any]:
     """查询 IDA/Ghidra 摘要的字符串。"""
-    return _safe_call(ghidra_summary.ghidra_summary_strings, summary_path, query, min_length, limit)
+    return _static_summary_call(ghidra_summary.ghidra_summary_strings, summary_path, query, min_length, limit)
 
 
 @mcp.tool()
@@ -1946,6 +1954,12 @@ def main() -> None:
     applied = registry.apply_profile(mcp, args.profile)
     if not applied.get("ok"):
         raise SystemExit(applied.get("error", "failed to apply profile"))
+
+    if args.profile in {"apk", "pe", "general", "common"}:
+        # Keep the public tool names stable across local sample-analysis profiles.
+        for name, reader in (("kb_router", kb.blue_kb_router), ("kb_read_file", kb.blue_kb_read_file)):
+            mcp.remove_tool(name)
+            mcp.add_tool(reader, name=name)
 
     if args.list_tools:
         print(

@@ -83,6 +83,8 @@ uv sync
 
 `legacy` · `common` · `ctf` · `pe` · `apk` · `general`
 
+`common`、`pe`、`apk`、`general` 提供 `kb_router` 和 `kb_read_file`，可检索和读取防御与共享参考文档。
+
 ```bash
 python reverse_lab_tools_mcp.py --profile-report pe   # 查看某 profile 会加载哪些工具
 python reverse_lab_tools_mcp.py --profile pe --list-tools

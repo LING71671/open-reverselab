@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import struct
+import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 MCP_ROOT = ROOT / "tools" / "skills" / "mcp" / "ReverseLabToolsMCP"
 sys.path.insert(0, str(MCP_ROOT))
 
+from reverselab_mcp import runner
 from reverselab_mcp.tools import dotnet, pcap, wasm  # noqa: E402
 
 
@@ -113,3 +117,85 @@ def test_wasm_info_without_wabt(monkeypatch):
 
     assert result["ok"] is False
     assert result["error"]["kind"] == "missing_engine"
+
+@pytest.mark.parametrize("exits, expected", [((1, 1), "unsupported"), ((1, 0), "partial"), ((0, 1), "partial")])
+def test_wabt_failures_keep_successful_outputs(monkeypatch, exits, expected):
+    monkeypatch.setattr(wasm, "resolve_file", lambda _: Path(__file__))
+    monkeypatch.setattr(wasm, "_find", lambda name, _: name)
+    results = iter((code, "result" if code == 0 else "", "invalid module") for code in exits)
+    monkeypatch.setattr(runner, "run", lambda *a, **kw: next(results))
+    result = wasm.wasm_info("fixture")
+    assert not result["ok"] and not result["coverage"]["complete"]
+    assert result["error"]["kind"] == expected
+    if 0 in exits:
+        component, key = ("objdump", "output") if exits[0] == 0 else ("wat", "preview")
+        assert result["findings"][component][key] == "result"
+
+
+@pytest.mark.parametrize("kind, expected", [("request", "unsupported"), ("both", "partial")])
+def test_http_extraction_reports_failure(monkeypatch, kind, expected):
+    monkeypatch.setattr(pcap, "resolve_file", lambda _: Path(__file__))
+    monkeypatch.setattr(pcap, "_tshark", lambda: "tshark")
+
+    def run(args, timeout):
+        if "http.request" in args:
+            return 1, "", "bad capture"
+        return 0, "", ""
+
+    monkeypatch.setattr(runner, "run", run)
+    result = pcap.pcap_extract_http("fixture", kind)
+    assert not result["ok"] and result["error"]["kind"] == expected
+    assert result["findings"]["request"]["exit"] == 1
+    if kind == "both":
+        assert result["findings"]["response"]["rows"] == []
+
+
+def test_http_extraction_handles_timeout(monkeypatch):
+    monkeypatch.setattr(pcap, "resolve_file", lambda _: Path(__file__))
+    monkeypatch.setattr(pcap, "_tshark", lambda: "tshark")
+
+    def timeout(args, timeout):
+        raise subprocess.TimeoutExpired(args, timeout)
+
+    monkeypatch.setattr(runner, "run", timeout)
+    result = pcap.pcap_extract_http("fixture")
+    assert result["error"]["kind"] == "timeout" and result["error"]["retryable"]
+
+
+def test_http_row_limit_uses_displayed_packets(monkeypatch):
+    monkeypatch.setattr(pcap, "resolve_file", lambda _: Path(__file__))
+    monkeypatch.setattr(pcap, "_tshark", lambda: "tshark")
+
+    def run(args, timeout):
+        assert "-c" not in args and args[args.index("-a") + 1] == "packets:2"
+        return 0, "501\n502", ""
+
+    monkeypatch.setattr(runner, "run", run)
+    result = pcap.pcap_extract_http("fixture", max_rows=1)
+    assert result["ok"] and not result["coverage"]["complete"]
+    assert [row["frame.number"] for row in result["findings"]["request"]["rows"]] == ["501"]
+
+
+def test_real_tshark_finds_late_http_request(monkeypatch, tmp_path):
+    if not pcap._tshark():
+        pytest.skip("tshark is optional")
+    # 500 unrelated Ethernet frames followed by one local HTTP request.
+    ethernet = bytes.fromhex("020000000002020000000001")
+    unrelated = ethernet + bytes.fromhex("88b5") + bytes(46)
+    payload = b"GET /fixture HTTP/1.1\r\nHost: example.test\r\n\r\n"
+    tcp = struct.pack("!HHIIBBHHH", 45678, 80, 1, 0, 0x50, 0x18, 4096, 0, 0)
+    ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 20 + len(tcp) + len(payload), 0,
+                     0, 64, 6, 0, bytes([192, 0, 2, 1]), bytes([192, 0, 2, 2]))
+    request = ethernet + bytes.fromhex("0800") + ip + tcp + payload
+    capture = tmp_path / "late.pcap"
+    with capture.open("wb") as stream:
+        stream.write(struct.pack("<IHHIIII", 0xA1B2C3D4, 2, 4, 0, 0, 65535, 1))
+        for i, packet in enumerate([unrelated] * 500 + [request]):
+            stream.write(struct.pack("<IIII", i, 0, len(packet), len(packet)))
+            stream.write(packet)
+    monkeypatch.setattr(pcap, "resolve_file", lambda _: capture)
+    result = pcap.pcap_extract_http(str(capture), max_rows=1)
+    assert result["ok"], result
+    rows = result["findings"]["request"]["rows"]
+    assert [(row["frame.number"], row["http.request.uri"]) for row in rows] == [("501", "/fixture")]
+    assert result["coverage"]["complete"]

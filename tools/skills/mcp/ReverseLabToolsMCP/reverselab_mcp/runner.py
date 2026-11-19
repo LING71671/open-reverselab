@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from .config import REVERSE_ROOT
 
@@ -29,6 +30,19 @@ def run(args: list[str], timeout: int = 60, env: dict[str, str] | None = None) -
         creationflags=creationflags,
     )
     return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
+
+
+def run_component(args: list[str], timeout: int) -> tuple[str, dict[str, Any]]:
+    """Return stdout or a serializable failure for one external analysis step."""
+    try:
+        code, out, err = run(args, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return "", {"kind": "timeout", "error": f"exceeded {timeout}s"}
+    except (OSError, ValueError) as exc:
+        return "", {"kind": "internal", "error": str(exc)}
+    if code:
+        return "", {"kind": "unsupported", "exit": code, "error": (err or out).strip()[:500] or f"exit {code}"}
+    return out, {}
 
 
 def launch(args: list[str], visible: bool = True, cwd: Path | None = None) -> int:
