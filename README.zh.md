@@ -31,7 +31,12 @@
   </tr>
 </table>
 
-**合作推荐：[模真真](https://mozhenzhen.com/go/open-reverselab)。** 买 AI 前，先查模真真。2000+ 模型、35 万+ 渠道比价，查模型真假、看用户点评，全部免费。
+<table width="100%">
+  <tr>
+    <td width="80" align="center" valign="middle"><a href="https://mozhenzhen.com/go/open-reverselab"><img src="assets/sponsors/mozhenzhen-icon.png" width="64" height="64" alt="模真真"></a></td>
+    <td valign="middle"><strong>合作推荐：<a href="https://mozhenzhen.com/go/open-reverselab">模真真</a>。</strong> 买 AI 前，先查模真真。2000+ 模型、35 万+ 渠道比价，查模型真假、看用户点评，全部免费。</td>
+  </tr>
+</table>
 
 <p align="center"><sub>完整赞助名单与合作方式见 <a href="SPONSORS_zh.md">赞助说明</a></sub></p>
 

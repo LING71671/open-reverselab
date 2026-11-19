@@ -31,7 +31,12 @@ Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · M
   </tr>
 </table>
 
-**Partner pick: [Mozhenzhen](https://mozhenzhen.com/go/open-reverselab).** Check Mozhenzhen before buying AI. Compare 2,000+ models across 350K+ listings, verify models and read user reviews, all for free.
+<table width="100%">
+  <tr>
+    <td width="80" align="center" valign="middle"><a href="https://mozhenzhen.com/go/open-reverselab"><img src="assets/sponsors/mozhenzhen-icon.png" width="64" height="64" alt="Mozhenzhen"></a></td>
+    <td valign="middle"><strong>Partner pick: <a href="https://mozhenzhen.com/go/open-reverselab">Mozhenzhen</a>.</strong> Check Mozhenzhen before buying AI. Compare 2,000+ models across 350K+ listings, verify models and read user reviews, all for free.</td>
+  </tr>
+</table>
 
 <p align="center"><sub>Sponsor details and ways to support the project: <a href="SPONSORS.md">SPONSORS.md</a></sub></p>
 
