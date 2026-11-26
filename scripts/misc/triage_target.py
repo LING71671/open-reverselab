@@ -10,9 +10,11 @@ import argparse
 import hashlib
 import json
 import os
+import stat
 import sys
 import urllib.request
 import zipfile
+from collections import deque
 from pathlib import Path
 from typing import Any
 
@@ -201,6 +203,81 @@ def triage_web(url: str) -> dict[str, Any]:
     return res
 
 
+SAMPLE_TYPES = {
+    ".exe": "PE Executable", ".dll": "Dynamic Library", ".sys": "Kernel Driver",
+    ".apk": "Android Package", ".dex": "Binary Module", ".so": "Binary Module", ".bin": "Binary Module",
+}
+MAX_SCAN_DEPTH = 6  # Root is level zero.
+MAX_SCAN_ENTRIES = 10000
+MAX_SAMPLE_BYTES = 2 * 1024**3
+MAX_VISIBLE_SAMPLES = 30
+
+
+def triage_directory(root: Path) -> dict[str, Any]:
+    pending = deque([(root, 0)])
+    samples = []
+    entries = total_bytes = 0
+    limits: set[str] = set()
+
+    while pending and "entries" not in limits:
+        directory, depth = pending.popleft()
+        try:
+            with os.scandir(directory) as listing:
+                for entry in listing:
+                    if entries >= MAX_SCAN_ENTRIES:
+                        limits.add("entries")
+                        break
+                    entries += 1
+                    try:
+                        info = entry.stat(follow_symlinks=False)
+                    except OSError:
+                        limits.add("unreadable")
+                        continue
+                    if getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                        continue
+                    path = Path(entry.path)
+                    if stat.S_ISDIR(info.st_mode):
+                        if depth < MAX_SCAN_DEPTH:
+                            pending.append((path, depth + 1))
+                        else:
+                            limits.add("depth")
+                        continue
+                    ext = path.suffix.lower()
+                    if not stat.S_ISREG(info.st_mode) or ext not in SAMPLE_TYPES:
+                        continue
+                    if total_bytes + info.st_size > MAX_SAMPLE_BYTES:
+                        limits.add("bytes")
+                        continue
+                    total_bytes += info.st_size
+                    samples.append({
+                        "name": path.relative_to(root).as_posix(), "path": str(path),
+                        "sizeBytes": info.st_size, "ext": ext, "type": SAMPLE_TYPES[ext],
+                    })
+        except OSError:
+            limits.add("unreadable")
+
+    samples.sort(key=lambda sample: (-sample["sizeBytes"], sample["name"].casefold(), sample["name"]))
+    primary = next((s for ext in (".exe", ".apk") for s in samples if s["ext"] == ext), None)
+    result = {"board": "general", "fileType": "Directory", "targetPath": str(root)}
+    preview = samples[:MAX_VISIBLE_SAMPLES]
+    if primary:
+        result = triage_target(primary["path"])
+        result["resolvedBinary"] = primary["name"]
+        if primary not in preview:
+            preview[-1] = primary
+        for sample in preview:
+            sample["isPrimary"] = sample is primary
+
+    result.update({
+        "isContainerDirectory": True, "containerDirectory": str(root), "discoveredSamples": preview,
+        "inventoryScan": {
+            "sampleCount": len(samples), "entriesScanned": entries, "sizeBytes": total_bytes,
+            "limitsReached": sorted(limits),
+        },
+    })
+    return result
+
+
 def triage_target(target: str) -> dict[str, Any]:
     target_clean = target.strip().strip("'\"")
     if not target_clean:
@@ -214,62 +291,7 @@ def triage_target(target: str) -> dict[str, Any]:
 
     if p.exists():
         if p.is_dir():
-            # Discover and inventory all binaries / samples inside directory
-            all_samples = []
-            for ext in ("*.exe", "*.dll", "*.sys", "*.apk", "*.dex", "*.so", "*.bin"):
-                for f in p.glob(ext):
-                    if not f.is_file() or f.is_symlink():
-                        continue
-                    all_samples.append({
-                        "name": f.name,
-                        "path": str(f),
-                        "sizeBytes": f.stat().st_size,
-                        "ext": f.suffix.lower(),
-                        "type": "PE Executable" if f.suffix.lower() == ".exe" else (
-                            "Dynamic Library" if f.suffix.lower() == ".dll" else (
-                                "Kernel Driver" if f.suffix.lower() == ".sys" else (
-                                    "Android Package" if f.suffix.lower() == ".apk" else "Binary Module"
-                                )
-                            )
-                        ),
-                    })
-            all_samples.sort(key=lambda x: x["sizeBytes"], reverse=True)
-
-            # Auto-discover primary executable
-            exes = [s for s in all_samples if s["ext"] == ".exe"]
-            if exes:
-                primary = exes[0]
-                primary_path = Path(primary["path"])
-                res = triage_target(str(primary_path))
-                res["isContainerDirectory"] = True
-                res["containerDirectory"] = str(p)
-                res["resolvedBinary"] = primary["name"]
-                for s in all_samples:
-                    s["isPrimary"] = (s["name"] == primary["name"])
-                res["discoveredSamples"] = all_samples[:30]
-                return res
-
-            apks = [s for s in all_samples if s["ext"] == ".apk"]
-            if apks:
-                primary = apks[0]
-                primary_path = Path(primary["path"])
-                res = triage_target(str(primary_path))
-                res["isContainerDirectory"] = True
-                res["containerDirectory"] = str(p)
-                res["resolvedBinary"] = primary["name"]
-                for s in all_samples:
-                    s["isPrimary"] = (s["name"] == primary["name"])
-                res["discoveredSamples"] = all_samples[:30]
-                return res
-
-            return {
-                "board": "general",
-                "fileType": "Directory",
-                "targetPath": str(p),
-                "isContainerDirectory": True,
-                "containerDirectory": str(p),
-                "discoveredSamples": all_samples[:30],
-            }
+            return triage_directory(p)
 
         elif p.is_file():
             with p.open("rb") as f:

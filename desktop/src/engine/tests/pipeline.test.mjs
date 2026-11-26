@@ -898,7 +898,7 @@ test("MCP plans use discovered connection-qualified tools and coexist with Pytho
 
 test("MCP execution records the real result and passes it to dependent Python", async () => {
   const original = nativeBridge.mcp;
-  const requests = [], events = [];
+  const requests = [], events = [], nodes = [];
   let pythonScript;
   try {
     nativeBridge.mcp = async (request, options) => {
@@ -909,8 +909,12 @@ test("MCP execution records the real result and passes it to dependent Python", 
     const ctx = context({ state: { mcpTools: [mcpDefinition()], executeAction: async (_key, script) => {
       pythonScript = script; return { success: true, stdout: "verified observation", stderr: "" };
     } } });
-    const output = await executeActionPlan([mcpAction(), { id: "verify", title: "Verify", dependsOn: ["inspect"], script: "print(REVERSELAB_INPUTS)" }], ctx, { onToolCall: event => events.push(event) });
+    const output = await executeActionPlan([mcpAction(), { id: "verify", title: "Verify", dependsOn: ["inspect"], script: "print(REVERSELAB_INPUTS)" }], ctx, { onToolCall: event => events.push(event), onStepNode: node => nodes.push(node) });
     assert.equal(output.success, true);
+    const observations = nodes.filter(node => node.agentId === "fixture/inspect");
+    assert(observations.some(node => node.status === "pending"));
+    assert(observations.every(node => node.toolSession.connectionId === "fixture" && node.toolSession.target === ctx.target));
+    assert(nodes.filter(node => node.agentId === "python").every(node => node.toolSession === undefined));
     assert.equal(requests[0].request.expectedSchemaHash, "synthetic-schema");
     assert.equal(requests[0].request.tool, "fixture/inspect");
     assert(requests[0].options.signal instanceof AbortSignal);
@@ -1348,4 +1352,57 @@ test("a real dropped HTTP stream retries automatically after backoff", { timeout
   await new LlmStreamStage().execute(ctx, { onStepNode: step => waiting.push(step.detail) });
   assert.equal(requests, 2); assert.equal(ctx.state.fullContent, "complete recovered plan");
   assert.ok(waiting.some(detail => detail.includes("2 秒后重试")));
+});
+
+test("empty and incomplete directory inventories stop before planning", async () => {
+  const original = nativeBridge.triage;
+  let nextStageCalls = 0;
+  try {
+    for (const limitsReached of [[], ["depth"]]) {
+      nativeBridge.triage = async () => ({ isContainerDirectory: true, discoveredSamples: [], inventoryScan: { sampleCount: 0, limitsReached } });
+      const pipeline = new HarnessPipeline([new TargetDiscoveryStage(), stage("plan", async () => { nextStageCalls++; })]);
+      const result = await pipeline.run("fixture", "inspect", [], {}, undefined, "directory", "blue");
+      assert.equal(result.runProgress.status, "blocked");
+      assert.match(result.runProgress.reason, limitsReached.length ? /扫描未覆盖整个目录/ : /目录中未找到支持的样本/);
+    }
+    assert.equal(nextStageCalls, 0);
+  } finally { nativeBridge.triage = original; }
+});
+
+test("saved evidence review only sends observed summaries to the explicitly selected fallback", async () => {
+  const { reviewSavedEvidence } = await load("services/goals/evidenceReview.ts");
+  const providers = [{ id: "a", name: "Primary" }, { id: "b", name: "Backup" }];
+  const record = { diagnostics: { triage: { stageId: "blue:static-triage", stageName: "Static triage", status: "pass", summary: "PE header observed", metrics: [], evidence: { secret: "excluded" } } }, messages: [{ content: "private history" }] };
+  const methods = ["complete", "getProviders", "getActiveProvider", "getModel", "getEvidenceFallbackProviderId"];
+  const original = Object.fromEntries(methods.map(key => [key, llmService[key]]));
+  const signal = new AbortController().signal;
+  let fallback = "", status = 502, revoke = false;
+  const requests = [];
+  try {
+    llmService.getActiveProvider = () => providers[0];
+    llmService.getProviders = () => providers;
+    llmService.getModel = id => id + "-model";
+    llmService.getEvidenceFallbackProviderId = () => fallback;
+    llmService.complete = async (messages, options) => {
+      assert.doesNotMatch(JSON.stringify(messages), /private history|excluded/);
+      assert.match(messages[1].content, /PE header observed/);
+      requests.push(options.providerId);
+      if (revoke) fallback = "";
+      if (options.providerId === "a") throw Object.assign(new Error("provider failed"), { status });
+      return { content: "Header present." };
+    };
+    await assert.rejects(reviewSavedEvidence(record, signal));
+    assert.deepEqual(requests.splice(0), ["a"]);
+    fallback = "b";
+    assert.deepEqual(await reviewSavedEvidence(record, signal), { text: "Header present.", provider: "Backup", model: "b-model" });
+    assert.deepEqual(requests.splice(0), ["a", "b"]);
+    status = 401;
+    await assert.rejects(reviewSavedEvidence(record, signal));
+    assert.deepEqual(requests.splice(0), ["a"]);
+    status = 502; revoke = true;
+    await assert.rejects(reviewSavedEvidence(record, signal));
+    assert.deepEqual(requests.splice(0), ["a"]);
+    await assert.rejects(reviewSavedEvidence(record, AbortSignal.abort()));
+    assert.deepEqual(requests, []);
+  } finally { Object.assign(llmService, original); }
 });

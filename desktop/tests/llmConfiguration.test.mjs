@@ -82,3 +82,71 @@ test("model catalogs are shared with the composer but isolated by provider, endp
   llmService.addProvider({ id: "first", name: "First", baseUrl: "https://changed.example.test/v1", apiKey: "changed-fixture-key" });
   assert.deepEqual(llmService.getCachedModels(), []);
 });
+
+test("editing, testing and syncing a different provider preserves the active model across reloads", async t => {
+  const initial = [{ id: "first", name: "First", baseUrl: "https://first.example.test/v1" }];
+  const { llmService, LlmService, requests } = await load(t, {}, [
+    ["reverselab_providers", JSON.stringify(initial)], ["reverselab_model", "old-model"],
+  ]);
+  const second = { id: "second", name: "Second", baseUrl: "https://second.example.test/v1", apiKey: "fixture-second", model: "second-model" };
+  llmService.addProvider(second, false);
+  llmService.addProvider({ ...second, model: "" }, false);
+  assert.equal((await llmService.checkHealth(second.id)).ok, true);
+  assert.equal(requests.at(-1).method, "GET");
+  assert.equal(requests.at(-1).url, second.baseUrl + "/models");
+  llmService.addProvider(second, false);
+  await llmService.fetchModels(second.id);
+  assert.equal((await llmService.checkHealth(second.id)).ok, true);
+  assert.equal(requests.at(-1).url, second.baseUrl + "/chat/completions");
+  assert.equal(requests.at(-1).headers.Authorization, "Bearer fixture-second");
+  assert.equal(JSON.parse(requests.at(-1).body).model, "second-model");
+  const restored = new LlmService();
+  assert.equal(restored.getActiveProviderId(), "first");
+  assert.equal(restored.getModel(), "old-model");
+  restored.setActiveProviderId(second.id);
+  assert.equal(restored.getModel(), second.model);
+  assert.deepEqual(restored.getCachedModels(), ["fixture-model"]);
+  restored.setModel("fixture-model");
+  restored.setActiveProviderId("first");
+  assert.equal(restored.getModel(), "old-model");
+  assert.equal(restored.getModel(second.id), "fixture-model");
+});
+
+test("a model catalog response is discarded when the provider credentials changed during sync", async t => {
+  const { llmService } = await load(t);
+  llmService.addProvider({ id: "first", name: "First", baseUrl: "https://first.example.test/v1" });
+  const inFlight = llmService.fetchModels();
+  llmService.setApiKey("changed-fixture-key");
+  assert.deepEqual(await inFlight, []);
+  assert.deepEqual(llmService.getCachedModels(), []);
+});
+
+test("evidence fallback requires a saved, explicitly selected alternative and uses its own model", async t => {
+  const { llmService, LlmService, requests } = await load(t, { DEV: true });
+  const first = { id: "first", name: "First", baseUrl: "https://first.example.test/v1", model: "first-model", apiKey: "fixture-first" };
+  const second = { id: "second", name: "Second", baseUrl: "https://second.example.test/tokenrhythm.studio/v1", model: "second-model" };
+  llmService.addProvider(first);
+  llmService.addProvider(second, false);
+  assert.equal(llmService.getEvidenceFallbackProviderId(), "");
+  assert.throws(() => llmService.setEvidenceFallbackProviderId(first.id));
+  assert.throws(() => llmService.setEvidenceFallbackProviderId("missing"));
+  llmService.setEvidenceFallbackProviderId(second.id);
+  const restored = new LlmService();
+  assert.equal(restored.getEvidenceFallbackProviderId(), second.id);
+  assert.equal(restored.getActiveProviderId(), first.id);
+  const messages = [{ role: "user", content: "fixture" }];
+  await restored.complete(messages, { providerId: second.id, model: first.model });
+  assert.equal(requests.at(-1).url, second.baseUrl + "/chat/completions");
+  assert.equal(requests.at(-1).headers.Authorization, "Bearer ");
+  assert.equal(JSON.parse(requests.at(-1).body).model, second.model);
+  restored.setActiveProviderId(second.id);
+  assert.equal(restored.getEvidenceFallbackProviderId(), "");
+  restored.setActiveProviderId(first.id);
+  assert.equal(restored.getEvidenceFallbackProviderId(), "");
+  restored.setEvidenceFallbackProviderId(second.id);
+  restored.removeProvider(second.id);
+  assert.equal(restored.getEvidenceFallbackProviderId(), "");
+  await assert.rejects(restored.complete(messages, { providerId: second.id }), /不存在/);
+  await assert.rejects(restored.complete(messages, { providerId: "" }), /不存在/);
+  assert.equal(requests.length, 1);
+});

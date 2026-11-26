@@ -22,6 +22,11 @@ export interface ProviderConfig {
   name: string;
   baseUrl: string;
   apiKey?: string;
+  model?: string;
+}
+
+interface SavedProvider extends ProviderConfig {
+  models?: string[];
 }
 
 export function deriveProviderName(urlOrHost: string): string {
@@ -39,10 +44,9 @@ export function deriveProviderName(urlOrHost: string): string {
 }
 
 export class LlmService {
-  private providers: ProviderConfig[] = [];
+  private providers: SavedProvider[] = [];
   private activeProviderId: string = "";
   private defaultModel: string;
-  private modelCatalogs = new Map<string, { baseUrl: string; apiKey?: string; models: string[] }>();
 
   constructor() {
     const savedModel = localStorage.getItem("reverselab_model");
@@ -84,16 +88,18 @@ export class LlmService {
       updated = true;
     }
 
-    if (updated) {
-      this.saveProviders();
-    }
-
     const savedActiveId = localStorage.getItem("reverselab_active_provider_id");
     if (savedActiveId && this.providers.some((p) => p.id === savedActiveId)) {
       this.activeProviderId = savedActiveId;
     } else {
       this.activeProviderId = this.providers[0]?.id || "";
     }
+    const active = this.getActiveProvider();
+    if (active && active.model === undefined && this.defaultModel) {
+      active.model = this.defaultModel;
+      updated = true;
+    }
+    if (updated) this.saveProviders();
   }
 
   private saveProviders(): void {
@@ -115,28 +121,34 @@ export class LlmService {
   public setActiveProviderId(id: string): void {
     if (this.providers.some((p) => p.id === id)) {
       this.activeProviderId = id;
+      if (localStorage.getItem("reverselab_evidence_fallback_provider") === id) this.setEvidenceFallbackProviderId("");
       localStorage.setItem("reverselab_active_provider_id", id);
+      localStorage.setItem("reverselab_model", this.getModel());
     }
   }
 
-  public addProvider(provider: ProviderConfig): void {
+  public addProvider(provider: ProviderConfig, activate = true): void {
     const exists = this.providers.findIndex((p) => p.id === provider.id);
     if (exists >= 0) {
-      this.providers[exists] = provider;
+      const previous = this.providers[exists];
+      const sameEndpoint = previous.baseUrl === provider.baseUrl && previous.apiKey === provider.apiKey;
+      this.providers[exists] = { ...provider, model: provider.model ?? previous.model, models: sameEndpoint ? previous.models : undefined };
     } else {
-      this.providers.push(provider);
+      this.providers.push({ ...provider, model: provider.model ?? (this.providers.length ? "" : this.defaultModel) });
     }
     this.saveProviders();
-    this.setActiveProviderId(provider.id);
+    if (activate || !this.activeProviderId || provider.id === this.activeProviderId) this.setActiveProviderId(provider.id);
   }
 
   public removeProvider(id: string): void {
-    this.modelCatalogs.delete(id);
     this.providers = this.providers.filter((p) => p.id !== id);
+    if (localStorage.getItem("reverselab_evidence_fallback_provider") === id) this.setEvidenceFallbackProviderId("");
     this.saveProviders();
     if (this.activeProviderId === id) {
       this.activeProviderId = this.providers[0]?.id || "";
       localStorage.setItem("reverselab_active_provider_id", this.activeProviderId);
+      this.defaultModel = "";
+      localStorage.setItem("reverselab_model", this.getModel());
     }
   }
 
@@ -147,19 +159,33 @@ export class LlmService {
 
   public setApiKey(key: string): void {
     const active = this.getActiveProvider();
-    if (active) {
-      active.apiKey = key;
-      this.saveProviders();
-    }
+    if (active) this.addProvider({ ...active, apiKey: key });
   }
 
-  public getModel(): string {
-    return this.defaultModel;
+  public getModel(providerId = this.activeProviderId): string {
+    if (!providerId) return this.defaultModel;
+    return this.providers.find(p => p.id === providerId)?.model || "";
   }
 
   public setModel(model: string): void {
-    this.defaultModel = model;
+    const active = this.getActiveProvider();
+    if (active) {
+      active.model = model;
+      this.saveProviders();
+    } else {
+      this.defaultModel = model;
+    }
     localStorage.setItem("reverselab_model", model);
+  }
+
+  public getEvidenceFallbackProviderId(): string {
+    const id = localStorage.getItem("reverselab_evidence_fallback_provider");
+    return id && id !== this.activeProviderId && this.providers.some(p => p.id === id) ? id : "";
+  }
+
+  public setEvidenceFallbackProviderId(id: string): void {
+    if (id && (id === this.activeProviderId || !this.providers.some(p => p.id === id))) throw new Error("请选择其他已保存的提供商");
+    localStorage.setItem("reverselab_evidence_fallback_provider", id);
   }
 
   public getBaseUrl(): string {
@@ -169,16 +195,12 @@ export class LlmService {
 
   public setBaseUrl(url: string): void {
     const active = this.getActiveProvider();
-    if (active) {
-      active.baseUrl = url;
-      this.saveProviders();
-    }
+    if (active) this.addProvider({ ...active, baseUrl: url });
   }
 
   public getCachedModels(providerId = this.getActiveProviderId()): string[] {
     const provider = this.providers.find(item => item.id === providerId);
-    const cached = this.modelCatalogs.get(providerId);
-    return provider && cached && cached.baseUrl === provider.baseUrl && cached.apiKey === provider.apiKey ? [...cached.models] : [];
+    return [...(provider?.models || [])];
   }
 
   public async fetchModels(providerId?: string): Promise<string[]> {
@@ -203,7 +225,10 @@ export class LlmService {
       if (res.ok) {
         const data = await res.json();
         const list: string[] = Array.isArray(data.data) ? [...new Set<string>(data.data.map((m: any) => m?.id).filter((id: unknown): id is string => typeof id === "string" && Boolean(id.trim())))] : [];
-        this.modelCatalogs.set(provider.id, { baseUrl, apiKey, models: list });
+        const current = this.providers.find(p => p.id === provider.id);
+        if (!current || current.baseUrl !== baseUrl || current.apiKey !== apiKey) return [];
+        current.models = list;
+        this.saveProviders();
         return list;
       }
     } catch {
@@ -213,35 +238,30 @@ export class LlmService {
   }
 
   private resolveUrl(path: string, customBase?: string): string {
-    const base = customBase || this.getBaseUrl();
+    const base = (customBase || this.getBaseUrl()).replace(/\/+$/, "");
     if (
       import.meta.env.DEV && !usesNativeNetwork() &&
-      (base.includes("tokenrhythm.studio") || base.startsWith("/api/llm"))
+      ["/api/llm", "https://tokenrhythm.studio", "https://tokenrhythm.studio/v1"].includes(base)
     ) {
       return `/api/llm/v1${path}`;
     }
-    const cleanBase = base.replace(/\/+$/, "");
-    return `${cleanBase}${path}`;
+    return `${base}${path}`;
   }
 
-  public async checkHealth(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+  public async checkHealth(providerId = this.activeProviderId): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
     const start = performance.now();
     try {
-      const active = this.getActiveProvider();
-      if (!active?.baseUrl || !this.defaultModel) throw new Error("请先配置 API 地址和模型 ID");
-      const url = this.resolveUrl("/chat/completions", active?.baseUrl);
-      const key = active?.apiKey || this.getApiKey();
+      const provider = this.providers.find(p => p.id === providerId);
+      const model = this.getModel(providerId);
+      if (!provider?.baseUrl) throw new Error("请先配置 API 地址");
+      const url = this.resolveUrl(model ? "/chat/completions" : "/models", provider.baseUrl);
+      const headers: Record<string, string> = {};
+      if (provider.apiKey) headers.Authorization = `Bearer ${provider.apiKey}`;
+      if (model) headers["Content-Type"] = "application/json";
       const res = await modelFetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          model: this.defaultModel,
-          messages: [{ role: "user", content: "ping" }],
-          max_tokens: 5,
-        }),
+        method: model ? "POST" : "GET",
+        headers,
+        body: model ? JSON.stringify({ model, messages: [{ role: "user", content: "ping" }], max_tokens: 5 }) : undefined,
         signal: AbortSignal.timeout(10000),
       });
 
@@ -269,14 +289,17 @@ export class LlmService {
       timeoutMs?: number;
       signal?: AbortSignal;
       provider?: ProviderConfig;
+      providerId?: string;
     }
   ): Promise<CompletionResult> {
     const start = performance.now();
-    const active = options?.provider || this.getActiveProvider();
-    const model = options?.model || this.defaultModel;
+    const explicitId = options?.providerId;
+    const active = explicitId !== undefined ? this.providers.find(p => p.id === explicitId) : options?.provider || this.getActiveProvider();
+    if (explicitId !== undefined && !active) throw new Error("选定的提供商不存在");
+    const model = explicitId !== undefined ? this.getModel(explicitId) : options?.model || this.getModel();
     if (!active?.baseUrl || !model) throw new Error("请先配置 API 地址和模型 ID");
     const url = this.resolveUrl("/chat/completions", active?.baseUrl);
-    const key = options?.provider ? active?.apiKey || "" : active?.apiKey || this.getApiKey();
+    const key = active.apiKey || "";
 
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;

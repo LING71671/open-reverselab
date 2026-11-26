@@ -11,8 +11,8 @@ export function parentIds(step: LayoutStep): string[] {
   return step.parentIds?.length ? step.parentIds : step.parentId ? [step.parentId] : [];
 }
 
-/** Advance dependencies rightward and place cards in the nearest free vertical space. */
-export function layoutGraph(steps: LayoutStep[], viewport: CanvasSize, heights: ReadonlyMap<string, number> = new Map()): Map<string, LayoutPoint> {
+/** Only nodes whose observed dependencies can be resolved appear in order. */
+export function dependencyOrder(steps: LayoutStep[]) {
   const byId = new Map(steps.map(step => [step.id, step]));
   const pending = new Map<string, number>();
   const children = new Map<string, string[]>();
@@ -35,6 +35,12 @@ export function layoutGraph(steps: LayoutStep[], viewport: CanvasSize, heights: 
   }
   // Keep malformed historical cycles visible without inventing or dropping edges.
   for (const step of steps) if (pending.get(step.id)) ranks.set(step.id, ranks.get(step.id) || 0);
+  return { order: queue, ranks };
+}
+
+/** Advance dependencies rightward and place cards in the nearest free vertical space. */
+export function layoutGraph(steps: LayoutStep[], viewport: CanvasSize, heights: ReadonlyMap<string, number> = new Map()): Map<string, LayoutPoint> {
+  const { ranks } = dependencyOrder(steps);
   if (!steps.length) return new Map();
   const heightOf = (id: string) => Math.max(1, heights.get(id) || 174);
   const maxRank = Math.max(0, ...ranks.values());

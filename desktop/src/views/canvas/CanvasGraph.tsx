@@ -4,17 +4,28 @@ import { Focus, Scan, Maximize2, Minimize2, Plus, Minus, Map as MapIcon } from "
 import { HarnessNode, type HarnessNodeData } from "./nodes/HarnessNode";
 import type { GraphStep } from "../../core";
 import { reconcileNodes, planNodeMotion, applyNodeMotion, type Point } from "./nodeMotion";
-import { layoutGraph, expandLayout, parentIds, edgePorts } from "./graphLayout";
+import { layoutGraph, edgePorts } from "./graphLayout";
+import { SessionNode, type SessionNodeData } from "./nodes/SessionNode";
+import { canvasSessions, positionSessions, sessionEdges, visibleStep } from "./sessionGroups";
 import "./canvas.css";
 interface CanvasGraphProps { active: boolean; fullscreen?: boolean; onToggleFullscreen?: () => void; steps: GraphStep[]; selectedStep: GraphStep | null; onSelectStep: (step: GraphStep) => void }
-const nodeTypes = { harnessNode: HarnessNode };
+type CanvasNode = Node<HarnessNodeData, "harnessNode"> | Node<SessionNodeData, "sessionNode">;
+const nodeTypes = { harnessNode: HarnessNode, sessionNode: SessionNode };
 const motionDuration = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 240;
+function toggleId(previous: Set<string>, id: string) {
+  const next = new Set(previous);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
+}
 function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep, onSelectStep }: CanvasGraphProps) {
   const { fitView, zoomIn, zoomOut } = useReactFlow();
   const initialized = useNodesInitialized();
   const [following, setFollowing] = useState(true);
   const [showMap, setShowMap] = useState(true);
   const [expanded, setExpanded] = useState(new Set<string>());
+  const [openedSessions, setOpenedSessions] = useState(new Set<string>());
+  const sessions = useMemo(() => canvasSessions(steps), [steps]);
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
   const [expansionAnchor, setExpansionAnchor] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -22,12 +33,13 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   selectRef.current = onSelectStep;
   const selectStep = useCallback((step: GraphStep) => selectRef.current(step), []);
   const fullscreenButton = useRef<HTMLButtonElement>(null);
+  const [movedSessions, setMovedSessions] = useState(new Map<string, Point>());
   const movedNodes = useRef(new Set<string>());
   const canvas = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 800 });
   const [measured, setMeasured] = useState({ collapsed: new Map<string, number>(), expanded: new Map<string, number>() });
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<HarnessNodeData>>([]);
-  const handleNodesChange = useCallback((changes: NodeChange<Node<HarnessNodeData>>[]) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>([]);
+  const handleNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => {
     onNodesChange(changes);
     const dimensions = changes.filter(change => change.type === "dimensions" && change.dimensions);
     if (dimensions.length) setMeasured(previous => {
@@ -54,36 +66,60 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   }, []);
   const currentNodes = useRef(nodes);
   currentNodes.current = nodes;
-  const toggleExpanded = useCallback((id: string) => {
+  const anchorAt = useCallback((id: string) => {
     const node = currentNodes.current.find(node => node.id === id);
     if (node) setExpansionAnchor({ id, ...node.position });
     setFollowing(false);
-    setExpanded(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }, []);
-  const topologyKey = JSON.stringify(steps.map(step => [step.id, parentIds(step)]));
-  const topology = useMemo(() => (JSON.parse(topologyKey) as [string, string[]][]).map(([id, parentIds]) => ({ id, parentId: null, parentIds })), [topologyKey]);
-  // Expansion must never compete for another global layout. Keep the compact
-  // geometry separate from detail sizes, then make room around the clicked card.
-  const basePositions = useMemo(() => layoutGraph(topology, canvasSize, measured.collapsed), [topology, canvasSize, measured.collapsed]);
-  const positions = useMemo(() => {
-    const heights = new Map(topology.map(step => [step.id, (expanded.has(step.id) ? measured.expanded.get(step.id) : undefined) || measured.collapsed.get(step.id) || 174]));
-    return expandLayout(basePositions, heights, expansionAnchor);
-  }, [topology, basePositions, measured, expanded, expansionAnchor]);
-  const { layout, edges } = useMemo(() => {
-    const layout: Node<HarnessNodeData>[] = [];
-    const edges: Edge[] = [];
-    const byId = new Map(steps.map(step => [step.id, step]));
-    for (const step of steps) {
-      const parents = parentIds(step);
-      const { x, y } = positions.get(step.id)!;
-      layout.push({ id: step.id, type: "harnessNode", position: { x, y }, data: { step, isSelected: selectedStep?.id === step.id, expanded: expanded.has(step.id), onToggle: toggleExpanded, onSelect: selectStep } });
-      for (const parent of parents) if (byId.has(parent)) {
-        const ports = edgePorts(positions.get(parent)!, positions.get(step.id)!);
-        edges.push({ id: `${parent}->${step.id}`, source: parent, target: step.id, sourceHandle: `out-${ports.source}`, targetHandle: `in-${ports.target}`, type: "default", selectable: false, focusable: false, reconnectable: false, interactionWidth: 0, animated: active && step.status === "running", label: parents.length > 1 ? "汇合" : undefined, style: { stroke: step.status === "failed" ? "var(--red)" : step.status === "running" ? "var(--blue)" : "var(--border-hover)", strokeDasharray: "5 5" }, labelStyle: { fill: "var(--text-secondary)", fontSize: 13 }, labelBgStyle: { fill: "var(--bg-canvas)" } });
-      }
+  const toggleExpanded = useCallback((id: string) => {
+    anchorAt(sessions.owner.get(id) || id);
+    setExpanded(previous => toggleId(previous, id));
+  }, [anchorAt, sessions.owner]);
+  const toggleSession = useCallback((id: string) => {
+    anchorAt(id);
+    setOpenedSessions(previous => toggleId(previous, id));
+  }, [anchorAt]);
+  const topologyKey = JSON.stringify(sessions.topology);
+  const topology = useMemo(() => JSON.parse(topologyKey) as typeof sessions.topology, [topologyKey]);
+  const basePositions = useMemo(() => {
+    const base = layoutGraph(topology, canvasSize, measured.collapsed);
+    for (const [id, point] of movedSessions) {
+      const original = base.get(id);
+      if (original) base.set(id, { ...original, ...point });
     }
-    return { layout, edges };
-  }, [active, steps, selectedStep?.id, selectStep, toggleExpanded, expanded, positions]);
+    return base;
+  }, [topology, canvasSize, measured.collapsed, movedSessions]);
+  const positions = useMemo(() => positionSessions(basePositions, sessions.groups, openedSessions,
+    id => (expanded.has(id) ? measured.expanded.get(id) : undefined) || measured.collapsed.get(id) || 174, expansionAnchor),
+    [basePositions, sessions.groups, measured, expanded, openedSessions, expansionAnchor]);
+  const layout = useMemo(() => {
+    const nodes: CanvasNode[] = [];
+    for (const group of sessions.groups.values()) {
+      const position = positions.get(group.id)!;
+      const last = positions.get(group.members[group.members.length - 1].id);
+      nodes.push({ id: group.id, type: "sessionNode", position,
+        data: { group, height: last ? last.y + last.height - position.y : position.height, expanded: openedSessions.has(group.id), onToggle: toggleSession,
+          isSelected: !!selectedStep && sessions.owner.get(selectedStep.id) === group.id && !openedSessions.has(group.id) } });
+    }
+    for (const step of steps) {
+      if (visibleStep(step.id, sessions.owner, openedSessions) !== step.id) continue;
+      const point = positions.get(step.id)!;
+      const parentId = sessions.owner.get(step.id);
+      const parent = parentId && positions.get(parentId);
+      const position = parent ? { x: point.x - parent.x, y: point.y - parent.y } : point;
+      nodes.push({ id: step.id, type: "harnessNode", parentId, position,
+        data: { step, isSelected: selectedStep?.id === step.id, expanded: expanded.has(step.id), onToggle: toggleExpanded, onSelect: selectStep } });
+    }
+    return nodes;
+  }, [steps, sessions, openedSessions, selectedStep, selectStep, toggleExpanded, toggleSession, expanded, positions]);
+  const edges = useMemo((): Edge[] => sessionEdges(steps, sessions.owner, openedSessions).map(edge => {
+    const ports = edgePorts(positions.get(edge.source)!, positions.get(edge.target)!);
+    return { id: edge.id, source: edge.source, target: edge.target, sourceHandle: `out-${ports.source}`, targetHandle: `in-${ports.target}`, type: "default",
+      selectable: false, focusable: false, reconnectable: false, interactionWidth: 0, animated: active && edge.status === "running",
+      label: edge.count > 1 ? `${edge.count} 条依赖` : edge.joined ? "汇合" : undefined,
+      style: { stroke: edge.status === "failed" ? "var(--red)" : edge.status === "running" ? "var(--blue)" : "var(--border-hover)", strokeDasharray: "5 5" },
+      labelStyle: { fill: "var(--text-secondary)", fontSize: 13 }, labelBgStyle: { fill: "var(--bg-canvas)" } };
+  }), [active, steps, sessions.owner, openedSessions, positions]);
   useLayoutEffect(() => {
     setNodes(previous => reconcileNodes(previous, layout));
   }, [layout, setNodes]);
@@ -109,7 +145,7 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   const running = steps.filter(step => step.status === "running" && (step.parentId || step.parentIds?.length)).slice(-2);
   const joined = steps.find(step => step.agentId === "coordinator" && step.status !== "pending" && step.status !== "running");
   const focus = running.length ? running : joined ? [joined] : steps.slice(-1);
-  const focusKey = JSON.stringify(focus.map(step => step.id));
+  const focusKey = JSON.stringify([...new Set(focus.map(step => visibleStep(step.id, sessions.owner, openedSessions)))]);
   useEffect(() => {
     if (!active || !following || !initialized) return;
     const ids = JSON.parse(focusKey) as string[];
@@ -119,7 +155,12 @@ function FlowInner({ active, fullscreen, onToggleFullscreen, steps, selectedStep
   }, [active, initialized, focusKey, following, fullscreen, fitView]);
   const fit = () => { setFollowing(false); void fitView({ padding: .22, maxZoom: 1, duration: motionDuration() }); };
   return <div ref={canvas} className="workflow-canvas" aria-label="流程画板">
-    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={handleNodesChange} nodesConnectable={false} nodeDragThreshold={4} minZoom={.15} maxZoom={2} onNodeDragStart={(_event, node) => { movedNodes.current.add(node.id); setFollowing(false); }} onMoveStart={event => { if (event) setFollowing(false); }}>
+    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={handleNodesChange} nodesConnectable={false} nodeDragThreshold={4} minZoom={.15} maxZoom={2} onNodeDragStart={(_event, node) => { movedNodes.current.add(node.id); setFollowing(false); }} onNodeDragStop={(_event, node) => {
+      if (!sessions.groups.has(node.id)) return;
+      movedNodes.current.delete(node.id);
+      setMovedSessions(previous => new Map(previous).set(node.id, node.position));
+      setExpansionAnchor({ id: node.id, ...node.position });
+    }} onMoveStart={event => { if (event) setFollowing(false); }}>
       <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--border-subtle)" />
       {steps.length > 4 && showMap && <MiniMap pannable zoomable nodeColor="var(--border-hover)" maskColor="color-mix(in srgb, var(--bg-canvas) 75%, transparent)" ariaLabel="流程概览" onClick={() => setFollowing(false)} />}
     </ReactFlow>

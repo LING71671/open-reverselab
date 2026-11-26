@@ -77,3 +77,49 @@ def test_web_triage_leaves_the_deadline_to_the_execution_runner(monkeypatch):
     result = triage.triage_target("https://fixture.example.test/")
     assert result["httpStatus"] == 200
     assert observed == [None]
+
+def test_nested_executables_use_relative_names_and_include_the_primary_in_preview(tmp_path):
+    for parent in ("one", "two"):
+        folder = tmp_path / parent
+        folder.mkdir()
+        (folder / "sample.EXE").write_bytes(parent.encode())
+    for index in range(31):
+        (tmp_path / f"{index}.dll").write_bytes(b"longer")
+    result = triage.triage_target(str(tmp_path))
+    assert result["inventoryScan"]["sampleCount"] == 33
+    assert result["inventoryScan"]["limitsReached"] == []
+    assert len(result["discoveredSamples"]) == 30
+    assert result["resolvedBinary"] == "one/sample.EXE"
+    assert result["targetPath"] == str(tmp_path / "one" / "sample.EXE")
+    assert [s["name"] for s in result["discoveredSamples"] if s["isPrimary"]] == ["one/sample.EXE"]
+
+
+def test_nested_directory_scan_bounds(tmp_path, monkeypatch):
+    nested = tmp_path / "one" / "two"
+    nested.mkdir(parents=True)
+    (nested / "nested.exe").write_bytes(b"nested")
+    (tmp_path / "large.exe").write_bytes(b"oversize")
+    (tmp_path / "small.dll").write_bytes(b"x")
+    monkeypatch.setattr(triage, "MAX_SCAN_DEPTH", 1)
+    monkeypatch.setattr(triage, "MAX_SAMPLE_BYTES", 5)
+    result = triage.triage_target(str(tmp_path))
+    assert [s["name"] for s in result["discoveredSamples"]] == ["small.dll"]
+    assert result["inventoryScan"] == {
+        "entriesScanned": 4, "sizeBytes": 1, "sampleCount": 1, "limitsReached": ["bytes", "depth"],
+    }
+    monkeypatch.setattr(triage, "MAX_SCAN_ENTRIES", 2)
+    scan = triage.triage_target(str(tmp_path))["inventoryScan"]
+    assert scan["entriesScanned"] == 2
+    assert "entries" in scan["limitsReached"]
+
+
+def test_directory_scan_skips_linked_directories(tmp_path):
+    source, outside = tmp_path / "source", tmp_path / "outside"
+    source.mkdir()
+    outside.mkdir()
+    (outside / "sample.exe").write_bytes(b"external")
+    try:
+        (source / "link").symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlink privilege unavailable")
+    assert triage.triage_target(str(source))["discoveredSamples"] == []

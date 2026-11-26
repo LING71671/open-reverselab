@@ -80,7 +80,7 @@ function AppContent() {
         <ResizeHandle label="调整侧栏宽度" axis="x" size={sidebarWidth} min={180} max={360} initial={224} onChange={setSidebarWidth} />
         </div>
         <main className="workspace-main">
-          <header className="workspace-heading">
+          <header className="workspace-heading" data-tauri-drag-region="deep">
             {composerVisible ? state.currentSession && (state.currentSession.customTitle || state.currentSession.status !== "idle") && <h1 className="goal-page-title">{state.currentSession.title}</h1> : <h1>{names[state.viewMode]}</h1>}
             {composerVisible && <div className="goal-view-tabs" role="tablist" aria-label="Goal 视图" onKeyDown={event => {
               if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End") {

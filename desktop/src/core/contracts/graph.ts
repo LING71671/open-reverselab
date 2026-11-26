@@ -1,3 +1,5 @@
+import type { ToolSession } from "./toolSession";
+
 export type StepStatus = "pending" | "running" | "done" | "failed";
 
 export interface GraphStep {
@@ -9,6 +11,7 @@ export interface GraphStep {
   status: StepStatus;
   detail: string;
   kbRef?: string;
+  toolSession?: ToolSession;
   evidence?: Record<string, any>;
   timestamp: number;
 }

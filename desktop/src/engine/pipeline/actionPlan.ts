@@ -1,3 +1,4 @@
+import { readToolSession } from "../../core/contracts/toolSession";
 import type { PipelineCallbacks, PipelineContext } from "../../core/contracts/pipeline";
 import { DagScheduler } from "../runtime/dagScheduler";
 import { nativeBridge, type PythonExecResult } from "../../services/native/nativeBridge";
@@ -181,6 +182,7 @@ export async function executeActionPlan(actions: AnalysisAction[], ctx: Pipeline
       const action = actions.find(item => item.id === node.id)!;
       const parents = action.dependsOn.map(idFor);
       callbacks.onStepNode?.({ id: idFor(node.id), parentId: parents[0] || rootParent, parentIds: parents.length ? parents : rootParent ? [rootParent] : [],
+        toolSession: action.kind === "mcp" ? readToolSession({ connectionId: action.connectionId, target: ctx.target, arguments: action.arguments }) : undefined,
         evidenceParentIds: peerParents.get(node.id), agentId: action.kind === "mcp" ? action.tool : "python", title: action.title,
         status: node.status === "succeeded" ? "done" : node.status === "running" ? "running" : node.status === "queued" ? "pending" : "failed",
         detail: node.status === "cancelled" ? "前置动作未完成或任务已停止" : node.error ? String(node.error) : action.title,

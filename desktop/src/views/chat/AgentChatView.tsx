@@ -4,6 +4,8 @@ import { useHarness } from "../../state";
 import { MarkdownViewer } from "../kb/MarkdownViewer";
 import type { Deliverables } from "../../core";
 import { presentAgentContent } from "./agentContent";
+import { EvidenceReviewPanel } from "./EvidenceReviewPanel";
+
 function AgentBody({ content }: { content: string }) {
   const { prose, details } = presentAgentContent(content);
   return <>{prose && <MarkdownViewer content={prose} />}{details.length > 0 && <details className="activity-details"><summary>计划与脚本</summary>{details.map((detail, index) => <section key={index}><h4>{detail.label}</h4><pre>{detail.content}</pre></section>)}</details>}</>;
@@ -18,12 +20,14 @@ function Output({ data }: { data: Deliverables }) {
   </div>;
 }
 export function AgentChatView() {
-  const { messages, isRunning } = useHarness();
+  const { messages, isRunning, currentSession, records, saveEvidenceReview } = useHarness();
   const bottom = useRef<HTMLDivElement>(null);
   return <div className="activity-workspace"><div className="activity-transcript">{messages.map(message => <article className="activity-message" key={message.id}><header><span>{message.role === "user" ? message.adjustment ? "补充要求" : "Goal" : "Agent"}</span><time>{new Date(message.timestamp).toLocaleTimeString("zh-CN", { hour12: false })}</time>{message.adjustment && <span role="status">{message.adjustment.status === "pending" ? "当前步骤结束后生效" : message.adjustment.status === "applied" ? "已生效" : "未执行"}</span>}{message.isRunning && <Loader2 size={13} className="loading-spinner" />}</header>
     {message.role === "user" ? <p className="goal-objective">{message.content}</p> : <>
       {message.toolCalls?.length ? <details className="activity-details"><summary>{message.isRunning && <Loader2 size={12} className="loading-spinner" />}<span>{message.isRunning ? [...message.toolCalls].reverse().find(tool => tool.status === "running")?.title || "运行记录" : "运行记录"}</span><small>{message.toolCalls.length} 项</small></summary><div className="activity-tools">{message.toolCalls.map(tool => <details className="activity-details" key={tool.id}><summary>{tool.status === "running" && <Loader2 size={12} className="loading-spinner" />}<span>{tool.title}</span><small>{tool.durationMs === undefined ? ({ pending: "排队中", running: "运行中", done: "完成", failed: "失败", error: "失败" }[tool.status]) : `${tool.durationMs} ms`}</small></summary><p>{tool.detail}</p>{tool.output && <pre>{typeof tool.output === "string" ? tool.output : JSON.stringify(tool.output, null, 2)}</pre>}</details>)}</div></details> : null}
       {message.content && <AgentBody content={message.content} />}
       {message.deliverables && <Output data={message.deliverables} />}
-    </>}</article>)}<div ref={bottom} /></div>{isRunning && <button className="secondary-button activity-latest" onClick={() => bottom.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}><ArrowDown size={14} />最新进展</button>}</div>;
+    </>}</article>)}{currentSession?.status === "blocked" && records[currentSession.id] &&
+      <EvidenceReviewPanel key={currentSession.id} record={records[currentSession.id]} save={result => saveEvidenceReview(currentSession.id, result)} />}
+    <div ref={bottom} /></div>{isRunning && <button className="secondary-button activity-latest" onClick={() => bottom.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}><ArrowDown size={14} />最新进展</button>}</div>;
 }

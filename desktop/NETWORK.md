@@ -32,6 +32,12 @@ An interrupted response is regenerated from the same request context. Partial pl
 
 Stopping cancels the active request or wait. Revised requirements end the wait and return control to the existing Goal revision flow. Explicit time and token budgets still apply; repeated requests retain their usage, estimated when the provider did not report it. Reconnection does not restore live execution after closing the application.
 
+### Reviewing saved evidence
+
+In a blocked Goal, choose **Review saved evidence** in the conversation to summarize recorded discovery, static triage, and forensics observations. The report, provider, and model are saved with the original Goal.
+
+This request goes to the current provider first. Model settings let you select an optional backup provider for evidence review. A temporary service or network failure sends the same stage summaries and metrics to that provider once. The backup defaults to none. Authentication or configuration errors appear in the conversation.
+
 ## Data and failure handling
 
 Nodes and credentials are saved in local WebView storage, without OS-keychain encryption. They are not included in Goal prompts, reports, or workspace records. Child process output redacts configured proxy credentials; avoid printing sensitive environment variables from custom scripts. Node tests report only status and latency. Network errors use stable `PROXY_*` / `NETWORK_*` codes; see [error codes](ERROR_CODES.md).

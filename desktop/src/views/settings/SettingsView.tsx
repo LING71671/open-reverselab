@@ -50,7 +50,7 @@ export function SettingsView({ isOpen, onClose, initialTab = "model", theme, onT
     </aside>
     <main className="settings-content">
       <div className="settings-content-inner">
-        <header className="settings-heading"><h2>{tabs.find(([key]) => key === tab)?.[1]}</h2></header>
+        <header className="settings-heading" data-tauri-drag-region="deep"><h2>{tabs.find(([key]) => key === tab)?.[1]}</h2></header>
         <div hidden={tab !== "workspace"}><WorkspacePane active={isOpen && tab === "workspace"} onOpened={onClose} /></div>
         <div hidden={tab !== "model"}><ModelPane active={isOpen && tab === "model"} /></div>
         <div hidden={tab !== "network"}><ProxyPane /></div>
@@ -73,55 +73,68 @@ function ModelPane({ active }: { active: boolean }) {
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [models, setModels] = useState<string[]>([]);
+  const [fallbackId, setFallbackId] = useState(llmService.getEvidenceFallbackProviderId());
   const lastSavedModel = useRef(llmService.getModel());
   useEffect(() => {
     if (!active) return;
-    const saved = llmService.getModel();
+    const saved = providerId ? llmService.getModel(providerId) : "";
     if (saved !== lastSavedModel.current) { setModel(saved); lastSavedModel.current = saved; }
     setModels(llmService.getCachedModels(providerId));
+    setFallbackId(llmService.getEvidenceFallbackProviderId());
   }, [active]);
   const selectProvider = (id: string) => {
-    const provider = providers.find(item => item.id === id);
-    setProviderId(provider?.id || ""); setUrl(provider?.baseUrl || ""); setName(provider?.name || ""); setApiKey(provider?.apiKey || ""); setModels([]); setResult(""); setError("");
+    const provider = llmService.getProviders().find(item => item.id === id);
+    setProviderId(provider?.id || ""); setUrl(provider?.baseUrl || ""); setName(provider?.name || ""); setApiKey(provider?.apiKey || "");
+    lastSavedModel.current = provider?.model || "";
+    setModel(lastSavedModel.current); setModels(llmService.getCachedModels(id)); setResult(""); setError("");
   };
-  const save = (requireModel = true) => {
+  const save = () => {
     setError(""); setResult("");
     try {
       if (!url.trim()) throw new Error("请填写 API 地址");
       let parsed: URL;
       try { parsed = new URL(url); } catch { throw new Error("API 地址格式不正确"); }
       if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error("请使用 HTTP 或 HTTPS 地址，密钥单独填写");
-      if (requireModel && !model.trim()) throw new Error("请填写模型 ID，或读取模型列表后选择");
       const id = providerId || crypto.randomUUID();
-      llmService.addProvider({ id, name: name.trim() || deriveProviderName(url), baseUrl: url.trim().replace(/\/+$/, ""), apiKey: apiKey.trim() });
-      if (model.trim()) llmService.setModel(model.trim());
-      setProviderId(id); setProviders(llmService.getProviders()); setResult("已保存"); return true;
-    } catch (err) { setError(err instanceof Error ? err.message : "保存失败"); return false; }
+      llmService.addProvider({ id, name: name.trim() || deriveProviderName(url), baseUrl: url.trim().replace(/\/+$/, ""), apiKey: apiKey.trim(), model: model.trim() }, false);
+      lastSavedModel.current = model.trim();
+      setModels(llmService.getCachedModels(id));
+      setProviderId(id); setProviders(llmService.getProviders()); setResult("已保存"); return id;
+    } catch (err) { setError(err instanceof Error ? err.message : "保存失败"); return; }
   };
   const request = async (action: "test" | "models") => {
-    if (!save(action === "test")) return;
+    const id = save();
+    if (!id) return;
     setPending(action); setResult("");
     try {
       if (action === "test") {
-        const response = await llmService.checkHealth();
+        const response = await llmService.checkHealth(id);
         if (!response.ok) throw new Error(response.error || "连接失败，请检查地址和密钥");
         setResult("连接成功");
       } else {
-        const list = await llmService.fetchModels(); setModels(list);
+        const list = await llmService.fetchModels(id); setModels(llmService.getCachedModels(id));
         setResult(list.length ? `已读取 ${list.length} 个模型` : "未获取到模型列表，可直接填写模型 ID");
       }
     } catch (err) { setError(err instanceof Error ? err.message : "请求失败，请重试"); }
     finally { setPending(null); }
   };
-  return <form noValidate id="settings-model" role="tabpanel" aria-labelledby="settings-tab-model" className="settings-fields model-pane" onSubmit={event => { event.preventDefault(); save(); }}>
-    {providers.length > 0 && <div className="provider-row"><label>提供商<Select label="提供商" value={providerId || "new"} onChange={selectProvider} disabled={Boolean(pending)} options={[...providers.map(item => ({ value: item.id, label: item.name })), { value: "new", label: "新增提供商" }]} /></label><button type="button" className="icon-button" aria-label="新增提供商" disabled={Boolean(pending)} onClick={() => selectProvider("")}><Plus size={18} /></button></div>}
-    <label>名称<input value={name} onChange={event => setName(event.target.value)} placeholder="可选，默认使用服务名称" disabled={Boolean(pending)} /></label>
-    <label>API 地址<input type="url" required value={url} onChange={event => setUrl(event.target.value)} placeholder="https://api.example.com/v1" spellCheck={false} disabled={Boolean(pending)} /></label>
-    <label>API Key<input type="password" value={apiKey} onChange={event => setApiKey(event.target.value)} autoComplete="off" disabled={Boolean(pending)} /></label>
-    <div className="model-field"><label>模型 ID<input required value={model} onChange={event => setModel(event.target.value)} placeholder="填写模型 ID" spellCheck={false} disabled={Boolean(pending)} /></label><button type="button" className="secondary-button" disabled={Boolean(pending)} onClick={() => void request("models")}>{pending === "models" && <Loader2 size={14} className="loading-spinner" />}读取模型列表</button></div>
-    {models.length > 0 && <Select label="选择可用模型" placeholder="选择可用模型" value={models.includes(model) ? model : ""} onChange={setModel} options={models.map(id => ({ value: id, label: id }))} />}
-    <small>保存后用于新 Goal。密钥保存在本机；测试连接会发送一条短请求。</small>
-    <div className="settings-feedback" aria-live="polite">{error ? <p className="field-error" role="alert">{error}</p> : <p role="status">{result}</p>}</div>
-    <footer className="settings-actions"><button type="button" className="secondary-button" onClick={() => void request("test")} disabled={Boolean(pending)}>{pending === "test" && <Loader2 size={14} className="loading-spinner" />}{pending === "test" ? "正在连接" : "保存并测试"}</button><button className="primary-button" type="submit" disabled={Boolean(pending)}>保存</button></footer>
-  </form>;
+  return <section id="settings-model" role="tabpanel" aria-labelledby="settings-tab-model" className="settings-fields model-pane">
+    <form noValidate className="settings-fields" onSubmit={event => { event.preventDefault(); save(); }}>
+      {providers.length > 0 && <div className="provider-row"><label>提供商<Select label="提供商" value={providerId || "new"} onChange={selectProvider} disabled={Boolean(pending)} options={[...providers.map(item => ({ value: item.id, label: item.name })), { value: "new", label: "新增提供商" }]} /></label><button type="button" className="icon-button" aria-label="新增提供商" disabled={Boolean(pending)} onClick={() => selectProvider("")}><Plus size={18} /></button></div>}
+      <label>名称<input value={name} onChange={event => setName(event.target.value)} placeholder="可选，默认使用服务名称" disabled={Boolean(pending)} /></label>
+      <label>API 地址<input type="url" required value={url} onChange={event => setUrl(event.target.value)} placeholder="https://api.example.com/v1" spellCheck={false} disabled={Boolean(pending)} /></label>
+      <label>API Key<input type="password" value={apiKey} onChange={event => setApiKey(event.target.value)} autoComplete="off" disabled={Boolean(pending)} /></label>
+      <div className="model-field"><label>模型 ID<input value={model} onChange={event => setModel(event.target.value)} placeholder="填写模型 ID" spellCheck={false} disabled={Boolean(pending)} /></label><button type="button" className="secondary-button" disabled={Boolean(pending)} onClick={() => void request("models")}>{pending === "models" && <Loader2 size={14} className="loading-spinner" />}读取模型列表</button></div>
+      {models.length > 0 && <Select label="选择可用模型" placeholder="选择可用模型" value={models.includes(model) ? model : ""} onChange={setModel} options={models.map(id => ({ value: id, label: id }))} />}
+      <small>密钥保存在本机。测试连接会读取模型列表，已填写模型 ID 时会发送一条短对话。</small>
+      <div className="settings-feedback" aria-live="polite">{error ? <p className="field-error" role="alert">{error}</p> : <p role="status">{result}</p>}</div>
+      <footer className="settings-actions"><button type="button" className="secondary-button" onClick={() => void request("test")} disabled={Boolean(pending)}>{pending === "test" && <Loader2 size={14} className="loading-spinner" />}{pending === "test" ? "正在连接" : "保存并测试"}</button><button className="primary-button" type="submit" disabled={Boolean(pending)}>保存</button></footer>
+    </form>
+    <label>证据复核备用提供商<Select label="证据复核备用提供商" value={fallbackId || "none"} options={[{ value: "none", label: "无" }, ...providers.filter(p => p.id !== llmService.getActiveProviderId()).map(p => ({ value: p.id, label: p.name }))]} onChange={value => {
+      const id = value === "none" ? "" : value;
+      llmService.setEvidenceFallbackProviderId(id);
+      setFallbackId(id);
+    }} /></label>
+    <small>手动复核已保存的 Goal 证据时，若切换到备用提供商，本次复核的上下文会发送给它。</small>
+  </section>;
 }

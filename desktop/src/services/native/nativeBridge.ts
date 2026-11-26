@@ -89,6 +89,12 @@ export interface TriageResult {
   executableSections?: string[];
   importedDlls?: string[];
   isContainerDirectory?: boolean;
+  inventoryScan?: {
+    sampleCount: number;
+    entriesScanned: number;
+    sizeBytes: number;
+    limitsReached: Array<"bytes" | "depth" | "entries" | "unreadable">;
+  };
   discoveredSamples?: Array<{
     name: string;
     path: string;

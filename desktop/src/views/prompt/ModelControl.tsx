@@ -3,7 +3,9 @@ import { llmService } from "../../services/llm/llmService";
 import { Select } from "../controls/Select";
 
 export function ModelControl({ active, isRunning, onSettings }: { active: boolean; isRunning: boolean; onSettings: () => void }) {
-  const provider = llmService.getActiveProvider();
+  const [providerId, setProviderId] = useState(llmService.getActiveProviderId());
+  const providers = llmService.getProviders();
+  const provider = providers.find(p => p.id === providerId);
   const currentModel = llmService.getModel();
   const [model, setModel] = useState(currentModel);
   const [models, setModels] = useState(() => llmService.getCachedModels());
@@ -11,6 +13,7 @@ export function ModelControl({ active, isRunning, onSettings }: { active: boolea
   const [empty, setEmpty] = useState(false);
   const requestId = useRef(0);
   useEffect(() => {
+    setProviderId(llmService.getActiveProviderId());
     setModel(currentModel); setModels(llmService.getCachedModels()); setPending(false); setEmpty(false);
     return () => { requestId.current++; };
   }, [active, provider?.id, provider?.baseUrl, provider?.apiKey, currentModel]);
@@ -27,7 +30,9 @@ export function ModelControl({ active, isRunning, onSettings }: { active: boolea
   const options = [...new Set([model, ...models].filter(Boolean))].map(id => ({ value: id, label: id }));
   const status = pending ? "正在读取模型" : empty ? "未获取到模型列表" : "读取模型列表";
   return <div className="composer-model">
-    <button type="button" className="text-button model-provider" onClick={onSettings} title="模型设置">{provider.name}</button>
+    <Select className="model-provider" label="切换提供商" value={providerId} disabled={isRunning}
+      onChange={id => { llmService.setActiveProviderId(id); setProviderId(id); }}
+      options={providers.map(p => ({ value: p.id, label: p.name }))} />
     <span className="model-divider" aria-hidden="true">/</span>
     <Select className="model-control" label="切换模型" value={model} placeholder="选择模型" disabled={isRunning}
       onOpenChange={open => { void load(open); }}

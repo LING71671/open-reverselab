@@ -47,7 +47,10 @@ export class TargetDiscoveryStage implements PipelineStage {
 
       const durationMs = Date.now() - startTime;
       const isDir = !!triage.isContainerDirectory;
-      const samplesCount = ctx.discoveredSamples.length;
+      const samplesCount = triage.inventoryScan?.sampleCount ?? ctx.discoveredSamples.length;
+      const limitLabels = { bytes: "样本总大小", depth: "子目录深度", entries: "目录项数量", unreadable: "部分目录项无法读取" };
+      const limitedBy = triage.inventoryScan?.limitsReached.map(reason => limitLabels[reason]).join("、");
+      const scanNote = limitedBy ? `扫描未覆盖整个目录（${limitedBy}）` : "";
 
       callbacks.onDiscoveredSamples?.(
         ctx.discoveredSamples,
@@ -55,18 +58,26 @@ export class TargetDiscoveryStage implements PipelineStage {
         ctx.resolvedBinary
       );
 
+      if (isDir && !samplesCount) {
+        const reason = scanNote ? `${scanNote}，已扫描范围内未找到支持的样本` : "目录中未找到支持的样本";
+        throw new Error(`${reason}。请选择包含样本的子目录或直接选择文件。`);
+      }
+      const inventorySummary = [`已发现 ${samplesCount} 个样本`, triage.resolvedBinary && `主样本 ${triage.resolvedBinary}`, scanNote]
+        .filter(Boolean).join(" · ");
+
       callbacks.onToolCall?.({
         id: toolId,
         tool: "target_discovery",
         title: isDir ? `样本目录 · ${samplesCount} 项` : "目标识别",
         status: "done",
         detail: isDir
-          ? `Primary: ${triage.resolvedBinary || "none"} in ${triage.containerDirectory} (${samplesCount} samples inventory)`
+          ? inventorySummary
           : `${target} · ${triage.fileType || "类型未识别"}`,
         output: {
           containerDirectory: triage.containerDirectory,
           resolvedBinary: triage.resolvedBinary,
           samples: ctx.discoveredSamples,
+          inventoryScan: triage.inventoryScan,
         },
         durationMs,
       });
@@ -74,11 +85,11 @@ export class TargetDiscoveryStage implements PipelineStage {
       const diag: StageDiagnostic = {
         stageId: this.id,
         stageName: this.name,
-        status: triage.httpError ? "warn" : "pass",
+        status: triage.httpError || limitedBy ? "warn" : "pass",
         durationMs,
         timestamp: Date.now(),
         summary: isDir
-          ? `Found ${samplesCount} samples in ${triage.containerDirectory}; selected [${triage.resolvedBinary}]`
+          ? inventorySummary
           : triage.targetUrl ? triage.httpError || `HTTP ${triage.httpStatus} · ${triage.targetUrl}` : `文件已读取：${target}`,
         metrics: [
           { label: "Mode", value: isDir ? "Container Directory" : "Single Sample", status: "pass" },
@@ -90,6 +101,7 @@ export class TargetDiscoveryStage implements PipelineStage {
           containerDirectory: triage.containerDirectory,
           resolvedBinary: triage.resolvedBinary,
           samples: ctx.discoveredSamples,
+          inventoryScan: triage.inventoryScan,
         },
       };
       ctx.diagnostics[this.id] = diag;

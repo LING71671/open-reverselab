@@ -64,11 +64,13 @@ input[type="checkbox"]:not([role="switch"]):checked::after { content: ""; width:
 .budget-fields { padding: 8px 0; border: 0; }
 .composer-error { padding: 3px 0; }
 .model-control { max-width: 54%; }
-.composer-model { display: flex; align-items: center; gap: 2px; min-width: 0; max-width: 54%; margin-left: -10px; }
-.model-provider { min-width: 0; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.composer-model { display: flex; align-items: center; gap: 2px; min-width: 0; max-width: 54%; }
+.composer-model .model-provider { min-width: 0; width: auto; max-width: 46%; }
+.model-provider > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-divider { color: var(--text-muted); }
-.composer-model .model-control { flex: 1; width: auto; max-width: none; gap: 8px; padding-inline: 6px; border-color: transparent; background: transparent; color: var(--text-secondary); }
-.composer-model .model-control:hover, .composer-model .model-control[data-state="open"] { background: var(--selection); }
+.composer-model .model-control { flex: 1; width: auto; max-width: none; }
+.composer-model .select-trigger { gap: 6px; padding-inline: 6px; border-color: transparent; background: transparent; color: var(--text-secondary); }
+.composer-model .select-trigger:hover, .composer-model .select-trigger[data-state="open"] { background: var(--selection); }
 .run-progress { width: 100%; }
 .knowledge-library { position: relative; min-width: 240px; max-width: 48%; }
 .knowledge-filters { padding: 16px 16px 12px; }
