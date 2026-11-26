@@ -2,7 +2,7 @@
 
 [English](RELEASING.md)
 
-`v2.0.0-beta2` 仅打包桌面运行时，知识包与 MCP 服务作为扩展独立分发。此前的 `v2.0.0-beta.1` 标签保持不变。
+`v2.0.0-beta3` 仅打包桌面运行时，知识包与 MCP 服务作为扩展独立分发。此前的 `v2.0.0-beta.1` 标签保持不变。
 
 Python 3.11+、WebView2 与外部分析工具另行安装，详见[桌面端说明](site/desktop.md)。
 
@@ -58,7 +58,7 @@ python scripts/misc/package_desktop_release.py package --installer <NSIS-EXE> --
 
 ## 发布与更新渠道
 
-将 `v<VERSION>` 标签指向暂存和构建使用的同一提交。先创建草稿 GitHub Release，通过 `--notes-file` 提供说明并上传完整资产；确认清单版本、平台、安装包地址、签名及校验值对应这些资产。`v2.0.0-beta2` 取消 GitHub 预发布标记并设为 Latest，使仓库侧栏展示当前桌面下载；版本和标题仍保留 beta 测试版标识，桌面的稳定版渠道仍按 SemVer 排除该测试版。
+将 `v<VERSION>` 标签指向暂存和构建使用的同一提交。先创建草稿 GitHub Release，通过 `--notes-file` 提供说明并上传完整资产；确认清单版本、平台、安装包地址、签名及校验值对应这些资产。`v2.0.0-beta3` 取消 GitHub 预发布标记并设为 Latest，使仓库侧栏展示当前桌面下载；版本和标题仍保留 beta 测试版标识，桌面的稳定版渠道仍按 SemVer 排除该测试版。
 
 桌面通过公开 GitHub Releases API 查找发布：
 

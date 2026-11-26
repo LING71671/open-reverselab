@@ -4,9 +4,29 @@
 
 Notable changes to Open ReverseLab.
 
-## Unreleased
+## [2.0.0-beta3] - 2026-11-26
+
+### Desktop
 
 - Planning and verification now wait and retry after temporary model connection failures. Reconnection retains the Goal and completed tool evidence, replaces incomplete responses, respects provider retry intervals and explicit budgets, and remains cancellable.
+- Switch provider profiles from the Goal composer. Each profile keeps its own models and catalog while configuring, testing, and switching.
+- Review saved observations from a blocked Goal through an explicitly selected alternative.
+- The canvas groups steps by tool session and keeps dependency order when a session is re-entered.
+- Target discovery inventories nested samples and stops when a target is missing or empty.
+- The workspace and settings headers now support native window dragging.
+
+### MCP server and analysis scripts
+
+- Added tool profiles (`legacy`, `common`, `ctf`, `pe`, `apk`, `general`) with `--profile-report` and `--list-tools`. `legacy` remains the default and is unchanged; track and knowledge tools stay in every profile.
+- Added a shared result envelope (`reverselab.envelope.v1`) with findings, coverage, unknowns, and structured errors. A missing external tool returns `missing_engine` instead of an empty result.
+- Added native .NET, PCAP, and WebAssembly adapters through ilspycmd, tshark, and WABT, and an IDAPython static-analysis adapter. `static_headless_analyze` prefers IDA and falls back to Ghidra.
+- Partial results are kept when an analyzer times out. Ghidra runs are isolated and validate the target SHA-256; IDA summaries publish only after parent validation. Default workups no longer overwrite existing output, and `--strict-tools` enforces optional tools.
+- `docs/capability-matrix.md` is generated from the operation registry. Added `verify_engines.py` and `tools/bin` wrappers; `lab_healthcheck.py` reports profiles and optional tool availability.
+
+### Validation scope
+
+- Regression tests cover model reconnection, provider profile switching, canvas sessions, evidence review, MCP profiles, format fallbacks, analyzer failures, and the static-analysis backend policy.
+- Replacement of an installed beta1 or beta2 by this version has not been validated. BLA/REA evaluation is outside this release's validation scope.
 
 ## [2.0.0-beta2] - 2026-11-15
 
