@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "mcp>=1.2.0,<2",
+#     "mcp>=1.28.0,<2",
 #     "pycryptodome>=3.20.0,<4",
 # ]
 # ///
@@ -134,7 +134,7 @@ def triage_pe(path: str, write_markdown: bool = False) -> dict[str, Any]:
 def ghidra_headless_analyze(
     path: str,
     project_name: str = "",
-    overwrite: bool = True,
+    overwrite: bool = False,
     analysis_timeout_seconds: int = 600,
     process_timeout_seconds: int = 1800,
     function_limit: int = 300,
@@ -163,7 +163,7 @@ def static_backend_status() -> dict[str, Any]:
 
 @mcp.tool()
 def static_headless_analyze(
-    path: str, backend: str = "", project_name: str = "", overwrite: bool = True,
+    path: str, backend: str = "", project_name: str = "", overwrite: bool = False,
     analysis_timeout_seconds: int = 600, process_timeout_seconds: int = 1800,
     function_limit: int = 300, string_limit: int = 300, import_limit: int = 300,
 ) -> dict[str, Any]:
@@ -174,7 +174,7 @@ def static_headless_analyze(
 
 @mcp.tool()
 def ida_headless_analyze(
-    path: str, project_name: str = "", overwrite: bool = True,
+    path: str, project_name: str = "", overwrite: bool = False,
     analysis_timeout_seconds: int = 600, process_timeout_seconds: int = 1800,
     function_limit: int = 300, string_limit: int = 300, import_limit: int = 300,
 ) -> dict[str, Any]:

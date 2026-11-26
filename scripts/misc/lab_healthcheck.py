@@ -42,6 +42,20 @@ def _engine_status() -> dict:
     return payload
 
 
+def should_compile_source(path: Path, root: Path = ROOT) -> bool:
+    try:
+        parts = path.relative_to(root).parts
+    except ValueError:
+        return False
+    if not parts:
+        return False
+    if any(part in {".git", ".venv", "venv", "node_modules", "__pycache__"} for part in parts):
+        return False
+    return parts[0] not in {
+        "dist", "tmp", "runs", "logs", "exports", "samples", "projects", "reports", "cases", "封存文件",
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--strict-tools", action="store_true", help="also require every registry tool")
@@ -56,17 +70,7 @@ def main() -> int:
             failures.append(f"missing core file: {rel}")
 
     for path in ROOT.rglob("*.py"):
-        try:
-            first = path.relative_to(ROOT).parts[0]
-        except ValueError:
-            continue
-        # Workspace/artifact directories are not source: they hold local cases, probe scripts,
-        # extracted samples, and generated output. CI runs on a clean clone, so skipping them
-        # does not hide release content.
-        if first in {
-            ".git", ".venv", "venv", "node_modules", "dist", "tmp", "runs", "logs",
-            "exports", "samples", "projects", "reports", "cases", "封存文件",
-        }:
+        if not should_compile_source(path):
             continue
         try:
             py_compile.compile(str(path), doraise=True)
@@ -82,7 +86,7 @@ def main() -> int:
     tool_result = None
     if args.strict_tools:
         tool_result = subprocess.run(
-            [sys.executable, str(ROOT / "scripts/misc/ai_toolcheck.py")], cwd=ROOT
+            [sys.executable, str(ROOT / "scripts/misc/ai_toolcheck.py"), "--strict"], cwd=ROOT
         ).returncode
         if tool_result:
             failures.append("strict tool availability check failed")

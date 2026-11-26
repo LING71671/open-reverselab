@@ -82,7 +82,8 @@ def generate() -> str:
     lines.append("")
     lines.append("| Format | Native operations | Examples | External engine |")
     lines.append("| --- | --- | --- | --- |")
-    for fmt in FORMAT_ORDER:
+    format_order = [*FORMAT_ORDER, *sorted(set(by_format) - set(FORMAT_ORDER))]
+    for fmt in format_order:
         names = sorted(by_format.get(fmt, []))
         if not names:
             continue

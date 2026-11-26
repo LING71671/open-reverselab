@@ -88,6 +88,8 @@ MCP 服务器默认加载 `legacy`（全部工具，行为不变）。按任务�
 | `apk` | Android 静态、Frida、加密 |
 | `general` | 加密、协议、pcap、.NET、WASM |
 
+PE 静态分析默认走 `static_headless_analyze`（IDA 优先、Ghidra 备用）；`sample_full_workup` 默认包含该步骤，已有摘要可传入复用。旧工具 `ghidra_headless_analyze` 仅用于明确指定 Ghidra。
+
 设置方式：`.mcp.json` 的 `env.REVERSELAB_PROFILE`，或启动参数 `--profile <name>`。
 查看某个 profile 会暴露哪些工具：
 

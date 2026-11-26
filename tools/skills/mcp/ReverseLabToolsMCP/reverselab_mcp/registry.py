@@ -39,6 +39,7 @@ COMMON_TOOLS = frozenset(
     {
         "kb_router",
         "kb_read_file",
+        "get_track_status",
         "hash_file",
         "triage_pe",
         "die_scan",
@@ -232,7 +233,8 @@ def classify(name: str) -> tuple[str, tuple[str, ...]]:
         return "android", ("apk",)
     if name in PE_TOOLS or name.startswith(PE_PREFIXES):
         return "pe", ("pe",)
-    return "pe", ("pe",)
+    # Unknown future tools stay available in legacy only until explicitly classified.
+    return "other", ("legacy",)
 
 
 def native_specs(path: Path | None = None) -> list[OperationSpec]:
