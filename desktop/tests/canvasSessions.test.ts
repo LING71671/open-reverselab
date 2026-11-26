@@ -76,3 +76,36 @@ test("session expansion keeps the measured header anchored and makes room for vi
     }
   }
 });
+
+for (const length of [1, 3]) {
+  test(`returning after ${length} external nodes splits only at the causal boundary`, () => {
+    const chain = Array.from({ length }, (_, i) => step(`outside-${i}`, [i ? `outside-${i - 1}` : "a1"], false));
+    const last = chain[chain.length - 1].id;
+    const steps = [step("a0"), step("a1", ["a0"]), ...chain, step("a2", ["a1", last]), step("a3", ["a2"])];
+    for (const history of [steps, steps.slice().reverse()]) {
+      const { groups, owner, topology } = canvasSessions(history);
+      const before = owner.get("a1")!, after = owner.get("a2")!;
+      assert.equal(groups.size, 2);
+      assert.notEqual(before, after);
+      assert.equal(owner.get("a0"), before);
+      assert.equal(owner.get("a3"), after);
+      assert.equal(groups.get(before)?.sessionId, groups.get(after)?.sessionId);
+      assert.deepEqual([groups.get(before)?.part, groups.get(after)?.part], ["1/2", "2/2"]);
+      const layout = layoutGraph(topology, { width: 1000, height: 800 });
+      const edges = sessionEdges(history, owner, new Set());
+      const expected = [[before, "outside-0"], ...chain.slice(1).map((s, i) => [chain[i].id, s.id]), [before, after], [last, after]];
+      assert.deepEqual(new Set(edges.map(e => JSON.stringify([e.source, e.target]))), new Set(expected.map(e => JSON.stringify(e))));
+      for (const e of edges) assert.ok(layout.get(e.source)!.rank < layout.get(e.target)!.rank);
+      const open = sessionEdges(history, owner, new Set(groups.keys()));
+      assert.deepEqual(open.map(e => [e.source, e.target]), history.flatMap(s => s.parentIds!.map(parent => [parent, s.id])));
+    }
+  });
+}
+
+test("an interleaved external branch without a return dependency does not split the session", () => {
+  const steps = [step("a1"), step("external", ["a1"], false), step("independent", [], false), step("a2", ["a1", "independent"])];
+  const { groups, owner } = canvasSessions(steps);
+  assert.equal(groups.size, 1);
+  assert.equal(owner.get("a1"), owner.get("a2"));
+  assert.equal([...groups.values()][0].part, undefined);
+});

@@ -1,12 +1,13 @@
 import type { GraphStep, StepStatus } from "../../core/contracts/graph";
 import { readToolSession } from "../../core/contracts/toolSession.ts";
-import { expandLayout, parentIds, type LayoutPoint } from "./graphLayout.ts";
+import { dependencyOrder, expandLayout, parentIds, type LayoutPoint } from "./graphLayout.ts";
 
 export interface SessionGroup {
   id: string;
   tool: string;
   target: string;
   sessionId?: string;
+  part?: string;
   members: GraphStep[];
   status: StepStatus;
   failed: number;
@@ -15,41 +16,80 @@ export interface SessionGroup {
 
 const priority: Record<StepStatus, number> = { done: 0, pending: 1, running: 2, failed: 3 };
 
+// A direct parent in the same group is internal. An external parent that is
+// already downstream of the group would become both predecessor and successor.
+function canJoin(group: string, parents: string[], compact: Map<string, Set<string>>) {
+  const pending = parents.filter(id => id !== group && !compact.get(group)?.has(id));
+  const seen = new Set<string>();
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (id === group) return false;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    for (const parent of compact.get(id) || []) pending.push(parent);
+  }
+  return true;
+}
+
+function sessionIdentity(step: GraphStep) {
+  const receipt = readToolSession(step.evidence?.execution?.mcp);
+  const session = receipt?.sessionId ? receipt : step.toolSession || receipt;
+  if (!session || typeof session.connectionId !== "string" || !session.connectionId || typeof session.target !== "string" || !session.target) return;
+  // MCP transports can reconnect per request. Without a tool-issued session
+  // handle, scope a logical session to this branch's recorded action plan.
+  const plan = step.id.match(/^(.*:\d+):action:[\w-]+$/)?.[1];
+  if (!session.sessionId && !plan) return;
+  const scope = session.sessionId ? ["session", session.sessionId] : ["plan", plan];
+  const key = "tool-session:" + JSON.stringify([session.connectionId, session.target, session.subject, scope]);
+  return { key, session };
+}
+
 export function canvasSessions(steps: GraphStep[]) {
   const groups = new Map<string, SessionGroup>();
   const owner = new Map<string, string>();
-  const ids = new Set(steps.map(step => step.id));
-  for (const step of steps) {
-    const receipt = readToolSession(step.evidence?.execution?.mcp);
-    const session = receipt?.sessionId ? receipt : step.toolSession || receipt;
-    if (!session || typeof session.connectionId !== "string" || !session.connectionId || typeof session.target !== "string" || !session.target) continue;
-    // MCP transports can reconnect per request. Without a tool-issued session
-    // handle, scope a logical session to this branch's recorded action plan.
-    const plan = step.id.match(/^(.*:\d+):action:[\w-]+$/)?.[1];
-    if (!session.sessionId && !plan) continue;
-    const scope = session.sessionId ? ["session", session.sessionId] : ["plan", plan];
-    let id = "tool-session:" + JSON.stringify([session.connectionId, session.target, session.subject, scope]);
-    while (ids.has(id)) id += ":";
-    let group = groups.get(id);
-    if (!group) {
-      group = { id, tool: session.connectionId, target: session.subject || session.target, sessionId: session.sessionId, members: [], status: "done", failed: 0, running: false };
-      groups.set(id, group);
+  const segments = new Map<string, SessionGroup[]>();
+  const compact = new Map<string, Set<string>>();
+  const byId = new Map(steps.map(step => [step.id, step]));
+  const projectedParents = (step: GraphStep) => parentIds(step).filter(id => byId.has(id)).map(id => owner.get(id) || id);
+
+  // Process dependencies first, even when historical steps arrived out of order.
+  for (const id of dependencyOrder(steps).order) {
+    const step = byId.get(id)!;
+    const parents = projectedParents(step);
+    const identity = sessionIdentity(step);
+    if (!identity) {
+      compact.set(id, new Set(parents));
+      continue;
     }
+    const { key, session } = identity;
+    const parts = segments.get(key) || [];
+    let group: SessionGroup | undefined;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (canJoin(parts[i].id, parents, compact)) { group = parts[i]; break; }
+    }
+    if (!group) {
+      let id = parts.length ? `${key}:part:${parts.length + 1}` : key;
+      while (byId.has(id)) id += ":";
+      group = { id, tool: session.connectionId, target: session.subject || session.target, sessionId: session.sessionId, members: [], status: "done", failed: 0, running: false };
+      parts.push(group);
+      segments.set(key, parts);
+      groups.set(id, group);
+      compact.set(id, new Set());
+    }
+    const external = compact.get(group.id)!;
+    for (const parent of parents) if (parent !== group.id) external.add(parent);
     group.members.push(step);
     if (step.status === "running") group.running = true;
     if (priority[step.status] > priority[group.status]) group.status = step.status;
     if (step.status === "failed") group.failed++;
-    owner.set(step.id, id);
+    owner.set(id, group.id);
   }
-  const compact = new Map<string, Set<string>>();
-  for (const step of steps) {
-    const id = owner.get(step.id) || step.id;
-    const parents = compact.get(id) || new Set<string>();
-    compact.set(id, parents);
-    for (const parent of parentIds(step)) {
-      const source = owner.get(parent) || parent;
-      if (source !== id && ids.has(parent)) parents.add(source);
-    }
+  for (const parts of segments.values()) if (parts.length > 1) {
+    parts.forEach((part, i) => { part.part = `${i + 1}/${parts.length}`; });
+  }
+  // Keep malformed historical cycles and their dependents visible individually.
+  for (const step of steps) if (!owner.has(step.id) && !compact.has(step.id)) {
+    compact.set(step.id, new Set(projectedParents(step)));
   }
   return { groups, owner, topology: [...compact].map(([id, parents]) => ({ id, parentId: null, parentIds: [...parents] })) };
 }
