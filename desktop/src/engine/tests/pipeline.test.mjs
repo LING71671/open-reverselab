@@ -898,7 +898,7 @@ test("MCP plans use discovered connection-qualified tools and coexist with Pytho
 
 test("MCP execution records the real result and passes it to dependent Python", async () => {
   const original = nativeBridge.mcp;
-  const requests = [], events = [];
+  const requests = [], events = [], nodes = [];
   let pythonScript;
   try {
     nativeBridge.mcp = async (request, options) => {
@@ -909,8 +909,12 @@ test("MCP execution records the real result and passes it to dependent Python", 
     const ctx = context({ state: { mcpTools: [mcpDefinition()], executeAction: async (_key, script) => {
       pythonScript = script; return { success: true, stdout: "verified observation", stderr: "" };
     } } });
-    const output = await executeActionPlan([mcpAction(), { id: "verify", title: "Verify", dependsOn: ["inspect"], script: "print(REVERSELAB_INPUTS)" }], ctx, { onToolCall: event => events.push(event) });
+    const output = await executeActionPlan([mcpAction(), { id: "verify", title: "Verify", dependsOn: ["inspect"], script: "print(REVERSELAB_INPUTS)" }], ctx, { onToolCall: event => events.push(event), onStepNode: node => nodes.push(node) });
     assert.equal(output.success, true);
+    const observations = nodes.filter(node => node.agentId === "fixture/inspect");
+    assert(observations.some(node => node.status === "pending"));
+    assert(observations.every(node => node.toolSession.connectionId === "fixture" && node.toolSession.target === ctx.target));
+    assert(nodes.filter(node => node.agentId === "python").every(node => node.toolSession === undefined));
     assert.equal(requests[0].request.expectedSchemaHash, "synthetic-schema");
     assert.equal(requests[0].request.tool, "fixture/inspect");
     assert(requests[0].options.signal instanceof AbortSignal);

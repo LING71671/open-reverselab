@@ -33,3 +33,10 @@
   .workflow-canvas .harness-node { animation: none; transition: none; }
   .workflow-canvas .react-flow__edge.animated path { animation: none; }
 }
+.workflow-canvas .session-node header { gap: 12px; }
+.session-bracket { position: absolute; pointer-events: none; top: 0; left: -12px; width: 7px; border: 1px solid var(--border-hover); border-right: none; border-radius: 6px 0 0 6px; }
+.session-target, .session-title h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-node header > span:last-child, .session-count { flex-shrink: 0; }
+.session-title, .session-count { display: flex; align-items: center; gap: 8px; }
+.session-title > svg { flex: none; color: var(--text-secondary); }
+.session-count { margin-left: auto; color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }

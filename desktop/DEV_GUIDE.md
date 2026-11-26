@@ -48,6 +48,8 @@ python -m pytest tests/test_desktop_kb.py tests/test_desktop_workspace.py tests/
 python scripts/misc/public_release_check.py
 ```
 
+Canvas groups use the observed MCP connection, target and tool session handle. Without a handle, grouping is limited to the same recorded action plan on one branch. Records missing a connection or target stay as individual steps. The canvas projects the recorded dependencies and leaves the underlying execution graph intact.
+
 Engine tests use synthetic targets and mocked model responses. Live provider behavior and BLA/REA acceptance require their own recorded runs. Keep private end-to-end targets, logs, and screenshots outside the public change set.
 
 `tests/test_desktop_triage.py` covers missing targets, unknown file metadata, empty directories, and ZIP/APK identity. Target discovery must stop on missing files. Architecture, compiler, imports, and packing status must come from observed metadata.

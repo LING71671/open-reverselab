@@ -36,7 +36,7 @@ Create other Goals or switch workspaces while work continues. Each runner keeps 
 
 The **Body** view shows the Agent's analysis progress and conclusions. Plans, scripts, structured data, tool output, and verification details are expandable. Report paths remain available with the result.
 
-The **Canvas** shows actual actions, dependencies, evidence handoffs, and joins. Click a card to expand its details or open its execution record. Pan and zoom to inspect a branch, use **Follow workflow** to follow current work, or open the full-screen canvas; **Esc** exits full screen. Manual navigation turns following off until you enable it again.
+The **Canvas** shows actual actions, dependencies, evidence handoffs, and joins. Steps from the same tool session share a card. Click the step count to expand the group in place, trace dependencies to individual steps, and open their execution records. Pan and zoom to inspect a branch, use **Follow workflow** to follow current work, or open the full-screen canvas; **Esc** exits full screen. Manual navigation turns following off until you enable it again.
 
 `red` and `blue` use separate strategies and knowledge routes. In `both`, each side can create parallel actions and share evidence with the other side; the graph includes those cross-links. Each branch is checked separately before the combined objective is verified.
 
