@@ -4,7 +4,7 @@ description: Download the Open ReverseLab Windows desktop beta, install knowledg
 ---
 # Desktop installation and updates
 
-[Download v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2) for Windows x64 as an installer or portable ZIP. The desktop packages do not bundle a knowledge base or MCP server. Import knowledge packs and add MCP connections in the application after installation.
+[Download v2.0.0-beta3](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta3) for Windows x64 as an installer or portable ZIP. The desktop packages do not bundle a knowledge base or MCP server. Import knowledge packs and add MCP connections in the application after installation.
 
 ## Windows installation
 

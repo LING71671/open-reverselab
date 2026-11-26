@@ -10,7 +10,7 @@ Desktop workspaces · red / blue / both · Parallel Goals · Knowledge base · M
 
 <p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
 
-<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2"><strong>Download for Windows</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">Knowledge base</a></p>
+<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta3"><strong>Download for Windows</strong></a> &nbsp; · &nbsp; <a href="desktop/README.md">Desktop guide</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">Website & docs</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">Knowledge base</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -54,7 +54,7 @@ Select `red / blue / both` in the upper-left corner, choose a workspace, and ent
 
 ### Download and setup
 
-[Download v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2) for Windows x64: choose the installer (`-setup.exe`) or portable ZIP. Both packages contain the desktop runtime without a bundled knowledge base or MCP server. Install knowledge through **Extensions** and configure MCP connections separately.
+[Download v2.0.0-beta3](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta3) for Windows x64: choose the installer (`-setup.exe`) or portable ZIP. Both packages contain the desktop runtime without a bundled knowledge base or MCP server. Install knowledge through **Extensions** and configure MCP connections separately.
 
 1. Install Python 3.11 or newer and make the `python` command available on PATH. Windows also needs the Microsoft Edge WebView2 runtime.
 2. Run the installer, or extract the complete portable ZIP and launch `OpenReverseLab.exe`. Keep personal workspaces outside the installation directory.

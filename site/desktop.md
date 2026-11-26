@@ -4,7 +4,7 @@ description: 下载 Open ReverseLab Windows 桌面测试版，安装知识库扩
 ---
 # 桌面端安装与更新
 
-[下载 v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2)，提供 Windows x64 安装版与便携版。桌面包不内置知识库或 MCP 服务；安装后可在应用中导入知识包、添加 MCP 连接。
+[下载 v2.0.0-beta3](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta3)，提供 Windows x64 安装版与便携版。桌面包不内置知识库或 MCP 服务；安装后可在应用中导入知识包、添加 MCP 连接。
 
 ## Windows 安装
 

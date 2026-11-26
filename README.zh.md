@@ -10,7 +10,7 @@
 
 <p><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2"><strong>下载 Windows 版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">知识库</a></p>
+<p><a href="https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta3"><strong>下载 Windows 版</strong></a> &nbsp; · &nbsp; <a href="desktop/README.zh-CN.md">桌面端说明</a> &nbsp; · &nbsp; <a href="https://ling71671.github.io/open-reverselab/">官网与文档</a> &nbsp; · &nbsp; <a href="https://github.com/LING71671/open-reverselab-knowledge">知识库</a></p>
 
 [![Release](https://img.shields.io/github/v/release/LING71671/open-reverselab?include_prereleases&style=flat-square&color=242424)](https://github.com/LING71671/open-reverselab/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-242424?style=flat-square)](LICENSE)
@@ -54,7 +54,7 @@
 
 ### 下载与启动
 
-[下载 v2.0.0-beta2](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta2)，提供 Windows x64 安装版（`-setup.exe`）与便携 ZIP。两种包均只包含桌面运行时，不内置知识库或 MCP 服务；知识库通过**扩展**导入，MCP 连接单独配置。
+[下载 v2.0.0-beta3](https://github.com/LING71671/open-reverselab/releases/tag/v2.0.0-beta3)，提供 Windows x64 安装版（`-setup.exe`）与便携 ZIP。两种包均只包含桌面运行时，不内置知识库或 MCP 服务；知识库通过**扩展**导入，MCP 连接单独配置。
 
 1. 安装 Python 3.11 或更新版本，确保终端能执行 `python`。Windows 还需要 Microsoft Edge WebView2 Runtime。
 2. 运行安装程序，或完整解压便携 ZIP 后启动 `OpenReverseLab.exe`。个人工作区放在安装目录之外。
