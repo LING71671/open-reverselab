@@ -362,3 +362,18 @@ test("adjusted goals retain MCP unknown outcomes, action identities and knowledg
   assert.deepEqual(requests[1].knowledgePins, checkpoint.knowledgePins);
   manager.flush();
 });
+
+test("text review stays in the blocked goal across restart without invoking the runner", async () => {
+  const saved = storage();
+  let calls = 0;
+  const runner = async (_request, cb) => { calls++; cb.onRunProgress(progress("blocked")); };
+  const manager = new GoalManager(runner, saved);
+  const id = manager.submit("fixture.bin", "Review headers", "blue");
+  await tick();
+  const report = { text: "Header observed", provider: "Fixture", model: "fixture-model" };
+  manager.saveEvidenceReview(id, report);
+  const restored = new GoalManager(runner, saved);
+  assert.equal(session(restored, id).status, "blocked");
+  assert.deepEqual(restored.getSnapshot().records[id].evidenceReview, report);
+  assert.equal(calls, 1);
+});

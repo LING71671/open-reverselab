@@ -1,8 +1,10 @@
 import type { SessionItem, HarnessChatMessage, GraphStep, Deliverables, StageDiagnostic, DiscoveredSample, LogEntry, SecurityTrack, RunBudget, RunProgress, PipelineCallbacks } from "../../core";
 import type { HealthEvent } from "../../core/contracts/health";
 import type { KnowledgePin } from "../../core/contracts/pipeline";
+import type { EvidenceReview } from "./evidenceReview";
 
 export interface GoalRecord {
+  evidenceReview?: EvidenceReview;
   messages: HarnessChatMessage[];
   steps: GraphStep[];
   logs: LogEntry[];
@@ -287,6 +289,11 @@ export class GoalManager {
     this.snapshot.sessions = this.snapshot.sessions.filter(s => s.id !== id);
     const records = { ...this.snapshot.records }; delete records[id]; this.snapshot.records = records;
     this.emit(); this.flush();
+  }
+  saveEvidenceReview(id: string, review: EvidenceReview) {
+    if (this.snapshot.sessions.find(session => session.id === id)?.status !== "blocked") return;
+    this.update(id, record => ({ ...record, evidenceReview: review }));
+    this.flush();
   }
   clearMessages(id: string) { if (!this.controllers.has(id)) this.update(id, r => ({ ...r, messages: [] })); }
   clearLogs(id: string) { this.update(id, r => ({ ...r, logs: [] })); }

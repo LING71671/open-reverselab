@@ -1364,3 +1364,41 @@ test("empty and incomplete directory inventories stop before planning", async ()
     assert.equal(nextStageCalls, 0);
   } finally { nativeBridge.triage = original; }
 });
+
+test("saved evidence review only sends observed summaries to the explicitly selected fallback", async () => {
+  const { reviewSavedEvidence } = await load("services/goals/evidenceReview.ts");
+  const providers = [{ id: "a", name: "Primary" }, { id: "b", name: "Backup" }];
+  const record = { diagnostics: { triage: { stageId: "blue:static-triage", stageName: "Static triage", status: "pass", summary: "PE header observed", metrics: [], evidence: { secret: "excluded" } } }, messages: [{ content: "private history" }] };
+  const methods = ["complete", "getProviders", "getActiveProvider", "getModel", "getEvidenceFallbackProviderId"];
+  const original = Object.fromEntries(methods.map(key => [key, llmService[key]]));
+  const signal = new AbortController().signal;
+  let fallback = "", status = 502, revoke = false;
+  const requests = [];
+  try {
+    llmService.getActiveProvider = () => providers[0];
+    llmService.getProviders = () => providers;
+    llmService.getModel = id => id + "-model";
+    llmService.getEvidenceFallbackProviderId = () => fallback;
+    llmService.complete = async (messages, options) => {
+      assert.doesNotMatch(JSON.stringify(messages), /private history|excluded/);
+      assert.match(messages[1].content, /PE header observed/);
+      requests.push(options.providerId);
+      if (revoke) fallback = "";
+      if (options.providerId === "a") throw Object.assign(new Error("provider failed"), { status });
+      return { content: "Header present." };
+    };
+    await assert.rejects(reviewSavedEvidence(record, signal));
+    assert.deepEqual(requests.splice(0), ["a"]);
+    fallback = "b";
+    assert.deepEqual(await reviewSavedEvidence(record, signal), { text: "Header present.", provider: "Backup", model: "b-model" });
+    assert.deepEqual(requests.splice(0), ["a", "b"]);
+    status = 401;
+    await assert.rejects(reviewSavedEvidence(record, signal));
+    assert.deepEqual(requests.splice(0), ["a"]);
+    status = 502; revoke = true;
+    await assert.rejects(reviewSavedEvidence(record, signal));
+    assert.deepEqual(requests.splice(0), ["a"]);
+    await assert.rejects(reviewSavedEvidence(record, AbortSignal.abort()));
+    assert.deepEqual(requests, []);
+  } finally { Object.assign(llmService, original); }
+});

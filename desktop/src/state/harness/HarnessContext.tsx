@@ -78,6 +78,7 @@ function useHarnessState(runtime: WorkspaceRuntime, openWorkspace: (workspace: W
     stopHarness: () => goalManager.cancel(activeSessionId),
     cancelGoal: (id: string) => goalManager.cancel(id),
     runDiagnostics: async () => setDiagnostics(await diagnosticService.runFullDiagnostics(currentSession?.target)),
+    saveEvidenceReview: goalManager.saveEvidenceReview.bind(goalManager),
     newSession, selectSession,
     archiveSession: (id: string) => goalManager.archive(id),
     renameSession: (id: string, title: string) => goalManager.rename(id, title),
