@@ -1349,3 +1349,18 @@ test("a real dropped HTTP stream retries automatically after backoff", { timeout
   assert.equal(requests, 2); assert.equal(ctx.state.fullContent, "complete recovered plan");
   assert.ok(waiting.some(detail => detail.includes("2 秒后重试")));
 });
+
+test("empty and incomplete directory inventories stop before planning", async () => {
+  const original = nativeBridge.triage;
+  let nextStageCalls = 0;
+  try {
+    for (const limitsReached of [[], ["depth"]]) {
+      nativeBridge.triage = async () => ({ isContainerDirectory: true, discoveredSamples: [], inventoryScan: { sampleCount: 0, limitsReached } });
+      const pipeline = new HarnessPipeline([new TargetDiscoveryStage(), stage("plan", async () => { nextStageCalls++; })]);
+      const result = await pipeline.run("fixture", "inspect", [], {}, undefined, "directory", "blue");
+      assert.equal(result.runProgress.status, "blocked");
+      assert.match(result.runProgress.reason, limitsReached.length ? /扫描未覆盖整个目录/ : /目录中未找到支持的样本/);
+    }
+    assert.equal(nextStageCalls, 0);
+  } finally { nativeBridge.triage = original; }
+});
