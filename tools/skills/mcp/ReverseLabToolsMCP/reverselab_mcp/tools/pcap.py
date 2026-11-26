@@ -95,33 +95,29 @@ def pcap_summary(path: str, display_filter: str = "", max_packets: int = 0) -> d
     }
     capinfos = _capinfos()
     if capinfos:
+        retryable = False
         try:
             info_code, info_out, info_err = run([capinfos, "-c", "-M", str(target)], timeout=120)
             if info_code == 0:
                 findings["capture"] = info_out
             else:
-                findings["capture_error"] = (info_err or info_out).strip()[:300]
+                detail = (info_err or info_out).strip()[:300]
+                findings["capture_error"] = f"capinfos exited {info_code}: {detail}".rstrip(": ")
         except subprocess.TimeoutExpired as exc:
             findings["capture_error"] = f"capinfos timed out: {exc}"
-            return fail(
-                "pcap_summary",
-                kind="partial",
-                message="Protocol hierarchy completed, but capinfos timed out.",
-                findings=findings,
-                target={"path": str(target), "format": "pcap"},
-                coverage=Coverage(scope="protocol hierarchy", complete=False, reason="capinfos timed out"),
-                retryable=True,
-            )
+            retryable = True
         except (OSError, RuntimeError, ValueError) as exc:
-            findings["capture_error"] = str(exc)
+            findings["capture_error"] = f"capinfos failed: {exc}"
+            retryable = True
+        if "capture_error" in findings:
             return fail(
                 "pcap_summary",
                 kind="partial",
-                message="Protocol hierarchy completed, but capture metadata failed.",
+                message=findings["capture_error"],
                 findings=findings,
                 target={"path": str(target), "format": "pcap"},
                 coverage=Coverage(scope="protocol hierarchy", complete=False, reason="capture metadata failed"),
-                retryable=True,
+                retryable=retryable,
             )
     else:
         findings["capture_error"] = "capinfos not found; packet count omitted"

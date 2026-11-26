@@ -39,15 +39,7 @@ COMMON_TOOLS = frozenset(
     {
         "kb_router",
         "kb_read_file",
-        "kb_catalog",
-        "kb_graph",
-        "kb_get",
-        "kb_neighbors",
-        "kb_pin",
-        # Track controls are needed by red-gated tools in every board profile.
         "get_track_status",
-        "set_track",
-        "route_track",
         "hash_file",
         "triage_pe",
         "die_scan",

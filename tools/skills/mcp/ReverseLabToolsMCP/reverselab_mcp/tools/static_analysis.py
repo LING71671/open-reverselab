@@ -85,10 +85,11 @@ def static_headless_analyze(
             status = "partial" if result.get("status") == "partial" or summary.get("analysis_complete") is False else "ok"
             if status == "partial":
                 partial_result = {**result, "status": status, "backend": selected, "requested_backend": requested}
-                attempts.append({"backend": selected, "status": status, "error": result.get("stderr", "analysis incomplete")})
+                reason = "analysis timed out" if result.get("analysis_timed_out") else "analysis incomplete"
+                attempts.append({"backend": selected, "status": status, "error": result.get("stderr") or reason})
                 if requested == "auto" and selected != order[-1]:
                     continue
-                return {**partial_result, "attempts": attempts}
+                return {**partial_result, "attempts": attempts, "fallback_used": len(attempts) > 1}
             attempts.append({"backend": selected, "status": status})
             return {**result, "status": status, "backend": selected, "requested_backend": requested,
                     "fallback_used": len(attempts) > 1, "attempts": attempts}

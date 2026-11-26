@@ -93,7 +93,7 @@ The binary target was Windows x64. Python and external reverse-engineering tools
 
 ### Fixed — review feedback on profiles, adapters, and static analysis
 
-- `fix(mcp)`：profile 保留 `set_track` / `kb_*` 等跨板块必需工具；未知新工具不再默认落入 `pe`。
+- `fix(mcp)`：各 profile 可查询当前轨道状态。修改服务轨道属于完整工具集，尚未分类的新工具只出现在 `legacy`。
 - `fix(pcap)`：协议层级统计应用 `display_filter`；超时与 `capinfos` 失败返回结构化 / 部分结果。
 - `fix(dotnet)`：解析前校验数据目录数量与可选头边界；`ilspycmd` 超时返回可重试信封。
 - `fix(static)`：Ghidra/IDA 摘要按运行隔离并以目标 SHA256 校验；失败或超时的 IDA 运行不再发布摘要；默认 workup 不覆盖已有项目。

@@ -2,7 +2,6 @@
 //@category ReverseLab
 
 import java.io.File;
-import java.io.FileWriter;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -190,6 +189,10 @@ public class ReverseLabExportSummary extends GhidraScript {
 			throw new IllegalArgumentException("usage: ReverseLabExportSummary.java <output.json> <functionLimit> <stringLimit> <importLimit> <runId> <targetSha256>");
 		}
 
+		String importedSha256 = currentProgram.getExecutableSHA256();
+		if (!args[5].equalsIgnoreCase(importedSha256)) {
+			throw new IllegalStateException("Imported program SHA-256 differs from the requested input");
+		}
 		File outputFile = new File(args[0]);
 		File temporaryFile = new File(outputFile.getPath() + ".tmp");
 		File parent = outputFile.getParentFile();
@@ -202,7 +205,7 @@ public class ReverseLabExportSummary extends GhidraScript {
 		int importLimit = parseLimit(args, 3, 300);
 
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		JsonWriter writer = new JsonWriter(new FileWriter(temporaryFile));
+		JsonWriter writer = new JsonWriter(Files.newBufferedWriter(temporaryFile.toPath()));
 		writer.setIndent("  ");
 
 		Listing listing = currentProgram.getListing();
@@ -253,7 +256,7 @@ public class ReverseLabExportSummary extends GhidraScript {
 		writer.beginObject();
 		writer.name("export_schema").value("reverselab-ghidra-summary-v2");
 		writer.name("run_id").value(args[4]);
-		writer.name("target_sha256").value(args[5]);
+		writer.name("target_sha256").value(importedSha256.toLowerCase(java.util.Locale.ROOT));
 
 		writer.name("program").beginObject();
 		writer.name("name").value(currentProgram.getName());

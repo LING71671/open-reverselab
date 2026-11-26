@@ -59,12 +59,11 @@ def test_common_profile_always_has_intake_and_workspace_tools():
 
 
 @pytest.mark.parametrize("profile", ["common", "ctf", "pe", "apk", "general"])
-def test_every_profile_can_switch_tracks_and_read_knowledge(profile):
+def test_scoped_profiles_expose_status_and_scoped_reference_tools(profile):
     tools = registry.allowed_tools(profile)
-    assert {
-        "get_track_status", "set_track", "route_track",
-        "kb_router", "kb_read_file", "kb_catalog",
-    } <= tools
+    assert {"get_track_status", "kb_router", "kb_read_file"} <= tools
+    assert tools.isdisjoint({"set_track", "route_track", "kb_graph", "kb_get", "kb_neighbors", "kb_pin"})
+    assert ("kb_catalog" in tools) == (profile == "ctf")
 
 
 def test_general_profile_owns_new_format_tools():

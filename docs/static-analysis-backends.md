@@ -50,12 +50,13 @@ independently bounds the IDA process and its cleanup. Ghidra's
 bounded separately by `process_timeout_seconds`. Automatic fallback gives Ghidra
 its own configured budget.
 
-Every Ghidra run uses a per-run summary path and target SHA-256, so two analyses
-of same-named files cannot accept each other's output. IDA writes its summary
-into the private run directory and publishes it under `exports/` only after the
-parent validates the run, so a timeout or failed export is never selected as the
-latest summary. Default workups use unique projects and `overwrite=False`, so an
-existing Ghidra project is preserved; explicit overwrite remains opt-in.
+Each Ghidra run checks the imported program's SHA-256 against the requested file
+and stages its summary under a unique name. A validated summary is published
+atomically with its final completeness flag, including partial results after a timeout.
+IDA writes its summary into the private run directory and publishes it under
+`exports/` only after the parent validates the run. Default workups use unique
+projects. To overwrite an import in a named Ghidra project, explicitly pass
+`overwrite=True`.
 
 ## MCP tools
 

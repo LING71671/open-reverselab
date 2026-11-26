@@ -19,7 +19,7 @@ from ..utils import slug, read_text
 def ida_headless_analyze(
     path: str,
     project_name: str = "",
-    overwrite: bool = True,
+    overwrite: bool = False,
     analysis_timeout_seconds: int = 600,
     process_timeout_seconds: int = 1800,
     function_limit: int = 300,

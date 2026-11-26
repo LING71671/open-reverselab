@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import uuid
+from pathlib import Path
 from typing import Any
 
 from ..config import GHIDRA_EXPORTS_DIR, GHIDRA_HEADLESS_BAT, GHIDRA_PROJECTS_DIR, GHIDRA_SCRIPT_DIR
@@ -45,6 +46,7 @@ def ghidra_headless_analyze(
     # Every run owns its output and log paths, so concurrent same-stem analyses cannot
     # accept each other's summary or infer a timeout from another run's log.
     output_json = GHIDRA_EXPORTS_DIR / f"{sample_slug}-{run_id}-ghidra-summary.json"
+    pending_output = output_json.with_suffix(".pending")
     headless_log = GHIDRA_EXPORTS_DIR / f"{sample_slug}-{run_id}-headless.log"
     script_log = GHIDRA_EXPORTS_DIR / f"{sample_slug}-{run_id}-script.log"
 
@@ -70,7 +72,7 @@ def ghidra_headless_analyze(
         [
             "-postScript",
             "ReverseLabExportSummary.java",
-            str(output_json),
+            str(pending_output),
             str(max(0, function_limit)),
             str(max(0, string_limit)),
             str(max(0, import_limit)),
@@ -91,9 +93,9 @@ def ghidra_headless_analyze(
         stderr += f"\nGhidra exceeded its {process_timeout_seconds} second process deadline."
 
     summary = None
-    if output_json.is_file():
+    if pending_output.is_file():
         try:
-            candidate = json.loads(output_json.read_text(encoding="utf-8", errors="replace"))
+            candidate = json.loads(pending_output.read_text(encoding="utf-8"))
             program = candidate.get("program") if isinstance(candidate, dict) else None
             if (
                 isinstance(candidate, dict)
@@ -110,11 +112,16 @@ def ghidra_headless_analyze(
 
     headless_log_text = read_text(headless_log)
     script_log_text = read_text(script_log)
-    timed_out = process_timed_out or "Analysis timed out" in headless_log_text or "analysis timed out" in stdout
+    timed_out = process_timed_out or any(
+        "report: analysis timed out" in text.lower() for text in (headless_log_text, stdout, stderr)
+    )
     is_complete = isinstance(summary, dict) and summary.get("analysis_complete") is True and not timed_out
     status = "ok" if code == 0 and is_complete else ("partial" if isinstance(summary, dict) else "error")
-    if status == "partial" and isinstance(summary, dict):
-        summary["analysis_complete"] = False
+    if summary is not None:
+        if status == "partial" and summary.get("analysis_complete") is not False:
+            summary["analysis_complete"] = False
+            pending_output.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        pending_output.replace(output_json)
 
     return {
         "tool": "ghidra_analyzeHeadless",
