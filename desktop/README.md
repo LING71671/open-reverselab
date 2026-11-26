@@ -26,6 +26,8 @@ For the native desktop app, use `pnpm tauri dev`. Python 3.11+ must be available
 3. Select `red / blue / both` at the upper left. Enter the **Target** separately from the **Goal**. Importing a file or directory through **Samples** preserves an original copy and creates a working copy; entering an external path directly uses that path.
 4. Start the Goal. Time and token budgets are optional and blank by default. Goals and ready actions have no default concurrency cap.
 
+Directory discovery scans up to six subdirectory levels and 10,000 directory entries. The combined size of inventoried samples is capped at 2 GiB. The inventory shows the total number found and previews up to 30 entries, including the selected primary sample. Select a narrower directory or a file if a limit is reached.
+
 The model comes from saved settings or an explicitly configured `VITE_LLM_MODEL`. No provider or model is substituted when configuration is missing. Basic SHA256 verification can use a deterministic local check; other Goals use the configured model to plan actions and independently assess their evidence.
 
 While a Goal runs, send additional requirements from its input area. They remain in the same Goal, appear as pending, and take effect after the current step ends. Earlier evidence and history remain available; the revised objective must pass its own verification. **Stop** cancels the run and retains its recorded progress.
